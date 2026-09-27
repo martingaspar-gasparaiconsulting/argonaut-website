@@ -14,7 +14,7 @@
 // mit aktivem RLS — jeder Betrieb schreibt ausschließlich in seine eigenen Daten.
 // ============================================================
 
-import { useMemo, useState, useEffect, useCallback, type CSSProperties } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef, type CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
   importQuellen, sucheImporte, gruppiereImporte, zaehleImporte, quellenFuerModule,
@@ -25,9 +25,17 @@ import { MODUL_PFAD } from '@/lib/rechte';
 import { csvZeile } from '@/lib/csvSchreiben';
 import {
   ZIELE, zielDef, errateMapping, fehlendePflichtfelder, pruefeAlles,
-  baueMustervorlage, passtZuordnung,
+  baueMustervorlage, passtZuordnung, leseCsv,
   type Mapping, type PruefBericht, type ZeilenFehler,
 } from '@/lib/importParser';
+import {
+  PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
+  formatDauer, formatBytes, zahlDe, uhrzeitBerlin, gesamtFortschritt, dateiProzent, verschluckt,
+  hochrechnung, spannenText, umzugSumme, abschlussText,
+  type Messpunkt, type MengenEinheit, type UmzugSumme,
+} from '@/lib/importFortschritt';
+import { leseZahl } from '@/lib/zahlen';
+import { DateiBalken, GesamtBalken, type BalkenStand } from './FortschrittAnzeige';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -40,8 +48,13 @@ const C = {
   danger: '#E06666', warn: '#E0A24C',
 };
 
-const BATCH = 100;                 // so viele Zeilen gehen pro Schreibvorgang raus
+// Schritt 0 (27.09.2026): Einspielen in Paketen zu PAKET_GROESSE (500) Zeilen —
+// echter Fortschritt, kein Timeout, und nach jedem Paket steht im Protokoll,
+// was schon drin ist.
 const MAX_FEHLER_ANZEIGE = 50;
+
+/** Spalten, die erst mit supabase-sql/p123-import-fortschritt.sql existieren. */
+const NEU_SPALTEN = 'umzug_id,dateigroesse,gestartet_am,dauer_ms,zeilen_pro_s,zeilen_gelesen,zeilen_uebersprungen,zeilen_abgelehnt,zeilen_doppelt,zeilen_gescheitert,zeilen_offen,warnungen,erstellt_von,beendet_am';
 
 type Datei = {
   dateiname: string;
@@ -50,6 +63,8 @@ type Datei = {
   kopf: string[];
   zeilen: string[][];
   abgeschnitten: number;
+  /** Groesse in Bytes (fuer Protokoll und Hochrechnung). */
+  groesse: number;
 };
 
 type ImportErgebnis = {
@@ -58,6 +73,22 @@ type ImportErgebnis = {
   uebersprungen: number;
   fehlgeschlagen: number;
   fehler: ZeilenFehler[];
+  // --- Schritt 0: Bilanz und Stoppuhr ---
+  gelesen: number;
+  abgelehnt: number;
+  doppelt: number;
+  /** noch nicht eingespielt, weil angehalten oder abgebrochen */
+  offen: number;
+  angehalten: boolean;
+  dauerMs: number;
+  zeilenProS: number | null;
+};
+
+type Umzug = {
+  id: string; name: string; geplante_dateien: number | null;
+  datenmenge: number | null; datenmenge_einheit: MengenEinheit | null;
+  status: string; gestartet_am: string; beendet_am: string | null; dauer_ms: number | null;
+  zusammenfassung: UmzugSumme | null;
 };
 
 type Job = {
@@ -67,7 +98,58 @@ type Job = {
   als_vorlage: boolean; vorlage_name: string | null; erstellt_am: string;
   /** F6: ids der neu angelegten Datensätze (nur wenn die SQL-Spalte existiert). */
   angelegte_ids?: string[] | null; rueckgaengig_am?: string | null;
+  /** Schritt 0: Messwerte (nur wenn p123-SQL gelaufen ist; alte Zeilen: null). */
+  umzug_id?: string | null; dateigroesse?: number | null; gestartet_am?: string | null;
+  dauer_ms?: number | null; zeilen_pro_s?: number | null; zeilen_gelesen?: number | null;
+  zeilen_uebersprungen?: number | null; zeilen_abgelehnt?: number | null; zeilen_doppelt?: number | null;
+  zeilen_gescheitert?: number | null; zeilen_offen?: number | null; warnungen?: number | null;
+  erstellt_von?: string | null; beendet_am?: string | null;
 };
+
+type ServerAntwort = { ok: boolean; error?: string } & Partial<Omit<Datei, 'groesse'>>;
+
+/** Datei im Browser laden — mit Bytes-Fortschritt. Die Datei verlaesst den Rechner nicht. */
+function ladeImBrowser(f: File, beiFortschritt: (geladen: number) => void): Promise<Uint8Array> {
+  return new Promise((ok, nein) => {
+    const r = new FileReader();
+    r.onprogress = (e) => { if (e.lengthComputable) beiFortschritt(e.loaded); };
+    r.onerror = () => nein(new Error('Die Datei konnte nicht geladen werden.'));
+    r.onload = () => { beiFortschritt(f.size); ok(new Uint8Array(r.result as ArrayBuffer)); };
+    r.readAsArrayBuffer(f);
+  });
+}
+
+/**
+ * Excel an den Server schicken — mit Upload-Fortschritt (fetch kann das nicht,
+ * deshalb XMLHttpRequest). hochgeladen() meldet: jetzt liest der Server.
+ */
+function ladeUeberServer(f: File, beiFortschritt: (geladen: number, gesamt: number) => void, hochgeladen: () => void): Promise<ServerAntwort> {
+  return new Promise((ok, nein) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/import/lesen');
+    xhr.responseType = 'json';
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) beiFortschritt(e.loaded, e.total); };
+    xhr.upload.onload = () => hochgeladen();
+    xhr.onerror = () => nein(new Error('Die Verbindung ist abgebrochen — die Datei kam nicht beim Server an.'));
+    xhr.onload = () => {
+      const d = xhr.response as ServerAntwort | null;
+      if (xhr.status === 413) {
+        nein(new Error('Die Datei ist für den Server zu groß. Bitte in Excel als CSV speichern — CSV liest ARGONAUT direkt im Browser.'));
+        return;
+      }
+      if (!d || xhr.status >= 400 || !d.ok) { nein(new Error(d?.error || 'Die Datei konnte nicht gelesen werden.')); return; }
+      ok(d);
+    };
+    const form = new FormData();
+    form.append('datei', f);
+    xhr.send(form);
+  });
+}
+
+/** Dem Browser kurz Luft geben, damit der Balken sich zeichnet. */
+function kurzLuft(): Promise<void> {
+  return new Promise((r) => setTimeout(r, 0));
+}
 
 function fmtZeit(iso: string | null): string {
   if (!iso) return '—';
@@ -157,13 +239,49 @@ export default function ImportCenterPage() {
   const [merken, setMerken] = useState(true);
   const [verlauf, setVerlauf] = useState<Job[]>([]);
 
+  // --- Schritt 0: Fortschritt, Stoppuhr, Umzug ------------------------------
+  const [balken, setBalken] = useState<BalkenStand | null>(null);
+  const messRef = useRef<Messpunkt[]>([]);
+  const anhaltenRef = useRef(false);
+  const [anhaltenGewuenscht, setAnhaltenGewuenscht] = useState(false);
+  const dateiStartRef = useRef(0);
+  const lesenEndeRef = useRef(0);
+  const phasenRef = useRef<Record<string, number>>({});
+  /** true, sobald supabase-sql/p123-import-fortschritt.sql gelaufen ist */
+  const [neuesSchema, setNeuesSchema] = useState(false);
+  const [umzug, setUmzug] = useState<Umzug | null>(null);
+  const [letzteUmzuege, setLetzteUmzuege] = useState<Umzug[]>([]);
+  const [abschluss, setAbschluss] = useState<{ summe: UmzugSumme; name: string } | null>(null);
+  const [planDateien, setPlanDateien] = useState('');
+  const [planMenge, setPlanMenge] = useState('');
+  const [planEinheit, setPlanEinheit] = useState<MengenEinheit>('MB');
+  const [jetzt, setJetzt] = useState(() => Date.now());
+  const [ich, setIch] = useState<string | null>(null);
+  const [namen, setNamen] = useState<Record<string, string>>({});
+
   const ziel = useMemo(() => (zielKey ? zielDef(zielKey) : undefined), [zielKey]);
   const offenePflicht = useMemo(() => (zielKey ? fehlendePflichtfelder(mapping, zielKey) : []), [mapping, zielKey]);
 
   const verlaufLaden = useCallback(async () => {
     const SPALTEN = 'id,ziel,dateiname,status,kopfzeilen,mapping,zeilen_gesamt,zeilen_ok,zeilen_fehler,als_vorlage,vorlage_name,erstellt_am';
-    // F6: mit den neuen Spalten fuer „Rückgängig" — fehlen sie (SQL noch nicht
-    // gelaufen), wie bisher ohne.
+    // Schritt 0: mit Messwerten — fehlen die Spalten (p123-SQL noch nicht
+    // gelaufen), wie bisher. F6: mit „Rückgängig"-Spalten, sonst ohne.
+    const r0 = await supabase.from('import_jobs').select(SPALTEN + ',angelegte_ids,rueckgaengig_am,' + NEU_SPALTEN)
+      .order('erstellt_am', { ascending: false }).limit(60);
+    if (!r0.error) {
+      setVerlauf((r0.data as unknown as Job[]) ?? []);
+      setNeuesSchema(true);
+      const u = await supabase.from('import_umzug')
+        .select('id,name,geplante_dateien,datenmenge,datenmenge_einheit,status,gestartet_am,beendet_am,dauer_ms,zusammenfassung')
+        .order('gestartet_am', { ascending: false }).limit(10);
+      if (!u.error) {
+        const liste = (u.data as unknown as Umzug[]) ?? [];
+        setUmzug(liste.find((x) => x.status === 'laeuft') ?? null);
+        setLetzteUmzuege(liste.filter((x) => x.status === 'fertig').slice(0, 5));
+      }
+      return;
+    }
+    setNeuesSchema(false);
     const r1 = await supabase.from('import_jobs').select(SPALTEN + ',angelegte_ids,rueckgaengig_am')
       .order('erstellt_am', { ascending: false }).limit(40);
     if (!r1.error) { setVerlauf((r1.data as unknown as Job[]) ?? []); return; }
@@ -171,6 +289,95 @@ export default function ImportCenterPage() {
       .order('erstellt_am', { ascending: false }).limit(40);
     setVerlauf((r2.data as unknown as Job[]) ?? []);
   }, []);
+
+  // Wer bin ich, wie heissen die Kolleginnen und Kollegen (Spalte „Wer").
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      setIch(data?.user?.id ?? null);
+      const { data: ma } = await supabase.from('mitarbeiter').select('auth_user_id, vorname, nachname');
+      const n: Record<string, string> = {};
+      for (const m of ((ma ?? []) as { auth_user_id: string | null; vorname: string | null; nachname: string | null }[])) {
+        if (m.auth_user_id) n[m.auth_user_id] = [m.vorname, m.nachname].filter(Boolean).join(' ') || 'Mitarbeiter';
+      }
+      setNamen(n);
+    })();
+  }, []);
+
+  // Stoppuhr: laeuft, solange ein Umzug offen ist oder eine Datei arbeitet.
+  useEffect(() => {
+    if (!umzug && busy !== 'import' && busy !== 'lesen') return;
+    const t = setInterval(() => setJetzt(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [umzug, busy]);
+
+  /** Eigene Messwerte des Betriebs fuer die Hochrechnung. */
+  const messwerte = useMemo(() => verlauf
+    .filter((j) => (j.dauer_ms ?? 0) > 0 && (j.zeilen_gelesen ?? 0) > 0 && j.status !== 'rueckgaengig')
+    .map((j) => ({ bytes: j.dateigroesse ?? null, zeilen: j.zeilen_gelesen ?? 0, dauerMs: j.dauer_ms ?? 0 })), [verlauf]);
+
+  const umzugJobs = useMemo(() => (umzug ? verlauf.filter((j) => j.umzug_id === umzug.id) : []), [verlauf, umzug]);
+
+  const laufendProzent = balken && balken.phase !== 'fertig' && !balken.fehler && datei ? dateiProzent(balken) : null;
+  const gesamt = umzug ? gesamtFortschritt({
+    geplant: umzug.geplante_dateien ?? 0,
+    fertigeDateien: umzugJobs.filter((j) => j.status !== 'laeuft' && j.status !== 'rueckgaengig').length,
+    laufendProzent,
+    startMs: Date.parse(umzug.gestartet_am),
+    jetztMs: jetzt,
+  }) : null;
+
+  const planMengeZahl = leseZahl(planMenge);
+  const schaetzung = useMemo(() => {
+    const menge = umzug?.datenmenge ?? planMengeZahl;
+    const einheit = (umzug?.datenmenge_einheit ?? planEinheit) as MengenEinheit;
+    return menge ? hochrechnung(menge, einheit, messwerte) : null;
+  }, [umzug, planMengeZahl, planEinheit, messwerte]);
+
+  async function betriebUndIch(): Promise<{ uid: string; betrieb: string }> {
+    const { data: nutzer } = await supabase.auth.getUser();
+    const uid = nutzer?.user?.id;
+    if (!uid) throw new Error('Nicht angemeldet.');
+    const { data: chefId } = await supabase.rpc('mein_chef_id');
+    return { uid, betrieb: typeof chefId === 'string' && chefId ? chefId : uid };
+  }
+
+  async function umzugStarten() {
+    setFehler(null); setAbschluss(null);
+    try {
+      const { uid, betrieb } = await betriebUndIch();
+      const geplant = leseZahl(planDateien);
+      const menge = leseZahl(planMenge);
+      const { data, error } = await supabase.from('import_umzug').insert({
+        owner_user_id: betrieb,
+        erstellt_von: uid,
+        geplante_dateien: geplant && geplant > 0 ? Math.min(1000, Math.round(geplant)) : null,
+        datenmenge: menge && menge > 0 ? menge : null,
+        datenmenge_einheit: menge && menge > 0 ? planEinheit : null,
+      }).select('id,name,geplante_dateien,datenmenge,datenmenge_einheit,status,gestartet_am,beendet_am,dauer_ms,zusammenfassung').single();
+      if (error) throw new Error(error.message);
+      setUmzug(data as unknown as Umzug);
+      setJetzt(Date.now());
+    } catch (err: unknown) {
+      setFehler('Umzug konnte nicht gestartet werden: ' + (err instanceof Error ? err.message : 'Fehler'));
+    }
+  }
+
+  async function umzugAbschliessen() {
+    if (!umzug) return;
+    const fertig = umzugJobs.filter((j) => j.status !== 'rueckgaengig').length;
+    if (umzug.geplante_dateien && fertig < umzug.geplante_dateien && typeof window !== 'undefined'
+      && !window.confirm(`Erst ${fertig} von ${umzug.geplante_dateien} Dateien sind importiert. Umzug trotzdem abschließen?`)) return;
+    const ende = Date.now();
+    const summe = umzugSumme(umzugJobs, Date.parse(umzug.gestartet_am), ende);
+    const { error } = await supabase.from('import_umzug').update({
+      status: 'fertig', beendet_am: new Date(ende).toISOString(), dauer_ms: summe.dauerMs, zusammenfassung: summe,
+    }).eq('id', umzug.id);
+    if (error) { setFehler('Abschluss konnte nicht gespeichert werden: ' + error.message); return; }
+    setAbschluss({ summe, name: umzug.name });
+    setUmzug(null);
+    await verlaufLaden();
+  }
 
   // --- F6: Import rückgängig machen -----------------------------------------
   // Loescht NUR die Datensaetze, die dieser Import neu angelegt hat. Geaenderte
@@ -216,34 +423,80 @@ export default function ImportCenterPage() {
   function zuruecksetzen(behalteZiel = false) {
     if (!behalteZiel) setZielKey('');
     setDatei(null); setMapping({}); setBericht(null); setErgebnis(null);
-    setFehler(null); setHinweis(null);
+    setFehler(null); setHinweis(null); setBalken(null);
   }
 
   function zielWaehlen(key: string) {
     setZielKey(key);
-    setDatei(null); setMapping({}); setBericht(null); setErgebnis(null); setFehler(null); setHinweis(null);
+    setDatei(null); setMapping({}); setBericht(null); setErgebnis(null); setFehler(null); setHinweis(null); setBalken(null);
   }
 
   // --- Datei einlesen -------------------------------------------------------
+  // Schritt 0: CSV/TXT liest der BROWSER (Bytes-Fortschritt, keine 4,5-MB-
+  // Grenze von Vercel, keine 5.000-Zeilen-Kappung). Excel geht an den Server,
+  // mit Upload-Fortschritt; dort gilt die Grenze je Anfrage.
+  function ladeFortschritt(geladen: number, gesamtBytes: number) {
+    messRef.current.push({ t: Date.now(), n: geladen });
+    const tempo = tempoProMs(messRef.current);
+    setBalken({
+      phase: 'laden',
+      anteil: gesamtBytes > 0 ? geladen / gesamtBytes : 0,
+      zaehler: `${formatBytes(geladen)} von ${formatBytes(gesamtBytes)}`,
+      rest: restText(restMs(geladen, gesamtBytes, tempo)),
+    });
+  }
+
   async function dateiLesen(f: File) {
     if (!zielKey) return;
-    setBusy('lesen'); setFehler(null); setHinweis(null); setBericht(null); setErgebnis(null);
-    try {
-      const form = new FormData();
-      form.append('datei', f);
-      const antwort = await fetch('/api/import/lesen', { method: 'POST', body: form });
-      const daten = await antwort.json() as { ok: boolean; error?: string } & Partial<Datei>;
-      if (!antwort.ok || !daten.ok) throw new Error(daten.error || 'Die Datei konnte nicht gelesen werden.');
+    setFehler(null); setHinweis(null); setBericht(null); setErgebnis(null);
+    const weg = dateiWeg(f.name, f.size);
+    if (weg.weg === 'zu_gross') { setFehler(weg.hinweis); setBalken(null); return; }
 
-      const neu: Datei = {
-        dateiname: daten.dateiname ?? f.name,
-        blatt: daten.blatt ?? null,
-        trennzeichen: daten.trennzeichen ?? '',
-        kopf: daten.kopf ?? [],
-        zeilen: daten.zeilen ?? [],
-        abgeschnitten: daten.abgeschnitten ?? 0,
-      };
+    setBusy('lesen');
+    dateiStartRef.current = Date.now();
+    phasenRef.current = {};
+    messRef.current = [];
+    let phaseStart = Date.now();
+    const phaseEnde = (key: string) => { phasenRef.current[key] = Date.now() - phaseStart; phaseStart = Date.now(); };
+    ladeFortschritt(0, f.size);
+
+    try {
+      let neu: Datei;
+      const leseHinweise: string[] = [];
+      if (weg.weg === 'browser') {
+        const bytes = await ladeImBrowser(f, (geladen) => ladeFortschritt(geladen, f.size));
+        phaseEnde('laden');
+        setBalken({ phase: 'lesen', anteil: 0.4, zaehler: `${formatBytes(f.size)} geladen · wird gelesen …` });
+        await kurzLuft();
+        const tab = leseCsv(dekodiere(bytes));
+        leseHinweise.push(...tab.hinweise);
+        neu = {
+          dateiname: f.name, blatt: null, trennzeichen: tab.trennzeichen,
+          kopf: tab.kopf.map((h, i) => (h.trim() || `Spalte ${i + 1}`)),
+          zeilen: tab.zeilen, abgeschnitten: 0, groesse: f.size,
+        };
+        if (neu.kopf.length === 0) throw new Error('In der Datei ist keine Kopfzeile mit Spaltennamen zu erkennen.');
+      } else {
+        const daten = await ladeUeberServer(
+          f,
+          (geladen, gesamtBytes) => ladeFortschritt(geladen, gesamtBytes),
+          () => { phaseEnde('laden'); setBalken({ phase: 'lesen', anteil: 0.5, zaehler: 'Der Server liest die Excel-Datei …' }); },
+        );
+        if (!phasenRef.current.laden) phaseEnde('laden');
+        neu = {
+          dateiname: daten.dateiname ?? f.name,
+          blatt: daten.blatt ?? null,
+          trennzeichen: daten.trennzeichen ?? '',
+          kopf: daten.kopf ?? [],
+          zeilen: daten.zeilen ?? [],
+          abgeschnitten: daten.abgeschnitten ?? 0,
+          groesse: f.size,
+        };
+      }
+      phaseEnde('lesen');
+      lesenEndeRef.current = Date.now();
       setDatei(neu);
+      setBalken({ phase: 'pruefen', anteil: 0, zaehler: `${zahlDe(neu.zeilen.length)} Zeilen gelesen in ${formatDauer(Date.now() - dateiStartRef.current)}`, wartet: 'wartet auf Ihre Zuordnung (Stufe 3)' });
 
       // Gab es fuer genau diesen Datei-Aufbau schon einmal eine Zuordnung?
       // Dann die gemerkte nehmen — die ist von Hand geprueft und schlaegt jedes Raten.
@@ -253,18 +506,20 @@ export default function ImportCenterPage() {
 
       if (gemerkt?.mapping) {
         setMapping(gemerkt.mapping);
-        setHinweis(`${neu.zeilen.length} Zeilen gelesen · gespeicherte Zuordnung von „${gemerkt.vorlage_name || gemerkt.dateiname || 'früherem Import'}" übernommen.`);
+        setHinweis(`${zahlDe(neu.zeilen.length)} Zeilen gelesen · gespeicherte Zuordnung von „${gemerkt.vorlage_name || gemerkt.dateiname || 'früherem Import'}" übernommen.`);
       } else {
         const geraten = errateMapping(neu.kopf, zielKey);
         setMapping(geraten);
         const erkannt = Object.values(geraten).filter(Boolean).length;
-        setHinweis(`${neu.zeilen.length} Zeilen gelesen · ${erkannt} von ${neu.kopf.length} Spalten automatisch erkannt. Bitte kurz prüfen.`);
+        setHinweis(`${zahlDe(neu.zeilen.length)} Zeilen gelesen · ${erkannt} von ${neu.kopf.length} Spalten automatisch erkannt. Bitte kurz prüfen.`);
       }
+      if (leseHinweise.length > 0) setHinweis((h) => `${h ?? ''} ${leseHinweise.join(' ')}`);
       if (neu.abgeschnitten > 0) {
-        setHinweis((h) => `${h ?? ''} Achtung: ${neu.abgeschnitten} weitere Zeilen wurden abgeschnitten — bitte in einem zweiten Durchgang importieren.`);
+        setHinweis((h) => `${h ?? ''} Achtung: ${zahlDe(neu.abgeschnitten)} weitere Zeilen wurden abgeschnitten (Excel-Grenze des Servers). Tipp: in Excel als CSV speichern — CSV liest ARGONAUT vollständig im Browser.`);
       }
     } catch (err: unknown) {
       setFehler(err instanceof Error ? err.message : 'Die Datei konnte nicht gelesen werden.');
+      setBalken((b) => (b ? { ...b, fehler: true, rest: null, wartet: null } : null));
     } finally { setBusy(null); }
   }
 
@@ -284,57 +539,125 @@ export default function ImportCenterPage() {
     if (!datei || !zielKey) return;
     setBusy('pruefen'); setFehler(null);
     try {
-      setBericht(pruefeAlles(zielKey, mapping, datei.kopf, datei.zeilen));
+      const t0 = Date.now();
+      // Die Zeit bis hierher war Ihre Zuordnung — sie zaehlt nicht als Rechenzeit.
+      if (lesenEndeRef.current) phasenRef.current.zuordnen = t0 - lesenEndeRef.current;
+      const b = pruefeAlles(zielKey, mapping, datei.kopf, datei.zeilen);
+      phasenRef.current.pruefen = Date.now() - t0;
+      setBericht(b);
       setErgebnis(null);
+      setBalken({
+        phase: 'einspielen', anteil: 0,
+        zaehler: `${zahlDe(b.gut)} von ${zahlDe(b.gesamt)} Zeilen bereit · geprüft in ${formatDauer(phasenRef.current.pruefen)}`,
+        wartet: b.gut > 0 ? 'wartet auf „jetzt importieren"' : 'nichts zu übernehmen',
+      });
     } catch (err: unknown) {
       setFehler('Prüfung fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setBusy(null); }
   }
 
   // --- Importieren ----------------------------------------------------------
+  // Schritt 0: in Paketen zu 500 Zeilen. Das Protokoll entsteht VOR dem ersten
+  // Paket und wird nach jedem Paket fortgeschrieben — bricht etwas ab (Netz,
+  // Tab zu, „Anhalten"), steht dort genau, was schon drin ist. Die Zeilen-
+  // Bilanz geht immer auf: gelesen = übernommen + geändert + übersprungen +
+  // abgelehnt + doppelt + gescheitert + offen. Rest = „verschluckt" (muss 0 sein).
+  function anhalten() {
+    anhaltenRef.current = true;
+    setAnhaltenGewuenscht(true);
+  }
+
   async function importieren() {
     if (!datei || !ziel || !bericht || bericht.gut === 0) return;
     if (typeof window !== 'undefined' && !window.confirm(
-      `${bericht.gut} Datensätze werden jetzt in „${ziel.label}" geschrieben. Fortfahren?`
+      `${zahlDe(bericht.gut)} Datensätze werden jetzt in „${ziel.label}" geschrieben. Fortfahren?`
     )) return;
 
     setBusy('import'); setFehler(null);
-    const start = new Date();
-    const erg: ImportErgebnis = { angelegt: 0, aktualisiert: 0, uebersprungen: 0, fehlgeschlagen: 0, fehler: [] };
+    anhaltenRef.current = false; setAnhaltenGewuenscht(false);
+    messRef.current = [];
+    const doppelt = bericht.dubletten_in_datei;
+    const erg: ImportErgebnis = {
+      angelegt: 0, aktualisiert: 0, uebersprungen: 0, fehlgeschlagen: 0, fehler: [],
+      gelesen: bericht.gesamt, doppelt, abgelehnt: Math.max(0, bericht.schlecht - doppelt),
+      offen: 0, angehalten: false, dauerMs: 0, zeilenProS: null,
+    };
+    const angelegteIds: string[] = [];
+    let jobId: string | null = null;
+    let gesamtSchreiben = 0;
+    let erledigt = 0;
+    let einspielStart = Date.now();
+    let uidFuerAlt = '';
+
+    /** Protokoll-Zeile auf den aktuellen Stand bringen (nur neues Schema). */
+    const fortschreiben = async (status: string, ende = false) => {
+      if (!jobId) return;
+      const einspielMs = Date.now() - einspielStart;
+      const rechenMs = (phasenRef.current.laden ?? 0) + (phasenRef.current.lesen ?? 0) + (phasenRef.current.pruefen ?? 0) + einspielMs;
+      await supabase.from('import_jobs').update({
+        status,
+        zeilen_ok: erg.angelegt + erg.aktualisiert,
+        zeilen_fehler: erg.fehlgeschlagen + bericht.schlecht,
+        zeilen_uebersprungen: erg.uebersprungen,
+        zeilen_gescheitert: erg.fehlgeschlagen,
+        zeilen_offen: Math.max(0, gesamtSchreiben - erledigt),
+        angelegte_ids: angelegteIds,
+        fehler: [...bericht.fehler, ...erg.fehler].slice(0, 500),
+        dauer_ms: rechenMs,
+        zeilen_pro_s: einspielMs >= 1000 && erledigt > 0 ? Math.round((erledigt / (einspielMs / 1000)) * 100) / 100 : null,
+        phasen_ms: { ...phasenRef.current, einspielen: einspielMs },
+        ...(ende ? { beendet_am: new Date().toISOString() } : {}),
+      }).eq('id', jobId);
+    };
+
+    const zeigeStand = () => {
+      messRef.current.push({ t: Date.now(), n: erledigt });
+      const tempo = tempoProMs(messRef.current);
+      setBalken({
+        phase: 'einspielen',
+        anteil: gesamtSchreiben > 0 ? erledigt / gesamtSchreiben : 1,
+        zaehler: `${zahlDe(erledigt)} von ${zahlDe(gesamtSchreiben)} Zeilen eingespielt`,
+        rest: restText(restMs(erledigt, gesamtSchreiben, tempo)),
+      });
+    };
 
     try {
-      const { data: nutzer } = await supabase.auth.getUser();
-      const uid = nutzer?.user?.id;
-      if (!uid) throw new Error('Nicht angemeldet.');
+      const { uid, betrieb } = await betriebUndIch();
+      uidFuerAlt = uid;
       // B1b-2 (26.09.26): Importierte Kontakte gehoeren dem Betrieb (beim Mitarbeiter
       // der Chef) — sonst sieht der Chef sie nicht. Andere Ziele bleiben wie bisher.
       let neuOwner = uid;
-      if (ziel.tabelle === 'kontakte') {
-        const { data: chefId } = await supabase.rpc('mein_chef_id');
-        if (typeof chefId === 'string' && chefId) neuOwner = chefId;
-      }
+      if (ziel.tabelle === 'kontakte') neuOwner = betrieb;
 
       // Bereits vorhandene Schlüssel laden — damit nichts doppelt entsteht.
+      // Schritt 0: SEITENWEISE. Supabase liefert je Abfrage hoechstens 1.000
+      // Zeilen; vorher sah die Pruefung ab dem 1.001. Eintrag nichts mehr.
+      setBalken({ phase: 'einspielen', anteil: 0, zaehler: 'Abgleich mit vorhandenen Einträgen …' });
       const vorhanden = new Map<string, string>();
       if (ziel.schluessel) {
-        // Der dynamische Spaltenname laesst sich vom Supabase-Typparser nicht
-        // aufloesen — deshalb der Umweg ueber unknown.
-        const { data: alt } = await supabase.from(ziel.tabelle).select(`id,${ziel.schluessel}`).limit(20000);
-        for (const z of ((alt ?? []) as unknown as Record<string, unknown>[])) {
-          const s = String(z[ziel.schluessel] ?? '').trim().toLowerCase();
-          if (s) vorhanden.set(s, String(z.id));
+        for (let von = 0; von < 5000000; von += LESE_SEITE) {
+          // Der dynamische Spaltenname laesst sich vom Supabase-Typparser nicht
+          // aufloesen — deshalb der Umweg ueber unknown.
+          const { data: alt, error } = await supabase.from(ziel.tabelle)
+            .select(`id,${ziel.schluessel}`).order('id').range(von, von + LESE_SEITE - 1);
+          if (error) throw new Error('Abgleich mit den vorhandenen Einträgen fehlgeschlagen: ' + error.message);
+          const liste = (alt ?? []) as unknown as Record<string, unknown>[];
+          for (const z of liste) {
+            const sch = String(z[ziel.schluessel] ?? '').trim().toLowerCase();
+            if (sch) vorhanden.set(sch, String(z.id));
+          }
+          if (liste.length < LESE_SEITE) break;
         }
       }
 
       const neu: Record<string, unknown>[] = [];
       const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
       const zuAendern: { id: string; werte: Record<string, unknown>; zeile: number }[] = [];
-      const angelegteIds: string[] = [];           // F6: fuer „Rückgängig"
 
       bericht.saetze.forEach((satz, idx) => {
         const dateiZeile = bericht.zeilenNummern?.[idx] ?? 0;
-        const s = ziel.schluessel ? String(satz[ziel.schluessel] ?? '').trim().toLowerCase() : '';
-        const treffer = s ? vorhanden.get(s) : undefined;
+        const sch = ziel.schluessel ? String(satz[ziel.schluessel] ?? '').trim().toLowerCase() : '';
+        const treffer = sch ? vorhanden.get(sch) : undefined;
         if (treffer) {
           if (beiDublette === 'aktualisieren') zuAendern.push({ id: treffer, werte: satz, zeile: dateiZeile });
           else erg.uebersprungen++;
@@ -343,68 +666,146 @@ export default function ImportCenterPage() {
         neu.push({ ...satz, owner_user_id: neuOwner });
         neuZeile.push(dateiZeile);
       });
+      gesamtSchreiben = neu.length + zuAendern.length;
 
-      // Neue Datensätze in Stapeln. Scheitert ein Stapel, wird er Zeile für Zeile
+      // Protokoll VOR dem ersten Paket anlegen (neues Schema). Gehoert dem
+      // Betrieb, erstellt_von sagt, wer es war.
+      if (neuesSchema) {
+        const { data: j } = await supabase.from('import_jobs').insert({
+          owner_user_id: betrieb,
+          erstellt_von: uid,
+          ziel: zielKey,
+          dateiname: datei.dateiname,
+          status: 'laeuft',
+          kopfzeilen: datei.kopf,
+          mapping,
+          zeilen_gesamt: bericht.gesamt,
+          zeilen_gelesen: bericht.gesamt,
+          zeilen_ok: 0,
+          zeilen_fehler: bericht.schlecht,
+          zeilen_abgelehnt: erg.abgelehnt,
+          zeilen_doppelt: doppelt,
+          zeilen_uebersprungen: erg.uebersprungen,
+          zeilen_gescheitert: 0,
+          zeilen_offen: gesamtSchreiben,
+          warnungen: bericht.warnungen.length,
+          fehler: bericht.fehler.slice(0, 500),
+          als_vorlage: merken,
+          vorlage_name: merken ? datei.dateiname : null,
+          umzug_id: umzug?.id ?? null,
+          dateigroesse: datei.groesse,
+          gestartet_am: new Date(dateiStartRef.current || Date.now()).toISOString(),
+          angelegte_ids: [],
+        }).select('id').single();
+        jobId = (j as { id: string } | null)?.id ?? null;
+      }
+
+      einspielStart = Date.now();
+      zeigeStand();
+
+      // Neue Datensätze in Paketen. Scheitert ein Paket, wird es Zeile für Zeile
       // wiederholt — nur so weiß man am Ende, WELCHE Zeile das Problem war.
-      for (let i = 0; i < neu.length; i += BATCH) {
-        const stapel = neu.slice(i, i + BATCH);
+      for (const p of pakete(neu.length, PAKET_GROESSE)) {
+        if (anhaltenRef.current) break;
+        const stapel = neu.slice(p.von, p.bis);
         const { data: neuIds, error } = await supabase.from(ziel.tabelle).insert(stapel).select('id');
         if (!error) {
           erg.angelegt += stapel.length;
           ((neuIds as { id: string }[] | null) ?? []).forEach((r) => angelegteIds.push(r.id));
-          continue;
-        }
-
-        for (let j = 0; j < stapel.length; j++) {
-          const einzeln = stapel[j];
-          const { data: eineId, error: e2 } = await supabase.from(ziel.tabelle).insert(einzeln).select('id');
-          if (e2) {
-            erg.fehlgeschlagen++;
-            erg.fehler.push({
-              zeile: neuZeile[i + j] ?? 0,
-              feld: ziel.schluessel ? String(einzeln?.[ziel.schluessel] ?? '') : '',
-              meldung: e2.message,
-            });
-          } else {
-            erg.angelegt++;
-            ((eineId as { id: string }[] | null) ?? []).forEach((r) => angelegteIds.push(r.id));
+        } else {
+          for (let j = 0; j < stapel.length; j++) {
+            const einzeln = stapel[j];
+            const { data: eineId, error: e2 } = await supabase.from(ziel.tabelle).insert(einzeln).select('id');
+            if (e2) {
+              erg.fehlgeschlagen++;
+              erg.fehler.push({
+                zeile: neuZeile[p.von + j] ?? 0,
+                feld: ziel.schluessel ? String(einzeln?.[ziel.schluessel] ?? '') : '',
+                meldung: e2.message,
+              });
+            } else {
+              erg.angelegt++;
+              ((eineId as { id: string }[] | null) ?? []).forEach((r) => angelegteIds.push(r.id));
+            }
           }
         }
+        erledigt += stapel.length;
+        zeigeStand();
+        await fortschreiben('laeuft');
       }
 
-      for (const a of zuAendern) {
-        const { error } = await supabase.from(ziel.tabelle).update(a.werte).eq('id', a.id);
-        if (error) { erg.fehlgeschlagen++; erg.fehler.push({ zeile: a.zeile, feld: '', meldung: error.message }); }
-        else erg.aktualisiert++;
+      // Aenderungen: je 10 gleichzeitig, Protokoll alle 500.
+      for (const p of pakete(anhaltenRef.current ? 0 : zuAendern.length, 10)) {
+        if (anhaltenRef.current) break;
+        await Promise.all(zuAendern.slice(p.von, p.bis).map(async (a) => {
+          const { error } = await supabase.from(ziel.tabelle).update(a.werte).eq('id', a.id);
+          if (error) { erg.fehlgeschlagen++; erg.fehler.push({ zeile: a.zeile, feld: '', meldung: error.message }); }
+          else erg.aktualisiert++;
+        }));
+        erledigt += p.bis - p.von;
+        zeigeStand();
+        if (p.bis % PAKET_GROESSE === 0) await fortschreiben('laeuft');
       }
 
-      // Protokoll schreiben — inklusive Zuordnung, damit sie wiederverwendbar ist.
-      // F6: mit angelegten ids; fehlt die neue Spalte (SQL noch nicht gelaufen),
-      // wird wie bisher ohne gespeichert.
-      const jobSatz = {
-        owner_user_id: uid,
-        ziel: zielKey,
-        dateiname: datei.dateiname,
-        status: erg.fehlgeschlagen > 0 ? 'teilweise' : 'fertig',
-        kopfzeilen: datei.kopf,
-        mapping,
-        zeilen_gesamt: bericht.gesamt,
-        zeilen_ok: erg.angelegt + erg.aktualisiert,
-        zeilen_fehler: erg.fehlgeschlagen + bericht.schlecht,
-        fehler: [...bericht.fehler, ...erg.fehler].slice(0, 500),
-        als_vorlage: merken,
-        vorlage_name: merken ? datei.dateiname : null,
-        beendet_am: new Date().toISOString(),
-      };
-      const { error: jobFehler } = await supabase.from('import_jobs').insert({ ...jobSatz, angelegte_ids: angelegteIds });
-      if (jobFehler) await supabase.from('import_jobs').insert(jobSatz);
+      erg.offen = Math.max(0, gesamtSchreiben - erledigt);
+      erg.angehalten = erg.offen > 0;
+      const einspielMs = Date.now() - einspielStart;
+      erg.dauerMs = (phasenRef.current.laden ?? 0) + (phasenRef.current.lesen ?? 0) + (phasenRef.current.pruefen ?? 0) + einspielMs;
+      erg.zeilenProS = einspielMs >= 1000 && erledigt > 0 ? erledigt / (einspielMs / 1000) : null;
+      const status = erg.angehalten ? 'angehalten' : erg.fehlgeschlagen > 0 ? 'teilweise' : 'fertig';
+
+      if (jobId) {
+        await fortschreiben(status, true);
+      } else {
+        // Alter Weg (p123-SQL noch nicht gelaufen): Protokoll am Ende, wie bisher.
+        // F6: mit angelegten ids; fehlt die Spalte, ohne.
+        const jobSatz = {
+          owner_user_id: uid,
+          ziel: zielKey,
+          dateiname: datei.dateiname,
+          status: status === 'angehalten' ? 'abgebrochen' : status,
+          kopfzeilen: datei.kopf,
+          mapping,
+          zeilen_gesamt: bericht.gesamt,
+          zeilen_ok: erg.angelegt + erg.aktualisiert,
+          zeilen_fehler: erg.fehlgeschlagen + bericht.schlecht,
+          fehler: [...bericht.fehler, ...erg.fehler].slice(0, 500),
+          als_vorlage: merken,
+          vorlage_name: merken ? datei.dateiname : null,
+          beendet_am: new Date().toISOString(),
+        };
+        const { error: jobFehler } = await supabase.from('import_jobs').insert({ ...jobSatz, angelegte_ids: angelegteIds });
+        if (jobFehler) await supabase.from('import_jobs').insert(jobSatz);
+      }
 
       setErgebnis(erg);
+      setBalken({
+        phase: erg.angehalten ? 'einspielen' : 'fertig',
+        anteil: gesamtSchreiben > 0 ? erledigt / gesamtSchreiben : 1,
+        angehalten: erg.angehalten,
+        zaehler: `${zahlDe(erledigt)} von ${zahlDe(gesamtSchreiben)} Zeilen eingespielt · ${formatDauer(erg.dauerMs)} Rechenzeit`,
+        rest: erg.zeilenProS ? `${zahlDe(erg.zeilenProS)} Zeilen pro Sekunde` : null,
+        wartet: erg.angehalten ? `angehalten — ${zahlDe(erg.offen)} Zeilen noch offen` : null,
+      });
       await verlaufLaden();
-      setHinweis(`Import abgeschlossen in ${Math.max(1, Math.round((Date.now() - start.getTime()) / 1000))} Sekunden.`);
+      setHinweis(erg.angehalten
+        ? `Import angehalten. ${zahlDe(erg.angelegt + erg.aktualisiert)} Datensätze sind drin, ${zahlDe(erg.offen)} Zeilen noch nicht.`
+        : `Import abgeschlossen in ${formatDauer(erg.dauerMs)} Rechenzeit.`);
     } catch (err: unknown) {
-      setFehler('Import fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler'));
-    } finally { setBusy(null); }
+      const meldung = err instanceof Error ? err.message : 'Fehler';
+      erg.offen = Math.max(0, gesamtSchreiben - erledigt);
+      if (jobId) {
+        try { await fortschreiben('abgebrochen', true); } catch { /* Protokoll bleibt beim letzten Paket-Stand */ }
+      }
+      setFehler(`Import abgebrochen: ${meldung}` + (erledigt > 0
+        ? ` Bis dahin ${zahlDe(erg.angelegt + erg.aktualisiert)} Datensätze übernommen — steht so im Protokoll unten.`
+        : ''));
+      setBalken((b) => (b ? { ...b, fehler: true, rest: null, wartet: 'abgebrochen' } : null));
+      if (uidFuerAlt) await verlaufLaden();
+    } finally {
+      setBusy(null);
+      anhaltenRef.current = false; setAnhaltenGewuenscht(false);
+    }
   }
 
   // --- Fehlerbericht als CSV -----------------------------------------------
@@ -441,6 +842,118 @@ export default function ImportCenterPage() {
       {/* ================= Assistent ================= */}
       <div style={styles.assistent}>
 
+        {/* --- Umzug: Gesamtbalken, Stoppuhr, Hochrechnung (Schritt 0) --- */}
+        <div style={{ ...styles.stufe, borderColor: umzug ? 'rgba(201,168,76,0.45)' : C.border }}>
+          <div style={styles.stufenTitel}>🚚 Umzug nach ARGONAUT</div>
+          {umzug && gesamt ? (
+            <>
+              <GesamtBalken
+                prozent={gesamt.prozent}
+                text={`${gesamt.fertig} von ${umzug.geplante_dateien ? umzug.geplante_dateien : '?'} Dateien`}
+                unter={[
+                  `läuft seit ${formatDauer(jetzt - Date.parse(umzug.gestartet_am))}`,
+                  gesamt.fertigUm ? `fertig ca. ${uhrzeitBerlin(gesamt.fertigUm)}` : (umzug.geplante_dateien ? 'Hochrechnung ab dem ersten Fortschritt' : 'Ohne geplante Dateizahl keine Uhrzeit-Hochrechnung'),
+                ].join(' · ')}
+              />
+              {umzugJobs.length > 0 && (
+                <div style={{ display: 'grid', gap: 7, marginTop: 12 }}>
+                  {[...umzugJobs].reverse().map((j) => {
+                    const z = zielDef(j.ziel);
+                    const stand: BalkenStand = {
+                      phase: j.status === 'laeuft' || j.status === 'angehalten' || j.status === 'abgebrochen' ? 'einspielen' : 'fertig',
+                      anteil: (j.zeilen_offen ?? 0) > 0 && (j.zeilen_gelesen ?? 0) > 0 ? 1 - (j.zeilen_offen ?? 0) / (j.zeilen_gelesen ?? 1) : 1,
+                      angehalten: j.status === 'angehalten',
+                      fehler: j.status === 'abgebrochen',
+                      zaehler: `${z ? z.label : j.ziel} · ${zahlDe(j.zeilen_ok)} übernommen${j.dauer_ms ? ` · ${formatDauer(j.dauer_ms)}` : ''}${j.status === 'rueckgaengig' ? ' · rückgängig gemacht' : ''}`,
+                    };
+                    return <DateiBalken key={j.id} name={j.dateiname ?? '—'} stand={stand} kompakt />;
+                  })}
+                </div>
+              )}
+              {schaetzung && (
+                <div style={{ color: C.dim, fontSize: 12.5, marginTop: 10 }}>
+                  Hochrechnung für {zahlDe(umzug.datenmenge ?? 0)} {umzug.datenmenge_einheit}: <b style={{ color: C.text }}>{spannenText(schaetzung.dauerVonMs, schaetzung.dauerBisMs)}</b> Rechenzeit
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                <button type="button" onClick={umzugAbschliessen} disabled={busy !== null} style={{ ...styles.btnRand, borderColor: C.gold, color: C.gold }}>
+                  ✓ Umzug abschließen
+                </button>
+                <span style={{ color: C.dim, fontSize: 12.5, alignSelf: 'center' }}>
+                  Jede Datei, die Sie jetzt unten importieren, zählt zu diesem Umzug.
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={styles.stufenText}>
+                Bringen Sie mehrere Dateien mit (Kunden, Artikel, Lieferanten …)? Dann starten Sie einen Umzug:
+                ein Gesamtbalken über alle Dateien, eine Stoppuhr und am Ende eine Abschluss-Karte.
+                Einzelne Dateien können Sie auch ohne Umzug direkt unten importieren.
+              </p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <label style={styles.feldLabel}>
+                  Wie viele Dateien?
+                  <input value={planDateien} onChange={(e) => setPlanDateien(e.target.value)} inputMode="numeric" placeholder="z. B. 13" style={{ ...styles.eingabe, width: 110 }} />
+                </label>
+                <label style={styles.feldLabel}>
+                  Datenmenge (ungefähr)
+                  <span style={{ display: 'flex', gap: 6 }}>
+                    <input value={planMenge} onChange={(e) => setPlanMenge(e.target.value)} inputMode="decimal" placeholder="z. B. 5" style={{ ...styles.eingabe, width: 110 }} />
+                    <select value={planEinheit} onChange={(e) => setPlanEinheit(e.target.value as MengenEinheit)} style={{ ...styles.eingabe, width: 100 }}>
+                      <option value="MB">MB</option><option value="GB">GB</option><option value="TB">TB</option><option value="Zeilen">Zeilen</option>
+                    </select>
+                  </span>
+                </label>
+                <button type="button" onClick={umzugStarten} disabled={!neuesSchema || busy !== null} style={{ ...styles.btnGold, opacity: !neuesSchema || busy !== null ? 0.5 : 1 }}>
+                  Umzug starten
+                </button>
+              </div>
+              {!neuesSchema && (
+                <div style={{ color: C.warn, fontSize: 12.5, marginTop: 8 }}>
+                  Die Umzug-Leiste braucht einmal das Datenbank-Update „p123-import-fortschritt". Bis dahin funktioniert der Import wie gewohnt.
+                </div>
+              )}
+            </>
+          )}
+
+          {schaetzung && !umzug && (
+            <div style={styles.schaetzKasten}>
+              <div>
+                Geschätzte Rechenzeit: <b style={{ color: C.text }}>{spannenText(schaetzung.dauerVonMs, schaetzung.dauerBisMs)}</b>
+                {planEinheit !== 'Zeilen' && <> · etwa {zahlDe(schaetzung.zeilenVon)} bis {zahlDe(schaetzung.zeilenBis)} Zeilen</>}
+              </div>
+              <div style={{ fontSize: 12, marginTop: 3 }}>Ohne die Zeit, die Sie für das Zuordnen der Spalten brauchen.</div>
+              {schaetzung.hinweise.map((h, i) => (
+                <div key={i} style={{ marginTop: 5, color: i === 0 ? C.dim : C.warn }}>{i === 0 ? 'ℹ️' : '⚠️'} {h}</div>
+              ))}
+            </div>
+          )}
+          <div style={{ color: C.dim, fontSize: 11.5, marginTop: 10, lineHeight: 1.5 }}>
+            Grenzen: CSV bis {formatBytes(GRENZEN_UMZUG.browserDateiBytes)} je Datei (wird in Ihrem Browser gelesen) ·
+            Excel bis {formatBytes(GRENZEN_UMZUG.serverDateiBytes)} je Datei (wird auf dem Server gelesen) ·
+            eingespielt wird in Paketen zu {PAKET_GROESSE} Zeilen.
+          </div>
+        </div>
+
+        {abschluss && (
+          <div style={{ ...styles.stufe, borderColor: 'rgba(76,175,125,0.55)', background: 'rgba(76,175,125,0.07)' }}>
+            <div style={{ ...styles.stufenTitel, color: C.green }}>🏁 {abschluss.name} — abgeschlossen</div>
+            <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.5 }}>{abschlussText(abschluss.summe)}</div>
+            <div style={styles.zahlenReihe}>
+              <Zahl wert={abschluss.summe.dateien} label="Dateien" farbe={C.cyan} />
+              <Zahl wert={abschluss.summe.datensaetze} label="Datensätze übernommen" farbe={C.green} />
+              <Zahl wert={abschluss.summe.warnungen} label="Warnungen" farbe={abschluss.summe.warnungen > 0 ? C.warn : C.dim} />
+              <Zahl wert={abschluss.summe.abgelehnt} label="abgelehnt (mit Grund im Bericht)" farbe={abschluss.summe.abgelehnt > 0 ? C.warn : C.dim} />
+              <Zahl wert={abschluss.summe.verschluckt} label="verschluckt" farbe={abschluss.summe.verschluckt > 0 ? C.danger : C.green} />
+            </div>
+            <div style={{ color: C.dim, fontSize: 12.5 }}>
+              Die Dauer ist die echte Zeit vom Start bis zum Abschluss — einschließlich Ihrer Zuordnungen.
+            </div>
+            <button type="button" onClick={() => setAbschluss(null)} style={{ ...styles.btnRand, marginTop: 10 }}>Schließen</button>
+          </div>
+        )}
+
         {/* --- 1 Ziel --- */}
         <div style={styles.stufe}>
           <div style={styles.stufenTitel}>1 · Was möchten Sie importieren?</div>
@@ -468,7 +981,8 @@ export default function ImportCenterPage() {
             <div style={styles.stufenTitel}>2 · Datei auswählen</div>
             <p style={styles.stufenText}>
               Excel (.xlsx) oder CSV. Die erste Zeile muss die Spaltenüberschriften enthalten.
-              Ihre Datei wird nur gelesen und <b style={{ color: C.text }}>nicht gespeichert</b>.
+              CSV liest ARGONAUT <b style={{ color: C.text }}>direkt in Ihrem Browser</b> — die Datei verlässt Ihren Rechner nicht.
+              Excel wird auf dem Server gelesen und sofort verworfen, <b style={{ color: C.text }}>nicht gespeichert</b>.
             </p>
             <div style={styles.vorlagenLeiste}>
               <span style={{ color: C.dim, fontSize: 13 }}>Noch keine passende Datei zur Hand?</span>
@@ -485,7 +999,11 @@ export default function ImportCenterPage() {
               disabled={busy !== null}
               style={styles.dateiFeld}
             />
-            {busy === 'lesen' && <div style={{ color: C.cyan, fontSize: 13.5, marginTop: 8 }}>Datei wird gelesen …</div>}
+            {balken && !bericht && (
+              <div style={{ marginTop: 10 }}>
+                <DateiBalken name={datei?.dateiname ?? 'Datei'} stand={balken} />
+              </div>
+            )}
             {datei && (
               <div style={styles.dateiInfo}>
                 <b style={{ color: C.text }}>{datei.dateiname}</b>
@@ -638,14 +1156,25 @@ export default function ImportCenterPage() {
               </span>
             </label>
 
+            {balken && (busy === 'import' || ergebnis) && (
+              <div style={{ marginTop: 14 }}>
+                <DateiBalken name={datei?.dateiname ?? 'Datei'} stand={balken} />
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
               <button
                 type="button" onClick={importieren}
                 disabled={busy !== null || bericht.gut === 0 || ergebnis !== null}
                 style={{ ...styles.btnGold, opacity: busy !== null || bericht.gut === 0 || ergebnis !== null ? 0.5 : 1 }}
               >
-                {busy === 'import' ? 'Importiert …' : ergebnis ? 'Import erledigt' : `${bericht.gut} Datensätze jetzt importieren`}
+                {busy === 'import' ? 'Importiert …' : ergebnis ? 'Import erledigt' : `${zahlDe(bericht.gut)} Datensätze jetzt importieren`}
               </button>
+              {busy === 'import' && (
+                <button type="button" onClick={anhalten} disabled={anhaltenGewuenscht} style={{ ...styles.btnRand, borderColor: C.warn, color: C.warn }}>
+                  {anhaltenGewuenscht ? 'Hält nach dem laufenden Paket an …' : '⏸ Anhalten'}
+                </button>
+              )}
               {(bericht.fehler.length > 0 || bericht.warnungen.length > 0) && (
                 <button type="button" onClick={fehlerHerunterladen} style={styles.btnRand}>⬇ Bericht als CSV</button>
               )}
@@ -656,13 +1185,43 @@ export default function ImportCenterPage() {
         {/* --- Ergebnis --- */}
         {ergebnis && (
           <div style={{ ...styles.stufe, borderColor: 'rgba(76,175,125,0.45)' }}>
-            <div style={{ ...styles.stufenTitel, color: C.green }}>✓ Import abgeschlossen</div>
+            <div style={{ ...styles.stufenTitel, color: ergebnis.angehalten ? C.warn : C.green }}>
+              {ergebnis.angehalten ? '⏸ Import angehalten' : '✓ Import abgeschlossen'}
+            </div>
             <div style={styles.zahlenReihe}>
               <Zahl wert={ergebnis.angelegt} label="neu angelegt" farbe={C.green} />
               <Zahl wert={ergebnis.aktualisiert} label="aktualisiert" farbe={C.cyan} />
-              <Zahl wert={ergebnis.uebersprungen} label="übersprungen" farbe={C.dim} />
+              <Zahl wert={ergebnis.uebersprungen} label="übersprungen (schon vorhanden)" farbe={C.dim} />
               <Zahl wert={ergebnis.fehlgeschlagen} label="fehlgeschlagen" farbe={ergebnis.fehlgeschlagen > 0 ? C.danger : C.dim} />
+              {ergebnis.offen > 0 && <Zahl wert={ergebnis.offen} label="noch offen (angehalten)" farbe={C.warn} />}
             </div>
+            {(() => {
+              const rest = verschluckt({
+                gelesen: ergebnis.gelesen, angelegt: ergebnis.angelegt, aktualisiert: ergebnis.aktualisiert,
+                uebersprungen: ergebnis.uebersprungen, abgelehnt: ergebnis.abgelehnt, doppelt: ergebnis.doppelt,
+                gescheitert: ergebnis.fehlgeschlagen, offen: ergebnis.offen,
+              });
+              return (
+                <div style={{ ...styles.hinweisKasten, marginBottom: 10 }}>
+                  <b style={{ color: C.text }}>Zeilen-Bilanz:</b> {zahlDe(ergebnis.gelesen)} gelesen = {zahlDe(ergebnis.angelegt)} neu
+                  + {zahlDe(ergebnis.aktualisiert)} aktualisiert + {zahlDe(ergebnis.uebersprungen)} übersprungen
+                  + {zahlDe(ergebnis.abgelehnt)} abgelehnt + {zahlDe(ergebnis.doppelt)} doppelt in der Datei
+                  + {zahlDe(ergebnis.fehlgeschlagen)} fehlgeschlagen{ergebnis.offen > 0 ? ` + ${zahlDe(ergebnis.offen)} offen` : ''}
+                  {' · '}<b style={{ color: rest === 0 ? C.green : C.danger }}>{zahlDe(rest)} verschluckt</b>
+                  <div style={{ marginTop: 4 }}>
+                    Rechenzeit {formatDauer(ergebnis.dauerMs)}
+                    {ergebnis.zeilenProS ? ` · ${zahlDe(ergebnis.zeilenProS)} Zeilen pro Sekunde` : ''}
+                  </div>
+                  {ergebnis.angehalten && (
+                    <div style={{ marginTop: 4, color: C.warn }}>
+                      {ziel?.schluessel
+                        ? `Weitermachen: dieselbe Datei noch einmal importieren (Einstellung „Überspringen") — schon Übernommenes wird über „${ziel.felder.find((f) => f.key === ziel.schluessel)?.label ?? ziel.schluessel}" erkannt und nicht doppelt angelegt.`
+                        : 'Diese Liste hat kein Erkennungsmerkmal. Zum Weitermachen den Import unten rückgängig machen und neu starten — sonst entstehen Doppelte.'}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {ergebnis.fehler.length > 0 && (
               <div style={styles.meldungsListe}>
                 {ergebnis.fehler.slice(0, MAX_FEHLER_ANZEIGE).map((f, i) => (
@@ -688,7 +1247,7 @@ export default function ImportCenterPage() {
         {/* --- Verlauf --- */}
         {verlauf.length > 0 && (
           <div style={styles.stufe}>
-            <div style={styles.stufenTitel}>Bisherige Importe</div>
+            <div style={styles.stufenTitel}>Letzte Importe</div>
             <div style={{ overflowX: 'auto' }}>
               <table style={styles.tabelle}>
                 <thead>
@@ -697,6 +1256,10 @@ export default function ImportCenterPage() {
                     <th style={styles.th}>Was</th>
                     <th style={styles.th}>Datei</th>
                     <th style={styles.th}>Übernommen</th>
+                    <th style={styles.th}>Größe</th>
+                    <th style={styles.th}>Dauer</th>
+                    <th style={styles.th}>Tempo</th>
+                    <th style={styles.th}>Wer</th>
                     <th style={styles.th}>Zuordnung</th>
                     <th style={styles.th}>Rückgängig</th>
                   </tr>
@@ -713,6 +1276,15 @@ export default function ImportCenterPage() {
                           <b style={{ color: j.zeilen_fehler > 0 ? C.warn : C.green }}>{j.zeilen_ok}</b>
                           <span style={{ color: C.dim }}> von {j.zeilen_gesamt}</span>
                           {j.zeilen_fehler > 0 && <span style={{ color: C.danger, fontSize: 12.5 }}> · {j.zeilen_fehler} Probleme</span>}
+                          {j.status === 'laeuft' && <span style={{ color: C.cyan, fontSize: 12.5 }}> · läuft</span>}
+                          {j.status === 'angehalten' && <span style={{ color: C.warn, fontSize: 12.5 }}> · angehalten, {zahlDe(j.zeilen_offen ?? 0)} offen</span>}
+                          {j.status === 'abgebrochen' && <span style={{ color: C.danger, fontSize: 12.5 }}> · abgebrochen</span>}
+                        </td>
+                        <td style={{ ...styles.td, fontSize: 12.5, color: C.dim, whiteSpace: 'nowrap' }}>{j.dateigroesse ? formatBytes(j.dateigroesse) : '—'}</td>
+                        <td style={{ ...styles.td, fontSize: 12.5, whiteSpace: 'nowrap' }}>{j.dauer_ms ? formatDauer(j.dauer_ms) : '—'}</td>
+                        <td style={{ ...styles.td, fontSize: 12.5, color: C.dim, whiteSpace: 'nowrap' }}>{j.zeilen_pro_s ? `${zahlDe(Number(j.zeilen_pro_s))} Z./s` : '—'}</td>
+                        <td style={{ ...styles.td, fontSize: 12.5, color: C.dim }}>
+                          {!j.erstellt_von ? '—' : j.erstellt_von === ich ? 'Sie' : (namen[j.erstellt_von] ?? 'Chef')}
                         </td>
                         <td style={{ ...styles.td, fontSize: 12.5, color: j.als_vorlage ? C.cyan : C.dim }}>
                           {j.als_vorlage ? '✓ gemerkt' : '—'}
@@ -733,6 +1305,17 @@ export default function ImportCenterPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {letzteUmzuege.length > 0 && (
+          <div style={styles.stufe}>
+            <div style={styles.stufenTitel}>Letzte Umzüge</div>
+            {letzteUmzuege.map((u) => (
+              <div key={u.id} style={{ fontSize: 13, lineHeight: 1.7, color: C.dim }}>
+                <b style={{ color: C.text }}>{fmtZeit(u.gestartet_am)}</b> · {u.zusammenfassung ? abschlussText(u.zusammenfassung) : `Umzug fertig in ${formatDauer(u.dauer_ms)}`}
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -864,6 +1447,9 @@ const styles: Record<string, CSSProperties> = {
   merkenZeile: { display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 14, fontSize: 13.5, lineHeight: 1.55, cursor: 'pointer' },
   dateiFeld: { width: '100%', boxSizing: 'border-box', background: 'rgba(10,22,40,0.7)', border: `1px dashed ${C.border}`, borderRadius: 10, padding: '14px', color: C.text, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' },
   dateiInfo: { marginTop: 10, color: C.dim, fontSize: 13 },
+  feldLabel: { display: 'grid', gap: 5, color: C.dim, fontSize: 12.5, fontWeight: 700 },
+  eingabe: { padding: '9px 11px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'rgba(10,22,40,0.7)', color: C.text, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' },
+  schaetzKasten: { marginTop: 12, border: '1px solid rgba(0,229,255,0.2)', borderRadius: 10, padding: '10px 12px', background: 'rgba(0,229,255,0.05)', color: C.dim, fontSize: 13, lineHeight: 1.55 },
 
   tabelle: { width: '100%', borderCollapse: 'collapse', fontSize: 13.5 },
   th: { textAlign: 'left', color: C.dim, fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6, padding: '8px 8px', borderBottom: `1px solid ${C.border}` },

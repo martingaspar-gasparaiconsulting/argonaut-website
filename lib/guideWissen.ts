@@ -1311,16 +1311,18 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/import': {
     zweck: 'Bringt bestehende Daten aus einer Excel- oder CSV-Datei in ARGONAUT, in vier Stufen: Ziel wählen, Datei laden, Spalten zuordnen, prüfen und importieren. Direkt hier: Kunden & Kontakte, Artikel & Preise, Lieferanten und Offene Posten; für weitere Bereiche Vorlagen und der Sprung ins jeweilige Modul.',
     wer: 'beide',
-    werText: 'Wer das Modul „Import-Center“ hat, darf importieren. Unter „Bisherige Importe“ macht „↺ … löschen“ einen Import rückgängig: es löscht die Datensätze, die dieser Import neu angelegt hat (nicht bei Offenen Posten). Geänderte bestehende Datensätze bleiben geändert.',
+    werText: 'Wer das Modul „Import-Center“ hat, darf importieren. Unter „Letzte Importe“ macht „↺ … löschen“ einen Import rückgängig: es löscht die Datensätze, die dieser Import neu angelegt hat (nicht bei Offenen Posten). Geänderte bestehende Datensätze bleiben geändert.',
     schritte: [
+      'Mehrere Dateien? Oben unter „🚚 Umzug nach ARGONAUT“ die Zahl der Dateien und die ungefähre Datenmenge eintragen: Sie sehen sofort die geschätzte Rechenzeit. „Umzug starten“ zeigt danach einen Gesamtbalken mit Uhrzeit „fertig ca.“, am Ende „✓ Umzug abschließen“ ergibt die Abschluss-Karte',
       '„1 · Was möchten Sie importieren?“: Kunden & Kontakte, Artikel & Preise, Lieferanten oder Offene Posten anklicken',
       '„2 · Datei auswählen“: Excel oder CSV mit Überschriften in der ersten Zeile. Ohne passende Datei zuerst „⬇ Mustervorlage“ laden',
       '„3 · Spalten zuordnen“: je Spalte das Feld wählen oder „— nicht importieren“ (Pflichtfelder mit *), dann „Prüfen — was käme an?“',
       '„4 · Prüfergebnis“ lesen. Bei vorhandenen Einträgen „Überspringen“ oder „Aktualisieren — Vorhandenes wird überschrieben“ wählen',
-      '„… Datensätze jetzt importieren“ und die Rückfrage bestätigen. „Ergebnis ansehen ›“ führt zum Zielbereich',
+      '„… Datensätze jetzt importieren“ und die Rückfrage bestätigen. Der Balken zeigt Laden, Lesen, Prüfen, Einspielen und die Restzeit; eingespielt wird in Paketen zu 500 Zeilen. „⏸ Anhalten“ stoppt nach dem laufenden Paket — was drin ist, steht im Protokoll. „Ergebnis ansehen ›“ führt zum Zielbereich',
+      'Die Zeilen-Bilanz im Ergebnis muss „0 verschluckt“ zeigen: jede Zeile ist übernommen, übersprungen, abgelehnt (mit Grund) oder doppelt',
       '„Diese Spalten-Zuordnung merken“ übernimmt die Zuordnung beim nächsten Import mit gleichem Datei-Aufbau',
     ],
-    probe: { anlegen: 'Eine kleine Datei mit ein bis zwei Zeilen importieren, z. B. die „⬇ Mustervorlage“ für „Lieferanten“.', loeschen: 'Unter „Bisherige Importe“ beim Probe-Import „↺ … löschen“ klicken und bestätigen. Offene Posten lassen sich nur unter Rechnungen stornieren.' },
+    probe: { anlegen: 'Eine kleine Datei mit ein bis zwei Zeilen importieren, z. B. die „⬇ Mustervorlage“ für „Lieferanten“.', loeschen: 'Unter „Letzte Importe“ beim Probe-Import „↺ … löschen“ klicken und bestätigen. Offene Posten lassen sich nur unter Rechnungen stornieren.' },
     landetIn: [{ text: 'Vertrieb/CRM (Kontakte)', href: '/dashboard/crm' }, { text: 'ERP/Lager (Artikel)', href: '/dashboard/erp' }, { text: 'Rechnungen (offene Posten)', href: '/dashboard/rechnungen' }],
   },
   '/dashboard/automationen': {
