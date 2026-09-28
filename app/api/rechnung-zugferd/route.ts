@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { NextRequest, NextResponse } from 'next/server';
 import { baueZugferdXml } from '../../../lib/zugferd';
 import { baueZugferdPdf } from '../../../lib/zugferd-pdf';
@@ -20,6 +21,9 @@ import { baueZugferdPdf } from '../../../lib/zugferd-pdf';
 // ============================================================
 
 export async function POST(req: NextRequest) {
+  // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   try {
     const body = await req.json();
 

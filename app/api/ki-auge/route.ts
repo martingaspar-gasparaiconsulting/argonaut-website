@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 import { RECHTS_VORBEHALT, brauchtVorbehalt } from '@/lib/augeVorbehalt'
 // app/api/ki-auge/route.ts
@@ -45,6 +46,9 @@ function extrahiereJson(text: string): AugeAntwort | null {
 }
 
 export async function POST(req: Request) {
+  // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   try {
     const body = await req.json().catch(() => null);
     const modul: string = (body?.modul || "").toString().trim();

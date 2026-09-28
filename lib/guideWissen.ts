@@ -1358,7 +1358,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Automationen', href: '/dashboard/automationen' }, { text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Mahnwesen (Mahnstufe)', href: '/dashboard/mahnwesen' }],
   },
   '/dashboard/einstellungen': {
-    zweck: 'Firmenprofil und Grundeinstellungen: Anschrift, Kontakt, Registerdaten, Steuer, Bankverbindung, Kleinunternehmer-Regel und Akzentfarbe für Dokumente — dazu Anfahrt und Fahrtkosten, API-Schlüssel, Modul-Auswahl fürs Menü und das eigene Passwort.',
+    zweck: 'Firmenprofil und Grundeinstellungen: Anschrift, Kontakt, Registerdaten, Steuer, Bankverbindung, Kleinunternehmer-Regel und Akzentfarbe für Dokumente — dazu Anfahrt und Fahrtkosten, Modul-Auswahl fürs Menü und das eigene Passwort.',
     wer: 'chef',
     werText: 'Alle sehen die Seite, aber nur der Chef pflegt das Firmenprofil. Ein Mitarbeiter sieht hier nur „Mein Konto“ mit Name und Anmelde-Adresse.',
     schritte: [
@@ -1367,11 +1367,10 @@ export const WISSEN: Record<string, SeitenWissen> = {
       '„Ich bin Kleinunternehmer (§ 19 UStG)“ nur anhaken, wenn es zutrifft — dann ohne Umsatzsteuer mit gesetzlichem Hinweis. Danach „Firmenprofil speichern“',
       'Auf der Rechnung stehen Firmenname, Anschrift, Telefon, E-Mail, USt-IdNr./Steuernummer und Bankverbindung; das Angebots-PDF zeigt zusätzlich Website, Rechtsform, Geschäftsführer, Registergericht, HRB und die Akzentfarbe',
       '„Anfahrt & Entfernungen“: Betriebsstandort anlegen, Schlüssel mit „Prüfen und speichern“ hinterlegen, Fahrtkosten-Stufen eintragen und „Einstellungen speichern“',
-      '„Automatisierung“: „+ Schlüssel erzeugen“ (höchstens fünf) — er wird nur einmal angezeigt, gleich „📋 Kopieren“',
       '„🧩 Module & Ansicht“: nicht benötigte Bereiche ausschalten und „Speichern“ — nur das Menü wird kleiner, die Daten bleiben',
       '„🔑 Passwort ändern“: aktuelles und zweimal das neue Passwort (mind. 8 Zeichen); danach werden andere Geräte abgemeldet',
     ],
-    probe: { anlegen: 'Einen API-Schlüssel „Test“ über „+ Schlüssel erzeugen“ anlegen.', loeschen: '„Widerrufen“ am Schlüssel, mit Rückfrage.' },
+    probe: { anlegen: 'In „🧩 Module & Ansicht“ ein nicht benötigtes Modul ausschalten und „Speichern“ — nur das Menü wird kleiner.', loeschen: 'Das Modul dort wieder einschalten und „Speichern“.' },
     landetIn: [{ text: 'Rechnungen (Absender, Steuer, Bank)', href: '/dashboard/rechnungen' }, { text: 'Angebote (Briefkopf und Fußzeile)', href: '/dashboard/angebote' }],
   },
 

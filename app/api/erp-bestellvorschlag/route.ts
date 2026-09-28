@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E9 KI-Bestellvorschlag (API-Route)
@@ -32,6 +33,9 @@ function fallback(artikel: ArtikelInput[]) {
 }
 
 export async function POST(req: Request) {
+  // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   let artikel: ArtikelInput[] = [];
   try {
     const body = await req.json();

@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -34,6 +35,9 @@ Regeln:
 - Wenn die Beschreibung zu vage ist, triff sinnvolle, branchenübliche Standard-Annahmen.`;
 
 export async function POST(req: NextRequest) {
+  // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   try {
     const { beschreibung } = await req.json();
     if (!beschreibung || typeof beschreibung !== 'string' || beschreibung.trim().length < 3) {

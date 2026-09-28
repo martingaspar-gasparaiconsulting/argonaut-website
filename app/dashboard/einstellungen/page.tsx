@@ -4,7 +4,6 @@ import EinstellungenClient, { type FirmaProfil } from './EinstellungenClient'
 import ModulFreischaltung from './ModulFreischaltung'
 import PasswortAendern from './PasswortAendern'
 import AnfahrtEinstellungen from './AnfahrtEinstellungen'
-import ApiSchluesselKarte from './ApiSchluesselKarte'
 
 // ============================================================
 // ARGONAUT OS · Einstellungen
@@ -59,7 +58,7 @@ export default async function EinstellungenPage() {
         </div>
         <EinstellungenClient profil={profil} />
         <AnfahrtEinstellungen />
-        <ApiSchluesselKarte />
+        {/* Paket S0: API-Schlüssel (Zugang von außen) ausgeblendet — die Preisauskunft ist abgeschaltet. */}
         <ModulFreischaltung />
         <PasswortAendern />
       </main>

@@ -66,7 +66,16 @@ function fehler(nachricht: string, code: string, status: number) {
   return NextResponse.json({ ok: false, error: nachricht, code }, { status });
 }
 
+// Paket S0 (28.09.2026): ABGESCHALTET. Martins Regel: Was ein Betrieb intern
+// rechnet oder verschickt, wird nie von außen angestoßen. Diese Tür war für n8n
+// (per API-Schlüssel von außen in die Betriebsdaten) — n8n ist entfernt.
+// Wieder öffnen nur nach Martins ausdrücklicher Freigabe: hier auf true setzen.
+const VON_AUSSEN_OFFEN = false as boolean;
+
 export async function POST(req: Request) {
+  if (!VON_AUSSEN_OFFEN) {
+    return NextResponse.json({ ok: false, error: 'Diese Schnittstelle ist abgeschaltet.' }, { status: 410 });
+  }
   try {
     // --- 1. Wer fragt? Der Schlüssel entscheidet. -------------------------
     const roh = schluesselAusAnfrage(req);

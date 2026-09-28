@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 6 (Rechnung) · Block C-4 — KI-Mahnschreiben-Assistent
@@ -39,6 +40,9 @@ const STUFE_HINWEIS: Record<number, string> = {
 };
 
 export async function POST(req: Request) {
+  // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   let m: MahnInput = {};
   try {
     const body = await req.json();

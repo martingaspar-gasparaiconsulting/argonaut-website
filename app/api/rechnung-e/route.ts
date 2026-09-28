@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { NextRequest, NextResponse } from 'next/server';
 import { baueZugferdXml, type ZugferdPartei, type ZugferdProfil } from '../../../lib/zugferd';
 import { createClient } from '@/lib/supabase-server';
@@ -20,6 +21,9 @@ import { createClient } from '@/lib/supabase-server';
 // ============================================================
 
 export async function POST(req: NextRequest) {
+  // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   try {
     const body = await req.json();
 

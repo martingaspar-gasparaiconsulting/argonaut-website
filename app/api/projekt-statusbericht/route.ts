@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -88,6 +89,9 @@ function baueHtml(projekt: any, bericht: any, kennzahlen: any): string {
 }
 
 export async function POST(req: NextRequest) {
+  // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   try {
     const body = await req.json();
     const projekt = body?.projekt;

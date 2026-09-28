@@ -5,6 +5,7 @@
 // Kein Supabase-/Service-Key-Zugriff nötig → minimale Angriffsfläche.
 // Pfad: app/api/hr/ki-auswertung/route.ts
 // ============================================================
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -25,6 +26,9 @@ type Payload = {
 type AnthropicBlock = { type: string; text?: string };
 
 export async function POST(req: NextRequest) {
+  // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {

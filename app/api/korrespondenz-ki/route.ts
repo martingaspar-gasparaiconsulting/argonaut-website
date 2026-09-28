@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 12 · K4 KI-Brief-Assistent (API-Route)
@@ -28,6 +29,9 @@ const ART_HINWEIS: Record<string, string> = {
 };
 
 export async function POST(req: Request) {
+  // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   let b: BriefInput = {};
   try {
     const body = await req.json();
