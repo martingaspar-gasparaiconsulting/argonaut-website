@@ -38,6 +38,7 @@ import {
   type Preis, type Mengenrabatt,
 } from '../_components/preisLogik';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -101,6 +102,8 @@ const LEER_RABATT: RabattForm = { ab_menge: '', rabatt_prozent: '', einheit: '',
 
 export default function HolzSortimentPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 165: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [liste, setListe] = useState<Sortiment[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -127,6 +130,7 @@ export default function HolzSortimentPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
     })();
   }, []);
 
@@ -214,7 +218,7 @@ export default function HolzSortimentPage() {
     setSpeichert(true); setFehler(null);
     try {
       const payload = {
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         holzart: entwurf.holzart,
         scheitlaenge_cm: entwurf.scheitlaenge_cm,
         trocknungsgrad: entwurf.trocknungsgrad,
@@ -317,7 +321,7 @@ export default function HolzSortimentPage() {
     setPreisSpeichert(true); setFehler(null);
     try {
       const payload = zeilen.map((z) => ({
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         sortiment_id: form.id as string,
         einheit: z.einheit,
         preis_netto: z.preis_netto,
@@ -364,7 +368,7 @@ export default function HolzSortimentPage() {
     if (!window.confirm(`Rabattstaffel anlegen?\n\n• ab ${entwurf.ab_menge} ${einh} = ${entwurf.rabatt_prozent} %\n• Gilt für: ${geltung}`)) return;
 
     try {
-      const { error } = await supabase.from('holz_mengenrabatt').insert({ owner_user_id: uid, ...entwurf });
+      const { error } = await supabase.from('holz_mengenrabatt').insert({ owner_user_id: besitzer ?? uid, ...entwurf });
       if (error) throw error;
       setRabattForm(LEER_RABATT);
       await laden_();

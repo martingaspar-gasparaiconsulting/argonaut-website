@@ -21,6 +21,7 @@ import {
 } from '../_components/buchungsLogik';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const MODUL = 'buchungen';
 
@@ -92,6 +93,8 @@ function buchLeer(resId: string): BuchForm {
 
 export default function BuchungenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 165: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [ressourcen, setRessourcen] = useState<RessourceRow[]>([]);
   const [buchungen, setBuchungen] = useState<BuchungRow[]>([]);
   const [laden, setLaden] = useState(true);
@@ -116,6 +119,7 @@ export default function BuchungenPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
     })();
   }, []);
 
@@ -165,7 +169,6 @@ export default function BuchungenPage() {
     setSpeichert(true); setFehler(null);
     try {
       const payload = {
-        owner_user_id: uid,
         bezeichnung: resForm.bezeichnung.trim(),
         typ: resForm.typ,
         farbe: resForm.farbe,
@@ -174,7 +177,7 @@ export default function BuchungenPage() {
         aktualisiert_am: new Date().toISOString(),
       };
       if (istNeu) {
-        const { error } = await supabase.from('ressourcen').insert(payload);
+        const { ergebnis: { error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('ressourcen').insert(d));
         if (error) throw error;
       } else {
         const { error } = await supabase.from('ressourcen').update(payload).eq('id', resForm.id);
@@ -240,7 +243,6 @@ export default function BuchungenPage() {
     setSpeichert(true); setFehler(null);
     try {
       const payload = {
-        owner_user_id: uid,
         ressource_id: buchForm.ressource_id,
         titel: buchForm.titel.trim(),
         beschreibung: buchForm.beschreibung.trim() || null,
@@ -254,7 +256,7 @@ export default function BuchungenPage() {
         if (error) throw error;
         try { await speichereWerte(MODUL, buchForm.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
-        const { data: neu, error } = await supabase.from('buchungen').insert(payload).select('id').single();
+        const { ergebnis: { data: neu, error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('buchungen').insert(d).select('id').single());
         if (error) throw error;
         try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }

@@ -28,6 +28,7 @@ import {
 import { einheitKurz, holzartName, formatZahl } from '../../_components/holzLogik';
 import { trocknungsgradName, type Sortiment } from '../../_components/sortimentLogik';
 import { eur, type Preis } from '../../_components/preisLogik';
+import { betriebsKennung } from '@/lib/betriebBesitzer';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -187,6 +188,8 @@ export default function PreislisteImportPage() {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth?.user?.id;
       if (!uid) { setFehler('Nicht angemeldet.'); return; }
+      // 165: Preise/Sortiment gehoeren dem BETRIEB (upsert-Schluessel enthaelt den Besitzer)
+      const betrieb = betriebsKennung((await supabase.rpc('mein_chef_id')).data, uid) ?? uid;
 
       for (let i = 0; i < zuUebernehmen.length; i++) {
         const z = zuUebernehmen[i];
@@ -198,7 +201,7 @@ export default function PreislisteImportPage() {
           const { data: variante, error: vFehler } = await supabase
             .from('holz_sortiment')
             .upsert({
-              owner_user_id: uid,
+              owner_user_id: betrieb,
               holzart: z.holzart,
               scheitlaenge_cm: z.scheitlaenge_cm,
               trocknungsgrad: z.trocknungsgrad,
@@ -221,7 +224,7 @@ export default function PreislisteImportPage() {
             if (alt && !ueberschreiben) { uebersprungen++; continue; }
 
             const { error: pFehler } = await supabase.from('holz_preise').upsert({
-              owner_user_id: uid,
+              owner_user_id: betrieb,
               sortiment_id: variante.id as string,
               einheit: p.einheit,
               preis_netto: p.preis_netto,

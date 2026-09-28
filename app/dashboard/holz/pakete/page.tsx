@@ -28,6 +28,7 @@ import {
   type Paket, type PaketPosition,
 } from '../../_components/paketLogik';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -66,6 +67,8 @@ function num(s: string): number | null { return leseZahl(s); }
 
 export default function PaketePage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 165: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [erfolg, setErfolg] = useState<string | null>(null);
@@ -96,6 +99,7 @@ export default function PaketePage() {
       const id = auth?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); return; }
       setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
 
       const [pRes, ppRes, sRes, prRes] = await Promise.all([
         supabase.from('pakete').select('*').order('bezeichnung'),
@@ -230,7 +234,7 @@ export default function PaketePage() {
       let id = paketId;
 
       const kopf = {
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         bezeichnung: entwurfPaket.bezeichnung,
         beschreibung: entwurfPaket.beschreibung,
         fixpreis_netto: entwurfPaket.fixpreis_netto,
@@ -256,7 +260,7 @@ export default function PaketePage() {
       const altIds = ((altePos as { id: string }[] | null) ?? []).map((r) => r.id);
 
       const zeilen = entwurfPositionen.map((p, i) => ({
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         paket_id: id,
         position_nr: i + 1,
         art: p.art,

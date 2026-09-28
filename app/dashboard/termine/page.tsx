@@ -170,11 +170,15 @@ export default function TermineCockpit() {
     setFehler(null);
     setOk(null);
     try {
+      // 165: Besitzer setzt die Datenbank (termine_set_owner: Betrieb, beim
+      // Mitarbeiter die Kennung des Chefs) — vorher gehoerte der Termin dem Mitarbeiter.
+      // Ende ist live Pflicht (ende_am NOT NULL, > Beginn): ohne Angabe 1 Stunde.
+      const beginnD = new Date(beginn);
+      const endeD = ende ? new Date(ende) : new Date(beginnD.getTime() + 60 * 60 * 1000);
       const payload = {
-        owner_user_id: uid,
         titel: titel.trim(),
-        beginn_am: new Date(beginn).toISOString(),
-        ende_am: ende ? new Date(ende).toISOString() : null,
+        beginn_am: beginnD.toISOString(),
+        ende_am: (endeD > beginnD ? endeD : new Date(beginnD.getTime() + 60 * 60 * 1000)).toISOString(),
         ort: ort.trim() || null,
         status: "geplant",
         kunde_email: wer.trim() || null,

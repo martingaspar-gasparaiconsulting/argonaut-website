@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import {
   QUELLEN, MERKMALE, OPERATOREN, WERBE_STATUS_TEXT,
   merkmal, merkmaleFuer, operatorenFuer, istErlaubt,
@@ -156,16 +157,18 @@ export default function SegmentePage() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) { setMeldung('Nicht angemeldet.'); return; }
       const satzDaten = {
-        owner_user_id: user.id,
         name: name.trim(),
         quelle,
         verknuepfung,
         regeln: regeln as unknown as object,
         geaendert_am: new Date().toISOString(),
       };
+      // 165: neue Gruppe gehoert dem Betrieb (beim Mitarbeiter die Kennung des Chefs);
+      // beim Aendern bleibt der Besitzer, wie er ist.
+      const { data: chef } = await sb.rpc('mein_chef_id');
       const { error } = bearbeitet
         ? await sb.from(TABELLE).update(satzDaten).eq('id', bearbeitet)
-        : await sb.from(TABELLE).insert(satzDaten);
+        : (await anlegenFuerBetrieb(satzDaten, betriebsKennung(chef, user.id), user.id, (d) => sb.from(TABELLE).insert(d))).ergebnis;
       if (error) setMeldung('Nicht gespeichert: ' + error.message);
       else { setMeldung('Gespeichert: „' + name.trim() + '"'); await ladeSegmente(); }
     } catch (e) {

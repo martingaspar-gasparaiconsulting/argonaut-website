@@ -15,6 +15,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import BewertungAntwort from '../_components/BewertungAntwort';
 import { zahlText } from '@/lib/zahlen';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const MODUL = 'bewertungsanfragen';
 
@@ -42,6 +43,8 @@ function sterneText(n: number | null): string { return '★'.repeat(Math.max(0, 
 
 export default function BewertungenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 165: Anfragen gehoeren dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [firma, setFirma] = useState('');
   const [liste, setListe] = useState<Anfrage[]>([]);
   const [laden, setLaden] = useState(true);
@@ -67,7 +70,11 @@ export default function BewertungenPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
-      const { data: p } = await supabase.from('profiles').select('firma_name').eq('id', id).maybeSingle();
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      const betrieb = betriebsKennung(chef, id);
+      setBesitzer(betrieb);
+      // Firmenname des Betriebs (nicht des Mitarbeiter-Profils) fuer die Einladung
+      const { data: p } = await supabase.from('profiles').select('firma_name').eq('id', betrieb ?? id).maybeSingle();
       setFirma((p?.firma_name as string) || '');
     })();
   }, []);
@@ -94,11 +101,12 @@ export default function BewertungenPage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setFehler('Bitte eine gültige E-Mail angeben.'); return; }
     setBusy(true); setFehler(null); setOk(null);
     try {
-      const token = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + Math.round(Math.random() * 1e9);
-      const { data: neu, error } = await supabase.from('bewertungsanfragen').insert({
-        owner_user_id: uid, kunde_name: name.trim() || null, kunde_email: email.trim(),
+      // 165: kein ratbarer Rueckfall mehr (Date.now + Math.random) — der Link ist der Zugang.
+      const token = crypto.randomUUID();
+      const { ergebnis: { data: neu, error } } = await anlegenFuerBetrieb({
+        kunde_name: name.trim() || null, kunde_email: email.trim(),
         token, status: 'offen', quelle: 'manuell',
-      }).select('id').single();
+      }, besitzer, uid, (d) => supabase.from('bewertungsanfragen').insert(d).select('id').single());
       if (error) throw error;
       try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       setNmExtra({});

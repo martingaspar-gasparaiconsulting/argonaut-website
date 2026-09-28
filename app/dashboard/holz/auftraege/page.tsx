@@ -58,6 +58,7 @@ import { eur, steuerAusweisZeilen, type Position } from '../../_components/posit
 import { lieferscheinPdf } from '../../_components/lieferscheinPdf';
 import { klappeAuf, paketKurz, type Paket, type PaketPosition } from '../../_components/paketLogik';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -102,6 +103,8 @@ function datumHuebsch(iso: string | null): string {
 
 export default function AuftraegePage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 165: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [erfolg, setErfolg] = useState<string | null>(null);
@@ -154,6 +157,7 @@ export default function AuftraegePage() {
       const id = auth?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); return; }
       setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
 
       const [aRes, sRes, pRes, rRes, kRes, stRes, kontRes, firmRes, profRes, pkRes, ppRes] = await Promise.all([
         supabase.from('holz_auftraege').select('*').order('erstellt_am', { ascending: false }),
@@ -508,7 +512,7 @@ export default function AuftraegePage() {
       let nr = nummer;
 
       const kopf: Record<string, unknown> = {
-        owner_user_id: uid,
+        owner_user_id: besitzer ?? uid,
         status,
         kontakt_id: kunde?.art === 'kontakt' ? kunde.empf.id : null,
         ziel_firma_id: kunde?.art === 'firma' ? kunde.empf.id : null,
@@ -526,7 +530,7 @@ export default function AuftraegePage() {
       };
 
       if (istNeu) {
-        const { data: nrData } = await supabase.rpc('naechste_holz_auftragsnummer', { p_owner: uid });
+        const { data: nrData } = await supabase.rpc('naechste_holz_auftragsnummer', { p_owner: besitzer ?? uid });
         nr = (nrData as string) ?? null;
         const { data, error } = await supabase.from('holz_auftraege').insert({ ...kopf, nummer: nr }).select('id').single();
         if (error) throw error;
@@ -549,7 +553,7 @@ export default function AuftraegePage() {
         const altIds = ((altePos as { id: string }[] | null) ?? []).map((r) => r.id);
 
         const zeilen = befund.positionen.map((p) => ({
-          owner_user_id: uid,
+          owner_user_id: besitzer ?? uid,
           auftrag_id: id,
           position_nr: p.position_nr,
           art: p.art,

@@ -79,7 +79,7 @@ export async function POST(req: Request) {
 
   await Promise.all(ziel.map(async (e) => {
     try {
-      const token = (globalThis.crypto && globalThis.crypto.randomUUID) ? globalThis.crypto.randomUUID() : `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const token = globalThis.crypto.randomUUID(); // 165: kein ratbarer Rueckfall
       const { error } = await supabase.from('bewertungsanfragen').insert({
         owner_user_id: user.id,
         kunde_name: e.name || null,

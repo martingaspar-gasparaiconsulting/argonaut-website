@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../../_components/KiAuge';
 import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -55,6 +56,8 @@ function leerForm(): Form { return { id: null, mitarbeiter_name: '', art: 'motor
 
 export default function ForstNachweisePage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 165: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [liste, setListe] = useState<Nachweis[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -75,6 +78,7 @@ export default function ForstNachweisePage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id); await ladeListe(); setLaden(false);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
     })();
   }, [ladeListe]);
 
@@ -99,7 +103,7 @@ export default function ForstNachweisePage() {
     const ausg = form.ausgestellt_am || null;
     const naechste = ausg && intervall > 0 ? plusMonate(ausg, intervall) : null;
     const payload = {
-      owner_user_id: uid, mitarbeiter_name: form.mitarbeiter_name.trim(), art: form.art,
+      mitarbeiter_name: form.mitarbeiter_name.trim(), art: form.art,
       bezeichnung: form.bezeichnung.trim() || null, ausgestellt_am: ausg,
       intervall_monate: intervall, naechste_faellig: naechste, notiz: form.notiz.trim() || null,
     };
@@ -108,7 +112,7 @@ export default function ForstNachweisePage() {
         const { error } = await supabase.from('forst_nachweis').update(payload).eq('id', form.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('forst_nachweis').insert(payload);
+        const { ergebnis: { error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('forst_nachweis').insert(d));
         if (error) throw error;
       }
       setOk(form.id ? 'Gespeichert.' : 'Nachweis erfasst.'); setForm(leerForm()); await ladeListe();

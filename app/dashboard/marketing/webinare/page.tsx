@@ -28,6 +28,7 @@ import {
   STATUS_AKTIV, STATUS_ABGEMELDET,
 } from '@/lib/webinar';
 import { kontaktAusAnmeldung, uebernehmbar } from '@/lib/webinarKontakt';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -75,6 +76,7 @@ function isoZuLokal(iso: string | null): string {
 
 export default function WebinareSeite() {
   const [uid, setUid] = useState<string | null>(null);
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [webinare, setWebinare] = useState<Webinar[]>([]);
   const [termine, setTermine] = useState<Termin[]>([]);
   const [anmeldungen, setAnmeldungen] = useState<Anmeldung[]>([]);
@@ -123,7 +125,11 @@ export default function WebinareSeite() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
-      await alles(id);
+      // 165: Webinare gehoeren dem BETRIEB — Mitarbeiter sehen und pflegen die des Chefs
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      const betrieb = betriebsKennung(chef, id);
+      setBesitzer(betrieb);
+      await alles(betrieb ?? id);
     })();
   }, [alles]);
 
@@ -134,18 +140,17 @@ export default function WebinareSeite() {
     if (!nTitel.trim()) { setFehler('Bitte geben Sie einen Titel an.'); return; }
     setBusy('neu'); setFehler(null);
     try {
-      const { error } = await supabase.from('webinare').insert({
-        owner_user_id: uid,
+      const { ergebnis: { error } } = await anlegenFuerBetrieb({
         key: neuerSchluessel(),
         titel: nTitel.trim(),
         beschreibung: nBeschreibung.trim(),
         referent: nReferent.trim(),
         aktiv: false,
-      });
+      }, besitzer, uid, (d) => supabase.from('webinare').insert(d));
       if (error) throw error;
       setNTitel(''); setNBeschreibung(''); setNReferent(''); setNeuAuf(false);
       setOk('Webinar angelegt. Setzen Sie jetzt einen Termin mit Zugangslink.');
-      await alles(uid);
+      await alles(besitzer ?? uid);
     } catch (e) { setFehler('Anlegen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }
@@ -156,19 +161,18 @@ export default function WebinareSeite() {
     if (!iso) { setFehler('Bitte geben Sie Datum und Uhrzeit an.'); return; }
     setBusy('termin'); setFehler(null);
     try {
-      const { error } = await supabase.from('webinar_termin').insert({
-        owner_user_id: uid,
+      const { ergebnis: { error } } = await anlegenFuerBetrieb({
         webinar_id: w.id,
         beginnt_am: iso,
         dauer_minuten: Math.max(5, Math.floor(Number(tDauer)) || 60),
         kapazitaet: tKapazitaet.trim() === '' ? null : Math.max(1, Math.floor(Number(tKapazitaet)) || 0) || null,
         zugang_url: tZugang.trim() || null,
         status: TERMIN_GEPLANT,
-      });
+      }, besitzer, uid, (d) => supabase.from('webinar_termin').insert(d));
       if (error) throw error;
       setTBeginn(''); setTDauer('60'); setTKapazitaet(''); setTZugang('');
       setOk('Termin gesetzt.');
-      await alles(uid);
+      await alles(besitzer ?? uid);
     } catch (e) { setFehler('Termin anlegen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }
@@ -179,7 +183,7 @@ export default function WebinareSeite() {
     try {
       const { error } = await supabase.from('webinar_termin').update(werte).eq('id', t.id);
       if (error) throw error;
-      await alles(uid);
+      await alles(besitzer ?? uid);
     } catch (e) { setFehler('Ändern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }
@@ -190,7 +194,7 @@ export default function WebinareSeite() {
     try {
       const { error } = await supabase.from('webinare').update(werte).eq('id', w.id);
       if (error) throw error;
-      await alles(uid);
+      await alles(besitzer ?? uid);
     } catch (e) { setFehler('Ändern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }
@@ -201,7 +205,7 @@ export default function WebinareSeite() {
     try {
       const { error } = await supabase.from('webinar_anmeldung').update({ teilnahme: wert }).eq('id', a.id);
       if (error) throw error;
-      await alles(uid);
+      await alles(besitzer ?? uid);
     } catch (e) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }
@@ -228,14 +232,14 @@ export default function WebinareSeite() {
       const zeilen = offen.map((a) => {
         const t = meineTermine.find((x) => x.id === a.termin_id);
         return {
-          owner_user_id: uid,
+          owner_user_id: besitzer ?? uid,
           ...kontaktAusAnmeldung(a, { titel: w.titel, terminText: t ? formatiereTermin(t.beginnt_am) : '' }),
         };
       });
       const { error } = await supabase.from('kontakte').insert(zeilen);
       if (error) throw error;
       setOk(`${zeilen.length} Teilnehmer ins CRM übernommen — ohne Werbe-Einwilligung.`);
-      await alles(uid);
+      await alles(besitzer ?? uid);
     } catch (e) { setFehler('Übernahme fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }

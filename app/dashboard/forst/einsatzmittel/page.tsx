@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../../_components/KiAuge';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -49,6 +50,8 @@ function leerForm(): Form {
 
 export default function ForstEinsatzmittelPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 165: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [liste, setListe] = useState<Mittel[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -69,6 +72,7 @@ export default function ForstEinsatzmittelPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id); await ladeListe(); setLaden(false);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
     })();
   }, [ladeListe]);
 
@@ -89,7 +93,7 @@ export default function ForstEinsatzmittelPage() {
     if (!uid || !form.bezeichnung.trim()) { setFehler('Bitte eine Bezeichnung angeben.'); return; }
     setSpeichert(true); setFehler(null); setOk(null);
     const payload = {
-      owner_user_id: uid, bezeichnung: form.bezeichnung.trim(), art: form.art,
+      bezeichnung: form.bezeichnung.trim(), art: form.art,
       stundensatz_netto: numOrNull(form.stundensatz_netto),
       wegepauschale_netto: numOrNull(form.wegepauschale_netto),
       km_satz_netto: numOrNull(form.km_satz_netto),
@@ -101,7 +105,7 @@ export default function ForstEinsatzmittelPage() {
         const { error } = await supabase.from('forst_einsatzmittel').update(payload).eq('id', form.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('forst_einsatzmittel').insert(payload);
+        const { ergebnis: { error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('forst_einsatzmittel').insert(d));
         if (error) throw error;
       }
       setOk(form.id ? 'Gespeichert.' : 'Einsatzmittel angelegt.');
