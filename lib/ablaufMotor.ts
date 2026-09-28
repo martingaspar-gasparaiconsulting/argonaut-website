@@ -87,16 +87,18 @@ export function datumTrifft(a: Ausloeser, satz: Datensatz, jetzt: Date): { triff
 
 /**
  * Gilt der Auslöser nach dem Warten / nach der Freigabe noch?
- * Grundfilter + Bedingungen, OHNE Tage (die waren beim Start erfüllt).
+ * Geprüft wird der GRUNDFILTER des Auslösers (Rechnung noch offen, Angebot
+ * noch nicht beantwortet, Aufgabe nicht fertig …) — nicht die Start-Bedingungen:
+ * die gelten nur beim Start. Sonst beendet ein Mahnlauf „nur Mahnstufe 0"
+ * sich selbst, sobald er die Mahnstufe erhöht (Paket 158). Wer mitten im Lauf
+ * erneut prüfen will, nimmt einen Wenn-Schritt.
  * Beispiel: Rechnung inzwischen bezahlt -> der Mahnlauf endet.
  */
 export function nochGueltig(a: Ausloeser, satz: Datensatz): boolean {
   if (a.art === 'datum') {
     const t = triggerDef(a.trigger);
-    if (!t || !pruefeGrundfilter(t, satz)) return false;
-    return pruefeGruppe(a.filter ?? null, satz);
+    return !!t && pruefeGrundfilter(t, satz);
   }
-  if (a.art === 'ereignis') return pruefeGruppe(a.filter ?? null, satz);
   return true;
 }
 

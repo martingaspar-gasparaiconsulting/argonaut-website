@@ -64,12 +64,13 @@ test('Datum erreicht: Grundfilter, Datum, Tage, Rückblick, Bedingungen', () => 
   assert.equal(datumTrifft({ art: 'knopf' }, RECHNUNG, JETZT).trifft, false);
 });
 
-test('Nach dem Warten: bezahlte Rechnung beendet den Lauf, Bedingung wird neu geprüft', () => {
+test('Nach dem Warten: bezahlte Rechnung beendet den Lauf; Start-Bedingungen gelten nur beim Start (Paket 158)', () => {
   assert.equal(nochGueltig(UEBERFAELLIG, RECHNUNG), true);
   assert.equal(nochGueltig(UEBERFAELLIG, { ...RECHNUNG, zahlungsstatus: 'bezahlt' }), false);
-  assert.equal(nochGueltig({ ...UEBERFAELLIG, filter: { verknuepfung: 'und', regeln: [{ feld: 'mahnstufe', operator: 'kleiner', wert: 3 }] } }, { ...RECHNUNG, mahnstufe: 3 }), false);
+  // Mahnlauf „nur Mahnstufe 0": nach dem Hochzaehlen laeuft er weiter
+  assert.equal(nochGueltig({ ...UEBERFAELLIG, filter: { verknuepfung: 'und', regeln: [{ feld: 'mahnstufe', operator: 'gleich', wert: 0 }] } }, { ...RECHNUNG, mahnstufe: 1 }), true);
   assert.equal(nochGueltig({ art: 'datum', trigger: 'gibtsnicht', tage: 0 }, RECHNUNG), false);
-  assert.equal(nochGueltig({ art: 'ereignis', ereignis: 'x', filter: { verknuepfung: 'und', regeln: [{ feld: 'mahnstufe', operator: 'gleich', wert: 9 }] } }, RECHNUNG), false);
+  assert.equal(nochGueltig({ art: 'datum', trigger: 'angebot_ohne_antwort', tage: 5 }, { status: 'angenommen' }), false);
   assert.equal(nochGueltig({ art: 'knopf' }, RECHNUNG), true);
 });
 

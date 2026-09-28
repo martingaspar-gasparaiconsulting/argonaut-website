@@ -342,9 +342,17 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
         const def = ablaufAktion(s.aktion);
         if (!def) { fehler.push(`Schritt ${nr}: unbekannte Aktion.`); return; }
         if (!def.imMotor) nochNichtImMotor = true;
+        // Paket 158: Mahnstufe nur bei Rechnungen — passt die Aktion nicht zum Auslöser, gleich sagen.
+        const zielTypen = aktionDef(def.key)?.zielTypen;
+        const zielTyp = a?.art === 'datum' ? triggerDef(a.trigger)?.zielTyp : undefined;
+        if (zielTypen && zielTyp && !zielTypen.includes(zielTyp)) fehler.push(`Schritt ${nr} (${def.label}): passt nicht zu diesem Auslöser.`);
         for (const p of def.pflicht) if (!String(s.config?.[p] ?? '').trim()) fehler.push(`Schritt ${nr} (${def.label}): „${p}" fehlt.`);
         if (def.key === 'freigabe_chef') freigabe = true;
         if (def.geld && !freigabe) fehler.push(`Schritt ${nr} (${def.label}): Geld-Aktionen nur nach einer „Freigabe durch den Chef" davor.`);
+        // Paket 158: feste Adresse ohne gültige Adresse würde still übersprungen — lieber gleich sagen.
+        if (def.key === 'mail_senden' && s.config?.an === 'feste_adresse' && !String(s.config?.adresse ?? '').includes('@')) {
+          fehler.push(`Schritt ${nr} (${def.label}): feste Adresse fehlt.`);
+        }
         if (def.kundenpost && werbung && s.config?.an !== 'feste_adresse') {
           hinweise.push(`Schritt ${nr}: Diese Mail gilt als Werbung — sie geht nur an Kunden mit Einwilligung und ohne Widerspruch.`);
         }

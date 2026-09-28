@@ -1341,11 +1341,13 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Mahnwesen (Mahnstufe)', href: '/dashboard/mahnwesen' }, { text: 'Vertrieb/CRM', href: '/dashboard/crm' }],
   },
   '/dashboard/ablaeufe': {
-    zweck: 'Abläufe sind Ketten aus Schritten, die der Betrieb von allein abarbeitet: ein Auslöser wie „Rechnung ist überfällig", danach Aktionen, Wartezeiten und Wenn/Sonst. Schritte, die Geld betreffen (Mahnstufe), halten an, bis der Chef freigibt. Der Motor prüft stündlich, jeder Schritt steht im Protokoll. Bisherige Automationen lassen sich per Knopf übernehmen.',
+    zweck: 'Abläufe sind Ketten aus Schritten, die der Betrieb von allein abarbeitet: ein Auslöser wie „Rechnung ist überfällig", danach Aktionen, Wartezeiten und Wenn/Sonst. Schritte, die Geld betreffen (Mahnstufe), halten an, bis der Chef freigibt. Der Motor prüft stündlich, jeder Schritt steht im Protokoll. Vorlagen je Branche, eigener Baukasten mit „＋" zwischen den Karten, Fassungen zum Zurückholen; bisherige Automationen lassen sich per Knopf übernehmen.',
     wer: 'chef',
     werText: 'Nur der Chef übernimmt, schaltet ein oder aus und erteilt Freigaben. Mitarbeiter sehen den Stand und das Protokoll, ändern aber nichts.',
     schritte: [
+      'Unter „Vorlagen für Ihre Branche" die Branchengruppe wählen und eine Vorlage anklicken — oder „＋ Leerer Ablauf". Im Baukasten Auslöser und Tage wählen, mit „＋" zwischen den Karten Aktionen, „Warten", „Wenn / Sonst" oder „Stopp" einfügen, mit ↑ ↓ ✕ ordnen. Unten steht, was noch fehlt; „Ablauf anlegen (ausgeschaltet)" speichert',
       'Unter „Bisherige Automationen übernehmen" bei einer Automation „→ Als Ablauf übernehmen" klicken — der Ablauf startet ausgeschaltet, die alte Automation läuft weiter',
+      '„Bearbeiten" öffnet den Baukasten; „Als neue Fassung speichern" legt Fassung 2, 3 … an, laufende Läufe arbeiten mit ihrer Fassung zu Ende. „Fassungen" zeigt alle, „Diese Fassung wiederherstellen" holt eine alte zurück',
       '„🔍 Probelauf" am Ablauf zeigt je Vorgang, welche Schritte jetzt laufen würden und worauf danach gewartet wird. Es wird nichts ausgeführt',
       '„Einschalten" — die alte Automation wird dabei ausgeschaltet, damit nichts doppelt läuft; was sie schon erledigt hat, wird nicht wiederholt',
       'Wartet ein Lauf auf eine Freigabe, steht er oben unter „Freigaben für Sie": „✓ Freigeben" (geht spätestens in einer Stunde weiter) oder „✕ Ablehnen" (mit Rückfrage, der Lauf endet)',

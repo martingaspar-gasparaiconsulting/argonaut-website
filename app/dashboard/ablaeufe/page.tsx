@@ -9,7 +9,7 @@
 //   · einschalten — die alte Regel wird dabei ausgeschaltet (nie beide aktiv)
 //   · Freigaben für den Chef (Geld-Schritte warten hier)
 //   · Probelauf (rechnet nur) und Protokoll je Lauf
-// Der Karten-Baukasten zum Bearbeiten folgt in Paket 158.
+// Paket 158: Karten-Baukasten (AblaufEditor), Vorlagen-Galerie je Branche, Fassungen.
 // ============================================================================
 
 import { useState, useEffect, useCallback, useMemo, type CSSProperties } from 'react';
@@ -21,6 +21,9 @@ import {
 import type { AutomationRegel } from '@/lib/automation';
 import { nichtsGeschrieben, NICHT_GESPEICHERT } from '@/lib/speichernPruefen';
 import Leerzustand from '../_components/Leerzustand';
+import AblaufEditor, { type Entwurf } from './_teile/AblaufEditor';
+import { ABLAUF_VORLAGEN, GRUPPEN, vorlagenFuer, type BranchenGruppe, type AblaufVorlage } from '@/lib/ablaufVorlagen';
+import { neueFassungNoetig, kopie } from '@/lib/ablaufEditor';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -37,6 +40,7 @@ type LaufZeile = {
   id: string; ablauf_id: string; ziel_typ: string | null; ziel_id: string | null; status: string; pfad: string | null;
   weiter_am: string | null; meldung: string | null; gestartet_am: string; kontext: { tabelle?: string } | null;
 };
+type VersionZeile = { id: string; version: number; name: string | null; ausloeser: Ablauf['ausloeser']; schritte: Schritt[]; gespeichert_am: string };
 type ProtokollZeile = { id: string; pfad: string | null; schritt_typ: string | null; ergebnis: string; meldung: string | null; zeit: string };
 type Probe = {
   ok: boolean; error?: string; geprueft?: number; faellig?: number; wuerde_starten?: number; zurueckgestellt?: number; hinweis?: string;
@@ -109,6 +113,9 @@ export default function AblaeufePage() {
   const [ok, setOk] = useState<string | null>(null);
   const [probe, setProbe] = useState<Record<string, Probe>>({});
   const [protokoll, setProtokoll] = useState<{ laufId: string; zeilen: ProtokollZeile[] } | null>(null);
+  const [editor, setEditor] = useState<Entwurf | null>(null);
+  const [gruppe, setGruppe] = useState<BranchenGruppe>('alle');
+  const [versionen, setVersionen] = useState<{ ablaufId: string; zeilen: VersionZeile[] } | null>(null);
 
   const alles = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -231,6 +238,65 @@ export default function AblaeufePage() {
     });
   }
 
+  // --- Baukasten: neu, aus Vorlage, bearbeiten, Fassung wiederherstellen, speichern ---
+  function oeffne(e: Entwurf) {
+    setEditor(e); setFehler(null); setOk(null);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  const leer = (): Entwurf => ({ name: '', beschreibung: '', ausloeser: { art: 'datum', trigger: 'rechnung_ueberfaellig', tage: 3, filter: null }, schritte: [] });
+  const ausVorlage = (v: AblaufVorlage): Entwurf => ({ ...kopie(v.ablauf), vorlage_key: v.key });
+  const zumBearbeiten = (a: AblaufZeile): Entwurf => ({
+    id: a.id, version: a.version, aktiv: a.aktiv, name: a.name, beschreibung: a.beschreibung ?? '', ausloeser: kopie(a.ausloeser), schritte: kopie(a.schritte),
+  });
+
+  function speichern(e: Entwurf) {
+    return tu('speichern', async () => {
+      if (!uid) throw new Error('Nicht angemeldet.');
+      const p = pruefeAblauf(e);
+      if (p.fehler.length > 0) throw new Error(p.fehler.join(' · '));
+      const name = e.name.trim();
+      if (!e.id) {
+        const { data, error } = await supabase.from('ablaeufe').insert({
+          owner_user_id: uid, name, beschreibung: e.beschreibung?.trim() || null, ausloeser: e.ausloeser, schritte: e.schritte,
+          aktiv: false, version: 1, vorlage_key: e.vorlage_key ?? null,
+        }).select('id').single();
+        if (error) throw new Error('Anlegen fehlgeschlagen: ' + error.message);
+        const v = await supabase.from('ablauf_versionen').insert({ owner_user_id: uid, ablauf_id: (data as { id: string }).id, version: 1, name, ausloeser: e.ausloeser, schritte: e.schritte });
+        if (v.error) throw new Error('Fassung 1 nicht gespeichert: ' + v.error.message);
+        setEditor(null);
+        return `„${name}" ist angelegt — ausgeschaltet. Jetzt „🔍 Probelauf", dann „Einschalten".`;
+      }
+      const alt = ablaeufe.find((a) => a.id === e.id);
+      if (!alt) throw new Error('Ablauf nicht mehr vorhanden — bitte neu laden.');
+      if (!neueFassungNoetig(alt, { ...e, name })) {
+        const { data, error } = await supabase.from('ablaeufe').update({ beschreibung: e.beschreibung?.trim() || null, geaendert_am: new Date().toISOString() }).eq('id', alt.id).select('id');
+        if (error) throw error;
+        if (nichtsGeschrieben(data)) throw new Error(NICHT_GESPEICHERT);
+        setEditor(null);
+        return 'Gespeichert (keine inhaltliche Änderung, Fassung bleibt).';
+      }
+      if (alt.aktiv && !p.aktivierbar) throw new Error('Der Ablauf ist eingeschaltet — so wäre er nicht mehr lauffähig. Bitte erst ausschalten oder die Hinweise beheben.');
+      const neu = Number(alt.version) + 1;
+      // Nur speichern, wenn niemand zwischendurch eine neue Fassung angelegt hat.
+      const { data, error } = await supabase.from('ablaeufe').update({
+        name, beschreibung: e.beschreibung?.trim() || null, ausloeser: e.ausloeser, schritte: e.schritte, version: neu, geaendert_am: new Date().toISOString(),
+      }).eq('id', alt.id).eq('version', alt.version).select('id');
+      if (error) throw error;
+      if (nichtsGeschrieben(data)) throw new Error('Der Ablauf wurde inzwischen geändert — bitte neu laden.');
+      const v = await supabase.from('ablauf_versionen').insert({ owner_user_id: uid, ablauf_id: alt.id, version: neu, name, ausloeser: e.ausloeser, schritte: e.schritte });
+      if (v.error) throw new Error('Gespeichert, aber die Fassung fehlt im Verlauf: ' + v.error.message);
+      setEditor(null);
+      return `Fassung ${neu} gespeichert. Laufende Läufe arbeiten mit ihrer Fassung zu Ende.`;
+    });
+  }
+
+  async function zeigeVersionen(a: AblaufZeile) {
+    if (versionen?.ablaufId === a.id) { setVersionen(null); return; }
+    const { data, error } = await supabase.from('ablauf_versionen').select('id,version,name,ausloeser,schritte,gespeichert_am').eq('ablauf_id', a.id).order('version', { ascending: false });
+    if (error) { setFehler('Fassungen: ' + error.message); return; }
+    setVersionen({ ablaufId: a.id, zeilen: (data as VersionZeile[]) ?? [] });
+  }
+
   async function probelauf(a: AblaufZeile) {
     setBusy('probe-' + a.id); setFehler(null); setOk(null);
     try {
@@ -304,7 +370,7 @@ export default function AblaeufePage() {
       <div style={{ ...karte, borderColor: 'rgba(201,168,76,0.35)' }}>
         <div style={{ fontWeight: 800, marginBottom: 6 }}>So geht&apos;s</div>
         <div style={{ ...klein, fontSize: 13.5 }}>
-          1. Unter „Bisherige Automationen übernehmen" eine Automation mit „→ Als Ablauf übernehmen" umziehen — sie startet ausgeschaltet.<br />
+          1. Unter „Vorlagen für Ihre Branche" eine Vorlage anklicken oder „＋ Leerer Ablauf" — mit „＋" zwischen den Karten kommen Aktionen, Warten und Wenn/Sonst dazu. Bisherige Automationen ziehen mit „→ Als Ablauf übernehmen" um. Neue Abläufe starten ausgeschaltet.<br />
           2. „🔍 Probelauf" zeigt, was jetzt passieren würde. Es wird nichts ausgeführt.<br />
           3. „Einschalten" — die alte Automation wird dabei ausgeschaltet, damit nichts doppelt läuft. Bereits Erledigtes wird nicht wiederholt.<br />
           4. Wartet ein Lauf auf Sie, steht er unter „Freigaben für Sie": „✓ Freigeben" oder „✕ Ablehnen".
@@ -316,6 +382,10 @@ export default function AblaeufePage() {
       )}
       {fehler && <div style={{ ...karte, borderColor: 'rgba(224,102,102,0.5)', color: C.danger, fontSize: 14 }}>⚠️ {fehler}</div>}
       {ok && <div style={{ ...karte, borderColor: 'rgba(76,175,125,0.5)', color: C.green, fontSize: 14 }}>✓ {ok}</div>}
+
+      {editor && chef && (
+        <AblaufEditor key={editor.id ?? editor.vorlage_key ?? 'neu'} start={editor} busy={busy === 'speichern'} onSpeichern={speichern} onAbbrechen={() => setEditor(null)} />
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 12, marginBottom: 18 }}>
         {[
@@ -339,16 +409,41 @@ export default function AblaeufePage() {
         </div>
       )}
 
+      {chef && !editor && (
+        <div style={karte}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>Vorlagen für Ihre Branche</h2>
+            <button type="button" onClick={() => oeffne(leer())} style={knopf('rand')}>＋ Leerer Ablauf</button>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+            {GRUPPEN.map((g) => (
+              <button key={g.key} type="button" onClick={() => setGruppe(g.key)} style={{ ...knopf(gruppe === g.key ? 'gold' : 'rand'), padding: '5px 11px', fontSize: 12.5 }}>{g.label}</button>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(265px,1fr))', gap: 11 }}>
+            {vorlagenFuer(gruppe).map((v) => (
+              <button key={v.key} type="button" onClick={() => oeffne(ausVorlage(v))}
+                style={{ textAlign: 'left', cursor: 'pointer', border: `1px solid ${C.border}`, borderRadius: 11, padding: 13, background: 'rgba(10,22,40,0.5)', color: C.text, fontFamily: 'inherit' }}>
+                <div style={{ fontWeight: 800, fontSize: 14.5, marginBottom: 5 }}>{v.name}</div>
+                <div style={klein}>{v.beschreibung}</div>
+                <div style={{ color: C.cyan, fontSize: 11.5, marginTop: 8, fontWeight: 700 }}>{ausloeserText(v.ablauf.ausloeser)} · {v.ablauf.schritte.length} Schritte</div>
+              </button>
+            ))}
+          </div>
+          <div style={{ ...klein, marginTop: 8 }}>{ABLAUF_VORLAGEN.length} Vorlagen. Ein Klick öffnet eine Kopie im Baukasten — gespeichert wird erst mit „Ablauf anlegen", und zwar ausgeschaltet.</div>
+        </div>
+      )}
+
       <div style={karte}>
         <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 12px' }}>Ihre Abläufe</h2>
         {laden ? <div style={klein}>Lädt …</div> : ablaeufe.length === 0 ? (
           <Leerzustand
             icon="🔀"
             titel="Noch keine Abläufe"
-            text="Übernehmen Sie eine bisherige Automation als Ablauf. Der Baukasten für eigene Ketten mit Wenn/Sonst und Warten folgt."
-            schritte={['Unten eine Automation wählen', '„→ Als Ablauf übernehmen"', '„🔍 Probelauf", dann „Einschalten"']}
-            aktionText="⚡ Zu den Automationen"
-            aktionHref="/dashboard/automationen"
+            text="Starten Sie mit einer Vorlage für Ihre Branche, bauen Sie eine eigene Kette oder übernehmen Sie eine bisherige Automation."
+            schritte={['Oben eine Vorlage anklicken oder „＋ Leerer Ablauf"', 'Schritte mit „＋" ergänzen, „Ablauf anlegen (ausgeschaltet)"', '„🔍 Probelauf", dann „Einschalten"']}
+            aktionText="＋ Leerer Ablauf"
+            onAktion={() => oeffne(leer())}
           />
         ) : ablaeufe.map((a) => {
           const p = pruefeAblauf(a);
@@ -362,6 +457,8 @@ export default function AblaeufePage() {
                 </div>
                 {chef && (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button type="button" disabled={busy !== null} onClick={() => oeffne(zumBearbeiten(a))} style={knopf('rand')}>Bearbeiten</button>
+                    <button type="button" onClick={() => zeigeVersionen(a)} style={knopf('rand')}>{versionen?.ablaufId === a.id ? 'Fassungen zu' : 'Fassungen'}</button>
                     <button type="button" disabled={busy !== null} onClick={() => probelauf(a)} style={knopf('rand')}>{busy === 'probe-' + a.id ? 'Rechnet …' : '🔍 Probelauf'}</button>
                     {a.aktiv
                       ? <button type="button" disabled={busy !== null} onClick={() => ausschalten(a)} style={knopf('rand')}>Ausschalten</button>
@@ -372,6 +469,20 @@ export default function AblaeufePage() {
               <div style={{ marginTop: 10 }}><SchrittListe schritte={a.schritte} /></div>
               {p.fehler.map((f) => <div key={f} style={{ fontSize: 12.5, color: C.danger, marginTop: 4 }}>⚠️ {f}</div>)}
               {p.hinweise.map((h) => <div key={h} style={{ fontSize: 12.5, color: C.warn, marginTop: 4 }}>ℹ️ {h}</div>)}
+              {versionen?.ablaufId === a.id && (
+                <div style={{ marginTop: 10, padding: 10, borderRadius: 9, background: 'rgba(10,22,40,0.5)' }}>
+                  {versionen.zeilen.length === 0 ? <div style={klein}>Noch keine gespeicherte Fassung.</div> : versionen.zeilen.map((v) => (
+                    <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'center', padding: '4px 0' }}>
+                      <div style={{ fontSize: 13 }}>Fassung {v.version}{v.version === a.version ? ' (aktuell)' : ''} · {fmtZeit(v.gespeichert_am)} · {v.name ?? a.name} · {Array.isArray(v.schritte) ? v.schritte.length : 0} Schritte</div>
+                      {v.version !== a.version && (
+                        <button type="button" onClick={() => oeffne({ ...zumBearbeiten(a), name: v.name ?? a.name, ausloeser: kopie(v.ausloeser), schritte: kopie(v.schritte) })}
+                          style={{ ...knopf('rand'), padding: '4px 10px', fontSize: 12.5 }}>Diese Fassung wiederherstellen</button>
+                      )}
+                    </div>
+                  ))}
+                  <div style={{ ...klein, marginTop: 4 }}>Wiederherstellen öffnet die alte Fassung im Baukasten; gespeichert wird sie als neue Fassung.</div>
+                </div>
+              )}
               {pr && (
                 <div style={{ marginTop: 10, padding: 10, borderRadius: 9, background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.2)' }}>
                   <div style={{ fontSize: 13, fontWeight: 700 }}>
