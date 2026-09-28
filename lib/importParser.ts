@@ -2390,6 +2390,63 @@ export const ZIELE: ImportZiel[] = [
       { key: 'rechnung_alt', label: 'Rechnungsnummer (zum Aussortieren)', typ: 'text', virtuell: 'filter', nichtInVorlage: true, alias: ['rechnungsnummer', 'rechnung nr', 'rechnung', 'rechnungs nr', 'invoice', 'invoice number', 'beleg'] },
     ],
   },
+  // Paket 143: GEMEINSAM freigegeben 27.09.2026 — Kautionen, nur Chef.
+  // Der STAND wird uebernommen (Soll, eingezahlt, Anlage, Zinsen, Einbehalt,
+  // Rueckgabe) — keine Buchungen, keine Mahnlaeufe. Ein Kautionskonto je Vertrag.
+  {
+    key: 'kautionen',
+    label: 'Mietkautionen',
+    icon: '🔐',
+    tabelle: 'immo_kaution',
+    beschreibung: 'Kautionskonto je Mietvertrag: vereinbarte Höhe, bereits eingezahlt, Anlage, Zinsen, Einbehalte und Rückgabe. '
+      + 'Vorher die Mietverträge importieren. Es entstehen keine Buchungen. Nur die Geschäftsleitung.',
+    // '__nach' (Mietername) erkennt Doppelte schon IN der Datei — vertrag_id kennt erst die Seite (eindeutig je Vertrag).
+    schluesselFelder: ['vertrag_id', '__nach'],
+    eigeneFelderModul: 'immo_kaution',
+    nurMitKatalog: true,
+    nurChef: true,
+    ergebnisHref: '/dashboard/immobilien/mieter',
+    nachschlag: { ausFeld: 'mieter', tabelle: 'immo_mietvertraege', nameSpalte: 'mieter_name', spalte: 'vertrag_id', label: 'Mietvertrag', pflicht: true, mehrzahl: 'die Mietverträge' },
+    ausblenden: ['eingaenge', 'einbehalte'],
+    felder: [
+      { key: 'mieter', label: 'Mieter', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Name des Mieters genau wie im Mietvertrag.', alias: ['mieter', 'mietername', 'mieter name', 'name', 'mietpartei', 'vertrag', 'mietvertrag', 'tenant'] },
+      { key: 'soll', label: 'Kaution vereinbart (€)', typ: 'zahl', pflicht: true, alias: ['soll', 'kaution', 'kautionshoehe', 'kautionshöhe', 'kaution soll', 'vereinbart', 'mietsicherheit', 'deposit'] },
+      { key: 'eingezahlt', label: 'Bereits eingezahlt (€)', typ: 'zahl', virtuell: 'rechnen', alias: ['eingezahlt', 'kaution eingezahlt', 'eingang', 'erhalten', 'ist', 'kaution ist', 'gezahlt'] },
+      { key: 'eingezahlt_am', label: 'Eingezahlt am', typ: 'datum', virtuell: 'rechnen', alias: ['eingezahlt am', 'eingang am', 'erhalten am', 'zahlungseingang'] },
+      { key: 'anlage', label: 'Angelegt auf', typ: 'text', alias: ['anlage', 'angelegt auf', 'kautionskonto', 'sparbuch', 'konto kaution', 'bank anlage'] },
+      { key: 'zinsen', label: 'Zinsen (€)', typ: 'zahl', alias: ['zinsen', 'zinsertrag', 'aufgelaufene zinsen'] },
+      { key: 'einbehalt', label: 'Einbehalt (€)', typ: 'zahl', virtuell: 'rechnen', alias: ['einbehalt', 'einbehalten', 'abzug', 'einbehalt betrag'] },
+      { key: 'einbehalt_grund', label: 'Grund des Einbehalts', typ: 'text', virtuell: 'rechnen', alias: ['einbehalt grund', 'grund einbehalt', 'grund', 'abzug grund'] },
+      { key: 'rueckgabe_am', label: 'Zurückgegeben am', typ: 'datum', alias: ['rueckgabe am', 'rückgabe am', 'rueckgabe', 'rückgabe', 'ausgezahlt am', 'zurueckgezahlt am', 'zurückgezahlt am'] },
+      { key: 'ausgezahlt', label: 'Ausgezahlt (€)', typ: 'zahl', alias: ['ausgezahlt', 'auszahlung', 'zurueckgezahlt', 'zurückgezahlt', 'rueckzahlung', 'rückzahlung'] },
+    ],
+  },
+  // Paket 143: GEMEINSAM freigegeben 27.09.2026 — Mietzahlungen NUR als erledigt
+  // (bezahlt), nur Chef. Offene/rueckstaendige Mieten fallen mit Grund heraus;
+  // keine Buchungen, keine Mahnlaeufe.
+  {
+    key: 'mietzahlungen',
+    label: 'Mietzahlungen (bezahlt)',
+    icon: '🏠',
+    tabelle: 'immo_zahlungen',
+    beschreibung: 'Bereits eingegangene Mieten je Mietvertrag als Verlauf. Nur bezahlte Zeilen mit Zahlungsdatum — Offenes bleibt in Ihrer Datei. '
+      + 'Vorher die Mietverträge importieren. Es entstehen keine Buchungen und keine Mahnungen. Nur die Geschäftsleitung.',
+    schluesselFelder: ['vertrag_id+monat+betrag+bezahlt_am', '__nach+monat+betrag+bezahlt_am'],
+    eigeneFelderModul: 'immo_zahlungen',
+    nurMitKatalog: true,
+    nurChef: true,
+    ergebnisHref: '/dashboard/immobilien',
+    nachschlag: { ausFeld: 'mieter', tabelle: 'immo_mietvertraege', nameSpalte: 'mieter_name', spalte: 'vertrag_id', label: 'Mietvertrag', pflicht: true, mehrzahl: 'die Mietverträge' },
+    ablehnenWenn: { feld: 'zahlstatus_alt', werte: ['offen', 'unbezahlt', 'nicht bezahlt', 'ausstehend', 'rueckstand', 'rückstand', 'rueckstaendig', 'rückständig', 'faellig', 'fällig', 'ueberfaellig', 'überfällig', 'gemahnt', 'mahnung', 'teilbezahlt', 'teilweise', 'nein', 'open', 'unpaid', 'overdue'], grund: 'Nicht (voll) bezahlt — offene Mieten übernimmt ARGONAUT nicht aus einer Datei. Die Zeile bleibt in Ihrer Datei.' },
+    felder: [
+      { key: 'mieter', label: 'Mieter', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Name des Mieters genau wie im Mietvertrag.', alias: ['mieter', 'mietername', 'mieter name', 'name', 'mietpartei', 'vertrag', 'mietvertrag', 'tenant', 'zahler'] },
+      { key: 'monat', label: 'Monat', typ: 'text', hinweis: '„09/2026", „September 2026" oder ein Datum — gespeichert als 1. des Monats. Fehlt er, gilt der Monat der Zahlung.', alias: ['monat', 'mietmonat', 'zeitraum', 'fuer monat', 'für monat', 'periode', 'month'] },
+      { key: 'betrag', label: 'Betrag (€)', typ: 'zahl', pflicht: true, alias: ['betrag', 'miete', 'zahlung', 'gezahlt', 'eingang', 'summe', 'amount'] },
+      { key: 'bezahlt_am', label: 'Bezahlt am', typ: 'datum', pflicht: true, alias: ['bezahlt am', 'zahlungsdatum', 'eingang am', 'eingangsdatum', 'wertstellung', 'buchungsdatum', 'gezahlt am', 'datum'] },
+      { key: 'zahlstatus_alt', label: 'Status (zum Aussortieren)', typ: 'text', virtuell: 'filter', nichtInVorlage: true, alias: ['status', 'zahlstatus', 'bezahlt', 'zahlungsstatus', 'offen'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'verwendungszweck', 'kommentar'] },
+    ],
+  },
   // Paket 136: Umzug Schritt 4 Rest — Bestand je Filiale (Handel). Setzt
   // Zaehlstaende per Korrektur (lager_buchen), legt nichts an.
   {
@@ -2773,6 +2830,25 @@ Object.assign(BEISPIELE, {
     sachbericht: '||',
     notiz: 'Förderkennzeichen 123-ABC||',
   },
+  kautionen: {
+    mieter: 'Anna Beispiel|Bernd Muster|Clara Test',
+    soll: '2.100,00|1.800,00|2.400,00',
+    eingezahlt: '2.100,00|1.200,00|2.400,00',
+    eingezahlt_am: '01.03.2024|01.08.2026|15.01.2020',
+    anlage: 'Kautionskonto Kreissparkasse|Kautionskonto Kreissparkasse|Sparbuch',
+    zinsen: '||35,20',
+    einbehalt: '||150,00',
+    einbehalt_grund: '||Reparatur Türschloss',
+    rueckgabe_am: '||31.07.2026',
+    ausgezahlt: '||2.285,20',
+  },
+  mietzahlungen: {
+    mieter: 'Anna Beispiel|Anna Beispiel|Bernd Muster',
+    monat: '07/2026|08/2026|08/2026',
+    betrag: '850,00|850,00|720,00',
+    bezahlt_am: '01.07.2026|03.08.2026|01.08.2026',
+    notiz: '||Miete August',
+  },
   aufwand: {
     projekt: 'Website Relaunch|Website Relaunch|Wartung Serverpark',
     datum: '05.07.2026|06.07.2026|10.07.2026',
@@ -3002,6 +3078,8 @@ export const GELDFELDER: readonly string[] = [
   'betrag',
   // Paket 142: Stundensatz (Aufwand, Retainer)
   'stundensatz',
+  // Paket 143: Kaution (Soll, ausgezahlt)
+  'soll', 'ausgezahlt',
 ];
 
 export type ZeilenOptionen = {
@@ -3283,6 +3361,9 @@ function nachbereiten(
   if (zielKey === 'spenden') spendeNachbereiten(werte, nummer, warnungen);
   // Paket 142
   if (zielKey === 'aufwand') aufwandNachbereiten(werte, nummer, warnungen);
+  // Paket 143
+  if (zielKey === 'kautionen') kautionNachbereiten(werte, nummer, warnungen);
+  if (zielKey === 'mietzahlungen') mietzahlungNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -3745,6 +3826,82 @@ function aufwandNachbereiten(werte: Record<string, unknown>, nummer: number, war
   }
   if (werte.stundensatz === undefined || werte.stundensatz === 0) {
     warnungen.push({ zeile: nummer, feld: 'Stundensatz', meldung: 'Kein Stundensatz — bitte vor dem Abrechnen nachtragen.' });
+  }
+}
+
+/** Paket 143: heutiges Datum (Ortszeit) als JJJJ-MM-TT. */
+function heuteIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Paket 143: Kaution (GEMEINSAM, nur Chef) — der STAND des Kautionskontos.
+ * „Bereits eingezahlt" wird EIN Eingang (mit Datum), ein Einbehalt EIN
+ * Einbehalt mit Grund — genau die Form, die das Modul selbst speichert.
+ */
+function kautionNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const zahl = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const ein = zahl(werte.eingezahlt);
+  if (ein !== null && ein > 0) {
+    let am = typeof werte.eingezahlt_am === 'string' ? werte.eingezahlt_am : '';
+    if (!am) {
+      am = heuteIso();
+      warnungen.push({ zeile: nummer, feld: 'Eingezahlt am', meldung: 'Kein Eingangsdatum — als heute eingetragen (bitte prüfen).' });
+    }
+    werte.eingaenge = [{ am, betrag: ein }];
+    const soll = zahl(werte.soll);
+    if (soll !== null && ein > soll + 0.005) warnungen.push({ zeile: nummer, feld: 'Bereits eingezahlt', meldung: 'Eingezahlt ist mehr als vereinbart — bitte prüfen.' });
+  }
+  const einb = zahl(werte.einbehalt);
+  if (einb !== null && einb > 0) {
+    const grund = typeof werte.einbehalt_grund === 'string' && werte.einbehalt_grund.trim() ? werte.einbehalt_grund.trim() : 'Übernommen aus dem Altsystem';
+    werte.einbehalte = [{ grund, betrag: einb }];
+  }
+  const soll = zahl(werte.soll);
+  if (soll !== null && soll <= 0) warnungen.push({ zeile: nummer, feld: 'Kaution vereinbart', meldung: 'Kaution 0 oder negativ — bitte prüfen.' });
+  if (zahl(werte.ausgezahlt) !== null && !werte.rueckgabe_am) {
+    warnungen.push({ zeile: nummer, feld: 'Zurückgegeben am', meldung: 'Ausgezahlt, aber ohne Rückgabedatum — bitte nachtragen.' });
+  }
+}
+
+const MONATSNAMEN: Record<string, number> = {
+  jan: 1, januar: 1, january: 1, jaenner: 1, feb: 2, februar: 2, february: 2, maer: 3, mrz: 3, maerz: 3, mar: 3, march: 3,
+  apr: 4, april: 4, mai: 5, may: 5, jun: 6, juni: 6, june: 6, jul: 7, juli: 7, july: 7, aug: 8, august: 8,
+  sep: 9, sept: 9, september: 9, okt: 10, oct: 10, oktober: 10, october: 10, nov: 11, november: 11, dez: 12, dec: 12, dezember: 12, december: 12,
+};
+
+/**
+ * Paket 143: Mietmonat lesen — „07/2026", „7.2026", „2026-07", „Juli 2026",
+ * „Jul 26" oder ein ganzes Datum. Ergebnis: 1. des Monats (JJJJ-MM-01), sonst null.
+ */
+export function leseMonat(text: unknown): string | null {
+  const t = String(text ?? '').trim();
+  if (!t) return null;
+  const jahr = (j: string) => (j.length === 2 ? 2000 + Number(j) : Number(j));
+  const baue = (j: number, m: number) => (m >= 1 && m <= 12 && j >= 1900 && j <= 2100 ? `${j}-${String(m).padStart(2, '0')}-01` : null);
+  let m = t.match(/^(\d{1,2})\s*[./-]\s*(\d{4}|\d{2})$/);
+  if (m) return baue(jahr(m[2]), Number(m[1]));
+  m = t.match(/^(\d{4})-(\d{1,2})$/);
+  if (m) return baue(Number(m[1]), Number(m[2]));
+  m = normal(t).match(/^([a-z]+)\s+(\d{4}|\d{2})$/);
+  if (m && MONATSNAMEN[m[1]]) return baue(jahr(m[2]), MONATSNAMEN[m[1]]);
+  const d = leseDatum(t);
+  return d ? `${d.slice(0, 7)}-01` : null;
+}
+
+/** Paket 143: Mietzahlung — Monat immer der 1.; ohne lesbaren Monat gilt der Monat der Zahlung. */
+function mietzahlungNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const roh = werte.monat;
+  const monat = leseMonat(roh);
+  if (monat) werte.monat = monat;
+  else if (typeof werte.bezahlt_am === 'string') {
+    werte.monat = `${werte.bezahlt_am.slice(0, 7)}-01`;
+    warnungen.push({ zeile: nummer, feld: 'Monat', meldung: roh ? `„${String(roh)}" ist kein lesbarer Monat — Monat der Zahlung genommen.` : 'Kein Monat — Monat der Zahlung genommen.' });
+    if (roh) werte.notiz = typeof werte.notiz === 'string' && werte.notiz.trim() ? `${werte.notiz.trim()}\nMonat im Altsystem: ${String(roh)}` : `Monat im Altsystem: ${String(roh)}`;
+  }
+  if (typeof werte.betrag === 'number' && werte.betrag <= 0) {
+    warnungen.push({ zeile: nummer, feld: 'Betrag', meldung: 'Betrag 0 oder negativ — bitte prüfen (Erstattung?).' });
   }
 }
 
