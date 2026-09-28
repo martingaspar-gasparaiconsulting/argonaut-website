@@ -76,7 +76,7 @@ export default function RetourenSeite() {
     const r = await supabase.from('shop_retoure').select('*').order('erstellt_am', { ascending: false });
     if (r.error) { if (/shop_retoure/.test(r.error.message)) setSqlFehlt(true); else setFehler('Laden fehlgeschlagen: ' + r.error.message); return; }
     setListe(((r.data as Retoure[]) ?? []).map((x) => ({ ...x, positionen: x.positionen ?? [] })));
-    const b = await supabase.from('shop_bestellungen').select('id, extern_id, besteller, email, positionen, brutto_summe, bestell_am, erstellt_am').order('erstellt_am', { ascending: false }).limit(500);
+    const b = await supabase.from('shop_bestellungen').select('id, extern_id, besteller, email, positionen, brutto_summe, bestell_am, erstellt_am').neq('status', 'abgeschlossen').order('erstellt_am', { ascending: false }).limit(500); // Paket 144: Archiv aus dem Altsystem nicht in der Auswahl
     setBestellungen((b.data as Bestellung[]) ?? []);
   }, []);
 

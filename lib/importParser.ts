@@ -700,6 +700,13 @@ export type ImportZiel = {
    * und Filiale eine Korrektur ueber lager_buchen (lib/importBestand.ts).
    */
   bestandSetzen?: boolean;
+  /**
+   * Paket 144: Mehrere Datei-Zeilen mit gleichem `kopfFeld` (Bestellnummer)
+   * sind EIN Datensatz; die 'position'-Felder jeder Zeile werden als Liste
+   * [{bezeichnung, menge, einzelpreis}] in die jsonb-Spalte `spalte` gelegt
+   * (Shop-Bestellungen). Ohne Kind-Tabelle.
+   */
+  jsonPositionen?: { kopfFeld: string; spalte: string; summeFeld?: string };
   felder: ZielFeld[];
 };
 
@@ -2447,6 +2454,40 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'verwendungszweck', 'kommentar'] },
     ],
   },
+  // Paket 144: GEMEINSAM freigegeben 27.09.2026 — Shop-Bestellungen NUR als
+  // Archiv (Status „abgeschlossen"): keine Lagerbuchung, keine Rechnung, keine
+  // Mails. Eine Bestellung mit mehreren Artikeln = mehrere Datei-Zeilen.
+  {
+    key: 'shop',
+    label: 'Shop-Bestellungen (Archiv)',
+    icon: '🛒',
+    tabelle: 'shop_bestellungen',
+    beschreibung: 'Frühere Bestellungen aus Ihrem Online-Shop als Archiv („abgeschlossen"). Es wird nichts vom Lager gebucht, keine Rechnung erstellt und keine Mail verschickt. '
+      + 'Mehrere Zeilen mit derselben Bestellnummer werden zu einer Bestellung mit Positionen. Nur die Geschäftsleitung.',
+    schluesselFelder: ['quelle+extern_id'],
+    eigeneFelderModul: 'shop_bestellungen',
+    nurMitKatalog: true,
+    // Die Datenbank laesst Mitarbeiter hier nichts anlegen (sb_owner_all / nur select+update).
+    nurChef: true,
+    ergebnisHref: '/dashboard/shop',
+    jsonPositionen: { kopfFeld: 'extern_id', spalte: 'positionen', summeFeld: 'brutto_summe' },
+    ausblenden: ['status', 'positionen', 'rechnung_id', 'lager_gebucht'],
+    felder: [
+      { key: 'extern_id', label: 'Bestellnummer', typ: 'text', pflicht: true, alias: ['bestellnummer', 'bestell nr', 'bestellnr', 'order', 'order id', 'order number', 'order name', 'name', 'auftragsnummer', 'extern_id', 'id'] },
+      { key: 'quelle', label: 'Shop-System', typ: 'text', standard: 'import', hinweis: 'z. B. shopify, shopware, woocommerce — leer = „import".', alias: ['quelle', 'shop', 'plattform', 'kanal', 'source', 'sales channel', 'marktplatz'] },
+      { key: 'bestell_am', label: 'Bestellt am', typ: 'datum', alias: ['bestellt am', 'bestelldatum', 'datum', 'created at', 'order date', 'date', 'paid at'] },
+      { key: 'besteller', label: 'Besteller', typ: 'text', alias: ['besteller', 'kunde', 'kundenname', 'billing name', 'rechnungsname', 'customer', 'kaeufer', 'käufer'] },
+      { key: 'lead_vorname', label: 'Vorname (zum Besteller)', typ: 'text', virtuell: 'name_teil', fuellt: 'besteller', nichtInVorlage: true, alias: ['vorname', 'first name', 'billing first name'] },
+      { key: 'lead_nachname', label: 'Nachname (zum Besteller)', typ: 'text', virtuell: 'name_teil', fuellt: 'besteller', nichtInVorlage: true, alias: ['nachname', 'last name', 'billing last name'] },
+      { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail', 'customer email', 'billing email'] },
+      { key: 'brutto_summe', label: 'Gesamtsumme brutto (€)', typ: 'zahl', alias: ['gesamt', 'gesamtsumme', 'summe', 'brutto', 'total', 'order total', 'rechnungsbetrag', 'betrag'] },
+      { key: 'pos_bezeichnung', label: 'Artikel (Position)', typ: 'text', virtuell: 'position', positionSpalte: 'bezeichnung', alias: ['artikel', 'artikelbezeichnung', 'produkt', 'bezeichnung', 'lineitem name', 'line item name', 'item', 'item name', 'product', 'product name'] },
+      { key: 'pos_menge', label: 'Menge (Position)', typ: 'zahl', virtuell: 'position', positionSpalte: 'menge', alias: ['menge', 'anzahl', 'stueck', 'stück', 'lineitem quantity', 'quantity', 'qty'] },
+      { key: 'pos_einzelpreis', label: 'Einzelpreis (Position)', typ: 'zahl', virtuell: 'position', positionSpalte: 'einzelpreis', alias: ['einzelpreis', 'stueckpreis', 'stückpreis', 'lineitem price', 'line item price', 'item price', 'price', 'preis'] },
+      { key: 'status_alt', label: 'Status im Altsystem (in die Notiz)', typ: 'text', virtuell: 'anhang', anhangAn: 'notiz', nichtInVorlage: true, alias: ['status', 'bestellstatus', 'financial status', 'fulfillment status', 'zahlstatus', 'order status'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notes', 'kommentar', 'note'] },
+    ],
+  },
   // Paket 136: Umzug Schritt 4 Rest — Bestand je Filiale (Handel). Setzt
   // Zaehlstaende per Korrektur (lager_buchen), legt nichts an.
   {
@@ -2829,6 +2870,18 @@ Object.assign(BEISPIELE, {
     nachweis_status: 'offen||',
     sachbericht: '||',
     notiz: 'Förderkennzeichen 123-ABC||',
+  },
+  shop: {
+    extern_id: '#1001|#1001|#1002',
+    quelle: 'shopify|shopify|shopify',
+    bestell_am: '03.03.2026|03.03.2026|15.04.2026',
+    besteller: 'Anna Beispiel|Anna Beispiel|Bernd Muster',
+    email: 'anna.beispiel@example.de|anna.beispiel@example.de|bernd.muster@example.de',
+    brutto_summe: '59,80|59,80|12,50',
+    pos_bezeichnung: 'Duftkerze Lavendel|Geschenkbox|Postkarte Böblingen',
+    pos_menge: '2|1|5',
+    pos_einzelpreis: '19,90|20,00|2,50',
+    notiz: '||',
   },
   kautionen: {
     mieter: 'Anna Beispiel|Bernd Muster|Clara Test',
@@ -3361,6 +3414,8 @@ function nachbereiten(
   if (zielKey === 'spenden') spendeNachbereiten(werte, nummer, warnungen);
   // Paket 142
   if (zielKey === 'aufwand') aufwandNachbereiten(werte, nummer, warnungen);
+  // Paket 144: Shop-Archiv — IMMER abgeschlossen, nie ins Lager gebucht
+  if (zielKey === 'shop') werte.status = 'abgeschlossen';
   // Paket 143
   if (zielKey === 'kautionen') kautionNachbereiten(werte, nummer, warnungen);
   if (zielKey === 'mietzahlungen') mietzahlungNachbereiten(werte, nummer, warnungen);
@@ -4230,6 +4285,8 @@ export type PruefBericht = {
   gesamt: number;
   gut: number;
   schlecht: number;
+  /** Paket 144: Zeilen, die als weitere Position in einen Datensatz eingingen (nicht schlecht). */
+  zusammengefasst?: number;
   saetze: Record<string, unknown>[];
   fehler: ZeilenFehler[];
   warnungen: ZeilenFehler[];
@@ -4300,11 +4357,29 @@ export function pruefeAlles(
 
   const zeilenOpt: ZeilenOptionen = { ...opt, dezimal: trenner.dezimal };
 
+  // Paket 144: Positionen je Kopf (Bestellnummer) sammeln
+  const jp = ziel?.jsonPositionen;
+  const kopfIndex = new Map<string, Record<string, unknown>>();
+  let zusammengefasst = 0;
+
   zeilen.forEach((z, i) => {
     const nummer = i + 2;                       // +2: Kopfzeile ist Zeile 1
     const e = pruefeZeile(zielKey, mapping, kopf, z, nummer, zeilenOpt);
     warnungen.push(...e.warnungen);
     if (!e.werte) { fehler.push(...e.fehler); return; }
+    if (jp && ziel) {
+      const pos = jsonPositionAusSatz(e.werte, ziel);
+      const k = String(e.werte[jp.kopfFeld] ?? '').trim().toLowerCase();
+      const bisher = k ? kopfIndex.get(k) : undefined;
+      if (bisher) {
+        if (pos) (bisher[jp.spalte] as unknown[]).push(pos);
+        jsonKopfErgaenzen(bisher, e.werte, ziel, nummer, warnungen);
+        zusammengefasst++;
+        return;
+      }
+      e.werte[jp.spalte] = pos ? [pos] : [];
+      if (k) kopfIndex.set(k, e.werte);
+    }
 
     if (ziel && (ziel.schluesselFelder || ziel.schluessel)) {
       // Schritt 2: an JEDEM Erkennungsfeld (Kundennummer, Alt-ID, E-Mail …).
@@ -4323,14 +4398,58 @@ export function pruefeAlles(
     zeilenNummern.push(nummer);
   });
 
+  if (jp && ziel) {
+    for (const s of saetze) jsonSummeSetzen(s, ziel, zeilenNummern[saetze.indexOf(s)] ?? 0, warnungen);
+    if (zusammengefasst > 0) hinweise.push(`${zusammengefasst} Zeilen waren weitere Positionen einer Bestellung und wurden zusammengefasst.`);
+  }
   return {
     gesamt: zeilen.length,
     gut: saetze.length,
-    schlecht: zeilen.length - saetze.length,
+    schlecht: zeilen.length - saetze.length - zusammengefasst,
+    ...(jp ? { zusammengefasst } : {}),
     saetze, fehler, warnungen,
     dubletten_in_datei: dubletten,
     trenner,
     hinweise,
     zeilenNummern,
   };
+}
+
+/** Paket 144: Die 'position'-Felder eines Satzes als {bezeichnung, menge, einzelpreis}; entfernt sie aus dem Satz. */
+function jsonPositionAusSatz(werte: Record<string, unknown>, ziel: ImportZiel): Record<string, unknown> | null {
+  const pos: Record<string, unknown> = {};
+  for (const f of ziel.felder) {
+    if (f.virtuell !== 'position') continue;
+    const v = werte[f.key];
+    delete werte[f.key];
+    if (!f.positionSpalte || v === undefined || v === null || v === '') continue;
+    pos[f.positionSpalte] = v;
+  }
+  if (Object.keys(pos).length === 0) return null;
+  if (pos.menge === undefined) pos.menge = 1;
+  if (pos.bezeichnung === undefined) pos.bezeichnung = '(ohne Bezeichnung)';
+  return pos;
+}
+
+/** Paket 144: weitere Zeile derselben Bestellung — leere Kopffelder auffuellen, abweichende Summe melden. */
+function jsonKopfErgaenzen(kopfSatz: Record<string, unknown>, werte: Record<string, unknown>, ziel: ImportZiel, nummer: number, warnungen: ZeilenFehler[]): void {
+  const jp = ziel.jsonPositionen!;
+  for (const [k, v] of Object.entries(werte)) {
+    if (k === jp.spalte || v === undefined || v === null || v === '') continue;
+    const alt = kopfSatz[k];
+    if (alt === undefined || alt === null || alt === '') kopfSatz[k] = v;
+    else if (k === jp.summeFeld && typeof alt === 'number' && typeof v === 'number' && Math.abs(alt - v) > 0.005) {
+      warnungen.push({ zeile: nummer, feld: ziel.felder.find((f) => f.key === k)?.label ?? k, meldung: `Andere Gesamtsumme als in der ersten Zeile dieser Bestellung (${String(alt).replace('.', ',')}) — die erste gilt.` });
+    }
+  }
+}
+
+/** Paket 144: fehlt die Gesamtsumme, wird sie aus den Positionen gerechnet (Menge x Einzelpreis). */
+function jsonSummeSetzen(satz: Record<string, unknown>, ziel: ImportZiel, nummer: number, warnungen: ZeilenFehler[]): void {
+  const jp = ziel.jsonPositionen!;
+  if (!jp.summeFeld || typeof satz[jp.summeFeld] === 'number') return;
+  const pos = (satz[jp.spalte] as Record<string, unknown>[]) ?? [];
+  if (pos.length === 0 || pos.some((p) => typeof p.einzelpreis !== 'number')) return;
+  satz[jp.summeFeld] = centRunden(pos.reduce((a, p) => a + (Number(p.menge) || 0) * (p.einzelpreis as number), 0));
+  warnungen.push({ zeile: nummer, feld: ziel.felder.find((f) => f.key === jp.summeFeld)?.label ?? jp.summeFeld, meldung: 'Keine Gesamtsumme in der Datei — aus den Positionen gerechnet (ohne Versand/Rabatt).' });
 }

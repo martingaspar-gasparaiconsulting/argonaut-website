@@ -42,6 +42,8 @@ const STATUS: { key: string; label: string; farbe: string }[] = [
   { key: 'storniert', label: 'Storniert', farbe: C.danger },
 ];
 function statusInfo(k: string) { return STATUS.find((s) => s.key === k) || STATUS[0]; }
+// Paket 144: Bestellungen aus dem Altsystem — nur Archiv. Keine Rechnung, kein Lager, kein Statuswechsel.
+const ARCHIV = 'abgeschlossen';
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function num(s: string) { return leseZahlOder(s, 0); }
 
@@ -87,15 +89,24 @@ export default function ShopPage() {
   const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
+  const [zeigeArchiv, setZeigeArchiv] = useState(false);
+  const [archivAnzahl, setArchivAnzahl] = useState(0);
+
   const laden_ = useCallback(async () => {
-    const { data } = await supabase.from('shop_bestellungen')
-      .select('id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am, rechnung_id, kontakt_id, lager_gebucht')
-      .order('erstellt_am', { ascending: false });
+    // Paket 144: das Archiv aus dem Altsystem nie in die laufende Liste mischen
+    // (sonst verdraengen tausende alte Bestellungen die neuen).
+    const spalten = 'id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am, rechnung_id, kontakt_id, lager_gebucht';
+    const abfrage = supabase.from('shop_bestellungen').select(spalten);
+    const { data } = zeigeArchiv
+      ? await abfrage.eq('status', ARCHIV).order('bestell_am', { ascending: false, nullsFirst: false }).limit(500)
+      : await abfrage.neq('status', ARCHIV).order('erstellt_am', { ascending: false });
+    const { count } = await supabase.from('shop_bestellungen').select('id', { count: 'exact', head: true }).eq('status', ARCHIV);
+    setArchivAnzahl(count ?? 0);
     const rows = (data as Bestellung[]) ?? [];
     setListe(rows);
     setFelder(await ladeFelder(MODUL));
     setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
-  }, []);
+  }, [zeigeArchiv]);
 
   useEffect(() => {
     (async () => {
@@ -278,6 +289,13 @@ export default function ShopPage() {
         ))}
       </div>
 
+      {/* Paket 144: Archiv aus dem Altsystem ein-/ausblenden */}
+      {(archivAnzahl > 0 || zeigeArchiv) && (
+        <button style={{ ...styles.crmBtn, marginBottom: 12 }} onClick={() => setZeigeArchiv((a) => !a)}>
+          {zeigeArchiv ? '← Zurück zu den laufenden Bestellungen' : `🗄 Archiv aus dem Altsystem anzeigen (${archivAnzahl.toLocaleString('de-DE')})`}
+        </button>
+      )}
+
       {/* Liste */}
       {laden ? (
         <p style={styles.sub}>Lädt …</p>
@@ -299,6 +317,9 @@ export default function ShopPage() {
                   <EigeneFelderAnzeige felder={felder} werte={werteMap[b.id]} />
                 </div>
                 <div style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{eur(b.brutto_summe)}</div>
+                {b.status === ARCHIV ? (
+                  <span style={{ ...styles.lagerBtn, opacity: 0.75 }} title="Aus dem Altsystem übernommen — keine Rechnung, keine Lagerbuchung">🗄 Archiv (Altsystem){b.bestell_am ? ` · ${b.bestell_am.slice(0, 10).split('-').reverse().join('.')}` : ''}</span>
+                ) : (<>
                 {b.rechnung_id ? (
                   <a href={`/dashboard/rechnungen/${b.rechnung_id}`} style={styles.rechBtn}>🧾 Rechnung</a>
                 ) : (
@@ -339,6 +360,7 @@ export default function ShopPage() {
                   {STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
                 </select>
                 <span style={{ ...styles.punkt, background: si.farbe }} title={si.label} />
+                </>)}
               </div>
             );
           })}

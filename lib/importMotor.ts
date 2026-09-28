@@ -198,6 +198,11 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
       (ok ? felder : fehlend).push(f);
       continue;
     }
+    if (f.virtuell === 'position' && basis.jsonPositionen) {
+      // Paket 144: Positionen als Liste in EINER jsonb-Spalte (Shop-Archiv)
+      (vorhanden.has(basis.jsonPositionen.spalte) ? felder : fehlend).push(f);
+      continue;
+    }
     if (f.virtuell === 'position') {
       const ok = basis.kinder && kinderSpalten.has(basis.kinder.fremdschluessel)
         && (f.positionSpalte === null || f.positionSpalte === undefined || kinderSpalten.has(f.positionSpalte));
