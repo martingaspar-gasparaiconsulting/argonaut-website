@@ -52,6 +52,7 @@ import {
 } from '@/lib/importBestand';
 import { buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
 import { importErlaubt, leseRechtStand, type RechtStand } from '@/lib/importRechte';
+import { aufraeumerErlaubt, teileText, zeilenZuCsv, AUFRAEUMER_MAX_PORTIONEN } from '@/lib/importAufraeumer';
 import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
@@ -318,6 +319,10 @@ export default function ImportCenterPage() {
   const [anleitungOffen, setAnleitungOffen] = useState<string | null>(null);
   /** Aus welchem Altsystem stammt die aktuelle Datei ('' = unbekannt). */
   const [dateiSystem, setDateiSystem] = useState('');
+  // Paket 145: KI-Aufraeumer fuer Text, der keine saubere Tabelle ist
+  const [kiOffen, setKiOffen] = useState(false);
+  const [kiText, setKiText] = useState('');
+  const [kiStand, setKiStand] = useState<string | null>(null);
   const [spaltenOffen, setSpaltenOffen] = useState(false);
 
   const katalog = useMemo(() => (zielKey ? katalogFuerZiel(zielKey, dbSpalten) : null), [zielKey, dbSpalten]);
@@ -750,6 +755,43 @@ export default function ImportCenterPage() {
       setFehler(err instanceof Error ? err.message : 'Die Datei konnte nicht gelesen werden.');
       setBalken((b) => (b ? { ...b, fehler: true, rest: null, wartet: null } : null));
     } finally { setBusy(null); }
+  }
+
+  /**
+   * Paket 145: Umzug Schritt 5 — eingefuegten Text portionsweise von der KI
+   * den Feldern dieses Ziels zuordnen lassen; das Ergebnis geht als CSV durch
+   * denselben Motor wie jede Datei (dateiLesen). Die KI schreibt nichts.
+   */
+  async function kiAufraeumen() {
+    if (!zielKey || !ziel) return;
+    const e = aufraeumerErlaubt(zielKey);
+    if (!e.ok) { setFehler(e.grund); return; }
+    const { teile, zuViel } = teileText(kiText);
+    if (teile.length === 0) { setFehler('Bitte zuerst Text einfügen.'); return; }
+    if (zuViel) { setFehler(`Der Text ist zu lang für einen Durchgang (höchstens ${AUFRAEUMER_MAX_PORTIONEN} Portionen). Bitte in Teilen einlesen.`); return; }
+    setBusy('ki'); setFehler(null); setHinweis(null);
+    const alle: Record<string, string>[] = [];
+    let verworfen = 0;
+    try {
+      for (let i = 0; i < teile.length; i++) {
+        setKiStand(`ARGONAUT räumt auf … Portion ${i + 1} von ${teile.length}`);
+        const res = await fetch('/api/import-aufraeumen', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ zielKey, rohtext: teile[i] }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((j as { error?: string }).error || 'Aufbereitung fehlgeschlagen.');
+        alle.push(...(((j as { zeilen?: Record<string, string>[] }).zeilen) ?? []));
+        verworfen += Number((j as { verworfen?: number }).verworfen) || 0;
+      }
+      if (alle.length === 0) { setFehler('Im Text war kein passender Datensatz zu erkennen.'); return; }
+      const csv = zeilenZuCsv(alle, ziel);
+      setKiStand(null);
+      await dateiLesen(new File([csv], `KI-aufgeraeumt-${ziel.key}.csv`, { type: 'text/csv' }));
+      setHinweis((h) => `${h ?? ''} Aus eingefügtem Text von ARGONAUT aufgeräumt${verworfen > 0 ? ` (${zahlDe(verworfen)} unbrauchbare Einträge verworfen)` : ''} — bitte die Zuordnung und das Prüfergebnis genau ansehen.`);
+    } catch (err: unknown) {
+      setFehler(err instanceof Error ? err.message : 'Aufbereitung fehlgeschlagen.');
+    } finally { setBusy(null); setKiStand(null); }
   }
 
   function feldSetzen(spalte: string, feldKey: string) {
@@ -1935,6 +1977,39 @@ export default function ImportCenterPage() {
               disabled={busy !== null}
               style={styles.dateiFeld}
             />
+            {/* Paket 145: KI-Aufraeumer */}
+            <div style={{ marginTop: 12 }}>
+              <button type="button" onClick={() => setKiOffen((o) => !o)} style={styles.linkKnopf}>
+                {kiOffen ? '▾' : '▸'} Keine saubere Tabelle (PDF, Word, E-Mail)? Text einfügen — ARGONAUT räumt auf
+              </button>
+              {kiOffen && (() => {
+                const erlaubtKi = aufraeumerErlaubt(ziel.key);
+                return (
+                  <div style={{ ...styles.vorlagenLeiste, flexDirection: 'column', alignItems: 'stretch', marginTop: 8 }}>
+                    {!erlaubtKi.ok ? (
+                      <span style={{ color: C.dim, fontSize: 13 }}>{erlaubtKi.grund}</span>
+                    ) : (<>
+                      <span style={{ color: C.dim, fontSize: 12.5, lineHeight: 1.5 }}>
+                        Kopieren Sie die Liste aus PDF, Word oder E-Mail hier hinein. ARGONAUT ordnet sie den Feldern „{ziel.label}" zu —
+                        danach sehen Sie wie bei jeder Datei die Zuordnung und das Prüfergebnis, bevor etwas gespeichert wird.
+                        Der Text wird dafür an unseren KI-Dienst übermittelt und dort nicht gespeichert. Bankdaten werden nie übernommen.
+                      </span>
+                      <textarea
+                        value={kiText} onChange={(e) => setKiText(e.target.value)} rows={8} disabled={busy !== null}
+                        placeholder="Liste hier einfügen …"
+                        style={{ ...styles.select, width: '100%', minHeight: 140, fontFamily: 'inherit', resize: 'vertical' }}
+                      />
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <button type="button" onClick={kiAufraeumen} disabled={busy !== null || !kiText.trim()} style={{ ...styles.btnRand, fontSize: 13 }}>
+                          ✨ Aufräumen und einlesen
+                        </button>
+                        <span style={{ color: C.dim, fontSize: 12.5 }}>{kiStand ?? `${zahlDe(kiText.length)} Zeichen`}</span>
+                      </div>
+                    </>)}
+                  </div>
+                );
+              })()}
+            </div>
             {balken && !bericht && (
               <div style={{ marginTop: 10 }}>
                 <DateiBalken name={datei?.dateiname ?? 'Datei'} stand={balken} />
