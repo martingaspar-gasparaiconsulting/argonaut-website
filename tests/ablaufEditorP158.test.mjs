@@ -86,11 +86,11 @@ test('Grenzen beim „+": 50 Schritte, Wenn höchstens 5 Ebenen tief', () => {
 });
 
 test('Das „+" zeigt nur passende Aktionen; noch nicht im Motor = gekennzeichnet', () => {
-  const r = aktionenFuer('rechnung_ueberfaellig').map((a) => a.key);
+  const r = aktionenFuer({ art: 'datum', trigger: 'rechnung_ueberfaellig', tage: 0 }).map((a) => a.key);
   assert.ok(r.includes('mahnstufe_erhoehen'));
-  assert.ok(!aktionenFuer('angebot_ohne_antwort').some((a) => a.key === 'mahnstufe_erhoehen'), 'Mahnstufe nur bei Rechnungen');
-  assert.equal(aktionenFuer('rechnung_ueberfaellig').find((a) => a.key === 'freigabe_chef').imMotor, true);
-  assert.equal(aktionenFuer('rechnung_ueberfaellig').find((a) => a.key === 'glocke').imMotor, false);
+  assert.ok(!aktionenFuer({ art: 'datum', trigger: 'angebot_ohne_antwort', tage: 0 }).some((a) => a.key === 'mahnstufe_erhoehen'), 'Mahnstufe nur bei Rechnungen');
+  assert.equal(aktionenFuer({ art: 'datum', trigger: 'rechnung_ueberfaellig', tage: 0 }).find((a) => a.key === 'freigabe_chef').imMotor, true);
+  assert.equal(aktionenFuer({ art: 'datum', trigger: 'rechnung_ueberfaellig', tage: 0 }).find((a) => a.key === 'glocke').imMotor, false);
 });
 
 test('Bedingungen bearbeiten: UND/ODER, verschachtelte Gruppe', () => {

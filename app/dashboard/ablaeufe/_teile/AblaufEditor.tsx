@@ -14,11 +14,11 @@ import {
   type Bedingung, type Operator, type FeldDef,
 } from '@/lib/automation';
 import {
-  pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion,
-  type Ablauf, type Schritt, type BedingungsGruppe, type SchrittAktion,
+  pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion, ausloeserHatVorgang,
+  type Ablauf, type Ausloeser, type Schritt, type BedingungsGruppe, type SchrittAktion,
 } from '@/lib/ablauf';
 import {
-  einfuegen, ersetzen, entfernen, verschieben, neuerSchritt, plusErlaubt, aktionenFuer,
+  einfuegen, ersetzen, entfernen, verschieben, neuerSchritt, plusErlaubt, aktionenFuer, neuerAusloeser,
   bedingungDazu, bedingungAendern, bedingungWeg, verknuepfungSetzen, listeAn, type NeuArt,
 } from '@/lib/ablaufEditor';
 
@@ -108,11 +108,12 @@ function GruppeEditor({ gruppe, felder, onChange, pfad = '', tiefe = 0 }: {
 // ---------------------------------------------------------------------------
 // Das „+" zwischen zwei Karten
 // ---------------------------------------------------------------------------
-function Plus({ schritte, listePfad, trigger, onWahl }: {
-  schritte: Schritt[]; listePfad: string; trigger: string; onWahl: (art: NeuArt, aktion?: string) => void;
+function Plus({ schritte, listePfad, ausloeser, onWahl }: {
+  schritte: Schritt[]; listePfad: string; ausloeser: Ausloeser; onWahl: (art: NeuArt, aktion?: string) => void;
 }) {
   const [offen, setOffen] = useState(false);
-  const aktionen = aktionenFuer(trigger);
+  const aktionen = aktionenFuer(ausloeser);
+  const mitVorgang = ausloeserHatVorgang(ausloeser);
   const eintrag = (label: string, erlaubt: boolean, tu: () => void, hinweis?: string) => (
     <button key={label} type="button" disabled={!erlaubt} onClick={() => { tu(); setOffen(false); }}
       style={{ ...knopf('rand'), padding: '5px 10px', fontSize: 12.5, opacity: erlaubt ? 1 : 0.45, cursor: erlaubt ? 'pointer' : 'not-allowed' }}
@@ -127,7 +128,7 @@ function Plus({ schritte, listePfad, trigger, onWahl }: {
         <div style={{ marginTop: 6, padding: 10, borderRadius: 10, border: `1px solid ${C.border}`, background: C.navy, display: 'flex', flexWrap: 'wrap', gap: 6, maxWidth: 640, justifyContent: 'center' }}>
           {aktionen.map((a) => eintrag(a.label, a.imMotor && plusErlaubt(schritte, listePfad, 'aktion'), () => onWahl('aktion', a.key), a.imMotor ? undefined : 'folgt'))}
           {eintrag('Warten', plusErlaubt(schritte, listePfad, 'warten'), () => onWahl('warten'))}
-          {eintrag('Wenn / Sonst', plusErlaubt(schritte, listePfad, 'wenn'), () => onWahl('wenn'))}
+          {eintrag('Wenn / Sonst', mitVorgang && plusErlaubt(schritte, listePfad, 'wenn'), () => onWahl('wenn'), mitVorgang ? undefined : 'nur mit Vorgang')}
           {eintrag('Stopp', plusErlaubt(schritte, listePfad, 'stopp'), () => onWahl('stopp'))}
         </div>
       )}
@@ -176,10 +177,9 @@ function Kette({ e, setSchritte, listePfad, felder }: {
   e: Entwurf; setSchritte: (s: Schritt[]) => void; listePfad: string; felder: FeldDef[];
 }) {
   const liste = listeAn(e.schritte, listePfad) ?? [];
-  const trigger = e.ausloeser.art === 'datum' ? e.ausloeser.trigger : '';
   const dazu = (index: number) => (art: NeuArt, aktion?: string) =>
     setSchritte(einfuegen(e.schritte, listePfad, index, neuerSchritt(e.schritte, art, aktion, felder[0]?.key)));
-  const karten: ReactNode[] = [<Plus key="plus-0" schritte={e.schritte} listePfad={listePfad} trigger={trigger} onWahl={dazu(0)} />];
+  const karten: ReactNode[] = [<Plus key="plus-0" schritte={e.schritte} listePfad={listePfad} ausloeser={e.ausloeser} onWahl={dazu(0)} />];
   liste.forEach((s, i) => {
     const pfad = listePfad ? `${listePfad}.${i}` : String(i);
     const farbe = s.typ === 'aktion' && s.aktion === 'freigabe_chef' ? C.gold : s.typ === 'wenn' ? C.cyan : s.typ === 'stopp' ? C.danger : C.border;
@@ -218,7 +218,7 @@ function Kette({ e, setSchritte, listePfad, felder }: {
         )}
       </div>,
     );
-    karten.push(<Plus key={`plus-${i + 1}`} schritte={e.schritte} listePfad={listePfad} trigger={trigger} onWahl={dazu(i + 1)} />);
+    karten.push(<Plus key={`plus-${i + 1}`} schritte={e.schritte} listePfad={listePfad} ausloeser={e.ausloeser} onWahl={dazu(i + 1)} />);
   });
   return <div>{karten}</div>;
 }
@@ -263,12 +263,56 @@ export default function AblaufEditor({ start, busy, onSpeichern, onAbbrechen }: 
       <div style={{ border: `1px solid ${C.cyan}`, borderRadius: 12, padding: 12, background: 'rgba(0,229,255,0.04)' }}>
         <div style={{ fontSize: 11.5, letterSpacing: 1.2, textTransform: 'uppercase', color: C.cyan, fontWeight: 800, marginBottom: 8 }}>Auslöser</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-          {AUSLOESER_ARTEN.map((a) => (
-            <span key={a.art} title={a.hinweis} style={{ ...knopf(a.art === 'datum' ? 'gold' : 'rand'), padding: '4px 10px', fontSize: 12.5, opacity: a.imMotor ? 1 : 0.45, cursor: 'default' }}>
-              {a.label}{a.imMotor ? '' : ' · folgt'}
-            </span>
-          ))}
+          {AUSLOESER_ARTEN.map((a) => {
+            const waehlbar = a.imMotor && (a.art === 'datum' || a.art === 'zeitplan' || a.art === 'knopf');
+            return (
+              <button key={a.art} type="button" title={a.hinweis} disabled={!waehlbar}
+                onClick={() => waehlbar && e.ausloeser.art !== a.art && setE((x) => ({ ...x, ausloeser: neuerAusloeser(a.art as 'datum' | 'zeitplan' | 'knopf') }))}
+                style={{ ...knopf(e.ausloeser.art === a.art ? 'gold' : 'rand'), padding: '4px 10px', fontSize: 12.5, opacity: waehlbar ? 1 : 0.45, cursor: waehlbar ? 'pointer' : 'not-allowed' }}>
+                {a.label}{waehlbar ? '' : ' · folgt'}
+              </button>
+            );
+          })}
         </div>
+        {e.ausloeser.art === 'zeitplan' && (() => {
+          const z = e.ausloeser;
+          const setZ = (teil: Partial<typeof z>) => setE((x) => ({ ...x, ausloeser: { ...z, ...teil } }));
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: 10, marginBottom: 6 }}>
+              <div>
+                <label style={beschriftung}>Rhythmus</label>
+                <select value={z.rhythmus} onChange={(ev) => setZ({ rhythmus: ev.target.value as typeof z.rhythmus })} style={feld}>
+                  <option value="taeglich">Täglich</option><option value="woechentlich">Wöchentlich</option><option value="monatlich">Monatlich</option>
+                </select>
+              </div>
+              {z.rhythmus === 'woechentlich' && (
+                <div>
+                  <label style={beschriftung}>Wochentag</label>
+                  <select value={z.wochentag ?? 1} onChange={(ev) => setZ({ wochentag: Number(ev.target.value) })} style={feld}>
+                    {['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'].map((w, i) => <option key={w} value={i + 1}>{w}</option>)}
+                  </select>
+                </div>
+              )}
+              {z.rhythmus === 'monatlich' && (
+                <div>
+                  <label style={beschriftung}>Tag im Monat</label>
+                  <input type="number" min={1} max={31} value={z.tag ?? 1} onChange={(ev) => setZ({ tag: Math.max(1, Math.min(31, Math.trunc(Number(ev.target.value) || 1))) })} style={feld} />
+                </div>
+              )}
+              <div>
+                <label style={beschriftung}>Uhrzeit (Berliner Zeit)</label>
+                <input type="time" value={z.uhrzeit ?? '07:00'} onChange={(ev) => setZ({ uhrzeit: ev.target.value })} style={feld} />
+              </div>
+            </div>
+          );
+        })()}
+        {e.ausloeser.art === 'knopf' && (
+          <div style={{ ...klein, marginBottom: 6 }}>Startet mit „▶ Jetzt starten" auf der Seite Abläufe — ohne Vorgang. Knöpfe direkt in den Modulen folgen.</div>
+        )}
+        {e.ausloeser.art !== 'datum' && (
+          <div style={{ ...klein, marginBottom: 6 }}>Ohne Vorgang gehen nur Aktionen, die nichts Bestehendes ändern: Aufgabe anlegen, Mail an eine feste Adresse, Warten, Freigabe, Stopp. So liest sich das: {ausloeserText(e.ausloeser)}.</div>
+        )}
+        {e.ausloeser.art === 'datum' && (<>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>
           <div>
             <label style={beschriftung}>Wenn das passiert</label>
@@ -287,6 +331,7 @@ export default function AblaufEditor({ start, busy, onSpeichern, onAbbrechen }: 
         <div style={{ ...beschriftung, marginBottom: 6 }}>Nur starten, wenn … (leer = immer)</div>
         <GruppeEditor gruppe={filter} felder={felder}
           onChange={(g) => setE((x) => (x.ausloeser.art === 'datum' ? { ...x, ausloeser: { ...x.ausloeser, filter: g.regeln.length ? g : null } } : x))} />
+        </>)}
       </div>
 
       {/* Kette */}

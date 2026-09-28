@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@/lib/supabase-server';
-import { fahrplan, pruefeAblauf, schrittAn, schrittText, type Ablauf } from '@/lib/ablauf';
+import { fahrplan, pruefeAblauf, schrittAn, schrittText, ausloeserHatVorgang, ausloeserText, type Ablauf } from '@/lib/ablauf';
+import { zeitplanSlot } from '@/lib/ablaufZeit';
 import {
-  ausloeserZiel, neueStarts, freieStarts, aktionPlanen, zustandNach, planText, RUECKBLICK_TAGE, MAX_KANDIDATEN,
+  ausloeserZiel, neueStarts, freieStarts, aktionPlanen, zustandNach, planText, RUECKBLICK_TAGE, MAX_KANDIDATEN, OHNE_VORGANG,
 } from '@/lib/ablaufMotor';
 import { ergaenzeKontakte } from '@/lib/ablaufDaten';
 import type { Datensatz } from '@/lib/automation';
@@ -19,6 +20,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const TAG = 86400000;
+
 const MAX_BEISPIELE = 5;
 
 export async function GET(req: Request) {
@@ -36,6 +38,23 @@ export async function GET(req: Request) {
   const jetzt = new Date();
   const pruefung = pruefeAblauf(ablauf);
   const ziel = ausloeserZiel(ablauf.ausloeser);
+  if (!ausloeserHatVorgang(ablauf.ausloeser)) {
+    // Zeitplan / Knopf: ein Lauf ohne Vorgang — die Schritte zeigen, sonst nichts.
+    const f = fahrplan(ablauf, null, {}, jetzt);
+    const z = zustandNach(f.danach);
+    const slot = zeitplanSlot(ablauf.ausloeser, jetzt);
+    return NextResponse.json({
+      ok: true, zeitpunkt: jetzt.toISOString(), pruefung,
+      hinweis: ablauf.ausloeser.art === 'zeitplan'
+        ? `${ausloeserText(ablauf.ausloeser)} — ${slot ? `heute fällig (${slot})` : 'jetzt nicht fällig'}.`
+        : `${ausloeserText(ablauf.ausloeser)}.`,
+      beispiele: [{
+        vorgang: 'Ohne Vorgang',
+        schritte: f.jetzt.filter((e) => e.art === 'aktion').map((e) => ({ pfad: e.pfad, text: `${schrittText(e.schritt)}: ${planText(aktionPlanen(e.schritt, ablauf, OHNE_VORGANG, user.id, {}, jetzt))}` })),
+        danach: z.meldung,
+      }],
+    });
+  }
   if (!ziel || ablauf.ausloeser.art !== 'datum') {
     return NextResponse.json({ ok: true, zeitpunkt: jetzt.toISOString(), pruefung, faellig: 0, wuerde_starten: 0, zurueckgestellt: 0, beispiele: [], hinweis: 'Dieser Auslöser läuft noch nicht im Motor.' });
   }

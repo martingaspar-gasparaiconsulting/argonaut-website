@@ -58,6 +58,9 @@ export const NOTIZ_FELD: Record<string, string> = {
 
 export type Ziel = { tabelle: string; zielTyp: string; datumFeld: string };
 
+/** Ziel eines Laufs OHNE Vorgang (Zeitplan, Knopf auf der Ablauf-Seite) — Paket 159. */
+export const OHNE_VORGANG: Ziel = { tabelle: '', zielTyp: 'ohne', datumFeld: '' };
+
 /** Welche Tabelle ein Auslöser abfragt (heute nur „Datum erreicht"). */
 export function ausloeserZiel(a: Ausloeser | null | undefined): Ziel | null {
   if (!a || a.art !== 'datum') return null;

@@ -12,8 +12,8 @@
 
 import { aktionDef, triggerDef, type Bedingung } from './automation';
 import {
-  ablaufAktion, ABLAUF_AKTIONEN, GRENZEN, istGruppe,
-  type Ablauf, type Schritt, type SchrittAktion, type BedingungsGruppe,
+  ablaufAktion, ABLAUF_AKTIONEN, GRENZEN, istGruppe, ausloeserHatVorgang, VORGANG_AKTIONEN,
+  type Ablauf, type Ausloeser, type Schritt, type SchrittAktion, type BedingungsGruppe,
 } from './ablauf';
 
 // ---------------------------------------------------------------------------
@@ -139,15 +139,28 @@ export function plusErlaubt(schritte: readonly Schritt[], listePfad: string, art
   return !(art === 'wenn' && tiefe >= GRENZEN.tiefe);
 }
 
-/** Aktionen, die zum Auslöser passen (Mahnstufe nur bei Rechnungen) — mit Kennzeichen „im Motor". */
-export function aktionenFuer(trigger: string): { key: string; label: string; imMotor: boolean }[] {
-  const t = triggerDef(trigger);
+/**
+ * Aktionen, die zum Auslöser passen — mit Kennzeichen „im Motor".
+ * Mahnstufe nur bei Rechnungen; ohne Vorgang (Zeitplan, Knopf) keine
+ * Aktionen, die einen Vorgang ändern (Paket 159).
+ */
+export function aktionenFuer(a: Ausloeser): { key: string; label: string; imMotor: boolean }[] {
+  const t = a.art === 'datum' ? triggerDef(a.trigger) : undefined;
+  const mitVorgang = ausloeserHatVorgang(a);
   return ABLAUF_AKTIONEN
-    .filter((a) => {
-      const z = aktionDef(a.key)?.zielTypen;
+    .filter((x) => {
+      if (!mitVorgang && VORGANG_AKTIONEN.includes(x.key)) return false;
+      const z = aktionDef(x.key)?.zielTypen;
       return !z || !t || z.includes(t.zielTyp);
     })
-    .map((a) => ({ key: a.key, label: a.label, imMotor: a.imMotor }));
+    .map((x) => ({ key: x.key, label: x.label, imMotor: x.imMotor }));
+}
+
+/** Neuer Auslöser beim Umschalten der Art — mit sinnvollen Startwerten. */
+export function neuerAusloeser(art: 'datum' | 'zeitplan' | 'knopf'): Ausloeser {
+  if (art === 'zeitplan') return { art: 'zeitplan', rhythmus: 'woechentlich', uhrzeit: '07:00', wochentag: 1, tag: 1 };
+  if (art === 'knopf') return { art: 'knopf' };
+  return { art: 'datum', trigger: 'rechnung_ueberfaellig', tage: 3, filter: null };
 }
 
 // ---------------------------------------------------------------------------

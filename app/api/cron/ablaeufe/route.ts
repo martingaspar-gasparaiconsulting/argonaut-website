@@ -1,29 +1,34 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cronGuard } from '@/lib/cronGuard';
-import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
-import { fahrplan, type Ablauf, type Schritt } from '@/lib/ablauf';
+import { ausloeserHatVorgang } from '@/lib/ablauf';
 import {
-  ausloeserZiel, nochGueltig, neueStarts, freieStarts, laufbereit, aktionPlanen, zustandNach,
+  ausloeserZiel, nochGueltig, neueStarts, freieStarts, laufbereit, OHNE_VORGANG,
   MAX_ABLAEUFE, MAX_FORTSETZUNGEN, MAX_KANDIDATEN, RUECKBLICK_TAGE, MAX_JE_ABLAUF,
-  type AktionPlan, type Ziel,
 } from '@/lib/ablaufMotor';
+import { zeitplanSlot, slotKennung } from '@/lib/ablaufZeit';
+import {
+  arbeiteAb, schritteFuer, protokoll, setzeLauf, starteLauf,
+  type AblaufZeile, type LaufZeile,
+} from '@/lib/ablaufAusfuehren';
 import { ergaenzeKontakte } from '@/lib/ablaufDaten';
 import type { Datensatz } from '@/lib/automation';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/ablaeufe — der Motor der Abläufe (Paket 157, 28.09.2026)
 //
-// Läuft stündlich (vercel.json). Je Durchgang zwei Teile:
+// Läuft stündlich (vercel.json). Je Durchgang drei Teile:
 //   1. FORTSETZEN: Läufe, deren Wartezeit um ist (auch nach einer Freigabe durch
 //      den Chef — die Seite setzt den Lauf dann auf „wartet, weiter ab jetzt").
-//      Vorher wird geprüft, ob der Auslöser noch gilt (Rechnung bezahlt ->
-//      Lauf endet, statt weiter zu mahnen).
-//   2. NEU STARTEN: je eingeschaltetem Ablauf mit „Datum erreicht" die fälligen
+//      Bei Läufen mit Vorgang wird vorher geprüft, ob der Auslöser noch gilt
+//      (Rechnung bezahlt -> Lauf endet, statt weiter zu mahnen).
+//   2. NEU STARTEN „Datum erreicht": je eingeschaltetem Ablauf die fälligen
 //      Vorgänge — EINMALIG je Ablauf und Vorgang (Unique-Index), höchstens
 //      MAX_JE_ABLAUF neue Läufe je 24 Stunden, nicht älter als der Rückblick,
 //      nichts, was die alte Regel schon erledigt hat.
-// Jeder Schritt landet im Protokoll (ablauf_protokoll).
+//   3. ZEITPLAN (Paket 159): fälliger Slot in Berliner Zeit, je Slot genau ein
+//      Lauf (feste Kennung aus Ablauf + Slot, derselbe Unique-Index).
+// Abgearbeitet wird in lib/ablaufAusfuehren.ts (gemeinsam mit dem Knopf).
 //
 // PROBELAUF: ?probe=1 rechnet nur und schreibt NICHTS (keine Läufe, kein Protokoll).
 // Einzelner Ablauf: ?ablauf=<id>.
@@ -39,90 +44,8 @@ export const dynamic = 'force-dynamic';
 function service() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
-type Admin = ReturnType<typeof service>;
-
-type AblaufZeile = Ablauf & { id: string; owner_user_id: string; version: number; alt_regel_id: string | null };
-type LaufZeile = {
-  id: string; owner_user_id: string; ablauf_id: string; version: number; ziel_typ: string | null; ziel_id: string | null;
-  status: string; pfad: string | null; kontext: { tabelle?: string } | null;
-};
-type Ergebnis = { ergebnis: 'ok' | 'fehler' | 'uebersprungen'; meldung: string };
 
 const TAG = 86400000;
-
-// ---------------------------------------------------------------------------
-// Einen geplanten Schritt ausführen — nur, was lib/ablaufMotor geplant hat.
-// ---------------------------------------------------------------------------
-async function fuehreAus(admin: Admin, plan: AktionPlan, ownerId: string): Promise<Ergebnis> {
-  if (plan.art === 'uebersprungen') return { ergebnis: 'uebersprungen', meldung: plan.meldung };
-  if (plan.art === 'fehler') return { ergebnis: 'fehler', meldung: plan.meldung };
-  if (plan.art === 'anlegen') {
-    const { error } = await admin.from(plan.tabelle).insert({ ...plan.daten, owner_user_id: ownerId });
-    return error ? { ergebnis: 'fehler', meldung: error.message } : { ergebnis: 'ok', meldung: plan.meldung };
-  }
-  if (plan.art === 'aendern') {
-    const { data, error } = await admin.from(plan.tabelle).update(plan.daten)
-      .eq('id', plan.id).eq('owner_user_id', ownerId).select('id');
-    if (error) return { ergebnis: 'fehler', meldung: error.message };
-    if (!data || data.length === 0) return { ergebnis: 'fehler', meldung: 'Vorgang nicht gefunden' };
-    return { ergebnis: 'ok', meldung: plan.meldung };
-  }
-  const marke = await absenderBranding(admin, ownerId);
-  const inhalt = plan.text.split('\n').map((z) => `<p style="margin:0 0 10px">${z || '&nbsp;'}</p>`).join('');
-  const r = await sendeMail({ an: plan.an, betreff: plan.betreff, html: kundenMailLayout(marke.firma, marke.akzent, plan.betreff, inhalt) });
-  return r.ok ? { ergebnis: 'ok', meldung: plan.meldung } : { ergebnis: 'fehler', meldung: r.fehler };
-}
-
-async function protokoll(admin: Admin, lauf: LaufZeile, pfad: string | null, schrittTyp: string, ergebnis: string, meldung: string, details: Record<string, unknown> = {}) {
-  await admin.from('ablauf_protokoll').insert({
-    owner_user_id: lauf.owner_user_id, lauf_id: lauf.id, ablauf_id: lauf.ablauf_id,
-    pfad, schritt_typ: schrittTyp, ergebnis, meldung: meldung.slice(0, 500), details,
-  });
-}
-
-async function setzeLauf(admin: Admin, lauf: LaufZeile, felder: Record<string, unknown>) {
-  await admin.from('ablauf_laeufe').update(felder).eq('id', lauf.id).eq('owner_user_id', lauf.owner_user_id);
-}
-
-/** Den Fahrplan ab `startPfad` abarbeiten, Protokoll schreiben, Zustand setzen. */
-async function arbeiteAb(
-  admin: Admin, ablauf: AblaufZeile, schritte: Schritt[], lauf: LaufZeile, startPfad: string | null,
-  satz: Datensatz, ziel: Ziel, jetzt: Date,
-): Promise<string> {
-  const f = fahrplan({ schritte }, startPfad, satz, jetzt);
-  for (const e of f.jetzt) {
-    if (e.art === 'bedingung') {
-      await protokoll(admin, lauf, e.pfad, 'wenn', 'ok', e.ergebnis ? 'Wenn: ja → Dann-Zweig' : 'Wenn: nein → Sonst-Zweig');
-      continue;
-    }
-    const plan = aktionPlanen(e.schritt, ablauf, ziel, lauf.owner_user_id, satz, jetzt);
-    let r: Ergebnis;
-    try { r = await fuehreAus(admin, plan, lauf.owner_user_id); }
-    catch (err: unknown) { r = { ergebnis: 'fehler', meldung: err instanceof Error ? err.message : 'unbekannter Fehler' }; }
-    await protokoll(admin, lauf, e.pfad, 'aktion', r.ergebnis, r.meldung, { aktion: e.schritt.aktion });
-    if (r.ergebnis === 'fehler') {
-      // Nach einem Fehler geht es NICHT weiter — keine Folge-Mail auf kaputter Grundlage.
-      await setzeLauf(admin, lauf, { status: 'fehler', pfad: e.pfad, weiter_am: null, meldung: r.meldung.slice(0, 500), beendet_am: jetzt.toISOString() });
-      return 'fehler';
-    }
-  }
-  const z = zustandNach(f.danach);
-  if (f.danach.art === 'warten') await protokoll(admin, lauf, z.pfad, 'warten', 'wartet', `Wartet bis ${z.weiter_am ?? '—'}`);
-  if (f.danach.art === 'freigabe') await protokoll(admin, lauf, f.danach.pfad, 'freigabe', 'freigabe', z.meldung);
-  if (f.danach.art === 'stopp') await protokoll(admin, lauf, f.danach.pfad, 'stopp', 'ok', z.meldung);
-  const ende = z.status === 'fertig' || z.status === 'gestoppt';
-  await setzeLauf(admin, lauf, { status: z.status, pfad: z.pfad, weiter_am: z.weiter_am, meldung: z.meldung, beendet_am: ende ? jetzt.toISOString() : null });
-  return z.status;
-}
-
-/** Schritte in der Fassung, mit der der Lauf gestartet ist (Versionen). */
-async function schritteFuer(admin: Admin, ablauf: AblaufZeile, lauf: LaufZeile): Promise<Schritt[] | null> {
-  if (Number(lauf.version) === Number(ablauf.version)) return ablauf.schritte;
-  const { data } = await admin.from('ablauf_versionen').select('schritte')
-    .eq('ablauf_id', ablauf.id).eq('owner_user_id', ablauf.owner_user_id).eq('version', lauf.version).maybeSingle();
-  const s = (data as { schritte?: unknown } | null)?.schritte;
-  return Array.isArray(s) ? (s as Schritt[]) : null;
-}
 
 // ---------------------------------------------------------------------------
 // Der Durchgang
@@ -137,7 +60,7 @@ async function durchgang(req: Request) {
   const admin = service();
   const jetzt = new Date();
   const bericht: Array<Record<string, unknown>> = [];
-  let fortgesetzt = 0, gestartet = 0;
+  let fortgesetzt = 0, gestartet = 0, zeitplaene = 0;
 
   let q = admin.from('ablaeufe').select('*').eq('aktiv', true).limit(MAX_ABLAEUFE);
   if (nurAblauf) q = q.eq('id', nurAblauf);
@@ -156,6 +79,7 @@ async function durchgang(req: Request) {
     if (!ablauf || ablauf.owner_user_id !== lauf.owner_user_id) continue;
     const tabelle = lauf.kontext?.tabelle;
     const ziel = ausloeserZiel(ablauf.ausloeser);
+    const mitVorgang = ausloeserHatVorgang(ablauf.ausloeser);
     if (probe) { bericht.push({ ablauf: ablauf.name, lauf: lauf.id, wuerde: 'fortsetzen', ab: lauf.pfad }); continue; }
 
     // Anspruch anmelden: nur EIN Durchgang setzt einen Lauf fort.
@@ -164,6 +88,13 @@ async function durchgang(req: Request) {
     if (!meins || meins.length === 0) continue;
 
     const schritte = await schritteFuer(admin, ablauf, lauf);
+    if (!mitVorgang) {
+      // Zeitplan / Knopf: kein Vorgang zu laden, nichts nachzuprüfen.
+      if (!schritte) { await setzeLauf(admin, lauf, { status: 'abgebrochen', meldung: 'Fassung fehlt', beendet_am: jetzt.toISOString() }); continue; }
+      await arbeiteAb(admin, ablauf, schritte, lauf, lauf.pfad, {}, OHNE_VORGANG, jetzt);
+      fortgesetzt++;
+      continue;
+    }
     if (!ziel || !tabelle || tabelle !== ziel.tabelle || !schritte || !lauf.ziel_id) {
       await setzeLauf(admin, lauf, { status: 'abgebrochen', meldung: 'Fassung oder Ziel passt nicht mehr', beendet_am: jetzt.toISOString() });
       continue;
@@ -224,25 +155,34 @@ async function durchgang(req: Request) {
     await ergaenzeKontakte(admin, ablauf.owner_user_id, n.starten);
     let ok = 0;
     for (const satz of n.starten) {
-      const { data: neu, error } = await admin.from('ablauf_laeufe').insert({
-        owner_user_id: ablauf.owner_user_id, ablauf_id: ablauf.id, version: ablauf.version,
-        ziel_typ: ziel.zielTyp, ziel_id: String(satz.id), status: 'laeuft', probe: false,
-        kontext: { tabelle: ziel.tabelle, trigger: ablauf.ausloeser.trigger },
-      }).select('*').single();
-      if (error || !neu) continue;          // 23505 = lief schon (EINMALIG) — kein Drama
-      await protokoll(admin, neu as LaufZeile, null, 'start', 'ok', 'Gestartet: Datum erreicht');
-      await arbeiteAb(admin, ablauf, ablauf.schritte, neu as LaufZeile, null, satz, ziel, jetzt);
-      ok++;
+      // null = lief schon (EINMALIG-Index, 23505) — kein Drama
+      const r = await starteLauf(admin, ablauf, ziel, ziel.zielTyp, String(satz.id),
+        { tabelle: ziel.tabelle, trigger: ablauf.ausloeser.trigger }, satz, 'Gestartet: Datum erreicht', jetzt);
+      if (r !== null) ok++;
     }
     gestartet += ok;
     await admin.from('ablaeufe').update({ zuletzt_lauf_am: jetzt.toISOString() }).eq('id', ablauf.id).eq('owner_user_id', ablauf.owner_user_id);
     bericht.push({ ablauf: ablauf.name, geprueft: kandidaten.length, faellig: n.faellig, gestartet: ok, zurueckgestellt_wegen_deckel: n.zurueckgestellt });
   }
 
+  // ---- 3) Zeitplan: fälliger Slot in Berliner Zeit, je Slot genau ein Lauf --------
+  for (const ablauf of ablaeufe) {
+    if (ablauf.ausloeser.art !== 'zeitplan') continue;
+    const slot = zeitplanSlot(ablauf.ausloeser, jetzt);
+    if (!slot) continue;
+    if (probe) { bericht.push({ ablauf: ablauf.name, zeitplan: slot, wuerde: 'starten, falls noch nicht gelaufen' }); continue; }
+    const r = await starteLauf(admin, ablauf, OHNE_VORGANG, 'zeitplan', slotKennung(ablauf.id, slot), { slot }, {}, `Gestartet: Zeitplan ${slot}`, jetzt);
+    if (r !== null) {
+      zeitplaene++;
+      await admin.from('ablaeufe').update({ zuletzt_lauf_am: jetzt.toISOString() }).eq('id', ablauf.id).eq('owner_user_id', ablauf.owner_user_id);
+      bericht.push({ ablauf: ablauf.name, zeitplan: slot, ergebnis: r });
+    }
+  }
+
   return NextResponse.json({
     ok: true, probelauf: probe, zeitpunkt: jetzt.toISOString(),
     ablaeufe_aktiv: ablaeufe.length,
-    ...(probe ? {} : { fortgesetzt, gestartet }),
+    ...(probe ? {} : { fortgesetzt, gestartet, zeitplaene }),
     deckel_je_ablauf_24h: MAX_JE_ABLAUF, rueckblick_tage: RUECKBLICK_TAGE,
     bericht,
   });

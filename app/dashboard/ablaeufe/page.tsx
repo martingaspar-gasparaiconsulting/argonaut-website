@@ -38,7 +38,7 @@ const C = {
 type AblaufZeile = Ablauf & { id: string; owner_user_id: string; version: number; alt_regel_id: string | null; zuletzt_lauf_am: string | null };
 type LaufZeile = {
   id: string; ablauf_id: string; ziel_typ: string | null; ziel_id: string | null; status: string; pfad: string | null;
-  weiter_am: string | null; meldung: string | null; gestartet_am: string; kontext: { tabelle?: string } | null;
+  weiter_am: string | null; meldung: string | null; gestartet_am: string; kontext: { tabelle?: string; slot?: string } | null;
 };
 type VersionZeile = { id: string; version: number; name: string | null; ausloeser: Ablauf['ausloeser']; schritte: Schritt[]; gespeichert_am: string };
 type ProtokollZeile = { id: string; pfad: string | null; schritt_typ: string | null; ergebnis: string; meldung: string | null; zeit: string };
@@ -53,7 +53,7 @@ const STATUS_TEXT: Record<string, string> = {
 const STATUS_FARBE: Record<string, string> = {
   laeuft: C.cyan, wartet: C.cyan, freigabe: C.gold, fertig: C.green, gestoppt: C.textDim, abgebrochen: C.textDim, fehler: C.danger,
 };
-const ZIEL_TEXT: Record<string, string> = { rechnung: 'Rechnung', angebot: 'Angebot', aufgabe: 'Aufgabe', kontakt: 'Kunde', projekt: 'Projekt' };
+const ZIEL_TEXT: Record<string, string> = { rechnung: 'Rechnung', angebot: 'Angebot', aufgabe: 'Aufgabe', kontakt: 'Kunde', projekt: 'Projekt', zeitplan: 'Zeitplan', knopf: 'Per Knopf' };
 
 function fmtZeit(iso: string | null): string {
   if (!iso) return '—';
@@ -290,6 +290,15 @@ export default function AblaeufePage() {
     });
   }
 
+  function jetztStarten(a: AblaufZeile) {
+    return tu('start-' + a.id, async () => {
+      const antwort = await fetch('/api/ablaeufe/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.id }) });
+      const daten = await antwort.json() as { ok: boolean; error?: string; status?: string };
+      if (!antwort.ok || !daten.ok) throw new Error(daten.error || 'Start fehlgeschlagen');
+      return `„${a.name}" gestartet — Stand: ${STATUS_TEXT[daten.status ?? ''] ?? daten.status}. Details unter „Letzte Läufe" → „Protokoll".`;
+    });
+  }
+
   async function zeigeVersionen(a: AblaufZeile) {
     if (versionen?.ablaufId === a.id) { setVersionen(null); return; }
     const { data, error } = await supabase.from('ablauf_versionen').select('id,version,name,ausloeser,schritte,gespeichert_am').eq('ablauf_id', a.id).order('version', { ascending: false });
@@ -318,7 +327,9 @@ export default function AblaeufePage() {
 
   function laufZeile(l: LaufZeile, mitEntscheidung: boolean) {
     const v = l.ziel_id ? vorgaenge[l.ziel_id] : undefined;
-    const vorgang = `${ZIEL_TEXT[l.ziel_typ ?? ''] ?? 'Vorgang'} ${vorgangName(v) || (l.ziel_id ?? '').slice(0, 8)}`;
+    const vorgang = l.ziel_typ === 'zeitplan' ? `Zeitplan ${l.kontext?.slot ?? ''}`
+      : l.ziel_typ === 'knopf' ? 'Per Knopf gestartet'
+      : `${ZIEL_TEXT[l.ziel_typ ?? ''] ?? 'Vorgang'} ${vorgangName(v) || (l.ziel_id ?? '').slice(0, 8)}`;
     const link = l.ziel_typ === 'rechnung' && l.ziel_id ? `/dashboard/rechnungen/${l.ziel_id}` : null;
     return (
       <div key={l.id} style={{ borderTop: `1px solid ${C.border}`, padding: '10px 0' }}>
@@ -457,6 +468,9 @@ export default function AblaeufePage() {
                 </div>
                 {chef && (
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {a.aktiv && a.ausloeser.art === 'knopf' && !a.ausloeser.modul && (
+                      <button type="button" disabled={busy !== null} onClick={() => jetztStarten(a)} style={knopf('gold')}>▶ Jetzt starten</button>
+                    )}
                     <button type="button" disabled={busy !== null} onClick={() => oeffne(zumBearbeiten(a))} style={knopf('rand')}>Bearbeiten</button>
                     <button type="button" onClick={() => zeigeVersionen(a)} style={knopf('rand')}>{versionen?.ablaufId === a.id ? 'Fassungen zu' : 'Fassungen'}</button>
                     <button type="button" disabled={busy !== null} onClick={() => probelauf(a)} style={knopf('rand')}>{busy === 'probe-' + a.id ? 'Rechnet …' : '🔍 Probelauf'}</button>

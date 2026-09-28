@@ -66,10 +66,10 @@ export type Ablauf = {
 
 export const AUSLOESER_ARTEN: { art: Ausloeser['art']; label: string; hinweis: string; imMotor: boolean }[] = [
   { art: 'datum', label: 'Datum erreicht', hinweis: 'Z. B. „Rechnung seit 14 Tagen überfällig" — wie die bisherigen Automationen.', imMotor: true },
-  { art: 'zeitplan', label: 'Zeitplan', hinweis: 'Täglich, wöchentlich oder monatlich zu einer Uhrzeit.', imMotor: false },
+  { art: 'zeitplan', label: 'Zeitplan', hinweis: 'Täglich, wöchentlich oder monatlich zu einer Uhrzeit (Berliner Zeit).', imMotor: true },
   { art: 'ereignis', label: 'Ereignis', hinweis: 'Sofort, wenn in einem Modul etwas passiert.', imMotor: false },
   { art: 'webhook', label: 'Webhook', hinweis: 'Von außen angestoßen (z. B. n8n oder ein Formular).', imMotor: false },
-  { art: 'knopf', label: 'Knopf', hinweis: 'Per Knopfdruck in einem Modul.', imMotor: false },
+  { art: 'knopf', label: 'Knopf', hinweis: 'Per Knopfdruck auf der Seite Abläufe (Knöpfe in den Modulen folgen).', imMotor: true },
 ];
 
 /**
@@ -124,6 +124,21 @@ export const ABLAUF_AKTIONEN: AblaufAktionDef[] = [
 export function ablaufAktion(key: string): AblaufAktionDef | undefined {
   return ABLAUF_AKTIONEN.find((a) => a.key === key);
 }
+
+/**
+ * Hat ein Lauf dieses Auslösers einen Vorgang (Rechnung, Angebot …)?
+ * Zeitplan, Webhook und der Knopf auf der Ablauf-Seite haben keinen —
+ * dann gehen nur Aktionen ohne Vorgang (Aufgabe, Mail an feste Adresse …).
+ */
+export function ausloeserHatVorgang(a: Ausloeser | null | undefined): boolean {
+  if (!a) return false;
+  if (a.art === 'datum' || a.art === 'ereignis') return true;
+  if (a.art === 'knopf') return !!a.modul;
+  return false;
+}
+
+/** Aktionen, die einen Vorgang brauchen (sie ändern ihn). */
+export const VORGANG_AKTIONEN = ['status_aendern', 'mahnstufe_erhoehen', 'notiz_anhaengen'];
 
 /** Grenzen, damit kein Ablauf entgleist. */
 export const GRENZEN = { schritte: 50, tiefe: 5, wartenTage: 365, bedingungen: 30 } as const;
@@ -313,7 +328,11 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
     if (a.art === 'zeitplan') {
       if (!['taeglich', 'woechentlich', 'monatlich'].includes(a.rhythmus)) fehler.push('Unbekannter Rhythmus.');
       if (a.uhrzeit && !/^([01]\d|2[0-3]):[0-5]\d$/.test(a.uhrzeit)) fehler.push('Uhrzeit bitte als HH:MM.');
+      if (a.rhythmus === 'woechentlich' && !(Number.isInteger(a.wochentag) && (a.wochentag as number) >= 1 && (a.wochentag as number) <= 7)) fehler.push('Wochentag bitte wählen (Montag bis Sonntag).');
+      if (a.rhythmus === 'monatlich' && !(Number.isInteger(a.tag) && (a.tag as number) >= 1 && (a.tag as number) <= 31)) fehler.push('Tag im Monat bitte 1 bis 31.');
     }
+    // Knopf direkt im Modul (mit Vorgang) kommt später — speichern ja, einschalten noch nicht.
+    if (a.art === 'knopf' && a.modul) nochNichtImMotor = true;
     if ((a.art === 'datum' || a.art === 'ereignis') && zaehleBedingungen(a.filter) > GRENZEN.bedingungen) fehler.push(`Höchstens ${GRENZEN.bedingungen} Bedingungen.`);
   }
   if (!Array.isArray(ablauf.schritte) || ablauf.schritte.length === 0) fehler.push('Mindestens ein Schritt.');
@@ -321,6 +340,7 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
   const ids = new Set<string>();
   let anzahl = 0;
   const werbung = a ? ausloeserIstWerbung(a) : true;
+  const mitVorgang = ausloeserHatVorgang(a);
   const gehe = (liste: readonly Schritt[], tiefe: number, freigabeDavor: boolean, wo: string): void => {
     if (tiefe > GRENZEN.tiefe) { fehler.push(`Zu tief verschachtelt (höchstens ${GRENZEN.tiefe} Wenn-Ebenen).`); return; }
     let freigabe = freigabeDavor;
@@ -334,6 +354,7 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
         const h = (s.tage ?? 0) * 24 + (s.stunden ?? 0);
         if (!(h > 0) || h > GRENZEN.wartenTage * 24) fehler.push(`Schritt ${nr}: Wartezeit zwischen 1 Stunde und ${GRENZEN.wartenTage} Tagen.`);
       } else if (s.typ === 'wenn') {
+        if (!mitVorgang) fehler.push(`Schritt ${nr}: Wenn/Sonst braucht einen Vorgang — bei diesem Auslöser gibt es keinen.`);
         if (zaehleBedingungen(s.bedingung) === 0) fehler.push(`Schritt ${nr}: Wenn ohne Bedingung.`);
         if (zaehleBedingungen(s.bedingung) > GRENZEN.bedingungen) fehler.push(`Schritt ${nr}: höchstens ${GRENZEN.bedingungen} Bedingungen.`);
         gehe(s.dann ?? [], tiefe + 1, freigabe, `${nr}.dann.`);
@@ -348,6 +369,9 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
         if (zielTypen && zielTyp && !zielTypen.includes(zielTyp)) fehler.push(`Schritt ${nr} (${def.label}): passt nicht zu diesem Auslöser.`);
         for (const p of def.pflicht) if (!String(s.config?.[p] ?? '').trim()) fehler.push(`Schritt ${nr} (${def.label}): „${p}" fehlt.`);
         if (def.key === 'freigabe_chef') freigabe = true;
+        if (!mitVorgang && (VORGANG_AKTIONEN.includes(def.key) || (def.key === 'mail_senden' && s.config?.an !== 'feste_adresse'))) {
+          fehler.push(`Schritt ${nr} (${def.label}): braucht einen Vorgang — bei diesem Auslöser gibt es keinen${def.key === 'mail_senden' ? ' (Mail nur an eine feste Adresse)' : ''}.`);
+        }
         if (def.geld && !freigabe) fehler.push(`Schritt ${nr} (${def.label}): Geld-Aktionen nur nach einer „Freigabe durch den Chef" davor.`);
         // Paket 158: feste Adresse ohne gültige Adresse würde still übersprungen — lieber gleich sagen.
         if (def.key === 'mail_senden' && s.config?.an === 'feste_adresse' && !String(s.config?.adresse ?? '').includes('@')) {
@@ -416,10 +440,12 @@ export function ausloeserText(a: Ausloeser): string {
   if (a.art === 'ereignis') return EREIGNISSE.find((e) => e.key === a.ereignis)?.label ?? a.ereignis;
   if (a.art === 'zeitplan') {
     const r = { taeglich: 'Täglich', woechentlich: 'Wöchentlich', monatlich: 'Monatlich' }[a.rhythmus] ?? a.rhythmus;
-    return `${r}${a.uhrzeit ? ` um ${a.uhrzeit} Uhr` : ''}`;
+    const wt = ['', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'][a.wochentag ?? 0] ?? '';
+    const wann = a.rhythmus === 'woechentlich' && wt ? ` am ${wt}` : a.rhythmus === 'monatlich' && a.tag ? ` am ${a.tag}.` : '';
+    return `${r}${wann}${a.uhrzeit ? ` um ${a.uhrzeit} Uhr` : ''}`;
   }
   if (a.art === 'webhook') return 'Von außen (Webhook)';
-  return 'Per Knopf';
+  return a.modul ? `Per Knopf im Modul ${a.modul}` : 'Per Knopf auf der Seite Abläufe';
 }
 
 export function schrittText(s: Schritt): string {

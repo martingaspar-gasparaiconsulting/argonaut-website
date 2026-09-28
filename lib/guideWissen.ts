@@ -1347,6 +1347,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     schritte: [
       'Unter „Vorlagen für Ihre Branche" die Branchengruppe wählen und eine Vorlage anklicken — oder „＋ Leerer Ablauf". Im Baukasten Auslöser und Tage wählen, mit „＋" zwischen den Karten Aktionen, „Warten", „Wenn / Sonst" oder „Stopp" einfügen, mit ↑ ↓ ✕ ordnen. Unten steht, was noch fehlt; „Ablauf anlegen (ausgeschaltet)" speichert',
       'Unter „Bisherige Automationen übernehmen" bei einer Automation „→ Als Ablauf übernehmen" klicken — der Ablauf startet ausgeschaltet, die alte Automation läuft weiter',
+      'Auslöser: „Datum erreicht" (Rechnung überfällig …), „Zeitplan" (täglich, wöchentlich oder monatlich zu einer Uhrzeit) oder „Knopf" — ein eingeschalteter Knopf-Ablauf startet mit „▶ Jetzt starten". Zeitplan und Knopf haben keinen Vorgang: dann gehen nur „Aufgabe anlegen", Mail an eine feste Adresse, Warten, Freigabe und Stopp',
       '„Bearbeiten" öffnet den Baukasten; „Als neue Fassung speichern" legt Fassung 2, 3 … an, laufende Läufe arbeiten mit ihrer Fassung zu Ende. „Fassungen" zeigt alle, „Diese Fassung wiederherstellen" holt eine alte zurück',
       '„🔍 Probelauf" am Ablauf zeigt je Vorgang, welche Schritte jetzt laufen würden und worauf danach gewartet wird. Es wird nichts ausgeführt',
       '„Einschalten" — die alte Automation wird dabei ausgeschaltet, damit nichts doppelt läuft; was sie schon erledigt hat, wird nicht wiederholt',
