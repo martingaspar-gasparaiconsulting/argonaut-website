@@ -26,6 +26,7 @@
 import { zielDef } from './importParser';
 import { importQuellen } from './importKatalog';
 import { NAV_LINKS, ALLE_MODULE, istNurChefPfad, pfadPasst } from './rechte';
+import { anwaltSperrGrund } from './anwaltFreigabe';
 
 /** Pfad, auf den ein Import-Ziel fuehrt — daran haengt sein Bereich. */
 export function zielPfad(zielKey: string): string | null {
@@ -63,6 +64,9 @@ export type RechtErgebnis = { ok: true } | { ok: false; grund: string };
 export function importErlaubt(zielKey: string, stand: RechtStand | null | undefined): RechtErgebnis {
   const z = zielDef(zielKey);
   if (!z) return { ok: false, grund: 'Unbekanntes Import-Ziel.' };
+  // Paket 153: Ziele hinter dem Anwalt-Schalter — gesperrt fuer ALLE, auch den Chef.
+  const anwalt = anwaltSperrGrund(z.anwalt);
+  if (anwalt) return { ok: false, grund: anwalt };
   // Solange die Rechte nicht geladen sind: nichts freigeben.
   if (!stand) return { ok: false, grund: 'Ihre Rechte werden noch geladen …' };
   if (stand.chef) return { ok: true };

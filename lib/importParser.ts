@@ -526,7 +526,13 @@ export type ZielFeld = {
    *   name_zerlegen — „Müller, Anna" -> vorname/nachname (oder firma)
    *   adresse_teil  — Straße / PLZ / Ort -> das eine Feld „adresse"
    */
-  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter' | 'position' | 'nachschlag' | 'nachschlagMit' | 'rechnen';
+  virtuell?: 'name_zerlegen' | 'adresse_teil' | 'kunde_verweis' | 'name_teil' | 'anhang' | 'preis' | 'filter' | 'position' | 'nachschlag' | 'nachschlagMit' | 'rechnen' | 'gesundheit';
+  /**
+   * Paket 153: bei virtuell 'gesundheit' — die Art der Gesundheitsangabe.
+   * Der Wert geht NIE in eine Tabellenspalte, sondern verschluesselt nach
+   * gesundheit_notiz (ueber /api/gesundheit-notiz/stapel).
+   */
+  gesundheitArt?: 'allergie' | 'unvertraeglichkeit' | 'kontraindikation' | 'medikation' | 'hinweis';
   /** Paket 129: bei virtuell 'nachschlagMit' — Spalte des uebergeordneten Eintrags (Rezept-Typ, Tour-Datum). */
   elternSpalte?: string;
   /**
@@ -600,7 +606,7 @@ export type ImportZiel = {
      * 'mitarbeiter' (Qualifikationen: ueber Personalnummer als Eigenes Feld,
      * E-Mail oder Namen), 'lieferanten' (Bestellungen).
      */
-    quelle?: 'kontakte' | 'mitarbeiter' | 'lieferanten';
+    quelle?: 'kontakte' | 'mitarbeiter' | 'lieferanten' | 'wellness_kunden' | 'tier_tiere';
     /** Anzeige: „Mitarbeiter", „Lieferant" (Standard „Kunde"). */
     label?: string;
     /** Anzeige Mehrzahl: „die Mitarbeiter" (Standard „die Kunden"). */
@@ -679,6 +685,19 @@ export type ImportZiel = {
   nurNeu?: boolean;
   /** Nur der Chef darf diese Daten anlegen (die Datenbank-Regeln verlangen es ohnehin). */
   nurChef?: boolean;
+  /**
+   * Paket 153: Ziel steht hinter dem Anwalt-Schalter (lib/anwaltFreigabe.ts).
+   * Vorgebaut, aber gesperrt, bis der Bereich dort freigegeben ist. Solche
+   * Daten gehen nie an den KI-Aufraeumer.
+   */
+  anwalt?: 'gesundheit' | 'tier' | 'hilfsmittel' | 'kanzlei';
+  /**
+   * Paket 153: Gesundheitsangaben (Felder mit virtuell 'gesundheit') UND alle
+   * Spalten ohne Feld gehen verschluesselt nach gesundheit_notiz — nie als
+   * Eigenes Feld, nie in eine Notiz im Klartext. Klappt das Verschluesseln
+   * nicht, wird der Patient wieder entfernt (nichts halb, nichts im Klartext).
+   */
+  gesundheitNotizen?: boolean;
   /**
    * Zeilen mit diesem Wert in einem Filterfeld fallen mit Grund heraus —
    * z. B. „Angebot" in einer gemischten Auftrags-/Angebotsliste.
@@ -1817,6 +1836,123 @@ export const ZIELE: ImportZiel[] = [
       { key: 'kunde_telefon', label: 'Kunde Telefon', typ: 'text', alias: ['kunde telefon', 'telefon', 'tel', 'handy', 'mobil'] },
       { key: 'ressource', label: 'Raum / Gerät', typ: 'text', alias: ['ressource', 'raum', 'geraet', 'gerät', 'behandlungsraum', 'arbeitsplatz'] },
       { key: 'status', label: 'Status', typ: 'text', standard: 'geplant', hinweis: 'geplant · abgesagt', alias: ['status', 'stand', 'zusage'] },
+    ],
+  },
+  // --- Paket 153: Anwalt-Block — vorgebaut, GESPERRT bis zur Freigabe (lib/anwaltFreigabe.ts) ---
+  // Live-Schema 28.09.2026 abgefragt. Gesundheitsangaben nie im Klartext: sie gehen
+  // verschluesselt nach gesundheit_notiz (wie im Praxis-Paket, Schluessel nur auf dem Server).
+  {
+    key: 'patienten',
+    label: 'Patienten / Klienten (Praxis)',
+    icon: '🩺',
+    tabelle: 'wellness_kunden',
+    beschreibung: 'Patienten- bzw. Klientenkartei aus dem Praxisprogramm. Allergien, Medikation, Diagnosen und alle weiteren Spalten '
+      + 'werden verschlüsselt als Gesundheitsangaben abgelegt — nie im Klartext. Vorhandene Patienten werden nie überschrieben.',
+    schluesselFelder: ['email', 'name+geburtsdatum'],
+    nurMitKatalog: true,
+    nurChef: true,
+    nurNeu: true,
+    anwalt: 'gesundheit',
+    gesundheitNotizen: true,
+    ergebnisHref: '/dashboard/wellness',
+    // hinweise ist eine Klartext-Spalte ("z. B. Allergien") — der Import schreibt dort nie hinein.
+    ausblenden: ['hinweise'],
+    felder: [
+      { key: 'name', label: 'Name', typ: 'text', pflicht: true, hinweis: 'Oder Vorname und Nachname in zwei Spalten — sie werden zusammengesetzt.', alias: ['name', 'patient', 'patientin', 'patientenname', 'klient', 'klientin', 'kunde', 'kundenname', 'vollstaendiger name', 'full name'] },
+      { key: 'lead_vorname', label: 'Vorname (zum Namen)', typ: 'text', virtuell: 'name_teil', fuellt: 'name', nichtInVorlage: true, alias: ['vorname', 'first name', 'firstname'] },
+      { key: 'lead_nachname', label: 'Nachname (zum Namen)', typ: 'text', virtuell: 'name_teil', fuellt: 'name', nichtInVorlage: true, alias: ['nachname', 'familienname', 'last name', 'lastname'] },
+      { key: 'geburtsdatum', label: 'Geburtsdatum', typ: 'datum', alias: ['geburtsdatum', 'geb datum', 'geb.-datum', 'geboren', 'geboren am', 'geburtstag', 'birthday', 'date of birth', 'dob'] },
+      { key: 'telefon', label: 'Telefon', typ: 'text', alias: ['telefon', 'tel', 'mobil', 'handy', 'telefonnummer', 'phone', 'mobile'] },
+      { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail', 'e-mail-adresse'] },
+      { key: 'ge_allergie', label: 'Allergien (verschlüsselt)', typ: 'text', virtuell: 'gesundheit', gesundheitArt: 'allergie', alias: ['allergie', 'allergien', 'allergy', 'allergies', 'cave allergie'] },
+      { key: 'ge_unvertraeglichkeit', label: 'Unverträglichkeiten (verschlüsselt)', typ: 'text', virtuell: 'gesundheit', gesundheitArt: 'unvertraeglichkeit', alias: ['unvertraeglichkeit', 'unverträglichkeit', 'unvertraeglichkeiten', 'unverträglichkeiten', 'intoleranz', 'intoleranzen'] },
+      { key: 'ge_kontraindikation', label: 'Kontraindikationen (verschlüsselt)', typ: 'text', virtuell: 'gesundheit', gesundheitArt: 'kontraindikation', alias: ['kontraindikation', 'kontraindikationen', 'gegenanzeige', 'gegenanzeigen', 'cave', 'risikofaktoren'] },
+      { key: 'ge_medikation', label: 'Medikation (verschlüsselt)', typ: 'text', virtuell: 'gesundheit', gesundheitArt: 'medikation', alias: ['medikation', 'medikamente', 'dauermedikation', 'arzneimittel', 'medikamentenplan', 'medication'] },
+      { key: 'ge_hinweis', label: 'Gesundheitliche Hinweise (verschlüsselt)', typ: 'text', virtuell: 'gesundheit', gesundheitArt: 'hinweis', alias: ['hinweis', 'hinweise', 'anamnese', 'diagnose', 'diagnosen', 'befund', 'befunde', 'vorerkrankungen', 'krankengeschichte', 'medizinische hinweise', 'gesundheit'] },
+    ],
+  },
+  {
+    key: 'praxis_behandlungen',
+    label: 'Behandlungen (Praxis)',
+    icon: '💆',
+    tabelle: 'wellness_behandlungen',
+    beschreibung: 'Frühere Behandlungen je Patient. Vorher die Patienten importieren — ohne passenden Patienten bleibt die Zeile mit Grund in der Datei. '
+      + 'Notizen und weitere Spalten werden verschlüsselt beim Patienten abgelegt. Alte Behandlungen gelten als abgerechnet.',
+    schluesselFelder: ['kunde_id+datum+behandlung', '__kunde+datum+behandlung'],
+    nurMitKatalog: true,
+    nurChef: true,
+    nurNeu: true,
+    anwalt: 'gesundheit',
+    gesundheitNotizen: true,
+    kundeVerweis: { spalte: 'kunde_id', pflicht: true, quelle: 'wellness_kunden', label: 'Patient', mehrzahl: 'die Patienten' },
+    ergebnisHref: '/dashboard/wellness',
+    // notiz im Klartext waere eine Gesundheitsangabe — sie geht verschluesselt zum Patienten.
+    ausblenden: ['rechnung_id', 'notiz'],
+    felder: [
+      { key: 'kunde', label: 'Patient (Name oder E-Mail)', typ: 'text', virtuell: 'kunde_verweis', hinweis: 'Wird mit Ihren Patienten verknüpft — über E-Mail oder den genauen Namen.', alias: ['patient', 'patientin', 'patientenname', 'klient', 'klientin', 'kunde', 'kundenname', 'name'] },
+      { key: 'datum', label: 'Datum', typ: 'datum', pflicht: true, alias: ['datum', 'behandlungsdatum', 'termin', 'am', 'date'] },
+      { key: 'behandlung', label: 'Behandlung', typ: 'text', pflicht: true, alias: ['behandlung', 'leistung', 'therapie', 'anwendung', 'massnahme', 'maßnahme', 'bezeichnung', 'treatment'] },
+      { key: 'dauer_min', label: 'Dauer (Minuten)', typ: 'zahl', alias: ['dauer', 'dauer min', 'dauer (min)', 'minuten', 'min', 'zeit'] },
+      { key: 'preis', label: 'Preis (€)', typ: 'zahl', alias: ['preis', 'betrag', 'honorar', 'kosten', 'summe'] },
+      { key: 'ge_notiz', label: 'Notiz zur Behandlung (verschlüsselt)', typ: 'text', virtuell: 'gesundheit', gesundheitArt: 'hinweis', alias: ['notiz', 'notizen', 'bemerkung', 'befund', 'verlauf', 'dokumentation', 'kommentar'] },
+      { key: 'abgerechnet', label: 'Abgerechnet', typ: 'jaNein', standard: true, hinweis: 'Leer = ja (alte Behandlungen sind im Altsystem abgerechnet).', alias: ['abgerechnet', 'bezahlt', 'berechnet', 'in rechnung gestellt'] },
+    ],
+  },
+  {
+    key: 'tiere',
+    label: 'Tiere (Tierarzt)',
+    icon: '🐾',
+    tabelle: 'tier_tiere',
+    beschreibung: 'Tierkartei mit Halter aus dem Praxisprogramm. Der Halter wird mit Ihren Kunden verknüpft, wenn es ihn gibt. '
+      + 'Einwilligungen zur Impf-Erinnerung werden nicht übernommen — bitte in ARGONAUT neu einholen.',
+    schluesselFelder: ['chip_nr', 'name+halter'],
+    eigeneFelderModul: 'tier_tiere',
+    nurMitKatalog: true,
+    nurChef: true,
+    anwalt: 'tier',
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['halter_email', 'halter'], label: 'Halter', mehrzahl: 'die Kunden' },
+    ergebnisHref: '/dashboard/tier',
+    ausblenden: ['erinnerung_ok', 'erinnerung_ok_am', 'erinnerung_widerruf_am'],
+    sperren: [{ muster: 'erinnerung|impferinnerung|impf erinnerung|einwilligung|recall|werbung|newsletter', grund: 'Einwilligung zur Erinnerung bitte in ARGONAUT neu einholen — ohne eigenen Nachweis gilt sie nicht.' }],
+    felder: [
+      { key: 'name', label: 'Tiername', typ: 'text', pflicht: true, alias: ['name', 'tiername', 'tier', 'patient', 'patientenname', 'rufname'] },
+      { key: 'art', label: 'Tierart', typ: 'text', alias: ['art', 'tierart', 'spezies', 'species', 'gattung'] },
+      { key: 'rasse', label: 'Rasse', typ: 'text', alias: ['rasse', 'breed'] },
+      { key: 'geburtsdatum', label: 'Geburtsdatum', typ: 'datum', alias: ['geburtsdatum', 'geboren', 'geboren am', 'geb datum', 'wurfdatum'] },
+      { key: 'chip_nr', label: 'Chip-Nr.', typ: 'text', alias: ['chip', 'chip nr', 'chipnummer', 'chip-nr', 'transponder', 'transpondernummer', 'mikrochip', 'microchip'] },
+      { key: 'halter', label: 'Halter', typ: 'text', alias: ['halter', 'tierhalter', 'besitzer', 'eigentuemer', 'eigentümer', 'kunde', 'kundenname'] },
+      KUNDE_NR_FELD,
+      { key: 'halter_email', label: 'Halter E-Mail', typ: 'text', alias: ['halter email', 'halter e-mail', 'email', 'e-mail', 'mail'] },
+      { key: 'halter_telefon', label: 'Halter Telefon', typ: 'text', alias: ['halter telefon', 'telefon', 'tel', 'handy', 'mobil'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'kommentar'] },
+    ],
+  },
+  {
+    key: 'tier_behandlungen',
+    label: 'Tier-Behandlungen & Impfungen',
+    icon: '💉',
+    tabelle: 'tier_behandlungen',
+    beschreibung: 'Behandlungen und Impfungen je Tier mit nächster Fälligkeit. Vorher die Tiere importieren — ohne passendes Tier bleibt die Zeile mit Grund in der Datei. '
+      + 'Alte Behandlungen gelten als abgerechnet.',
+    schluesselFelder: ['tier_id+datum+bezeichnung', '__kunde+datum+bezeichnung'],
+    eigeneFelderModul: 'tier_behandlungen',
+    nurMitKatalog: true,
+    nurChef: true,
+    anwalt: 'tier',
+    kundeVerweis: { spalte: 'tier_id', pflicht: true, quelle: 'tier_tiere', label: 'Tier', mehrzahl: 'die Tiere' },
+    ergebnisHref: '/dashboard/tier',
+    ausblenden: ['rechnung_id'],
+    listen: [{ feld: 'art', label: 'Art', standard: 'behandlung', textFeld: 'notiz', liste: liste(['behandlung', 'impfung', 'untersuchung'], { impfen: 'impfung', vakzination: 'impfung', vaccination: 'impfung', schutzimpfung: 'impfung', auffrischung: 'impfung', kontrolle: 'untersuchung', check: 'untersuchung', 'check-up': 'untersuchung', vorsorge: 'untersuchung', untersuchen: 'untersuchung', op: 'behandlung', operation: 'behandlung', therapie: 'behandlung', leistung: 'behandlung' }) }],
+    felder: [
+      { key: 'kunde', label: 'Tier (Name oder „Name Halter")', typ: 'text', virtuell: 'kunde_verweis', hinweis: 'Wird mit Ihren Tieren verknüpft — über Chip-Nr., den Namen oder Name und Halter.', alias: ['tier', 'tiername', 'patient', 'name'] },
+      { key: 'kunde_nummer', label: 'Chip-Nr. (zum Verknüpfen)', typ: 'text', virtuell: 'kunde_verweis', nichtInVorlage: true, alias: ['chip', 'chip nr', 'chipnummer', 'chip-nr', 'transponder', 'mikrochip', 'microchip'] },
+      { key: 'datum', label: 'Datum', typ: 'datum', pflicht: true, alias: ['datum', 'behandlungsdatum', 'impfdatum', 'am', 'date'] },
+      { key: 'art', label: 'Art', typ: 'text', standard: 'behandlung', hinweis: 'behandlung · impfung · untersuchung', alias: ['art', 'typ', 'kategorie', 'leistungsart'] },
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'behandlung', 'leistung', 'impfung', 'impfstoff', 'diagnose', 'text'] },
+      { key: 'naechste_faellig', label: 'Nächste Fälligkeit', typ: 'datum', alias: ['naechste faelligkeit', 'nächste fälligkeit', 'naechste faellig', 'faellig am', 'fällig am', 'wiederholung', 'wiederimpfung', 'naechste impfung', 'nächste impfung', 'auffrischung am'] },
+      { key: 'preis', label: 'Preis (€)', typ: 'zahl', alias: ['preis', 'betrag', 'kosten', 'summe', 'honorar'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'kommentar'] },
+      { key: 'abgerechnet', label: 'Abgerechnet', typ: 'jaNein', standard: true, hinweis: 'Leer = ja (alte Behandlungen sind im Altsystem abgerechnet).', alias: ['abgerechnet', 'bezahlt', 'berechnet'] },
     ],
   },
   {
@@ -4362,6 +4498,15 @@ export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string,
   const virtuelle = ziel.felder.filter((f) => f.virtuell);
   if (virtuelle.length === 0) return;
   const leer = (v: unknown) => v === undefined || v === null || String(v).trim() === '';
+
+  // Paket 153: Gesundheitsangaben herausnehmen — sie gehen nie in eine Tabellenspalte.
+  const gesundheit: { art: string; text: string }[] = [];
+  for (const f of virtuelle) {
+    if (f.virtuell !== 'gesundheit' || !f.gesundheitArt) continue;
+    const v = String(werte[f.key] ?? '').trim();
+    if (v) gesundheit.push({ art: f.gesundheitArt, text: v });
+  }
+  if (gesundheit.length > 0) werte.__gesundheit = gesundheit;
 
   if (typeof werte.name_komplett === 'string' && werte.name_komplett.trim()) {
     const z = zerlegeName(werte.name_komplett);

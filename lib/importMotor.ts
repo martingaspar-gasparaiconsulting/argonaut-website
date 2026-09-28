@@ -73,6 +73,8 @@ export const MOTOR_TABELLEN = [
   'projektleistungen', 'immo_kaution', 'immo_zahlungen', 'shop_bestellungen',
   // Paket 151: Umzug Schritt 7 — Termine (iCal)
   'termine',
+  // Paket 153: Anwalt-Block (vorgebaut, gesperrt bis zur Freigabe — lib/anwaltFreigabe.ts)
+  'wellness_kunden', 'wellness_behandlungen', 'tier_tiere', 'tier_behandlungen',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -192,6 +194,8 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
     if (f.virtuell === 'name_teil') { (nutzbar(f.fuellt ?? 'name') ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'anhang') { (f.anhangAn && nutzbar(f.anhangAn) ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'filter' || f.virtuell === 'rechnen') { felder.push(f); continue; }
+    // Paket 153: Gesundheitsangaben gehen nie in eine Spalte, sondern verschluesselt nach gesundheit_notiz.
+    if (f.virtuell === 'gesundheit') { (basis.gesundheitNotizen ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'nachschlag') {
       const n = basis.nachschlag;
       (n && (vorhanden.has(n.spalte) || (n.textFeld && nutzbar(n.textFeld))) ? felder : fehlend).push(f);
@@ -851,6 +855,25 @@ export function verweisAusMitarbeitern(liste: readonly MitarbeiterRoh[], persona
 }
 
 export type LieferantRoh = { id?: unknown; name?: unknown; email?: unknown; lieferantennummer?: unknown };
+
+/** Paket 153: Patienten (wellness_kunden) als Verweis-Ziel — E-Mail und genauer Name. */
+export type PatientRoh = { id?: unknown; name?: unknown; email?: unknown };
+export function verweisAusPatienten(liste: readonly PatientRoh[]): KundeRoh[] {
+  return liste.filter((p) => p?.id).map((p) => ({ id: p.id, email: p.email, firma: p.name }));
+}
+
+/**
+ * Paket 153: Tiere als Verweis-Ziel — Chip-Nr. wie eine Kundennummer, der
+ * Tiername allein und „Tiername Halter". Zwei „Bello" ohne Halter -> mehrdeutig,
+ * dann wird nichts geraten.
+ */
+export type TierRoh = { id?: unknown; name?: unknown; halter?: unknown; chip_nr?: unknown };
+export function verweisAusTieren(liste: readonly TierRoh[]): KundeRoh[] {
+  return liste.filter((t) => t?.id).map((t) => ({
+    id: t.id, kundennummer: t.chip_nr ?? null, firma: t.name,
+    vorname: t.halter ? t.name : null, nachname: t.halter ?? null,
+  }));
+}
 
 /** Lieferanten als Verweis-Ziel (Nummer, E-Mail, Name). */
 export function verweisAusLieferanten(liste: readonly LieferantRoh[]): KundeRoh[] {

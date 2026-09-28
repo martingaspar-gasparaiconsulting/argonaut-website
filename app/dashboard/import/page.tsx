@@ -34,6 +34,7 @@ import {
   findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
   sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, erkennungsSpalten, kindZeilen, type KundeRoh,
   verweisAusMitarbeitern, verweisAusLieferanten, istPersonalnummerLabel, type MitarbeiterRoh, type LieferantRoh,
+  verweisAusPatienten, verweisAusTieren, type PatientRoh, type TierRoh,
   nachschlagIndex, fehlendeNamen, loeseNachschlag, elternZeilen, positionenJeEintrag, nachschlagPflichtGrund,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
 } from '@/lib/importMotor';
@@ -58,6 +59,7 @@ import { istVcard, leseVcard } from '@/lib/vcardLeser';
 import { istDatanorm, leseDatanorm, datanormReihenfolge, DATANORM_ENDUNGEN } from '@/lib/datanormLeser';
 import { istBmecat, leseBmecat } from '@/lib/bmecatLeser';
 import { istIcal, leseIcal } from '@/lib/icalLeser';
+import { notizenFuerSatz, behandlungUeberschrift, STAPEL_MAX, type NotizEntwurf } from '@/lib/gesundheitImport';
 import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
@@ -969,6 +971,15 @@ export default function ImportCenterPage() {
       const l = await allesLaden('lieferanten', ['id,name,email,lieferantennummer', 'id,name,email'], 'Lieferanten zum Verknüpfen');
       return baueKundenIndex(verweisAusLieferanten(l as LieferantRoh[]));
     }
+    // Paket 153: Patienten (Praxis) und Tiere (Tierarzt)
+    if (quelle === 'wellness_kunden') {
+      const pz = await allesLaden('wellness_kunden', ['id,name,email'], 'Patienten zum Verknüpfen');
+      return baueKundenIndex(verweisAusPatienten(pz as PatientRoh[]));
+    }
+    if (quelle === 'tier_tiere') {
+      const t = await allesLaden('tier_tiere', ['id,name,halter,chip_nr'], 'Tiere zum Verknüpfen');
+      return baueKundenIndex(verweisAusTieren(t as TierRoh[]));
+    }
     const k = await allesLaden('kontakte', [
       'id,kundennummer,import_schluessel,email,firma,vorname,nachname,firma_id',
       'id,email,firma,vorname,nachname,firma_id',
@@ -1499,7 +1510,10 @@ export default function ImportCenterPage() {
       // Schritt 2: Eigene Felder vorbereiten — vorhandene wiederfinden, neue anlegen.
       // Klappt das nicht (fehlende Rechte o. Ae.), wandern die Werte in die
       // Notizen: verschluckt wird nichts.
-      const eigene: EigeneSpalte[] = eigeneSpalten(datei.kopf, datei.zeilen, mapping, ziel);
+      // Paket 153: Bei Gesundheitszielen gibt es KEINE Eigenen Felder (Klartext) — diese
+      // Spalten gehen verschluesselt als Hinweis zum Patienten (gesundheitAblegen).
+      const gesundEigene: EigeneSpalte[] = ziel.gesundheitNotizen ? eigeneSpalten(datei.kopf, datei.zeilen, mapping, ziel) : [];
+      const eigene: EigeneSpalte[] = ziel.gesundheitNotizen ? [] : eigeneSpalten(datei.kopf, datei.zeilen, mapping, ziel);
       const feldIdJeSpalte: Record<string, string> = {};
       const modul = ziel.eigeneFelderModul ?? ziel.key;
       const notizFeld = ziel.felder.some((f) => f.key === 'notizen');
@@ -1589,6 +1603,7 @@ export default function ImportCenterPage() {
       const neu: Record<string, unknown>[] = [];
       const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
       const neuPos: unknown[] = [];                // Paket 146: Positionen je neuem Kopf (Kind-Tabelle)
+      const neuGes: unknown[] = [];                // Paket 153: Gesundheitsangaben je neuem Satz (__gesundheit)
       const kindTab = ziel.jsonPositionen?.kindTabelle ?? null;
       const zuAendern: { id: string; werte: Record<string, unknown>; zeile: number }[] = [];
 
@@ -1660,6 +1675,7 @@ export default function ImportCenterPage() {
         }
         neu.push({ ...satz, owner_user_id: neuOwner });
         if (kindTab) neuPos.push(satzRoh[ziel.jsonPositionen!.spalte] ?? []);
+        if (ziel.gesundheitNotizen) neuGes.push(satzRoh.__gesundheit);
         neuZeile.push(dateiZeile);
       });
       gesamtSchreiben = neu.length + zuAendern.length;
@@ -1703,6 +1719,41 @@ export default function ImportCenterPage() {
       einspielStart = Date.now();
       zeigeStand();
 
+      /**
+       * Paket 153: Gesundheitsangaben der gerade angelegten Saetze verschluesselt
+       * ablegen (Server-Route, Schluessel nur dort). Gibt einen Fehlertext zurueck
+       * oder null. Bei Fehler entfernt der Aufrufer die Saetze wieder — ein Patient
+       * ohne seine Angaben oder Angaben im Klartext entstehen nie.
+       */
+      const gesundheitAblegen = async (ids: readonly string[], von: number): Promise<string | null> => {
+        if (!ziel.gesundheitNotizen) return null;
+        const alle: NotizEntwurf[] = [];
+        ids.forEach((id, j) => {
+          const satz = neu[von + j] ?? {};
+          const kundeId = ziel.tabelle === 'wellness_kunden' ? id : String(satz.kunde_id ?? '');
+          const dz = neuZeile[von + j] ?? 0;
+          alle.push(...notizenFuerSatz({
+            kundeId,
+            gesundheit: neuGes[von + j],
+            weitere: gesundEigene.length > 0 && dz >= 2 ? eigeneWerteDerZeile(datei.zeilen[dz - 2] ?? [], gesundEigene) : [],
+            ueberschrift: ziel.tabelle === 'wellness_behandlungen' ? behandlungUeberschrift(satz) : undefined,
+          }));
+        });
+        for (let i = 0; i < alle.length; i += STAPEL_MAX) {
+          try {
+            const r = await fetch('/api/gesundheit-notiz/stapel', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ notizen: alle.slice(i, i + STAPEL_MAX) }),
+            });
+            const j = await r.json().catch(() => ({})) as { ok?: boolean; error?: string };
+            if (!r.ok || !j.ok) return j.error ?? `Fehler ${r.status}`;
+          } catch (e) {
+            return e instanceof Error ? e.message : 'Verbindung fehlgeschlagen';
+          }
+        }
+        return null;
+      };
+
       // Neue Datensätze in Paketen. Scheitert ein Paket, wird es Zeile für Zeile
       // wiederholt — nur so weiß man am Ende, WELCHE Zeile das Problem war.
       for (const p of pakete(neu.length, PAKET_GROESSE)) {
@@ -1723,9 +1774,19 @@ export default function ImportCenterPage() {
           }
           if (kindFehler && ids0.length > 0) await supabase.from(ziel.tabelle).delete().in('id', ids0);
         }
+        // Paket 153: Gesundheitsangaben verschluesselt — klappt es nicht, fliegt das Paket wieder raus.
+        let gesFehler: string | null = null;
+        if (!error && !kindFehler && ziel.gesundheitNotizen) {
+          const ids0 = ((neuIds as { id: string }[] | null) ?? []).map((r) => String(r.id));
+          gesFehler = ids0.length !== stapel.length ? 'Rückmeldung der Datenbank unvollständig' : await gesundheitAblegen(ids0, p.von);
+          if (gesFehler && ids0.length > 0) await supabase.from(ziel.tabelle).delete().in('id', ids0);
+        }
         if (kindFehler) {
           erg.fehlgeschlagen += stapel.length;
           for (let j = 0; j < stapel.length; j++) erg.fehler.push({ zeile: neuZeile[p.von + j] ?? 0, feld: 'Positionen', meldung: `Positionen nicht gespeichert (${kindFehler}) — Eintrag nicht übernommen.` });
+        } else if (gesFehler) {
+          erg.fehlgeschlagen += stapel.length;
+          for (let j = 0; j < stapel.length; j++) erg.fehler.push({ zeile: neuZeile[p.von + j] ?? 0, feld: 'Gesundheitsangaben', meldung: `Nicht verschlüsselt ablegbar (${gesFehler}) — Eintrag nicht übernommen.` });
         } else if (!error) {
           erg.angelegt += stapel.length;
           const ids = ((neuIds as { id: string }[] | null) ?? []).map((r) => String(r.id));
@@ -1759,6 +1820,16 @@ export default function ImportCenterPage() {
                   await supabase.from(ziel.tabelle).delete().eq('id', id);
                   erg.fehlgeschlagen++;
                   erg.fehler.push({ zeile: neuZeile[p.von + j] ?? 0, feld: 'Positionen', meldung: `Positionen nicht gespeichert (${ek.message}) — Eintrag nicht übernommen.` });
+                  continue;
+                }
+              }
+              // Paket 153: auch einzeln — erst die Gesundheitsangaben, sonst Eintrag wieder weg
+              if (id && ziel.gesundheitNotizen) {
+                const gf = await gesundheitAblegen([String(id)], p.von + j);
+                if (gf) {
+                  await supabase.from(ziel.tabelle).delete().eq('id', id);
+                  erg.fehlgeschlagen++;
+                  erg.fehler.push({ zeile: neuZeile[p.von + j] ?? 0, feld: 'Gesundheitsangaben', meldung: `Nicht verschlüsselt ablegbar (${gf}) — Eintrag nicht übernommen.` });
                   continue;
                 }
               }

@@ -19,6 +19,7 @@
 // ============================================================
 
 import { zielDef, type ImportZiel, type ZielFeld } from './importParser';
+import { KI_NIE_GRUND } from './anwaltFreigabe';
 
 /** Hoechstens so viele Zeichen je KI-Anfrage (die Route prueft dasselbe). */
 export const AUFRAEUMER_MAX_ZEICHEN = 18000;
@@ -41,6 +42,8 @@ export function aufraeumerErlaubt(zielKey: string): { ok: true } | { ok: false; 
   const z = zielDef(zielKey);
   if (!z) return { ok: false, grund: 'Unbekanntes Import-Ziel.' };
   if (GESPERRT[zielKey]) return { ok: false, grund: GESPERRT[zielKey] };
+  // Paket 153: Gesundheit, Tier, Hilfsmittel, Akten — nie an den KI-Dienst, auch nach der Freigabe.
+  if (z.anwalt) return { ok: false, grund: KI_NIE_GRUND };
   return { ok: true };
 }
 

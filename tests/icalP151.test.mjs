@@ -115,7 +115,9 @@ test('Ziel Termine: Katalog, Karte, SQL additiv, keine automatischen Mails', () 
   const sql = lies('supabase-sql/p151-import-termine.sql');
   const block = sql.match(/c\.table_name = any \(array\[([\s\S]*?)\]\)/)[1];
   const whitelist = [...block.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].sort());
+  // Paket 153: die Liste waechst (Anwalt-Block) — p151 bleibt eine Teilmenge; gleich ist sie mit dem neuesten SQL (anwaltBlockP153).
+  for (const t of whitelist) assert.ok(MOTOR_TABELLEN.includes(t), t);
+  assert.ok(whitelist.includes('termine'));
   assert.equal(whitelist.length, 73);
   assert.ok(!/\b(drop table|delete from|truncate|alter table)\b/i.test(sql));
   assert.match(sql, /revoke all on function public\.import_feldkatalog\(text\[\]\) from anon/);

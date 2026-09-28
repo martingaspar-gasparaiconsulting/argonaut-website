@@ -21,7 +21,8 @@ test('Jedes Import-Ziel hat einen Bereich (sonst koennte es kein Mitarbeiter je 
 
 test('Chef darf alles, auch „nur Chef"-Ziele', () => {
   const chef = { chef: true, module: [], schreibModule: null };
-  for (const z of ZIELE) assert.deepEqual(importErlaubt(z.key, chef), { ok: true }, z.key);
+  // Paket 153: ausser den Zielen hinter dem Anwalt-Schalter (die sind fuer ALLE zu, siehe anwaltBlockP153)
+  for (const z of ZIELE.filter((x) => !x.anwalt)) assert.deepEqual(importErlaubt(z.key, chef), { ok: true }, z.key);
 });
 
 test('Mitarbeiter: Bereich UND „darf ändern" noetig', () => {
@@ -43,7 +44,7 @@ test('Ohne Spalte schreib_module gilt wie bisher der Bereich allein (niemand aus
 
 test('„nur Chef"-Ziele bleiben fuer Mitarbeiter zu, auch mit allen Rechten', () => {
   const alles = MA(['personal', 'service', 'kasse', 'immobilien', 'einsaetze'], ['personal', 'service', 'kasse', 'immobilien', 'einsaetze']);
-  for (const z of ZIELE.filter((x) => x.nurChef)) {
+  for (const z of ZIELE.filter((x) => x.nurChef && !x.anwalt)) {
     const r = importErlaubt(z.key, alles);
     assert.equal(r.ok, false, z.key);
     assert.match(r.grund, /Geschäftsleitung/);
