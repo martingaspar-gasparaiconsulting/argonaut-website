@@ -75,6 +75,8 @@ export const MOTOR_TABELLEN = [
   'termine',
   // Paket 153: Anwalt-Block (vorgebaut, gesperrt bis zur Freigabe — lib/anwaltFreigabe.ts)
   'wellness_kunden', 'wellness_behandlungen', 'tier_tiere', 'tier_behandlungen',
+  // Paket 154: Anwalt-Block Teil 2 (gesperrt bis zur Freigabe)
+  'hilfsmittel_versorgung', 'hilfsmittel_position', 'kanzlei_akte', 'kanzlei_frist',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -1002,15 +1004,18 @@ export function positionenJeEintrag(saetze: readonly Record<string, unknown>[], 
  */
 export function kindZeilen(
   positionen: unknown, kopfId: string, fremdschluessel: string, owner: string,
+  /** Paket 154: andere Kind-Tabelle (Hilfsmittel-Positionen) — eigene Spalten, ggf. ohne Gesamt-Spalte. */
+  art?: { spalten?: readonly string[]; gesamt?: string | null },
 ): Record<string, unknown>[] {
   if (!Array.isArray(positionen)) return [];
-  const erlaubt = new Set(['bezeichnung', 'menge', 'einheit', 'einzelpreis', 'mwst_satz']);
+  const erlaubt = new Set(art?.spalten ?? ['bezeichnung', 'menge', 'einheit', 'einzelpreis', 'mwst_satz']);
+  const gesamt = art && 'gesamt' in art ? art.gesamt : 'gesamt_netto';
   return positionen.filter((p) => p && typeof p === 'object').map((p, i) => {
     const z: Record<string, unknown> = { owner_user_id: owner, [fremdschluessel]: kopfId, position: i + 1 };
     for (const [k, v] of Object.entries(p as Record<string, unknown>)) if (erlaubt.has(k)) z[k] = v;
     const menge = typeof z.menge === 'number' ? z.menge : 1;
     z.menge = menge;
-    if (typeof z.einzelpreis === 'number') z.gesamt_netto = centRunden(menge * z.einzelpreis);
+    if (gesamt && typeof z.einzelpreis === 'number') z[gesamt] = centRunden(menge * z.einzelpreis);
     return z;
   });
 }

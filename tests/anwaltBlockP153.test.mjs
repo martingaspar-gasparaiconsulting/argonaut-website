@@ -79,7 +79,7 @@ test('Vier Ziele: gesperrt fuer ALLE (auch den Chef), nur Chef, nie an die KI', 
   // Ohne Anwalt-Kennzeichen bleibt alles wie vorher
   assert.deepEqual(importErlaubt('kontakte', chef), { ok: true });
   assert.deepEqual(aufraeumerErlaubt('artikel'), { ok: true });
-  assert.equal(ZIELE.filter((z) => z.anwalt).length, 4);
+  assert.ok(ZIELE.filter((z) => z.anwalt).length >= 4); // Paket 154: + Hilfsmittel, Akten, Fristen
 });
 
 test('SQL p153: Feldkatalog kennt die vier Tabellen, sonst nichts geaendert', () => {
@@ -87,7 +87,8 @@ test('SQL p153: Feldkatalog kennt die vier Tabellen, sonst nichts geaendert', ()
   const sql = lies('supabase-sql/p153-import-anwaltblock.sql');
   const block = sql.match(/c\.table_name = any \(array\[([\s\S]*?)\]\)/)[1];
   const whitelist = [...block.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].sort());
+  // Paket 154: die Liste waechst — p153 bleibt Teilmenge; gleich ist sie mit dem neuesten SQL (anwaltBlockP154).
+  for (const t of whitelist) assert.ok(MOTOR_TABELLEN.includes(t), t);
   assert.equal(whitelist.length, 77);
   assert.ok(!/\b(drop table|delete from|truncate|alter table|create table|create policy)\b/i.test(sql));
   assert.match(sql, /revoke all on function public\.import_feldkatalog\(text\[\]\) from anon/);

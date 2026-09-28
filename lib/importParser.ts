@@ -733,7 +733,13 @@ export type ImportZiel = {
      * Kopf-Tabelle; die Seite schreibt nach dem Kopf die Positionen
      * (kindZeilen in importMotor). Scheitern sie, wird der Kopf wieder entfernt.
      */
-    kindTabelle?: { tabelle: string; fremdschluessel: string };
+    kindTabelle?: {
+      tabelle: string; fremdschluessel: string;
+      /** Paket 154: Spalten der Kind-Tabelle (Standard: die der Angebotspositionen). */
+      spalten?: readonly string[];
+      /** Paket 154: Spalte fuer Menge x Einzelpreis — null = die Tabelle hat keine (Standard gesamt_netto). */
+      gesamt?: string | null;
+    };
   };
   felder: ZielFeld[];
 };
@@ -1953,6 +1959,104 @@ export const ZIELE: ImportZiel[] = [
       { key: 'preis', label: 'Preis (€)', typ: 'zahl', alias: ['preis', 'betrag', 'kosten', 'summe', 'honorar'] },
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'kommentar'] },
       { key: 'abgerechnet', label: 'Abgerechnet', typ: 'jaNein', standard: true, hinweis: 'Leer = ja (alte Behandlungen sind im Altsystem abgerechnet).', alias: ['abgerechnet', 'bezahlt', 'berechnet'] },
+    ],
+  },
+  // --- Paket 154: Anwalt-Block Teil 2 — Hilfsmittel und Kanzlei-Akten, GESPERRT bis zur Freigabe ---
+  // Live-Schema 28.09.2026. Diagnose/Krankenkasse bzw. Mandant/Gegner bleiben wie im Modul.
+  {
+    key: 'hilfsmittel',
+    label: 'Hilfsmittel-Versorgungen',
+    icon: '🦽',
+    tabelle: 'hilfsmittel_versorgung',
+    beschreibung: 'Versorgungen mit Verordnung, Krankenkasse und Positionen (HMV-Nummer, Menge, Preis, Mehrkosten). '
+      + 'Zeilen mit gleicher KV-Nummer werden eine Versorgung. Vorhandene Versorgungen werden nie überschrieben.',
+    schluesselFelder: ['kv_nummer', 'versicherter+verordnung_datum'],
+    eigeneFelderModul: 'hilfsmittel_versorgung',
+    nurMitKatalog: true,
+    nurChef: true,
+    nurNeu: true,
+    anwalt: 'hilfsmittel',
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['versicherter'], label: 'Kunde', mehrzahl: 'die Kunden' },
+    jsonPositionen: {
+      kopfFeld: 'kv_nummer', spalte: '__positionen',
+      kindTabelle: { tabelle: 'hilfsmittel_position', fremdschluessel: 'versorgung_id', spalten: ['hmv_nummer', 'bezeichnung', 'menge', 'einzelpreis', 'mehrkosten'], gesamt: null },
+    },
+    ergebnisHref: '/dashboard/hilfsmittel',
+    listen: [{ feld: 'status', label: 'Status', standard: 'verordnet', textFeld: 'notiz', liste: liste(['verordnet', 'kv_gesendet', 'genehmigt', 'abgelehnt', 'versorgt', 'abgerechnet'], { neu: 'verordnet', offen: 'verordnet', verordnung: 'verordnet', 'kv gesendet': 'kv_gesendet', kv: 'kv_gesendet', beantragt: 'kv_gesendet', eingereicht: 'kv_gesendet', genehmigung: 'genehmigt', bewilligt: 'genehmigt', abgelehnt: 'abgelehnt', ablehnung: 'abgelehnt', ausgeliefert: 'versorgt', geliefert: 'versorgt', abgegeben: 'versorgt', abgeschlossen: 'abgerechnet', bezahlt: 'abgerechnet' }) }],
+    felder: [
+      { key: 'versicherter', label: 'Versicherter', typ: 'text', alias: ['versicherter', 'versicherte', 'patient', 'patientin', 'name', 'kunde'] },
+      { key: 'versicherten_nr', label: 'Versicherten-Nr.', typ: 'text', alias: ['versicherten nr', 'versichertennummer', 'versicherten-nr', 'kvnr', 'krankenversichertennummer'] },
+      { key: 'krankenkasse', label: 'Krankenkasse', typ: 'text', alias: ['krankenkasse', 'kasse', 'kostentraeger', 'kostenträger', 'kv'] },
+      { key: 'arzt', label: 'Verordnender Arzt', typ: 'text', alias: ['arzt', 'aerztin', 'ärztin', 'verordner', 'verordnender arzt'] },
+      { key: 'verordnung_datum', label: 'Verordnungsdatum', typ: 'datum', alias: ['verordnung datum', 'verordnungsdatum', 'verordnet am', 'rezeptdatum', 'datum'] },
+      { key: 'diagnose', label: 'Diagnose', typ: 'text', alias: ['diagnose', 'icd', 'icd-10', 'indikation'] },
+      { key: 'kv_nummer', label: 'KV-Nummer', typ: 'text', hinweis: 'Zeilen mit gleicher KV-Nummer werden eine Versorgung.', alias: ['kv nummer', 'kv-nummer', 'kv nr', 'kostenvoranschlag', 'kostenvoranschlag nr', 'vorgangsnummer', 'vorgang'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'verordnet', hinweis: 'verordnet · kv_gesendet · genehmigt · abgelehnt · versorgt · abgerechnet', alias: ['status', 'stand'] },
+      { key: 'genehmigt_am', label: 'Genehmigt am', typ: 'datum', alias: ['genehmigt am', 'genehmigung am', 'bewilligt am'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar'] },
+      { key: 'pos_hmv', label: 'Position: HMV-Nummer', typ: 'text', virtuell: 'position', positionSpalte: 'hmv_nummer', alias: ['hmv', 'hmv nummer', 'hmv-nummer', 'hilfsmittelnummer', 'positionsnummer'] },
+      { key: 'pos_bezeichnung', label: 'Position: Bezeichnung', typ: 'text', virtuell: 'position', positionSpalte: 'bezeichnung', alias: ['bezeichnung', 'hilfsmittel', 'artikel', 'produkt', 'position'] },
+      { key: 'pos_menge', label: 'Position: Menge', typ: 'zahl', virtuell: 'position', positionSpalte: 'menge', alias: ['menge', 'anzahl', 'stueck', 'stück'] },
+      { key: 'pos_einzelpreis', label: 'Position: Preis (€)', typ: 'zahl', virtuell: 'position', positionSpalte: 'einzelpreis', alias: ['einzelpreis', 'preis', 'vertragspreis', 'betrag'] },
+      { key: 'pos_mehrkosten', label: 'Position: Mehrkosten (€)', typ: 'zahl', virtuell: 'position', positionSpalte: 'mehrkosten', alias: ['mehrkosten', 'eigenanteil', 'aufzahlung', 'wirtschaftliche aufzahlung'] },
+    ],
+  },
+  {
+    key: 'akten',
+    label: 'Akten (Kanzlei)',
+    icon: '⚖️',
+    tabelle: 'kanzlei_akte',
+    beschreibung: 'Akten mit Aktenzeichen, Mandant, Gegner und Rechtsgebiet. Der Mandant wird mit Ihren Kunden verknüpft, wenn es ihn gibt. '
+      + 'Danach die Fristen importieren. Vorhandene Akten werden nie überschrieben.',
+    schluesselFelder: ['aktenzeichen', 'mandant+kurzbeschreibung'],
+    eigeneFelderModul: 'kanzlei_akte',
+    nurMitKatalog: true,
+    nurChef: true,
+    nurNeu: true,
+    anwalt: 'kanzlei',
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['mandant'], label: 'Mandant', mehrzahl: 'die Kunden' },
+    ergebnisHref: '/dashboard/fristen',
+    listen: [{ feld: 'status', label: 'Status', standard: 'offen', textFeld: 'notiz', liste: liste(['offen', 'abgeschlossen'], { aktiv: 'offen', laufend: 'offen', 'in bearbeitung': 'offen', neu: 'offen', ruht: 'offen', ruhend: 'offen', erledigt: 'abgeschlossen', geschlossen: 'abgeschlossen', beendet: 'abgeschlossen', abgelegt: 'abgeschlossen', archiviert: 'abgeschlossen' }) }],
+    felder: [
+      { key: 'aktenzeichen', label: 'Aktenzeichen', typ: 'text', hinweis: 'Das Aktenzeichen aus dem Altsystem bleibt erhalten — darüber finden die Fristen ihre Akte.', alias: ['aktenzeichen', 'az', 'akte', 'akten nr', 'aktennummer', 'geschaeftszeichen', 'geschäftszeichen'] },
+      { key: 'mandant', label: 'Mandant', typ: 'text', alias: ['mandant', 'mandantin', 'auftraggeber', 'kunde', 'mandantenname'] },
+      KUNDE_NR_FELD,
+      { key: 'gegner', label: 'Gegner', typ: 'text', alias: ['gegner', 'gegenseite', 'gegnerin', 'anspruchsgegner', 'beklagter', 'beklagte'] },
+      { key: 'rechtsgebiet', label: 'Rechtsgebiet', typ: 'text', alias: ['rechtsgebiet', 'sachgebiet', 'gebiet', 'referat'] },
+      { key: 'kurzbeschreibung', label: 'Kurzbeschreibung', typ: 'text', alias: ['kurzbeschreibung', 'betreff', 'gegenstand', 'wegen', 'kurzrubrum', 'rubrum', 'beschreibung'] },
+      { key: 'gegenstandswert', label: 'Gegenstandswert (€)', typ: 'zahl', alias: ['gegenstandswert', 'streitwert', 'wert', 'geschaeftswert', 'geschäftswert'] },
+      { key: 'sachbearbeiter', label: 'Sachbearbeiter', typ: 'text', alias: ['sachbearbeiter', 'bearbeiter', 'anwalt', 'anwaeltin', 'anwältin', 'zustaendig', 'zuständig', 'ra'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'offen', hinweis: 'offen · abgeschlossen', alias: ['status', 'stand', 'aktenstatus'] },
+      { key: 'angelegt_am', label: 'Angelegt am', typ: 'datum', alias: ['angelegt am', 'angelegt', 'eroeffnet', 'eröffnet', 'aktenanlage', 'datum'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar'] },
+    ],
+  },
+  {
+    key: 'fristen',
+    label: 'Fristen (Kanzlei)',
+    icon: '⏰',
+    tabelle: 'kanzlei_frist',
+    beschreibung: 'Fristen je Akte (Notfrist, Verjährung, Wiedervorlage, Termin). Vorher die Akten importieren — eine Frist ohne passendes Aktenzeichen '
+      + 'bleibt mit Grund in der Datei und wird im Bericht gezeigt. Bitte jede Notfrist nach dem Import im Fristenkalender gegenprüfen.',
+    schluesselFelder: ['akte_id+bezeichnung+frist_datum', '__nach+bezeichnung+frist_datum'],
+    eigeneFelderModul: 'kanzlei_frist',
+    nurMitKatalog: true,
+    nurChef: true,
+    nurNeu: true,
+    anwalt: 'kanzlei',
+    nachschlag: { ausFeld: 'aktenzeichen', tabelle: 'kanzlei_akte', nameSpalte: 'aktenzeichen', spalte: 'akte_id', label: 'Akte', pflicht: true, mehrzahl: 'die Akten' },
+    ergebnisHref: '/dashboard/fristen',
+    listen: [{ feld: 'art', label: 'Art', standard: 'sonstige', textFeld: 'notiz', liste: liste(['notfrist', 'verjaehrung', 'wiedervorlage', 'termin', 'sonstige'], { 'not frist': 'notfrist', rechtsmittelfrist: 'notfrist', berufungsfrist: 'notfrist', einspruchsfrist: 'notfrist', verjährung: 'verjaehrung', verjaehrungsfrist: 'verjaehrung', verjährungsfrist: 'verjaehrung', wv: 'wiedervorlage', vorlage: 'wiedervorlage', 'wieder vorlage': 'wiedervorlage', gerichtstermin: 'termin', verhandlung: 'termin', besprechung: 'termin', frist: 'sonstige', sonstiges: 'sonstige' }) }],
+    felder: [
+      { key: 'aktenzeichen', label: 'Aktenzeichen', typ: 'text', pflicht: true, virtuell: 'nachschlag', hinweis: 'Wie in Ihren Akten — darüber wird die Frist verknüpft.', alias: ['aktenzeichen', 'az', 'akte', 'akten nr', 'aktennummer', 'geschaeftszeichen', 'geschäftszeichen'] },
+      { key: 'bezeichnung', label: 'Bezeichnung', typ: 'text', pflicht: true, alias: ['bezeichnung', 'frist', 'fristbezeichnung', 'betreff', 'was', 'text'] },
+      { key: 'art', label: 'Art', typ: 'text', standard: 'sonstige', hinweis: 'notfrist · verjaehrung · wiedervorlage · termin · sonstige', alias: ['art', 'fristart', 'typ', 'kategorie'] },
+      { key: 'frist_datum', label: 'Fristdatum', typ: 'datum', pflicht: true, alias: ['frist datum', 'fristdatum', 'fristende', 'fristablauf', 'ablauf', 'faellig', 'fällig', 'faellig am', 'fällig am', 'datum', 'termin am'] },
+      { key: 'vorfrist_tage', label: 'Vorfrist (Tage)', typ: 'zahl', alias: ['vorfrist', 'vorfrist tage', 'vorfrist (tage)', 'vorlauf'] },
+      { key: 'verantwortlich', label: 'Verantwortlich', typ: 'text', alias: ['verantwortlich', 'sachbearbeiter', 'bearbeiter', 'zustaendig', 'zuständig', 'anwalt'] },
+      { key: 'erledigt', label: 'Erledigt', typ: 'jaNein', standard: false, alias: ['erledigt', 'abgeschlossen', 'gestrichen', 'done'] },
+      { key: 'erledigt_am', label: 'Erledigt am', typ: 'datum', alias: ['erledigt am', 'gestrichen am', 'abgeschlossen am'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar'] },
     ],
   },
   {

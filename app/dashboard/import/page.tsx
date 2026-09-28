@@ -1766,7 +1766,7 @@ export default function ImportCenterPage() {
           const ids0 = ((neuIds as { id: string }[] | null) ?? []).map((r) => String(r.id));
           if (ids0.length !== stapel.length) kindFehler = 'Rückmeldung der Datenbank unvollständig';
           else {
-            const kz = ids0.flatMap((id, j) => kindZeilen(neuPos[p.von + j], id, kindTab.fremdschluessel, neuOwner));
+            const kz = ids0.flatMap((id, j) => kindZeilen(neuPos[p.von + j], id, kindTab.fremdschluessel, neuOwner, kindTab));
             if (kz.length > 0) {
               const { error: ek } = await supabase.from(kindTab.tabelle).insert(kz);
               if (ek) kindFehler = ek.message;
@@ -1814,7 +1814,7 @@ export default function ImportCenterPage() {
               const id = ((eineId as { id: string }[] | null) ?? [])[0]?.id;
               // Paket 146: auch einzeln — erst die Positionen, sonst Kopf wieder weg
               if (id && kindTab) {
-                const kz = kindZeilen(neuPos[p.von + j], String(id), kindTab.fremdschluessel, neuOwner);
+                const kz = kindZeilen(neuPos[p.von + j], String(id), kindTab.fremdschluessel, neuOwner, kindTab);
                 const { error: ek } = kz.length > 0 ? await supabase.from(kindTab.tabelle).insert(kz) : { error: null };
                 if (ek) {
                   await supabase.from(ziel.tabelle).delete().eq('id', id);
