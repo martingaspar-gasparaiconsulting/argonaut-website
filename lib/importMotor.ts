@@ -182,9 +182,9 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
   const fehlend: ZielFeld[] = [];
   for (const f of basis.felder) {
     if (f.virtuell === 'name_zerlegen') { (nutzbar('nachname') ? felder : fehlend).push(f); continue; }
-    if (f.virtuell === 'adresse_teil') { (nutzbar('adresse') ? felder : fehlend).push(f); continue; }
+    if (f.virtuell === 'adresse_teil') { (nutzbar(f.fuellt ?? 'adresse') ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'kunde_verweis') { (basis.kundeVerweis && vorhanden.has(basis.kundeVerweis.spalte) ? felder : fehlend).push(f); continue; }
-    if (f.virtuell === 'name_teil') { (nutzbar('name') ? felder : fehlend).push(f); continue; }
+    if (f.virtuell === 'name_teil') { (nutzbar(f.fuellt ?? 'name') ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'anhang') { (f.anhangAn && nutzbar(f.anhangAn) ? felder : fehlend).push(f); continue; }
     if (f.virtuell === 'filter' || f.virtuell === 'rechnen') { felder.push(f); continue; }
     if (f.virtuell === 'nachschlag') {
@@ -494,7 +494,11 @@ export function erkennungsSpalten(felder: readonly string[]): string[] {
  * Ohne Angleichen kaeme derselbe Einsatz beim zweiten Import doppelt.
  */
 export function vergleichsText(v: unknown): string {
+  // Paket 141: Betraege angleichen — die Datenbank liefert numeric oft als
+  // Text „100.00", der Import hat die Zahl 100. Nur Dezimalzahlen MIT Punkt;
+  // ganze Zahlen bleiben Text (Nummern mit fuehrender 0 wie „007").
   const s = String(v ?? '').trim();
+  if (/^-?\d+\.\d+$/.test(s)) return String(Number(s));
   const m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(:\d{2}(\.\d+)?)?(z|[+-]\d{2}(:?\d{2})?)?$/i);
   if (!m) return s.toLowerCase();
   const zone = m[5] ? (/^[+-]\d{2}$/.test(m[5]) ? `${m[5]}:00` : m[5]) : 'Z';

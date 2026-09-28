@@ -77,6 +77,7 @@
 // ============================================================================
 
 import { leseZahl as leseZahlGemeinsam, leseZahlMitTrenner, centRunden } from './zahlen';
+import { spendeAltBestaetigt } from './spenden';
 import { FOERDER_PROGRAMME } from '../app/dashboard/foerdermittel/programme';
 import { datumPlusMonate } from './wiederkehr';
 
@@ -670,6 +671,12 @@ export type ImportZiel = {
    * Mandat bitte in ARGONAUT neu erfassen"). Ohne Angabe gilt GRUND.bank.
    */
   bankGrund?: string;
+  /**
+   * Paket 141: Vorhandene Eintraege werden NIE ueberschrieben, auch wenn
+   * „Aktualisieren" gewaehlt ist (Spenden: eine inzwischen bestaetigte
+   * Zuwendung darf sich durch einen zweiten Import nicht aendern).
+   */
+  nurNeu?: boolean;
   /** Nur der Chef darf diese Daten anlegen (die Datenbank-Regeln verlangen es ohnehin). */
   nurChef?: boolean;
   /**
@@ -2304,6 +2311,45 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'bemerkungen', 'kommentar', 'hinweis', 'notes'] },
     ],
   },
+  // Paket 141: GEMEINSAM freigegeben 27.09.2026 — Spenden IMMER unbestaetigt,
+  // keine Bestaetigungsnummer; die alte Nummer steht in der Notiz (NICHT im
+  // Zweck: der Zweck wird auf die Zuwendungsbestaetigung gedruckt).
+  {
+    key: 'spenden',
+    label: 'Spenden & Zuwendungen',
+    icon: '❤️',
+    tabelle: 'spende',
+    beschreibung: 'Geld- und Sachspenden sowie Aufwandsverzicht. Jede Spende kommt als „unbestätigt" — ARGONAUT vergibt keine Bestätigungsnummer. '
+      + 'Eine Nummer aus dem Altsystem steht in der Notiz. Bereits vorhandene Spenden werden nie überschrieben.',
+    schluesselFelder: ['spender_name+datum+betrag'],
+    eigeneFelderModul: 'spende',
+    nurMitKatalog: true,
+    nurNeu: true,
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['spender_name'], label: 'Kontakt', mehrzahl: 'die Kontakte' },
+    ergebnisHref: '/dashboard/spenden',
+    ausblenden: ['bestaetigt', 'bestaetigt_am', 'bestaetigung_nr', 'verzicht_aufwand'],
+    listen: [
+      { feld: 'art', label: 'Art', standard: 'geldzuwendung', textFeld: 'notiz', liste: liste(['geldzuwendung', 'sachzuwendung', 'aufwandsverzicht'], { geld: 'geldzuwendung', geldspende: 'geldzuwendung', spende: 'geldzuwendung', bar: 'geldzuwendung', barspende: 'geldzuwendung', ueberweisung: 'geldzuwendung', lastschrift: 'geldzuwendung', online: 'geldzuwendung', paypal: 'geldzuwendung', mitgliedsbeitrag: 'geldzuwendung', sach: 'sachzuwendung', sachspende: 'sachzuwendung', sachzuwendungen: 'sachzuwendung', aufwand: 'aufwandsverzicht', aufwandsspende: 'aufwandsverzicht', verzicht: 'aufwandsverzicht', 'verzicht auf aufwandsersatz': 'aufwandsverzicht', aufwandsentschaedigung: 'aufwandsverzicht', rueckspende: 'aufwandsverzicht' }) },
+    ],
+    felder: [
+      { key: 'datum', label: 'Datum der Zuwendung', typ: 'datum', pflicht: true, alias: ['datum', 'spendendatum', 'datum der zuwendung', 'zuwendungsdatum', 'eingang', 'eingangsdatum', 'buchungsdatum', 'date'] },
+      { key: 'spender_name', label: 'Spender', typ: 'text', pflicht: true, hinweis: 'Oder Vorname und Nachname in zwei Spalten — sie werden zusammengesetzt.', alias: ['spender_name', 'spender', 'spendername', 'name', 'zuwendender', 'unterstuetzer', 'unterstützer', 'donor', 'firma'] },
+      { key: 'lead_vorname', label: 'Vorname (zum Namen)', typ: 'text', virtuell: 'name_teil', fuellt: 'spender_name', nichtInVorlage: true, alias: ['vorname', 'first name'] },
+      { key: 'lead_nachname', label: 'Nachname (zum Namen)', typ: 'text', virtuell: 'name_teil', fuellt: 'spender_name', nichtInVorlage: true, alias: ['nachname', 'last name', 'familienname'] },
+      { key: 'spender_anschrift', label: 'Anschrift', typ: 'text', hinweis: 'Oder Straße, PLZ und Ort in eigenen Spalten.', alias: ['spender_anschrift', 'anschrift', 'adresse', 'spenderanschrift', 'address'] },
+      { key: 'adresse_strasse', label: 'Straße (zur Anschrift)', typ: 'text', virtuell: 'adresse_teil', fuellt: 'spender_anschrift', nichtInVorlage: true, alias: ['strasse', 'straße', 'str', 'street'] },
+      { key: 'adresse_plz', label: 'PLZ (zur Anschrift)', typ: 'text', virtuell: 'adresse_teil', fuellt: 'spender_anschrift', nichtInVorlage: true, alias: ['plz', 'postleitzahl', 'zip'] },
+      { key: 'adresse_ort', label: 'Ort (zur Anschrift)', typ: 'text', virtuell: 'adresse_teil', fuellt: 'spender_anschrift', nichtInVorlage: true, alias: ['ort', 'stadt', 'wohnort', 'city'] },
+      { key: 'betrag', label: 'Betrag / Wert (€)', typ: 'zahl', pflicht: true, alias: ['betrag', 'spendenbetrag', 'summe', 'wert', 'sachwert', 'zuwendung', 'amount'] },
+      { key: 'art', label: 'Art', typ: 'text', standard: 'geldzuwendung', hinweis: 'geldzuwendung · sachzuwendung · aufwandsverzicht', alias: ['art', 'spendenart', 'zuwendungsart', 'typ'] },
+      { key: 'sachwert_text', label: 'Bezeichnung der Sachzuwendung', typ: 'text', alias: ['sachwert_text', 'sachzuwendung', 'bezeichnung sachzuwendung', 'gegenstand', 'sachspende'] },
+      { key: 'zweck', label: 'Zweck', typ: 'text', alias: ['zweck', 'verwendungszweck', 'projekt', 'spendenzweck'] },
+      { key: 'alt_bestaetigung_nr', label: 'Bestätigungsnummer im Altsystem (in die Notiz)', typ: 'text', virtuell: 'anhang', anhangAn: 'notiz', nichtInVorlage: true, alias: ['bestaetigungsnummer', 'bestätigungsnummer', 'bestaetigung nr', 'bestätigung nr', 'zb nr', 'zuwendungsbestaetigung nr', 'zuwendungsbestätigung nr', 'bescheinigungsnummer', 'quittungsnummer', 'beleg nr'] },
+      { key: 'alt_bestaetigt', label: 'Bestätigt im Altsystem (in die Notiz)', typ: 'text', virtuell: 'anhang', anhangAn: 'notiz', nichtInVorlage: true, alias: ['bestaetigt', 'bestätigt', 'bescheinigt', 'quittiert', 'zuwendungsbestaetigung', 'zuwendungsbestätigung'] },
+      { key: 'alt_bestaetigt_am', label: 'Bestätigt am im Altsystem (in die Notiz)', typ: 'text', virtuell: 'anhang', anhangAn: 'notiz', nichtInVorlage: true, alias: ['bestaetigt am', 'bestätigt am', 'bestaetigungsdatum', 'bestätigungsdatum', 'bescheinigt am'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar', 'notes'] },
+    ],
+  },
   // Paket 136: Umzug Schritt 4 Rest — Bestand je Filiale (Handel). Setzt
   // Zaehlstaende per Korrektur (lager_buchen), legt nichts an.
   {
@@ -2686,6 +2732,16 @@ Object.assign(BEISPIELE, {
     nachweis_status: 'offen||',
     sachbericht: '||',
     notiz: 'Förderkennzeichen 123-ABC||',
+  },
+  spenden: {
+    datum: '15.03.2026|02.04.2026|10.05.2026',
+    spender_name: 'Anna Beispiel|Muster Bau GmbH|Bernd Test',
+    spender_anschrift: 'Hauptstraße 5, 71032 Böblingen|Industrieweg 1, 71063 Sindelfingen|Am Anger 3, 71034 Böblingen',
+    betrag: '100,00|500,00|250,00',
+    art: 'Geldspende|Geldspende|Sachspende',
+    sachwert_text: '||2 Fußballtore, gebraucht',
+    zweck: 'Jugendarbeit|Vereinsheim|Sportgeräte',
+    notiz: '||',
   },
   mitglieder: {
     mitglieds_nr: 'M-1001|M-1002|M-1003',
@@ -3163,6 +3219,8 @@ function nachbereiten(
   if (zielKey === 'foerdervorhaben') foerderNachbereiten(werte, nummer, warnungen);
   // Paket 140
   if (zielKey === 'mitglieder') mitgliedNachbereiten(werte, nummer, warnungen);
+  // Paket 141
+  if (zielKey === 'spenden') spendeNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -3570,6 +3628,25 @@ function mitgliedNachbereiten(werte: Record<string, unknown>, nummer: number, wa
 }
 
 /**
+ * Paket 141: Spenden (GEMEINSAM freigegeben 27.09.2026). IMMER unbestaetigt,
+ * keine Bestaetigungsnummer — eine Nummer aus dem Altsystem steht nur in der
+ * Notiz. Aufwandsverzicht setzt den Haken wie das Modul.
+ */
+function spendeNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  werte.bestaetigt = false;
+  werte.verzicht_aufwand = werte.art === 'aufwandsverzicht';
+  if (typeof werte.betrag === 'number' && werte.betrag <= 0) {
+    warnungen.push({ zeile: nummer, feld: 'Betrag', meldung: 'Betrag ist 0 oder negativ — bitte prüfen.' });
+  }
+  if (werte.art === 'sachzuwendung' && !werte.sachwert_text) {
+    warnungen.push({ zeile: nummer, feld: 'Bezeichnung der Sachzuwendung', meldung: 'Sachzuwendung ohne Bezeichnung — bitte vor der Bestätigung nachtragen.' });
+  }
+  if (spendeAltBestaetigt(werte.notiz)) {
+    warnungen.push({ zeile: nummer, feld: 'Bestätigung', meldung: 'Im Altsystem schon bestätigt — in ARGONAUT bitte KEINE zweite Zuwendungsbestätigung ausstellen.' });
+  }
+}
+
+/**
  * Paket 138: Gutscheine mit RESTWERT uebernehmen (Martin-Freigabe 27.09.2026).
  * Der Restwert wird der Startwert in ARGONAUT; Ursprungswert und schon
  * Eingeloestes stehen in der Notiz. Es werden KEINE Einloesungen und keine
@@ -3840,9 +3917,11 @@ export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string,
   const vn = String(werte.lead_vorname ?? '').trim();
   const nn = String(werte.lead_nachname ?? '').trim();
   const fi = String(werte.lead_firma ?? '').trim();
-  if ((vn || nn || fi) && leer(werte.name)) {
+  // Paket 141: Zielfeld aus `fuellt` (Spenden: spender_name), sonst wie bisher „name".
+  const namensZiel = virtuelle.find((f) => f.virtuell === 'name_teil' && f.fuellt)?.fuellt ?? 'name';
+  if ((vn || nn || fi) && leer(werte[namensZiel])) {
     const person = [vn, nn].filter(Boolean).join(' ');
-    werte.name = person && fi ? `${person} · ${fi}` : (person || fi);
+    werte[namensZiel] = person && fi ? `${person} · ${fi}` : (person || fi);
   }
 
   // Schritt 3: Spalten ohne eigenes Feld als „Label: Wert" an ein Textfeld haengen.
@@ -3860,7 +3939,9 @@ export function virtuelleFelderAufloesen(ziel: ImportZiel, werte: Record<string,
   const ort = String(werte.adresse_ort ?? '').trim();
   if (strasse || plz || ort) {
     const zusammen = [strasse, [plz, ort].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-    werte.adresse = leer(werte.adresse) ? zusammen : `${String(werte.adresse).trim()}, ${zusammen}`;
+    // Paket 141: Zielfeld aus `fuellt` (Spenden: spender_anschrift), sonst „adresse".
+    const adressZiel = virtuelle.find((f) => f.virtuell === 'adresse_teil' && f.fuellt)?.fuellt ?? 'adresse';
+    werte[adressZiel] = leer(werte[adressZiel]) ? zusammen : `${String(werte[adressZiel]).trim()}, ${zusammen}`;
   }
 
   // 'preis' rechnet nachbereiten() um (Stundensatz oder Einheitspreis) und entfernt es dort.

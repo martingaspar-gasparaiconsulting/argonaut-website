@@ -1532,7 +1532,8 @@ export default function ImportCenterPage() {
         }
         const treffer = findeImBestand(satz, erkennung, bestand);
         if (treffer) {
-          if (beiDublette === 'aktualisieren') zuAendern.push({ id: treffer, werte: satz, zeile: dateiZeile });
+          // Paket 141: Ziele mit nurNeu (Spenden) ueberschreiben nie Vorhandenes.
+          if (beiDublette === 'aktualisieren' && !ziel.nurNeu) zuAendern.push({ id: treffer, werte: satz, zeile: dateiZeile });
           else erg.uebersprungen++;
           return;
         }
@@ -2098,6 +2099,9 @@ export default function ImportCenterPage() {
                 <div style={{ color: C.dim, fontSize: 12.5, fontWeight: 700, marginBottom: 6 }}>
                   Wenn ein Eintrag schon vorhanden ist (erkannt über {erkennungsFelder(ziel).map((k) => ziel.felder.find((f) => f.key === k)?.label ?? k).join(' oder ')}):
                 </div>
+                {ziel.nurNeu ? (
+                  <div style={{ color: C.dim, fontSize: 13 }}>Vorhandene Einträge werden hier nie überschrieben — sie werden übersprungen.</div>
+                ) : (
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                   {([['ueberspringen', 'Überspringen — Vorhandenes bleibt unangetastet'], ['aktualisieren', 'Aktualisieren — Vorhandenes wird überschrieben']] as const).map(([wert, text]) => (
                     <button
@@ -2112,6 +2116,7 @@ export default function ImportCenterPage() {
                     </button>
                   ))}
                 </div>
+                )}
               </div>
             )}
 

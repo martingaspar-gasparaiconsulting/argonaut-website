@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { SPENDE_ARTEN, KLEINBETRAG_GRENZE, kleinbetrag, euroInWorten, zaehleSpenden, naechsteZbNummer } from '@/lib/spenden';
+import { SPENDE_ARTEN, KLEINBETRAG_GRENZE, kleinbetrag, euroInWorten, zaehleSpenden, naechsteZbNummer, spendeAltBestaetigt } from '@/lib/spenden';
 import Leerzustand from '../_components/Leerzustand';
 import { augeSpenden } from '@/lib/auge';
 import { zuwendungPdf } from '@/lib/zuwendungPdf';
@@ -210,7 +210,11 @@ export default function SpendenPage() {
                     {spenden.map((s) => (
                       <tr key={s.id}>
                         <td style={styles.td}>{fmtDatum(s.datum)}</td>
-                        <td style={styles.td}>{s.spender_name}<EigeneFelderAnzeige felder={felder} werte={werteMap[s.id]} /></td>
+                        <td style={styles.td}>{s.spender_name}<EigeneFelderAnzeige felder={felder} werte={werteMap[s.id]} />
+                          {/* Paket 141: aus dem Altsystem uebernommen und dort schon bestaetigt -> keine zweite Bestaetigung */}
+                          {!s.bestaetigt && spendeAltBestaetigt(s.notiz) && (
+                            <div style={{ color: C.warn, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 4 }}>⚠️ Im Altsystem bereits bestätigt — bitte keine zweite Zuwendungsbestätigung ausstellen.</div>
+                          )}</td>
                         <td style={{ ...styles.td, color: C.textDim }}>{ART_LABEL[s.art] || s.art}</td>
                         <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>{eur(s.betrag)}</td>
                         <td style={styles.td}>{s.bestaetigt

@@ -108,3 +108,15 @@ export function naechsteZbNummer(vorhandene: (string | null | undefined)[], jahr
   }
   return `ZB-${jahr}-${String(max + 1).padStart(3, '0')}`;
 }
+
+/**
+ * Paket 141: Wurde die Spende im Altsystem schon bestaetigt? Erkennbar an einer
+ * Bestaetigungsnummer, einem Bestaetigungsdatum oder „Bestätigt: ja" in der
+ * Notiz. „nein"/„offen" zaehlt nicht. Import-Center (importParser) und Spenden-Seite nutzen das.
+ */
+export function spendeAltBestaetigt(notiz: unknown): boolean {
+  const t = typeof notiz === 'string' ? notiz : '';
+  if (/^(Bestätigungsnummer|Bestätigt am) im Altsystem: *\S/m.test(t)) return true;
+  const m = t.match(/^Bestätigt im Altsystem: *(.+)$/m);
+  return !!m && /^(ja|j|x|yes|y|true|wahr|1|bestätigt|bestaetigt|erledigt|ausgestellt)$/i.test(m[1].trim());
+}

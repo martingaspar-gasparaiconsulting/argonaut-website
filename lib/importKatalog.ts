@@ -130,7 +130,8 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'kassen', label: 'Kassen & TSE', icon: '🧮', beschreibung: 'Kassen und TSE je Betriebsstätte für die Mitteilung ans Finanzamt.', musterZiel: 'kassen', zielHref: '/dashboard/kasse/meldung', motor: 'kassen', gruppe: 'finanzen' },
   // Paket 140: GEMEINSAM freigegeben — Mitglieder ohne Bankdaten, nur Chef.
   { key: 'mitglieder', label: 'Mitglieder & Abos', icon: '👥', beschreibung: 'Mitglieder und Abos mit Beitrag, Intervall und Vertragsdaten — ohne Bankverbindung, das SEPA-Mandat wird neu erfasst (nur Geschäftsleitung).', musterZiel: 'mitglieder', zielHref: '/dashboard/mitglieder', motor: 'mitglieder', gruppe: 'finanzen' },
-  { key: 'spenden', label: 'Spenden', icon: '❤️', beschreibung: 'Spenden und Zuwendungen (Verein/Sozial).', vorlage: V + 'spenden-import-vorlage.csv', zielHref: '/dashboard/spenden', gruppe: 'finanzen' },
+  // Paket 141: GEMEINSAM freigegeben — Spenden immer unbestaetigt.
+  { key: 'spenden', label: 'Spenden', icon: '❤️', beschreibung: 'Spenden und Zuwendungen (Verein/Sozial) — kommen unbestätigt, eine alte Bestätigungsnummer steht in der Notiz.', musterZiel: 'spenden', zielHref: '/dashboard/spenden', motor: 'spenden', gruppe: 'finanzen' },
 ];
 
 /** Alle Quellen (Kopie, damit Aufrufer nicht die Konstante mutieren). */
