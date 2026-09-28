@@ -252,8 +252,8 @@ export function istEinwilligungSpalte(spalte: string): boolean {
  * Gesperrt aus Rechtsgruenden (Bank, Werbe-Einwilligung) oder weil das Ziel
  * es verbietet (Mitarbeiter: Lohn, SV-/Steuernummer, Zugaenge) — mit Grund.
  */
-export function sperrGrund(spalte: string, ziel?: Pick<ImportZiel, 'sperren'> | null): string | null {
-  if (istBankSpalte(spalte)) return GRUND.bank;
+export function sperrGrund(spalte: string, ziel?: Pick<ImportZiel, 'sperren' | 'bankGrund'> | null): string | null {
+  if (istBankSpalte(spalte)) return ziel?.bankGrund ?? GRUND.bank;
   if (istEinwilligungSpalte(spalte)) return GRUND.einwilligung;
   const n = normal(spalte);
   for (const s of ziel?.sperren ?? []) {

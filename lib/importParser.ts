@@ -553,6 +553,13 @@ export type ZielFeld = {
    * Geldfeldern) — ein Bestand darf nicht still auf 0 gesetzt werden.
    */
   streng?: boolean;
+  /**
+   * Paket 140: Dieses (virtuelle) Feld fuellt ein Pflichtfeld — Vorname und
+   * Nachname ergeben den Pflicht-Namen eines Mitglieds. Ist das Pflichtfeld
+   * selbst nicht zugeordnet, genuegt eines dieser Felder; ist in einer Zeile
+   * weder das Pflichtfeld noch ein Helfer gefuellt, faellt sie mit Grund heraus.
+   */
+  fuellt?: string;
 };
 
 export type ImportZiel = {
@@ -658,6 +665,11 @@ export type ImportZiel = {
    * Ausdruck auf den vereinheitlichten Spaltennamen (siehe normal()).
    */
   sperren?: { muster: string; grund: string }[];
+  /**
+   * Paket 140: eigener Grund fuer gesperrte Bankspalten (Mitglieder: „SEPA-
+   * Mandat bitte in ARGONAUT neu erfassen"). Ohne Angabe gilt GRUND.bank.
+   */
+  bankGrund?: string;
   /** Nur der Chef darf diese Daten anlegen (die Datenbank-Regeln verlangen es ohnehin). */
   nurChef?: boolean;
   /**
@@ -2241,6 +2253,57 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar', 'aktenzeichen', 'foerderkennzeichen', 'förderkennzeichen'] },
     ],
   },
+  // Paket 140: GEMEINSAM freigegeben 27.09.2026 — Mitglieder & Abos OHNE
+  // Bankdaten. IBAN/BIC/Mandat/Einziehungen bleiben in der Datei; das
+  // SEPA-Mandat wird in ARGONAUT neu erfasst. Nur Chef (die Datenbank laesst
+  // Mitarbeiter hier nichts fuer den Betrieb anlegen: mgd_insert).
+  {
+    key: 'mitglieder',
+    label: 'Mitglieder & Abos',
+    icon: '👥',
+    tabelle: 'mitglieder',
+    beschreibung: 'Mitglieder, Abos und Beiträge mit Intervall, Status und Vertragsdaten. Bankverbindung und SEPA-Mandat werden NICHT übernommen — '
+      + 'bitte das SEPA-Mandat je Mitglied in ARGONAUT neu erfassen. Nur die Geschäftsleitung.',
+    schluesselFelder: ['mitglieds_nr', 'name+email'],
+    eigeneFelderModul: 'mitglieder',
+    nurMitKatalog: true,
+    nurChef: true,
+    ergebnisHref: '/dashboard/mitglieder',
+    bankGrund: 'Bankverbindung und SEPA-Mandat übernimmt ARGONAUT nicht aus einer Datei — bitte das SEPA-Mandat in ARGONAUT neu erfassen.',
+    sperren: [
+      { muster: 'letzte einziehung|einziehung|einzug|lastschrift|erst einzug|erstlastschrift|folgelastschrift|glaeubiger|creditor|direct debit', grund: 'Einzugs- und Mandatsdaten übernimmt ARGONAUT nicht aus einer Datei — bitte das SEPA-Mandat in ARGONAUT neu erfassen.' },
+    ],
+    ausblenden: ['iban', 'bic', 'mandatsreferenz', 'mandat_datum', 'letzte_einziehung', 'erst_einzug'],
+    listen: [
+      { feld: 'intervall', label: 'Intervall', standard: 'monat', textFeld: 'notiz', liste: liste(['monat', 'quartal', 'jahr'], { monatlich: 'monat', mtl: 'monat', monthly: 'monat', 'pro monat': 'monat', vierteljaehrlich: 'quartal', quartalsweise: 'quartal', quartalsbeitrag: 'quartal', quarterly: 'quartal', jaehrlich: 'jahr', jahresbeitrag: 'jahr', 'pro jahr': 'jahr', yearly: 'jahr', annual: 'jahr', annually: 'jahr', 'p a': 'jahr' }) },
+      { feld: 'status', label: 'Status', standard: 'aktiv', textFeld: 'notiz', liste: liste(['aktiv', 'pausiert', 'gekuendigt'], { active: 'aktiv', laufend: 'aktiv', mitglied: 'aktiv', ordentlich: 'aktiv', beitragsfrei: 'aktiv', ehrenmitglied: 'aktiv', ruhend: 'pausiert', ruht: 'pausiert', pause: 'pausiert', paused: 'pausiert', passiv: 'pausiert', gekündigt: 'gekuendigt', kuendigung: 'gekuendigt', ausgetreten: 'gekuendigt', austritt: 'gekuendigt', beendet: 'gekuendigt', ehemalig: 'gekuendigt', inaktiv: 'gekuendigt', cancelled: 'gekuendigt', canceled: 'gekuendigt' }) },
+      { feld: 'vertragsart', label: 'Vertragsart', standard: 'studio', textFeld: 'notiz', liste: liste(['studio', 'verein'], { abo: 'studio', vertrag: 'studio', fitness: 'studio', fitnessstudio: 'studio', kurs: 'studio', mitgliedschaft: 'verein', vereinsmitglied: 'verein', satzung: 'verein', ev: 'verein', 'e v': 'verein' }) },
+      { feld: 'satzung_zum', label: 'Austritt laut Satzung zum', standard: 'jahresende', textFeld: 'notiz', liste: liste(['monatsende', 'quartalsende', 'jahresende', 'jederzeit'], { monat: 'monatsende', 'ende des monats': 'monatsende', quartal: 'quartalsende', 'ende des quartals': 'quartalsende', jahr: 'jahresende', 'ende des jahres': 'jahresende', 'ende des geschaeftsjahres': 'jahresende', geschaeftsjahr: 'jahresende', kalenderjahr: 'jahresende', sofort: 'jederzeit' }) },
+    ],
+    felder: [
+      { key: 'mitglieds_nr', label: 'Mitgliedsnummer', typ: 'text', alias: ['mitgliedsnummer', 'mitglieds nr', 'mitgliedsnr', 'mitglied nr', 'mitglieder nr', 'mitgl nr', 'member id', 'member number', 'vertragsnummer', 'abo nr', 'abonummer'] },
+      { key: 'name', label: 'Name', typ: 'text', pflicht: true, hinweis: 'Oder Vorname und Nachname in zwei Spalten — sie werden zusammengesetzt.', alias: ['name', 'mitglied', 'mitgliedsname', 'vollstaendiger name', 'vollständiger name', 'full name', 'kunde', 'abonnent'] },
+      // Die Namens-Helfer heissen wie bei den Leads (lead_*), weil virtuelleFelderAufloesen sie dort schon zusammensetzt.
+      { key: 'lead_vorname', label: 'Vorname (zum Namen)', typ: 'text', virtuell: 'name_teil', fuellt: 'name', nichtInVorlage: true, alias: ['vorname', 'first name', 'rufname'] },
+      { key: 'lead_nachname', label: 'Nachname (zum Namen)', typ: 'text', virtuell: 'name_teil', fuellt: 'name', nichtInVorlage: true, alias: ['nachname', 'last name', 'familienname', 'surname'] },
+      { key: 'email', label: 'E-Mail', typ: 'text', alias: ['email', 'e-mail', 'mail', 'e mail', 'emailadresse', 'email address'] },
+      { key: 'telefon', label: 'Telefon', typ: 'text', alias: ['telefon', 'tel', 'telefonnummer', 'handy', 'mobil', 'phone', 'mobile'] },
+      { key: 'betrag', label: 'Beitrag (€ je Intervall)', typ: 'zahl', alias: ['beitrag', 'betrag', 'mitgliedsbeitrag', 'beitragshoehe', 'beitragshöhe', 'monatsbeitrag', 'abopreis', 'preis', 'gebuehr', 'gebühr', 'fee', 'amount'] },
+      { key: 'intervall', label: 'Intervall', typ: 'text', standard: 'monat', hinweis: 'monat · quartal · jahr (halbjährlich und wöchentlich werden umgerechnet)', alias: ['intervall', 'zahlweise', 'zahlungsintervall', 'beitragsintervall', 'turnus', 'rhythmus', 'periode', 'billing period'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'aktiv', hinweis: 'aktiv · pausiert · gekuendigt', alias: ['status', 'mitgliedsstatus', 'abostatus', 'stand'] },
+      { key: 'vertragsart', label: 'Vertragsart', typ: 'text', standard: 'studio', hinweis: 'studio (Abo/Vertrag) · verein (Satzung)', alias: ['vertragsart', 'mitgliedsart', 'art', 'tarifart'] },
+      { key: 'beginn_am', label: 'Beginn', typ: 'datum', alias: ['beginn', 'beginn am', 'eintritt', 'eintrittsdatum', 'mitglied seit', 'start', 'startdatum', 'vertragsbeginn', 'member since'] },
+      { key: 'abgeschlossen_am', label: 'Abgeschlossen am', typ: 'datum', alias: ['abgeschlossen am', 'vertragsabschluss', 'abschlussdatum', 'unterschrieben am'] },
+      { key: 'erstlaufzeit_monate', label: 'Erstlaufzeit (Monate)', typ: 'zahl', alias: ['erstlaufzeit', 'mindestlaufzeit', 'laufzeit', 'laufzeit monate', 'vertragslaufzeit'] },
+      { key: 'kuendigungsfrist_monate', label: 'Kündigungsfrist (Monate)', typ: 'zahl', alias: ['kuendigungsfrist', 'kündigungsfrist', 'kuendigungsfrist monate', 'frist monate'] },
+      { key: 'verlaengerung_monate', label: 'Verlängerung (Monate)', typ: 'zahl', alias: ['verlaengerung', 'verlängerung', 'verlaengerung monate', 'automatische verlaengerung'] },
+      { key: 'satzung_frist_monate', label: 'Austrittsfrist laut Satzung (Monate)', typ: 'zahl', alias: ['austrittsfrist', 'satzung frist', 'satzungsfrist'] },
+      { key: 'satzung_zum', label: 'Austritt laut Satzung zum', typ: 'text', hinweis: 'monatsende · quartalsende · jahresende · jederzeit', alias: ['austritt zum', 'satzung zum', 'austrittstermin'] },
+      { key: 'kuendigung_eingang', label: 'Kündigung eingegangen am', typ: 'datum', alias: ['kuendigung eingang', 'kündigung eingang', 'kuendigung eingegangen', 'gekuendigt am', 'gekündigt am', 'kuendigungsdatum', 'kündigungsdatum'] },
+      { key: 'kuendigung_zum', label: 'Kündigung zum', typ: 'datum', alias: ['kuendigung zum', 'kündigung zum', 'austritt', 'austrittsdatum', 'ende', 'vertragsende', 'enddatum', 'end date'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'bemerkungen', 'kommentar', 'hinweis', 'notes'] },
+    ],
+  },
   // Paket 136: Umzug Schritt 4 Rest — Bestand je Filiale (Handel). Setzt
   // Zaehlstaende per Korrektur (lager_buchen), legt nichts an.
   {
@@ -2624,6 +2687,26 @@ Object.assign(BEISPIELE, {
     sachbericht: '||',
     notiz: 'Förderkennzeichen 123-ABC||',
   },
+  mitglieder: {
+    mitglieds_nr: 'M-1001|M-1002|M-1003',
+    name: 'Anna Beispiel|Bernd Muster|Clara Test',
+    email: 'anna.beispiel@example.de|bernd.muster@example.de|',
+    telefon: '0171 1234567||07031 998877',
+    betrag: '39,90|120,00|15,00',
+    intervall: 'monatlich|jährlich|vierteljährlich',
+    status: 'aktiv|aktiv|gekündigt',
+    vertragsart: 'studio|verein|studio',
+    beginn_am: '01.02.2025|01.01.2020|01.06.2024',
+    abgeschlossen_am: '20.01.2025||15.05.2024',
+    erstlaufzeit_monate: '12||6',
+    kuendigungsfrist_monate: '1||1',
+    verlaengerung_monate: '1||1',
+    satzung_frist_monate: '|3|',
+    satzung_zum: '|jahresende|',
+    kuendigung_eingang: '||10.09.2026',
+    kuendigung_zum: '||31.10.2026',
+    notiz: 'Tarif Premium||',
+  },
   bestand_filiale: {
     artikelnummer: 'L-1001|L-1001|L-1002',
     ean: '2047110000009|2047110000009|',
@@ -2769,7 +2852,9 @@ export function fehlendePflichtfelder(mapping: Mapping, zielKey: string, zielObj
   const ziel = zielObjekt ?? zielDef(zielKey);
   if (!ziel) return [];
   const zugeordnet = new Set(Object.values(mapping).filter(Boolean));
-  return ziel.felder.filter((f) => f.pflicht && !zugeordnet.has(f.key));
+  // Paket 140: Vorname/Nachname fuellen den Pflicht-Namen
+  const gefuellt = new Set(ziel.felder.filter((f) => f.fuellt && zugeordnet.has(f.key)).map((f) => f.fuellt as string));
+  return ziel.felder.filter((f) => f.pflicht && !zugeordnet.has(f.key) && !gefuellt.has(f.key));
 }
 
 // ---------------------------------------------------------------------------
@@ -2806,6 +2891,8 @@ export const GELDFELDER: readonly string[] = [
   'netto', 'ust_betrag', 'brutto', 'anschaffungskosten', 'kosten_betrag', 'budget_betrag',
   // Paket 127: Bestellpositionen
   'einzelpreis', 'gesamt_netto',
+  // Paket 140: Mitgliedsbeitrag (und kuenftig Spende, Kaution) — nie still 0 €
+  'betrag',
 ];
 
 export type ZeilenOptionen = {
@@ -2874,7 +2961,12 @@ export function pruefeZeile(
     const leer = eingabe === undefined || eingabe === '';
 
     if (leer) {
-      if (f.pflicht) { fehler.push({ zeile: nummer, feld: f.label, meldung: 'Pflichtfeld ist leer' }); continue; }
+      if (f.pflicht) {
+        // Paket 140: ein Helfer (Vorname/Nachname) liefert den Wert erst beim Zusammensetzen
+        const helfer = ziel.felder.some((h) => h.fuellt === f.key && (roh[h.key] ?? '') !== '');
+        if (!helfer) fehler.push({ zeile: nummer, feld: f.label, meldung: 'Pflichtfeld ist leer' });
+        continue;
+      }
       if (f.standard !== undefined) werte[f.key] = f.standard;
       continue;
     }
@@ -2997,6 +3089,8 @@ function nachbereiten(
   steuersatz: number = STEUERSATZ_STANDARD,
   ziel?: ImportZiel,
 ): void {
+  // Paket 140: halbjaehrlich/woechentlich VOR der Werteliste umrechnen
+  if (zielKey === 'mitglieder') mitgliedIntervall(werte, nummer, warnungen);
   // Paket 128: allgemeine Wertelisten und Folgedaten des Ziels
   for (const l of ziel?.listen ?? []) aufListe(werte, l.feld, l.liste, l.standard, l.textFeld ?? '', l.label, nummer, warnungen);
   for (const d of ziel?.folgeDatum ?? []) {
@@ -3067,6 +3161,8 @@ function nachbereiten(
   if (zielKey === 'gutscheine') gutscheinNachbereiten(werte, nummer, warnungen);
   // Paket 139
   if (zielKey === 'foerdervorhaben') foerderNachbereiten(werte, nummer, warnungen);
+  // Paket 140
+  if (zielKey === 'mitglieder') mitgliedNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -3421,6 +3517,55 @@ function nutzungNachbereiten(werte: Record<string, unknown>, nummer: number, war
   }
   if (typeof werte.von === 'string' && typeof werte.bis === 'string' && werte.bis < werte.von) {
     warnungen.push({ zeile: nummer, feld: 'Bis', meldung: 'Ende liegt vor dem Beginn — bitte prüfen.' });
+  }
+}
+
+/**
+ * Paket 140: halbjaehrliche und woechentliche Beitraege kennt ARGONAUT nicht —
+ * sie werden auf den naechsten Rhythmus umgerechnet (halbjaehrlich -> jaehrlich
+ * x 2, woechentlich -> monatlich x 52/12). Der alte Wert steht in der Notiz.
+ */
+function mitgliedIntervall(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const roh = typeof werte.intervall === 'string' ? werte.intervall.trim() : '';
+  if (!roh) return;
+  const n = normal(roh).replace(/\s+/g, '');
+  const umrechnung = /^(halbjaehrlich|halbjahr|halbjahresbeitrag|halbjaehrig|semiannual|semiannually)$/.test(n)
+    ? { ziel: 'jahr', faktor: 2, text: 'jährlich' }
+    : /^(woechentlich|prowoche|weekly|wochenbeitrag)$/.test(n)
+      ? { ziel: 'monat', faktor: 52 / 12, text: 'monatlich' }
+      : null;
+  if (!umrechnung) return;
+  const merke = (zeile: string) => {
+    werte.notiz = typeof werte.notiz === 'string' && werte.notiz.trim() ? `${werte.notiz.trim()}\n${zeile}` : zeile;
+  };
+  const betrag = typeof werte.betrag === 'number' && Number.isFinite(werte.betrag) ? werte.betrag : null;
+  werte.intervall = umrechnung.ziel;
+  if (betrag !== null) {
+    const neu = centRunden(betrag * umrechnung.faktor);
+    const eur = (x: number) => `${x.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+    werte.betrag = neu;
+    merke(`Intervall im Altsystem: ${roh} (${eur(betrag)}) — in ARGONAUT ${umrechnung.text} ${eur(neu)}`);
+    warnungen.push({ zeile: nummer, feld: 'Intervall', meldung: `„${roh}" gibt es in ARGONAUT nicht — auf ${umrechnung.text} ${eur(neu)} umgerechnet (bitte prüfen).` });
+  } else {
+    merke(`Intervall im Altsystem: ${roh}`);
+    warnungen.push({ zeile: nummer, feld: 'Intervall', meldung: `„${roh}" gibt es in ARGONAUT nicht — auf ${umrechnung.text} gesetzt (bitte prüfen).` });
+  }
+}
+
+/**
+ * Paket 140: Mitglieder (GEMEINSAM freigegeben 27.09.2026). Nichts wird
+ * eingezogen: Bankverbindung und Mandat kommen nicht aus der Datei. Hier nur
+ * Plausibilitaet — negative Beitraege, Kuendigung ohne Datum, Ende vor Beginn.
+ */
+function mitgliedNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  if (typeof werte.betrag === 'number' && werte.betrag < 0) {
+    warnungen.push({ zeile: nummer, feld: 'Beitrag', meldung: 'Negativer Beitrag — bitte prüfen.' });
+  }
+  if (werte.status === 'gekuendigt' && !werte.kuendigung_zum) {
+    warnungen.push({ zeile: nummer, feld: 'Kündigung zum', meldung: 'Gekündigt, aber ohne „Kündigung zum" — bitte das Austrittsdatum nachtragen.' });
+  }
+  if (typeof werte.beginn_am === 'string' && typeof werte.kuendigung_zum === 'string' && werte.kuendigung_zum < werte.beginn_am) {
+    warnungen.push({ zeile: nummer, feld: 'Kündigung zum', meldung: 'Kündigung liegt vor dem Beginn — bitte prüfen.' });
   }
 }
 
