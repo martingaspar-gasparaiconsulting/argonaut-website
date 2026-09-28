@@ -18,6 +18,7 @@ import { leseXls } from '@/lib/xlsLeser';
 import { dateiArt, type KatalogSpalte } from '@/lib/importMotor';
 import { erkenneDatei, umzugPlan, type DateiErkennung } from '@/lib/umzugPlan';
 import { istVcard, leseVcard } from '@/lib/vcardLeser';
+import { istDatanorm, leseDatanorm, datanormReihenfolge, DATANORM_ENDUNGEN } from '@/lib/datanormLeser';
 
 const C = {
   gold: '#C9A84C', text: '#E8EDF4', dim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', green: '#4CAF7D', warn: '#E0A24C', navy: '#0A1628',
@@ -36,6 +37,12 @@ async function kopfLesen(f: File): Promise<{ kopf: string[]; zeilen: string[][];
   }
   if (art === 'xlsx' || /\.(xlsx|xlsm)$/i.test(f.name)) {
     return { kopf: [], zeilen: [], ersteZeile: '', hinweis: 'Excel (.xlsx): erkannt am Dateinamen — die Spalten liest ARGONAUT beim Öffnen.' };
+  }
+  // Paket 149: DATANORM -> Kopf mit den Feldnamen der Artikel (Anfang reicht zum Erkennen)
+  if (istDatanorm(f.name, anfang.subarray(0, 400))) {
+    const bisZeilenende = anfang.length >= 256 * 1024 ? anfang.subarray(0, anfang.lastIndexOf(10) + 1) : anfang;
+    const d = leseDatanorm(bisZeilenende);
+    return { kopf: d.kopf, zeilen: d.zeilen.slice(0, 50), ersteZeile: '', hinweis: `DATANORM ${d.version ?? '?'}${anfang.length >= 256 * 1024 ? '' : `: ${d.anzahl} Artikel`}` };
   }
   const text = dekodiere(anfang);
   const ersteZeile = text.split(/\r?\n/, 1)[0] ?? '';
@@ -64,7 +71,16 @@ export default function UmzugStapel(props: {
     if (!liste || liste.length === 0) return;
     setLiest(true);
     const neu: Eintrag[] = [];
-    for (const f of Array.from(liste)) {
+    // Paket 149: DATANORM.001 + DATPREIS.001 (+ .WRG/.RAB) gehoeren zusammen -> eine Datei
+    let dateien = Array.from(liste);
+    const dn = datanormReihenfolge(dateien.map((f) => f.name));
+    if (dn.length > 1) {
+      const teile: BlobPart[] = [];
+      dn.forEach((i, n) => { if (n > 0) teile.push('\r\n'); teile.push(dateien[i]); });
+      const zusammen = new File(teile, dn.map((i) => dateien[i].name).join(' + '));
+      dateien = [zusammen, ...dateien.filter((_, i) => !dn.includes(i))];
+    }
+    for (const f of dateien) {
       try {
         const k = await kopfLesen(f);
         const e = erkenneDatei(f.name, k.kopf, k.zeilen, { dbSpalten: props.dbSpalten, erlaubt: props.erlaubt, ersteZeile: k.ersteZeile });
@@ -89,7 +105,7 @@ export default function UmzugStapel(props: {
         ARGONAUT erkennt je Datei, wohin sie gehört, und schlägt die Reihenfolge vor — erst Kunden, Artikel und Lieferanten, dann alles, was darauf verweist.
         Danach öffnen Sie Datei für Datei; jede wird wie gewohnt geprüft und lässt sich einzeln rückgängig machen. Gelesen wird nur die Kopfzeile, direkt in Ihrem Browser.
       </div>
-      <input type="file" multiple accept=".csv,.txt,.xls,.xlsx,.xlsm,.xml,.vcf" disabled={liest || props.busy}
+      <input type="file" multiple accept={`.csv,.txt,.xls,.xlsx,.xlsm,.xml,.vcf,${DATANORM_ENDUNGEN}`} disabled={liest || props.busy}
         onChange={(e) => { void dateienGewaehlt(e.target.files); e.target.value = ''; }} style={{ color: C.text, fontSize: 13 }} />
       {liest && <div style={{ color: C.dim, fontSize: 12.5, marginTop: 6 }}>Dateien werden erkannt …</div>}
 

@@ -55,6 +55,7 @@ import { importErlaubt, leseRechtStand, type RechtStand } from '@/lib/importRech
 import { aufraeumerErlaubt, teileText, zeilenZuCsv, AUFRAEUMER_MAX_PORTIONEN } from '@/lib/importAufraeumer';
 import UmzugStapel from './UmzugStapel';
 import { istVcard, leseVcard } from '@/lib/vcardLeser';
+import { istDatanorm, leseDatanorm, datanormReihenfolge, DATANORM_ENDUNGEN } from '@/lib/datanormLeser';
 import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
@@ -655,6 +656,22 @@ export default function ImportCenterPage() {
     });
   }
 
+  // Paket 149: DATANORM.001 + DATPREIS.001 (+ .WRG/.RAB) gehoeren zusammen —
+  // gemeinsam gewaehlt werden sie in der richtigen Reihenfolge zu EINER Datei.
+  // Andere Mehrfachauswahl: die erste Datei, der Rest gehoert in den Umzug-Stapel.
+  async function dateienGewaehlt(liste: File[]) {
+    if (liste.length === 1) return dateiLesen(liste[0]);
+    const dn = datanormReihenfolge(liste.map((f) => f.name));
+    if (dn.length === liste.length) {
+      const sortiert = dn.map((i) => liste[i]);
+      const teile: BlobPart[] = [];
+      sortiert.forEach((f, i) => { if (i > 0) teile.push('\r\n'); teile.push(f); });
+      return dateiLesen(new File(teile, sortiert.map((f) => f.name).join(' + ')));
+    }
+    await dateiLesen(liste[0]);
+    setHinweis((h) => `${h ? h + ' · ' : ''}Mehrere Dateien gewählt — gelesen wurde nur „${liste[0].name}". Für viele Dateien auf einmal oben die Box „Alles auf einmal" nutzen.`);
+  }
+
   async function dateiLesen(f: File) {
     if (!zielKey) return;
     setFehler(null); setHinweis(null); setBericht(null); setErgebnis(null);
@@ -689,6 +706,13 @@ export default function ImportCenterPage() {
             abgeschnitten: 0, groesse: f.size,
           };
         } else {
+          if (istDatanorm(f.name, bytes.subarray(0, 400))) {
+            // Paket 149: DATANORM 4/5 (Artikel + Preise vom Großhandel) -> Tabelle mit den Feldnamen der Artikel
+            const d = leseDatanorm(bytes);
+            leseHinweise.push(...d.hinweise);
+            if (zielKey !== 'artikel') leseHinweise.push('Tipp: DATANORM gehört zum Ziel „Artikel & Preise".');
+            neu = { dateiname: f.name, blatt: null, trennzeichen: '', kopf: eindeutigeKoepfe(d.kopf), zeilen: d.zeilen, abgeschnitten: 0, groesse: f.size };
+          } else {
           const text = dekodiere(bytes);
           if (istVcard(f.name, text.slice(0, 200))) {
             // Paket 148: vCard (.vcf) -> Tabelle mit den Feldnamen der Kunden
@@ -709,6 +733,7 @@ export default function ImportCenterPage() {
             zeilen: tab.zeilen, abgeschnitten: 0, groesse: f.size,
             datev: dv ? dv.kopf : null,
           };
+          }
           }
         }
         if (neu.kopf.length === 0) throw new Error('In der Datei ist keine Kopfzeile mit Spaltennamen zu erkennen.');
@@ -2014,7 +2039,8 @@ export default function ImportCenterPage() {
           <div style={styles.stufe}>
             <div style={styles.stufenTitel}>2 · Datei auswählen</div>
             <p style={styles.stufenText}>
-              Excel (.xlsx, auch altes .xls), CSV, vCard (.vcf) oder eine DATEV-Datei (Debitoren/Kreditoren). Die erste Zeile muss die
+              Excel (.xlsx, auch altes .xls), CSV, vCard (.vcf), DATANORM 4/5 vom Großhandel (DATANORM.001 — mit DATPREIS.001 gemeinsam auswählen)
+              oder eine DATEV-Datei (Debitoren/Kreditoren). Die erste Zeile muss die
               Spaltenüberschriften enthalten — beim DATEV-Format erkennt ARGONAUT den Formatkopf selbst.
               CSV, .xls und DATEV liest ARGONAUT <b style={{ color: C.text }}>direkt in Ihrem Browser</b> — die Datei verlässt Ihren Rechner nicht.
               .xlsx wird auf dem Server gelesen und sofort verworfen, <b style={{ color: C.text }}>nicht gespeichert</b>.
@@ -2047,8 +2073,8 @@ export default function ImportCenterPage() {
               </span>
             </div>
             <input
-              type="file" accept=".csv,.txt,.xlsx,.xlsm,.xls,.vcf"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) dateiLesen(f); e.target.value = ''; }}
+              type="file" multiple accept={`.csv,.txt,.xlsx,.xlsm,.xls,.vcf,${DATANORM_ENDUNGEN}`}
+              onChange={(e) => { const liste = Array.from(e.target.files ?? []); e.target.value = ''; if (liste.length > 0) void dateienGewaehlt(liste); }}
               disabled={busy !== null}
               style={styles.dateiFeld}
             />
