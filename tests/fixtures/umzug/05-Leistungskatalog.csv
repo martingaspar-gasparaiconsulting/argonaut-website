@@ -1,0 +1,61 @@
+﻿Bezeichnung;Kategorie;Einheit;Standardwert;Preis
+Montagestunde Geselle;Arbeitszeit;Std;1;68,00
+Montagestunde Meister;Arbeitszeit;Std;1;78,00
+Montagestunde Azubi;Arbeitszeit;Std;1;32,00
+Montagestunde Projektleiter;Arbeitszeit;Std;1;92,00
+Überstundenzuschlag 25 %;Arbeitszeit;Std;1;17,00
+Nacht- und Wochenendstunde Notdienst;Arbeitszeit;Std;1;112,00
+Störungssuche je angefangene 15 Minuten;Arbeitszeit;Min;15;19,50
+Planungsstunde Elektrotechnik;Planung;Std;1;95,00
+CAD-Plan Stromlaufplan je Blatt;Planung;Stück;1;145,00
+Anfahrtspauschale bis 20 km;Fahrt;Stück;1;39,00
+Anfahrtspauschale 20 bis 40 km;Fahrt;Stück;1;69,00
+Notdienst-Bereitschaftspauschale;Fahrt;Stück;1;180,00
+E-Check Wohneinheit nach DGUV V3;Prüfung;Stück;1;148,00
+E-Check Gewerbeeinheit bis 200 m²;Prüfung;Stück;1;420,00
+Prüfung ortsveränderlicher Geräte je Gerät;Prüfung;Stück;1;6,90
+Prüfprotokoll nach VDE 0100-600;Prüfung;Stück;1;64,00
+Prüfung Notbeleuchtung je Leuchte;Prüfung;Stück;1;12,80
+Thermografie-Aufnahme Verteiler;Prüfung;Stück;1;189,00
+Steckdose setzen, Unterputz, inkl. Material;Installation;Stück;1;58,00
+Schalter setzen, Unterputz, inkl. Material;Installation;Stück;1;62,00
+Leitung verlegen Unterputz je Meter;Installation;lfm;1;18,50
+Leitung verlegen Aufputz je Meter;Installation;lfm;1;12,40
+Kabelrinne montieren je Meter;Installation;lfm;1;34,80
+Schlitz fräsen und verputzen je Meter;Installation;lfm;1;22,60
+Kernbohrung bis 100 mm;Installation;Stück;1;86,00
+Brandschott herstellen;Installation;Stück;1;148,00
+Unterverteilung erneuern, 3-reihig;Verteiler;Stück;1;1.290,00
+Unterverteilung erneuern, 5-reihig;Verteiler;Stück;1;1.985,00
+Zählerschrank erneuern, komplett;Verteiler;Stück;1;2.480,00
+Zählerschrank 4-Feld mit Netzbetreiber-Anmeldung;Verteiler;Stück;1;3.860,00
+Überspannungsschutz nachrüsten;Verteiler;Stück;1;489,00
+Hausanschluss umlegen;Verteiler;Stück;1;1.450,00
+Rauchwarnmelder montieren und anmelden;Sicherheit;Stück;1;68,00
+Video-Sprechanlage 1 Familie montieren;Sicherheit;Stück;1;986,00
+Video-Sprechanlage 8 Familien montieren;Sicherheit;Stück;1;3.780,00
+Brandmeldeanlage Wartung je Melder;Sicherheit;Stück;1;9,80
+Wallbox 11 kW montieren und anmelden;E-Mobilität;Stück;1;890,00
+Wallbox 22 kW montieren und anmelden;E-Mobilität;Stück;1;1.180,00
+Ladesäule Gewerbe setzen inkl. Fundament;E-Mobilität;Stück;1;2.640,00
+Lastmanagement einrichten je Ladepunkt;E-Mobilität;Stück;1;245,00
+PV-Montage je kWp;Photovoltaik;Stück;1;320,00
+Speicher anschließen und in Betrieb nehmen;Photovoltaik;Stück;1;780,00
+PV-Anlage Anmeldung Netzbetreiber und MaStR;Photovoltaik;Stück;1;285,00
+Modulfläche Dach je m² belegen;Photovoltaik;m²;1;48,50
+KNX-Inbetriebnahme je Aktor;Gebäudetechnik;Stück;1;145,00
+KNX-Programmierung je Stunde;Gebäudetechnik;Std;1;98,00
+Visualisierung einrichten;Gebäudetechnik;Stück;1;1.240,00
+Netzwerkdose setzen und auflegen;Netzwerk;Stück;1;72,00
+Datenleitung verlegen je Meter;Netzwerk;lfm;1;8,90
+Netzwerkschrank aufbauen und patchen;Netzwerk;Stück;1;680,00
+Glasfaser spleißen je Faser;Netzwerk;Stück;1;18,00
+LED-Hallenstrahler tauschen;Beleuchtung;Stück;1;96,00
+Lichtband montieren je Meter;Beleuchtung;lfm;1;42,00
+Downlight einbauen inkl. Bohrung;Beleuchtung;Stück;1;38,00
+Außenbeleuchtung Mast setzen;Beleuchtung;Stück;1;486,00
+Lichtplanung je m² Hallenfläche;Beleuchtung;m²;1;2,40
+Entsorgung Altmaterial je Ladung;Sonstiges;Stück;1;85,00
+Hubarbeitsbühne je Tag;Sonstiges;Stück;1;289,00
+Baustrom-Verteiler Miete je Woche;Sonstiges;Stück;1;64,00
+Großanlage nach Aufwand, Pauschale laut Vertrag;Sonstiges;Stück;1;12.500,00

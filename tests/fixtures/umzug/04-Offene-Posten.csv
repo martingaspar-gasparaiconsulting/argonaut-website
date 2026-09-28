@@ -1,0 +1,31 @@
+﻿Rechnungsnummer;Titel;Rechnungsdatum;Fällig am;Netto;MwSt;Brutto;Bereits bezahlt;Status;Notizen
+R-2026-0412;Schreinerei Bachmeier GmbH — Elektroarbeiten;12.04.2026;12.05.2026;6.890,00;1.309,10;8.199,10;0,00;ueberfaellig;Kunde K-1008 Schreinerei Bachmeier GmbH · Mahnstufe 1
+R-2026-0498;Familie Özkan — Elektroarbeiten;19.07.2026;18.08.2026;2.340,00;444,60;2.784,60;0,00;ueberfaellig;Kunde K-2004 Familie Özkan · Mahnstufe 0
+R-2026-0571;Hausverwaltung Seeblick GmbH — Elektroarbeiten;28.08.2026;27.09.2026;4.120,00;782,80;4.902,80;0,00;offen;Kunde K-1001 Hausverwaltung Seeblick GmbH · Mahnstufe 0
+R-2026-0583;Autohaus Kienzle GmbH — Elektroarbeiten;04.09.2026;04.10.2026;12.480,00;2.371,20;14,851.20;0,00;offen;Kunde K-1005 Autohaus Kienzle GmbH · Mahnstufe 0 · FALLE: Brutto im englischen Format 14,851.20
+R-2026-0590;Familie Vukovic — Elektroarbeiten;09/09/2026;09/10/2026;1.780,00;338,20;2.118,20;0,00;offen;Kunde K-2010 Familie Vukovic · Mahnstufe 0 · FALLE: Datum im US-Format 09/09/2026
+R-2026-0604;Gaststätte Zum Hirschen — Elektroarbeiten;17.09.2026;17.10.2026;3.260,00;619,40;3.879,40;0,00;offen;Kunde K-1009 Gaststätte Zum Hirschen · Mahnstufe 0
+R-2026-0612;Familie Beckhäuser — Netzwerkverkabelung 36 Arbeitsplätze;14.09.2026;28.09.2026;9.885,60;1.878,26;11.763,86;0,00;offen;Kunde K-2026 Familie Beckhäuser
+R-2026-0622;Gabriele Trautwein — Netzwerkverkabelung 36 Arbeitsplätze;04.08.2026;03.09.2026;2.145,00;407,55;2.552,55;0,00;ueberfaellig;Kunde K-2060 Gabriele Trautwein
+R-2026-0633;Familie Weidle — Elektroinstallation Neubau, Abschlag;31.05.2026;14.06.2026;24.380,50;4.632,30;29.012,80;0,00;ueberfaellig;Kunde K-2038 Familie Weidle
+R-2026-0643;Benedikt Knödler — Störungsbeseitigung Notdienst;06.06.2026;20.06.2026;486,50;92,44;578,94;173,68;teilbezahlt;Kunde K-2021 Benedikt Knödler
+R-2026-0648;Hausverwaltung Dürr & Knödler — Sprechanlage 8 Familien erneuert;14.08.2026;13.09.2026;127.400,00;24.206,00;151.606,00;0,00;ueberfaellig;Kunde K-1043 Hausverwaltung Dürr & Knödler
+R-2026-0653;Familie Rapp — Notbeleuchtung Prüfung und Instandsetzung;28.06.2026;12.07.2026;3.876,25;736,49;4.612,74;0,00;ueberfaellig;Kunde K-2067 Familie Rapp
+R-2026-0658;Dentallabor Oesterle — Störungsbeseitigung Notdienst;08.09.2026;22.09.2026;3.876,25;736,49;4.612,74;0,00;ueberfaellig;Kunde K-1055 Dentallabor Oesterle
+R-2026-0662;Familie Dettweiler — Elektroinstallation Neubau, Abschlag;25.08.2026;24.09.2026;948,00;180,12;1.128,12;0,00;ueberfaellig;Kunde K-2066 Familie Dettweiler
+R-2026-0673;Landratsamt Musterkreis — Liegenschaften — Brandmeldeanlage Wartung;18.06.2026;18.07.2026;2.145,00;407,55;2.552,55;765,76;teilbezahlt;Kunde K-3004 Landratsamt Musterkreis — Liegenschaften
+R-2026-0682;Heiko Häfele — Unterverteilung erneuert;09.09.2026;23.09.2026;3.876,25;736,49;4.612,74;2.306,37;teilbezahlt;Kunde K-2035 Heiko Häfele
+R-2026-0689;Daniela Romano — KNX-Nachrüstung Einfamilienhaus;03.08.2026;17.08.2026;24.380,50;4.632,30;29.012,80;0,00;ueberfaellig;Kunde K-2024 Daniela Romano
+R-2026-0694;Tanja Petrović — Zählerschrank erneuert;24.06.2026;24.07.2026;1.000,00;190,00;1.190,00;0,00;ueberfaellig;Kunde K-2056 Tanja Petrović
+R-2026-0704;Stadt Herrenberg — Schulverwaltung — Notbeleuchtung Prüfung und Instandsetzung;27.06.2026;11.07.2026;6.420,00;1.219,80;7.639,80;0,00;ueberfaellig;Kunde K-3005 Stadt Herrenberg — Schulverwaltung
+R-2026-0708;Zweckverband Kläranlage Würmtal — Unterverteilung erneuert;02.06.2026;16.06.2026;67.340,00;12.794,60;80.134,60;0,00;ueberfaellig;Kunde K-3007 Zweckverband Kläranlage Würmtal
+R-2026-0718;Kita Sonnenstrahl e.V. — Zählerschrank erneuert;12.06.2026;26.06.2026;486,50;92,44;578,94;0,00;ueberfaellig;Kunde K-1016 Kita Sonnenstrahl e.V.
+R-2026-0723;Katrin Lechner — PV-Anlage 12,4 kWp mit Speicher;17.07.2026;31.07.2026;127.400,00;24.206,00;151.606,00;45.481,80;teilbezahlt;Kunde K-2003 Katrin Lechner
+R-2026-0729;Manuela Kienle — Unterverteilung erneuert;21.08.2026;20.09.2026;486,50;92,44;578,94;0,00;ueberfaellig;Kunde K-2028 Manuela Kienle
+R-2026-0737;Familie Dettweiler — Netzwerkverkabelung 36 Arbeitsplätze;28.08.2026;11.09.2026;6.420,00;1.219,80;7.639,80;2.291,94;teilbezahlt;Kunde K-2066 Familie Dettweiler
+R-2026-0741;Elke Fetzer — Störungsbeseitigung Notdienst;24.09.2026;24.10.2026;127.400,00;24.206,00;151.606,00;0,00;offen;Kunde K-2018 Elke Fetzer
+R-2026-0744;Daniel Aydın — Netzwerkverkabelung 36 Arbeitsplätze;09.09.2026;09.10.2026;48.920,00;9.294,80;58.214,80;0,00;offen;Kunde K-2032 Daniel Aydın
+R-2026-0755;Logistikzentrum Gäu GmbH — Sanierung Altbau-Elektrik;13.08.2026;12.09.2026;38.912,00;7.393,28;46.305,28;0,00;ueberfaellig;Kunde K-1039 Logistikzentrum Gäu GmbH
+R-2026-0765;Nikolai Schulze-Wendt — Netzwerkverkabelung 36 Arbeitsplätze;17.09.2026;17.10.2026;24.380,50;4.632,30;29.012,80;0,00;offen;Kunde K-2017 Nikolai Schulze-Wendt
+R-2026-0773;Gemeinde Ehningen — Hochbau — Ladeinfrastruktur 6 Ladepunkte;08.09.2026;08.10.2026;38.912,00;7.393,28;46.305,28;0,00;offen;Kunde K-3003 Gemeinde Ehningen — Hochbau
+R-2026-0776;Gemeinde Ehningen — Hochbau — Ladeinfrastruktur 6 Ladepunkte;06.07.2026;05.08.2026;18.760,00;3.564,40;22.324,40;0,00;ueberfaellig;Kunde K-3003 Gemeinde Ehningen — Hochbau

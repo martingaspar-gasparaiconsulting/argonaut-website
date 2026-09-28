@@ -1027,7 +1027,7 @@ export const ZIELE: ImportZiel[] = [
     nurMitKatalog: true,
     kundeVerweis: { spalte: 'kontakt_id', firmaSpalte: 'firma_id' },
     ergebnisHref: '/dashboard/auftraege',
-    ablehnenWenn: { feld: 'belegart', werte: ['angebot', 'angebote', 'kostenvoranschlag', 'quote', 'offer'], grund: 'Das ist ein Angebot. Angebote übernehmen wir gemeinsam mit Ihnen (eigener Schritt) — diese Zeile bleibt in Ihrer Datei.' },
+    ablehnenWenn: { feld: 'belegart', werte: ['angebot', 'angebote', 'kostenvoranschlag', 'quote', 'offer'], grund: 'Das ist ein Angebot — importieren Sie dieselbe Datei danach noch einmal mit dem Ziel „Angebote (Archiv)“.' },
     felder: [
       { key: 'auftragsnummer', label: 'Auftragsnummer', typ: 'text', hinweis: 'Leer: ARGONAUT vergibt AU-Jahr-Nummer.', alias: ['auftragsnummer', 'auftragsnr', 'nummer', 'nr', 'auftrag nr', 'order number'] },
       { key: 'belegart', label: 'Art (Auftrag/Angebot)', typ: 'text', virtuell: 'filter', nichtInVorlage: true, alias: ['art', 'belegart', 'typ', 'dokumentart'] },

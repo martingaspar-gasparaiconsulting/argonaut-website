@@ -1,0 +1,41 @@
+﻿Lead-Nr.;Eingang am;Firma;Vorname;Nachname;E-Mail;Telefon;Ort;Anliegen;Quelle;Budget (geschätzt);Status
+LD-2601;21.09.2026;;Georg;Faulhaber;georg.faulhaber@anfrage-post.example;0151 3118925;71116 Gärtringen;PV-Anlage mit Speicher;Empfehlung;24.000,00;termin vereinbart
+LD-2602;17.09.2026;;Sven;Faulhaber;sven.faulhaber@anfrage-post.example;0176 2567547;71083 Herrenberg;Wallbox für Firmenparkplatz;Empfehlung;24.000,00;termin vereinbart
+LD-2603;27.08.2026;;Gabriele;Göhring;gabriele.goehring@anfrage-post.example;0160 2394507;71065 Sindelfingen;Netzwerkverkabelung Büro;Website-Formular;18.900,00;termin vereinbart
+LD-2604;26.09.2026;;Silke;Pfisterer;silke.pfisterer@anfrage-post.example;0160 9441667;70563 Stuttgart;Altbausanierung Elektrik;Website-Chat;1.000,00;neu
+LD-2605;14.08.2026;Kanzlei Aydın;Matthias;Aydın;matthias.aydin@anfrage-post.example;0160 8258843;71155 Altdorf;E-Check für Gewerbeobjekt;Empfehlung;38.500,00;termin vereinbart
+LD-2606;05.09.2026;;Bernd;Leibfried;bernd.leibfried@anfrage-post.example;0151 1701765;71131 Jettingen;Netzwerkverkabelung Büro;Empfehlung;999,99;kein Bedarf
+LD-2607;19.08.2026;;Nikolai;Lämmle;nikolai.laemmle@anfrage-post.example;0175 1939071;71083 Herrenberg;Netzwerkverkabelung Büro;Messe;1.000,00;qualifiziert
+LD-2608;24.08.2026;Praxis Illig;Timo;Illig;timo.illig@anfrage-post.example;0176 1347136;71063 Sindelfingen;Altbausanierung Elektrik;Telefon;1.000,00;neu
+LD-2609;05.09.2026;;Ralf;Trautwein;ralf.trautwein@anfrage-post.example;0175 5673510;71083 Herrenberg;Smart Home KNX im Neubau;Google-Anzeige;12.500,00;qualifiziert
+LD-2610;22.09.2026;;Karin;Schulze-Wendt;karin.schulze-wendt@anfrage-post.example;0171 7088408;71126 Gäufelden;Ladeinfrastruktur Hausverwaltung;Google-Anzeige;4.800,00;kein Bedarf
+LD-2611;12.09.2026;;Wolfgang;Petrović;wolfgang.petrovic@anfrage-post.example;0160 7079300;71034 Böblingen;Brandmeldeanlage Nachrüstung;Empfehlung;24.000,00;neu
+LD-2612;31.08.2026;;Ulrike;Schulze-Wendt;ulrike.schulze-wendt@anfrage-post.example;0175 2978265;71116 Gärtringen;Smart Home KNX im Neubau;Google-Anzeige;18.900,00;neu
+LD-2613;07.09.2026;;Lars;Göhring;lars.goehring@anfrage-post.example;0170 8092777;71120 Grafenau;Ladeinfrastruktur Hausverwaltung;Empfehlung;999,99;neu
+LD-2614;29.08.2026;Praxis Göhring;Lena;Göhring;lena.goehring@anfrage-post.example;0176 8702555;71272 Renningen;Sprechanlage für Mehrfamilienhaus;Empfehlung;38.500,00;neu
+LD-2615;24.09.2026;;Yasemin;Weidle;yasemin.weidle@anfrage-post.example;0151 5305431;71126 Gäufelden;Brandmeldeanlage Nachrüstung;Website-Chat;24.000,00;kontaktiert
+LD-2616;26.09.2026;;Sabine;Häfele;sabine.haefele@anfrage-post.example;0176 2611539;71139 Ehningen;Altbausanierung Elektrik;Website-Formular;38.500,00;termin vereinbart
+LD-2617;23.09.2026;;Christian;Schäfle;christian.schaefle@anfrage-post.example;0160 4522428;71093 Weil im Schönbuch;Zählerschrank-Erneuerung;Messe;999,99;termin vereinbart
+LD-2618;14.09.2026;Praxis Reutter;Ralf;Reutter;ralf.reutter@anfrage-post.example;0160 8034420;71083 Herrenberg;Ladeinfrastruktur Hausverwaltung;Empfehlung;24.000,00;kontaktiert
+LD-2619;09.09.2026;;Heike;Hägele;heike.haegele@anfrage-post.example;0160 2907669;71116 Gärtringen;Wallbox für Firmenparkplatz;Google-Anzeige;12.500,00;neu
+LD-2620;13.08.2026;Kanzlei Gaißmaier;Sven;Gaißmaier;sven.gaissmaier@anfrage-post.example;0175 9911030;71088 Holzgerlingen;Smart Home KNX im Neubau;Website-Formular;1.000,00;kontaktiert
+LD-2621;21.09.2026;Kanzlei Ulmer;Elke;Ulmer;elke.ulmer@anfrage-post.example;0175 8284469;70565 Stuttgart;Sprechanlage für Mehrfamilienhaus;Website-Chat;8.900,00;neu
+LD-2622;20.09.2026;;Georg;Bräunling;georg.braeunling@anfrage-post.example;0171 5262423;71134 Aidlingen;Netzwerkverkabelung Büro;Google-Anzeige;2.500,00;kein Bedarf
+LD-2623;26.08.2026;Café Nowak;Timo;Nowak;timo.nowak@anfrage-post.example;0157 7930925;71083 Herrenberg;Smart Home KNX im Neubau;Website-Chat;1.000,00;kein Bedarf
+LD-2624;14.08.2026;;Ulrike;Beckhäuser;ulrike.beckhaeuser@anfrage-post.example;0160 6852864;71263 Weil der Stadt;E-Check für Gewerbeobjekt;Google-Anzeige;24.000,00;kontaktiert
+LD-2625;24.09.2026;;Georg;Wacker;georg.wacker@anfrage-post.example;0170 4909751;71229 Leonberg;Wallbox für Firmenparkplatz;Website-Chat;2.500,00;neu
+LD-2626;26.08.2026;;Luca;Schwämmle;luca.schwaemmle@anfrage-post.example;0175 4385128;71065 Sindelfingen;Hallenbeleuchtung auf LED;Google-Anzeige;38.500,00;neu
+LD-2627;02.09.2026;;Miriam;Göhring;miriam.goehring@anfrage-post.example;0151 3895759;70565 Stuttgart;Notbeleuchtung nach Vorschrift;Empfehlung;24.000,00;kontaktiert
+LD-2628;27.08.2026;Werkstatt Lämmle;Yasemin;Lämmle;yasemin.laemmle@anfrage-post.example;0176 1665105;72070 Tübingen;Ladeinfrastruktur Hausverwaltung;Telefon;8.900,00;kontaktiert
+LD-2629;23.08.2026;Kanzlei Leibfried;Lars;Leibfried;lars.leibfried@anfrage-post.example;0157 5319904;71101 Schönaich;Ladeinfrastruktur Hausverwaltung;Website-Chat;24.000,00;termin vereinbart
+LD-2630;23.08.2026;Kanzlei Mauch;Frank;Mauch;frank.mauch@anfrage-post.example;0160 1396500;71120 Grafenau;Smart Home KNX im Neubau;Google-Anzeige;12.500,00;kontaktiert
+LD-2631;20.08.2026;;Tanja;Kübler;tanja.kuebler@anfrage-post.example;0160 4954602;71034 Böblingen;Notbeleuchtung nach Vorschrift;Messe;8.900,00;neu
+LD-2632;23.09.2026;;Julia;Epple;julia.epple@anfrage-post.example;0157 9347675;71093 Weil im Schönbuch;Sprechanlage für Mehrfamilienhaus;Empfehlung;1.000,00;qualifiziert
+LD-2633;29.08.2026;;Ivana;Ulmer;ivana.ulmer@anfrage-post.example;0170 4238733;71159 Mötzingen;Notbeleuchtung nach Vorschrift;Website-Formular;38.500,00;termin vereinbart
+LD-2634;23.08.2026;;Christian;Dürr;christian.duerr@anfrage-post.example;0152 7191813;70565 Stuttgart;Brandmeldeanlage Nachrüstung;Website-Chat;8.900,00;kontaktiert
+LD-2635;09.09.2026;;Florian;Nowak;florian.nowak@anfrage-post.example;0171 2129800;71159 Mötzingen;Smart Home KNX im Neubau;Website-Chat;1.000,00;neu
+LD-2636;09.09.2026;;Volker;Knödler;volker.knoedler@anfrage-post.example;0152 5253345;71131 Jettingen;E-Check für Gewerbeobjekt;Google-Anzeige;38.500,00;kontaktiert
+LD-2637;05.09.2026;;Gabriele;Kienle;gabriele.kienle@anfrage-post.example;0152 1071950;71229 Leonberg;Wallbox für Firmenparkplatz;Website-Chat;999,99;neu
+LD-2638;27.08.2026;;Ulrike;Blessing;ulrike.blessing@anfrage-post.example;0171 6639129;71065 Sindelfingen;Sprechanlage für Mehrfamilienhaus;Empfehlung;2.500,00;neu
+LD-2639;27.08.2026;;Stefanie;Nägele;stefanie.naegele@anfrage-post.example;0176 3368839;71069 Sindelfingen;Hallenbeleuchtung auf LED;Website-Chat;12.500,00;qualifiziert
+LD-2640;07.09.2026;;Bernd;Reutter;bernd.reutter@anfrage-post.example;0171 8485527;71088 Holzgerlingen;Brandmeldeanlage Nachrüstung;Website-Chat;24.000,00;qualifiziert

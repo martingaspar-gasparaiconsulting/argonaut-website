@@ -1,0 +1,251 @@
+﻿Artikelnummer;Bezeichnung;Warengruppe;Einheit;Einkaufspreis;Verkaufspreis;Bestand;Mindestbestand;Lagerort;EAN;Lieferant
+L-1001;Mantelleitung NYM-J 3x1,5 mm², Ring 100 m;Kabel und Leitungen;Ring;68,40;112,00;24;8;A1;2047110000009;Rehbein Kabel + Leitungen KG
+L-1002;Mantelleitung NYM-J 3x2,5 mm², Ring 100 m;Kabel und Leitungen;Ring;104,90;169,00;16;6;A1;2047110000016;Rehbein Kabel + Leitungen KG
+L-1003;Mantelleitung NYM-J 5x1,5 mm², Ring 100 m;Kabel und Leitungen;Ring;109,50;178,00;9;4;A1;2047110000023;Rehbein Kabel + Leitungen KG
+L-1004;Mantelleitung NYM-J 5x2,5 mm², Ring 100 m;Kabel und Leitungen;Ring;168,00;268,00;7;4;A1;2047110000030;Rehbein Kabel + Leitungen KG
+L-1005;Erdkabel NYY-J 5x6 mm², Meterware;Kabel und Leitungen;m;7,85;13,40;240;100;A2;2047110000047;Rehbein Kabel + Leitungen KG
+L-1006;Erdkabel NYY-J 4x16 mm², Meterware;Kabel und Leitungen;m;21,30;34,90;85;40;A2;2047110000054;Rehbein Kabel + Leitungen KG
+L-1007;Datenleitung Cat.7 S/FTP, Ring 100 m;Kabel und Leitungen;Ring;89,00;148,00;11;4;A3;2047110000061;Rehbein Kabel + Leitungen KG
+L-1008;Steuerleitung ÖLFLEX 4x0,75 mm², Meterware;Kabel und Leitungen;m;1,48;2,60;310;150;A3;2047110000078;Rehbein Kabel + Leitungen KG
+L-1009;KNX-Busleitung J-Y(St)Y 2x2x0,8, Ring 100 m;Kabel und Leitungen;Ring;62,00;104,00;6;3;A3;2047110000085;Rehbein Kabel + Leitungen KG
+L-1010;PV-Solarkabel 6 mm² schwarz, Meterware;Kabel und Leitungen;m;1,12;2,15;420;200;A2;2047110000092;Rehbein Kabel + Leitungen KG
+S-2001;Schalter-Einsatz Universal, Wechsel;Schalter und Steckdosen;Stk;3,85;8,90;148;50;B1;2047110000108;Sütterlin Elektro-Großhandel GmbH
+S-2002;Schalter-Einsatz Kreuzschaltung;Schalter und Steckdosen;Stk;6,20;13,50;42;20;B1;2047110000115;Sütterlin Elektro-Großhandel GmbH
+S-2003;Taster-Einsatz mit Wechslerkontakt;Schalter und Steckdosen;Stk;4,60;10,20;96;40;B1;2047110000122;Sütterlin Elektro-Großhandel GmbH
+S-2004;Steckdose SCHUKO, Einsatz;Schalter und Steckdosen;Stk;3,10;7,40;265;100;B1;2047110000139;Sütterlin Elektro-Großhandel GmbH
+S-2005;Steckdose SCHUKO mit USB-C, 20 W;Schalter und Steckdosen;Stk;29,80;58,00;38;15;B1;2047110000146;Sütterlin Elektro-Großhandel GmbH
+S-2006;Abdeckrahmen 1-fach, reinweiß;Schalter und Steckdosen;Stk;2,15;5,60;210;80;B2;2047110000153;Sütterlin Elektro-Großhandel GmbH
+S-2007;Abdeckrahmen 2-fach, reinweiß;Schalter und Steckdosen;Stk;3,40;8,20;124;50;B2;2047110000160;Sütterlin Elektro-Großhandel GmbH
+S-2008;Abdeckrahmen 3-fach, reinweiß;Schalter und Steckdosen;Stk;4,95;11,80;61;25;B2;2047110000177;Sütterlin Elektro-Großhandel GmbH
+S-2009;Dimmer-Einsatz LED 3-100 W, Universal;Schalter und Steckdosen;Stk;34,50;68,00;27;12;B2;2047110000184;Sütterlin Elektro-Großhandel GmbH
+S-2010;Bewegungsmelder 180°, Wandmontage;Schalter und Steckdosen;Stk;42,00;84,00;19;8;B2;2047110000191;Sütterlin Elektro-Großhandel GmbH
+D-3001;Schalterdose tief, 68 mm, Hohlwand;Dosen und Installation;Stk;0,78;2,10;480;200;C1;2047110000207;Installationsmaterial Fiedler GmbH
+D-3002;Schalterdose tief, 68 mm, Beton;Dosen und Installation;Stk;0,62;1,80;320;150;C1;2047110000214;Installationsmaterial Fiedler GmbH
+D-3003;Abzweigdose Aufputz IP55, 100x100;Dosen und Installation;Stk;2,95;7,20;74;30;C1;2047110000221;Installationsmaterial Fiedler GmbH
+D-3004;Verbindungsklemme 3-Leiter, Beutel 100 St.;Dosen und Installation;Beutel;18,40;34,00;46;20;C2;2047110000238;Installationsmaterial Fiedler GmbH
+D-3005;Verbindungsklemme 5-Leiter, Beutel 100 St.;Dosen und Installation;Beutel;24,90;44,50;31;15;C2;2047110000245;Installationsmaterial Fiedler GmbH
+D-3006;Installationsrohr M25 flexibel, Ring 50 m;Dosen und Installation;Ring;16,80;31,00;22;10;C2;2047110000252;Installationsmaterial Fiedler GmbH
+D-3007;Kabelbinder 200 mm, Beutel 100 St.;Dosen und Installation;Beutel;3,20;7,50;58;25;C2;2047110000269;Installationsmaterial Fiedler GmbH
+D-3008;"Stockschraube 8 x 5"" lang, verzinkt";Dosen und Installation;Stk;0,42;1,30;195;80;C3;2047110000276;Installationsmaterial Fiedler GmbH
+V-4001;Leitungsschutzschalter B16, 1-polig;Verteiler und Schutz;Stk;4,20;9,80;168;60;D1;2047110000283;Schaltgerätebau Ostermeier GmbH
+V-4002;Leitungsschutzschalter B10, 1-polig;Verteiler und Schutz;Stk;4,20;9,80;92;40;D1;2047110000290;Schaltgerätebau Ostermeier GmbH
+V-4003;Leitungsschutzschalter C16, 3-polig;Verteiler und Schutz;Stk;16,50;34,00;44;20;D1;2047110000306;Schaltgerätebau Ostermeier GmbH
+V-4004;FI-Schutzschalter 40 A / 30 mA, 4-polig;Verteiler und Schutz;Stk;58,00;119,00;36;15;D1;2047110000313;Schaltgerätebau Ostermeier GmbH
+V-4005;FI/LS-Kombi 16 A / 30 mA;Verteiler und Schutz;Stk;62,50;128,00;28;12;D1;2047110000320;Schaltgerätebau Ostermeier GmbH
+V-4006;Überspannungsschutz Typ 2, 4-polig;Verteiler und Schutz;Stk;148,00;289,00;14;6;D2;2047110000337;Schaltgerätebau Ostermeier GmbH
+V-4007;Verteiler Aufputz 3-reihig, IP65;Verteiler und Schutz;Stk;84,00;168,00;9;4;D2;2047110000344;Schaltgerätebau Ostermeier GmbH
+V-4008;Verteiler Unterputz 4-reihig;Verteiler und Schutz;Stk;112,00;228,00;6;3;D2;2047110000351;Schaltgerätebau Ostermeier GmbH
+V-4009;Hauptschalter 63 A, 4-polig;Verteiler und Schutz;Stk;38,90;79,00;11;5;D2;2047110000368;Schaltgerätebau Ostermeier GmbH
+V-4010;Sammelschiene 3-phasig, 12 TE;Verteiler und Schutz;Stk;12,40;26,00;23;10;D2;2047110000375;Schaltgerätebau Ostermeier GmbH
+B-5001;LED-Einbaustrahler 7 W, 3000 K, dimmbar;Beleuchtung;Stk;11,20;26,50;134;50;E1;2047110000382;Vollmann Licht- und Systemtechnik
+B-5002;LED-Panel 1200x300, 40 W, 4000 K;Beleuchtung;Stk;58,00;124,00;26;10;E1;2047110000399;Vollmann Licht- und Systemtechnik
+B-5003;LED-Feuchtraumleuchte 150 cm, IP65;Beleuchtung;Stk;34,50;72,00;31;12;E1;2047110000405;Vollmann Licht- und Systemtechnik
+B-5004;LED-Strahler 30 W mit Bewegungsmelder;Beleuchtung;Stk;28,90;62,00;18;8;E2;2047110000412;Vollmann Licht- und Systemtechnik
+B-5005;LED-Streifen 24 V, 5 m, warmweiß;Beleuchtung;Rolle;19,80;44,00;22;10;E2;2047110000429;Vollmann Licht- und Systemtechnik
+B-5006;Notleuchte mit Akku, 3 h Nachlauf;Beleuchtung;Stk;68,00;142,00;16;6;E2;2047110000436;Vollmann Licht- und Systemtechnik
+B-5007;Trafo LED 24 V / 100 W;Beleuchtung;Stk;32,40;68,00;19;8;E2;2047110000443;Vollmann Licht- und Systemtechnik
+T-6001;Rauchwarnmelder 10-Jahres-Batterie, VdS;Gebäudetechnik;Stk;14,60;32,00;88;40;F1;2047110000450;Nordhausen Energietechnik AG
+T-6002;Rauchwarnmelder funkvernetzt;Gebäudetechnik;Stk;38,00;78,00;34;15;F1;2047110000467;Nordhausen Energietechnik AG
+T-6003;Klingeltaster mit Namensschild;Gebäudetechnik;Stk;18,50;42,00;27;10;F1;2047110000474;Nordhausen Energietechnik AG
+T-6004;Video-Türsprechanlage, 1 Familie;Gebäudetechnik;Set;348,00;698,00;5;2;F2;2047110000481;Nordhausen Energietechnik AG
+T-6005;KNX-Schaltaktor 8-fach, REG;Gebäudetechnik;Stk;268,00;498,00;7;3;F2;2047110000498;Nordhausen Energietechnik AG
+T-6006;KNX-Netzteil 640 mA, REG;Gebäudetechnik;Stk;184,00;348,00;4;2;F2;2047110000504;Nordhausen Energietechnik AG
+T-6007;Wallbox 11 kW mit Lastmanagement;Gebäudetechnik;Stk;689,00;1.290,00;6;2;F3;2047110000511;Nordhausen Energietechnik AG
+T-6008;Wallbox 22 kW mit Zähler (MID);Gebäudetechnik;Stk;1.180,00;2.190,00;3;1;F3;2047110000528;Nordhausen Energietechnik AG
+T-6009;Zählerschrank Komplettsatz, 3-Feld;Gebäudetechnik;Stk;845,00;1.590,00;2;1;F3;2047110000535;Nordhausen Energietechnik AG
+T-6010;PV-Wechselrichter 10 kW, 3-phasig;Gebäudetechnik;Stk;1.420,00;2.480,00;4;2;F3;2047110000542;Nordhausen Energietechnik AG
+T-6011;PV-Modul 440 Wp, monokristallin;Gebäudetechnik;Stk;98,00;178,00;62;20;F3;2047110000559;Nordhausen Energietechnik AG
+T-6012;Speicher 10 kWh, Wandmontage;Gebäudetechnik;Stk;3.890,00 EUR;6.490,00 EUR;2;1;F3;2047110000566;Nordhausen Energietechnik AG
+K-7001;Isolierband 15 mm, schwarz;Kleinmaterial;Rolle;0,85;2,40;142;60;G1;2047110000573;Bergfeld Werkzeug und Befestigung
+K-7002;Schrumpfschlauch-Sortiment;Kleinmaterial;Set;14,20;32,00;12;5;G1;2047110000580;Bergfeld Werkzeug und Befestigung
+K-7003;Aderendhülsen-Sortiment 0,5-6 mm²;Kleinmaterial;Set;28,50;58,00;8;4;G1;2047110000597;Bergfeld Werkzeug und Befestigung
+K-7004;Dübel 8 mm, Beutel 100 St.;Kleinmaterial;Beutel;4,10;9,20;67;30;G1;2047110000603;Bergfeld Werkzeug und Befestigung
+K-7005;Schrauben 4x40 Senkkopf, Beutel 200 St.;Kleinmaterial;Beutel;6,80;14,50;39;20;G1;2047110000610;Bergfeld Werkzeug und Befestigung
+K-7006;Bohrer SDS-Plus 8 mm, 160 mm;Kleinmaterial;Stk;3,90;9,80;24;10;G2;2047110000627;Bergfeld Werkzeug und Befestigung
+K-7007;Lochsäge 68 mm für Dosen;Kleinmaterial;Stk;22,40;48,00;9;4;G2;2047110000634;Bergfeld Werkzeug und Befestigung
+K-7008;Kennzeichnungsschild Verteiler, Bogen;Kleinmaterial;Bogen;2,60;6,40;31;15;G2;2047110000641;Bergfeld Werkzeug und Befestigung
+L-8001;Mantelleitung NYM-J 3x1,5 mm², Meterware (Trommel);Kabel und Leitungen;m;0,69;1,15;2.400;300;Kabellager K1;2047110010657;Kabelwerk Remstal GmbH
+L-8002;Mantelleitung NYM-J 3x2,5 mm², Meterware (Trommel);Kabel und Leitungen;m;1,06;1,75;1.000;300;Kabellager K1;2047110010664;Kabelwerk Remstal GmbH
+L-8003;Mantelleitung NYM-J 5x1,5 mm², Meterware (Trommel);Kabel und Leitungen;m;1,12;1,85;1.250;800;Kabellager K1;2047110010671;Kabelwerk Remstal GmbH
+L-8004;Mantelleitung NYM-J 5x2,5 mm², Meterware (Trommel);Kabel und Leitungen;m;1,71;2,80;1.000;800;Kabellager K1;2047110010688;Kabelwerk Remstal GmbH
+L-8005;Mantelleitung NYM-J 5x4 mm², Meterware (Trommel);Kabel und Leitungen;m;2,64;4,35;1.000;800;Kabellager K1;2047110010695;Kabelwerk Remstal GmbH
+L-8006;Mantelleitung NYM-J 5x6 mm², Meterware (Trommel);Kabel und Leitungen;m;3,88;6,40;369;500;Kabellager K1;2047110010701;Kabelwerk Remstal GmbH
+L-8007;Mantelleitung NYM-J 5x10 mm², Meterware (Trommel);Kabel und Leitungen;m;6,12;10,10;1.250;300;Kabellager K1;2047110010718;Kabelwerk Remstal GmbH
+L-8008;Mantelleitung NYM-J 7x1,5 mm², Meterware (Trommel);Kabel und Leitungen;m;1,58;2,60;3.200;800;Kabellager K1;2047110010725;Kabelwerk Remstal GmbH
+L-8009;Erdkabel NYY-J 3x1,5 mm², Meterware;Kabel und Leitungen;m;0,92;1,45;600;200;Kabellager K2;2047110010732;Kabelwerk Remstal GmbH
+L-8010;Erdkabel NYY-J 3x2,5 mm², Meterware;Kabel und Leitungen;m;1,35;2,15;200;100;Kabellager K2;2047110010749;Kabelwerk Remstal GmbH
+L-8011;Erdkabel NYY-J 5x2,5 mm², Meterware;Kabel und Leitungen;m;2,10;3,35;450;100;Kabellager K2;2047110010756;Kabelwerk Remstal GmbH
+L-8012;Erdkabel NYY-J 5x10 mm², Meterware;Kabel und Leitungen;m;7,40;11,85;1.000;100;Kabellager K2;2047110010763;Kabelwerk Remstal GmbH
+L-8013;Erdkabel NYY-J 5x16 mm², Meterware;Kabel und Leitungen;m;11,20;17,90;1.150;100;Kabellager K2;2047110010770;Kabelwerk Remstal GmbH
+L-8014;Erdkabel NYY-J 4x25 mm², Meterware;Kabel und Leitungen;m;16,90;27,05;1.150;200;Kabellager K2;2047110010787;Kabelwerk Remstal GmbH
+L-8015;Erdkabel NYY-J 4x35 mm², Meterware;Kabel und Leitungen;m;22,80;36,50;188;200;Kabellager K2;2047110010794;Kabelwerk Remstal GmbH
+L-8016;Erdkabel NYY-J 4x50 mm², Meterware;Kabel und Leitungen;m;31,60;50,55;1.000;100;Kabellager K2;2047110010800;Kabelwerk Remstal GmbH
+L-8017;Erdkabel NYY-J 4x95 mm², Meterware;Kabel und Leitungen;m;58,40;93,45;200;100;Kabellager K2;2047110010817;Kabelwerk Remstal GmbH
+L-8018;Datenleitung Cat.7 S/FTP, Trommel 500 m;Kabel und Leitungen;Trommel;389,00;602,95;6;1;Kabellager K3;2047110010824;Rehbein Kabel + Leitungen KG
+L-8019;Datenleitung Cat.6a U/FTP, Trommel 500 m;Kabel und Leitungen;Trommel;312,00;483,60;2;1;Kabellager K3;2047110010831;Kabelwerk Remstal GmbH
+L-8020;Glasfaser-Außenkabel 12 Fasern, Meterware;Kabel und Leitungen;m;1,94;3,00;1.200;200;Kabellager K3;2047110010848;Rehbein Kabel + Leitungen KG
+L-8021;H07RN-F 5G2,5 Gummischlauchleitung, Meterware;Kabel und Leitungen;m;3,10;4,80;1.200;200;Kabellager K3;2047110010855;Rehbein Kabel + Leitungen KG
+L-8022;H07RN-F 5G6 Gummischlauchleitung, Meterware;Kabel und Leitungen;m;6,85;10,60;1.200;200;Kabellager K3;2047110010862;Kabelwerk Remstal GmbH
+L-8023;Solarkabel 4 mm² rot, Trommel 500 m;Kabel und Leitungen;Trommel;438,00;678,90;0;1;Kabellager K3;2047110010879;Kabelwerk Remstal GmbH
+L-8024;Solarkabel 6 mm² schwarz, Trommel 500 m;Kabel und Leitungen;Trommel;612,00;948,60;2;1;Kabellager K3;2047110010886;Kabelwerk Remstal GmbH
+L-8025;Brandschutzkabel NHXH-J E30 3x1,5, Meterware;Kabel und Leitungen;m;2,95;4,55;1.200;200;Kabellager K3;2047110010893;Kabelwerk Remstal GmbH
+L-8026;Telefonleitung J-Y(St)Y 4x2x0,6, Ring 100 m;Kabel und Leitungen;Ring;54,00;83,70;6;1;Kabellager K3;2047110010909;Rehbein Kabel + Leitungen KG
+L-8027;Erdkabel NAYY-J 4x150 SE, Meterware;Kabel und Leitungen;m;18,90;29,30;750;200;Kabellager K3;2047110010916;Rehbein Kabel + Leitungen KG
+L-8028;Leerrohr-Trommel FFKuS 25 mm, 1.000 m;Kabel und Leitungen;Trommel;1.284,00;1.990,20;2;1;Kabellager K3;2047110010923;Rehbein Kabel + Leitungen KG
+V-8001;Leitungsschutzschalter B6, 1-polig;Verteiler und Schutz;Stk;4,10;9,45;36;12;Regal V2;2047110010930;Schaltgerätebau Ostermeier GmbH
+V-8002;Leitungsschutzschalter B13, 1-polig;Verteiler und Schutz;Stk;4,20;9,65;60;12;Regal V2;2047110010947;Schaltgerätebau Ostermeier GmbH
+V-8003;Leitungsschutzschalter B20, 1-polig;Verteiler und Schutz;Stk;4,60;10,60;24;12;Regal V2;2047110010954;Schaltgerätebau Ostermeier GmbH
+V-8004;Leitungsschutzschalter B25, 1-polig;Verteiler und Schutz;Stk;5,10;11,75;24;12;Regal V2;2047110010961;Schaltgerätebau Ostermeier GmbH
+V-8005;Leitungsschutzschalter B32, 1-polig;Verteiler und Schutz;Stk;5,90;13,55;36;12;Regal V2;2047110010978;Schaltgerätebau Ostermeier GmbH
+V-8006;Leitungsschutzschalter C10, 1-polig;Verteiler und Schutz;Stk;4,80;11,05;60;12;Regal V2;2047110010985;Schaltgerätebau Ostermeier GmbH
+V-8007;Leitungsschutzschalter C20, 1-polig;Verteiler und Schutz;Stk;5,20;11,95;60;12;Regal V2;2047110010992;Schaltgerätebau Ostermeier GmbH
+V-8008;Leitungsschutzschalter C25, 1-polig;Verteiler und Schutz;Stk;6,10;14,05;24;12;Regal V2;2047110011005;Schaltgerätebau Ostermeier GmbH
+V-8009;Leitungsschutzschalter C32, 1-polig;Verteiler und Schutz;Stk;6,80;15,65;24;12;Regal V2;2047110011012;Schaltgerätebau Ostermeier GmbH
+V-8010;Leitungsschutzschalter B16, 3-polig;Verteiler und Schutz;Stk;15,90;33,40;8;4;Regal V2;2047110011029;Schaltgerätebau Ostermeier GmbH
+V-8011;Leitungsschutzschalter C32, 3-polig;Verteiler und Schutz;Stk;19,80;41,60;12;4;Regal V2;2047110011036;Schaltgerätebau Ostermeier GmbH
+V-8012;Leitungsschutzschalter C63, 3-polig;Verteiler und Schutz;Stk;42,50;89,25;16;4;Regal V2;2047110011043;Schaltgerätebau Ostermeier GmbH
+V-8013;Leitungsschutzschalter B32, 3-polig;Verteiler und Schutz;Stk;17,40;36,55;16;4;Regal V2;2047110011050;Schaltgerätebau Ostermeier GmbH
+V-8014;FI-Schutzschalter 63 A / 30 mA, Typ A, 4-polig;Verteiler und Schutz;Stk;72,00;133,20;3;2;Regal V3;2047110011067;Schaltgerätebau Ostermeier GmbH
+V-8015;FI-Schutzschalter 40 A / 30 mA, Typ B, 4-polig;Verteiler und Schutz;Stk;389,00;719,65;2;2;Regal V3;2047110011074;Schaltgerätebau Ostermeier GmbH
+V-8016;FI-Schutzschalter 63 A / 300 mA, Typ B, 4-polig;Verteiler und Schutz;Stk;468,00;865,80;8;3;Regal V3;2047110011081;Schaltgerätebau Ostermeier GmbH
+V-8017;Brandschutzschalter AFDD 16 A;Verteiler und Schutz;Stk;118,00;218,30;1;2;Regal V3;2047110011098;Schaltgerätebau Ostermeier GmbH
+V-8018;Überspannungsschutz Typ 1+2 Kombiableiter;Verteiler und Schutz;Stk;486,00;899,10;14;3;Regal V3;2047110011104;Schaltgerätebau Ostermeier GmbH
+V-8019;Zählerschrank 4-Feld, APZ, komplett;Verteiler und Schutz;Stk;1.368,00;2.530,80;14;3;Regal V3;2047110011111;Schaltgerätebau Ostermeier GmbH
+V-8020;Zählerschrank 5-Feld mit Verteilerfeld, komplett;Verteiler und Schutz;Stk;1.875,00;3.468,75;20;1;Regal V3;2047110011128;Schaltgerätebau Ostermeier GmbH
+V-8021;Hausanschlusskasten NH00, 100 A;Verteiler und Schutz;Stk;138,00;255,30;10;2;Regal V3;2047110011135;Schaltgerätebau Ostermeier GmbH
+V-8022;Verteiler Unterputz 5-reihig, 60 TE;Verteiler und Schutz;Stk;168,00;310,80;3;2;Regal V3;2047110011142;Schaltgerätebau Ostermeier GmbH
+V-8023;Industrieverteiler 800x600, bestückt;Verteiler und Schutz;Stk;2.180,00;4.033,00;10;3;Regal V3;2047110011159;Schaltgerätebau Ostermeier GmbH
+V-8024;NH-Sicherungseinsatz 63 A gG, Größe 00;Verteiler und Schutz;Stk;6,40;11,85;8;1;Regal V3;2047110011166;Schaltgerätebau Ostermeier GmbH
+V-8025;Motorschutzschalter 4-6,3 A;Verteiler und Schutz;Stk;48,00;88,80;3;1;Regal V3;2047110011173;Schaltgerätebau Ostermeier GmbH
+V-8026;Schütz 25 A, 4 Schließer, 230 V;Verteiler und Schutz;Stk;36,50;67,50;8;2;Regal V3;2047110011180;Schaltgerätebau Ostermeier GmbH
+V-8027;Treppenlichtzeitschalter REG;Verteiler und Schutz;Stk;24,90;46,05;2;1;Regal V3;2047110011197;Schaltgerätebau Ostermeier GmbH
+V-8028;Zeitschaltuhr digital REG;Verteiler und Schutz;Stk;39,80;73,65;10;4;Regal V3;2047110011203;Schaltgerätebau Ostermeier GmbH
+P-9001;PV-Wechselrichter 5 kW, 3-phasig, Hybrid;Photovoltaik und Speicher;Stk;1.289,00;1.997,95;3;1;Halle H1;2047110011210;Sonnenfeld Photovoltaik-Vertrieb
+P-9002;PV-Wechselrichter 8 kW, 3-phasig, Hybrid;Photovoltaik und Speicher;Stk;1.845,50;2.860,50;4;1;Halle H1;2047110011227;Sonnenfeld Photovoltaik-Vertrieb
+P-9003;PV-Wechselrichter 15 kW, 3-phasig;Photovoltaik und Speicher;Stk;2.378,00;3.685,90;2;1;Halle H1;2047110011234;Nordhausen Energietechnik AG
+P-9004;PV-Wechselrichter 20 kW, 3-phasig;Photovoltaik und Speicher;Stk;2.890,00;4.479,50;1;1;Halle H1;2047110011241;Voltara Speichertechnik GmbH
+P-9005;Batteriespeicher 5 kWh, Modul;Photovoltaik und Speicher;Stk;2.450,00;3.797,50;4;1;Halle H1;2047110011258;Sonnenfeld Photovoltaik-Vertrieb
+P-9006;Batteriespeicher 7,5 kWh, Wandgerät;Photovoltaik und Speicher;Stk;3.689,00;5.717,95;2;1;Halle H1;2047110011265;Sonnenfeld Photovoltaik-Vertrieb
+P-9007;Batteriespeicher 15 kWh, Turm;Photovoltaik und Speicher;Stk;7.280,00;11.284,00;1;1;Halle H1;2047110011272;Nordhausen Energietechnik AG
+P-9008;Batteriespeicher 20 kWh, Turm mit Notstrom;Photovoltaik und Speicher;Stk;9.845,00;15.259,75;1;1;Halle H1;2047110011289;Voltara Speichertechnik GmbH
+P-9009;Notstrom-Umschaltbox, 3-phasig;Photovoltaik und Speicher;Stk;1.134,00;1.757,70;2;1;Halle H1;2047110011296;Nordhausen Energietechnik AG
+P-9010;PV-Modul 450 Wp, Glas-Glas, schwarz;Photovoltaik und Speicher;Stk;112,40;174,20;64;4;Halle H1;2047110011302;Voltara Speichertechnik GmbH
+P-9011;PV-Modul 500 Wp, bifazial;Photovoltaik und Speicher;Stk;138,90;215,30;36;4;Halle H1;2047110011319;Voltara Speichertechnik GmbH
+P-9012;Energiemanager mit Smart Meter;Photovoltaik und Speicher;Stk;489,00;757,95;5;4;Halle H1;2047110011326;Sonnenfeld Photovoltaik-Vertrieb
+P-9013;Leistungsoptimierer 450 W;Photovoltaik und Speicher;Stk;46,80;72,55;40;4;Halle H1;2047110011333;Voltara Speichertechnik GmbH
+P-9014;DC-Freischalter 1.000 V;Photovoltaik und Speicher;Stk;88,00;136,40;1;4;Halle H1;2047110011340;Voltara Speichertechnik GmbH
+P-9015;PV-Überspannungsschutz DC Typ 1+2;Photovoltaik und Speicher;Stk;142,00;220,10;6;4;Halle H1;2047110011357;Voltara Speichertechnik GmbH
+P-9016;Dachhaken Ziegeldach, Edelstahl;Photovoltaik und Speicher;Stk;4,80;8,65;250;100;Halle H2;2047110011364;Solarmontagesysteme Kraichgau
+P-9017;Montageschiene Alu 4,20 m;Photovoltaik und Speicher;Stk;21,60;38,90;1.500;100;Halle H2;2047110011371;Solarmontagesysteme Kraichgau
+P-9018;Modul-Mittelklemme schwarz;Photovoltaik und Speicher;Stk;1,35;2,45;1.200;100;Halle H2;2047110011388;Solarmontagesysteme Kraichgau
+P-9019;Modul-Endklemme schwarz;Photovoltaik und Speicher;Stk;1,45;2,60;1.500;100;Halle H2;2047110011395;Solarmontagesysteme Kraichgau
+P-9020;Schienenverbinder Alu;Photovoltaik und Speicher;Stk;2,10;3,80;1.200;100;Halle H2;2047110011401;Solarmontagesysteme Kraichgau
+P-9021;Stecker MC4 Paar;Photovoltaik und Speicher;Stk;3,20;5,75;40;100;Halle H2;2047110011418;Solarmontagesysteme Kraichgau
+E-9001;Wallbox 11 kW, RFID, eichrechtskonform;E-Mobilität;Stk;1.045,00;1.672,00;2;1;Halle H1;2047110011425;Ladepunkt Süd GmbH
+E-9002;Wallbox 22 kW, OCPP, MID-Zähler;E-Mobilität;Stk;1.389,00;2.222,40;3;1;Halle H1;2047110011432;Ladepunkt Süd GmbH
+E-9003;Wallbox 11 kW Duo, 2 Ladepunkte;E-Mobilität;Stk;2.346,00;3.753,60;4;1;Halle H1;2047110011449;Ladepunkt Süd GmbH
+E-9004;Ladesäule Gewerbe 2x22 kW, Standfuß;E-Mobilität;Stk;4.980,00;7.968,00;4;1;Halle H1;2047110011456;Ladepunkt Süd GmbH
+E-9005;Lastmanagement-Controller für 10 Ladepunkte;E-Mobilität;Stk;1.188,00;1.900,80;2;1;Halle H1;2047110011463;Ladepunkt Süd GmbH
+E-9006;Ladekabel Typ 2, 7 m, 22 kW;E-Mobilität;Stk;164,00;262,40;2;1;Halle H1;2047110011470;Ladepunkt Süd GmbH
+E-9007;Wallbox-Standfuß Edelstahl;E-Mobilität;Stk;289,00;462,40;2;1;Halle H1;2047110011487;Ladepunkt Süd GmbH
+B-8001;LED-Hallenstrahler 150 W, 21.000 lm;Beleuchtung;Stk;168,00;294,00;36;2;Regal B2;2047110011494;Lichtmanufaktur Albrand
+B-8002;LED-Hallenstrahler 200 W, 28.000 lm;Beleuchtung;Stk;214,00;374,50;20;4;Regal B2;2047110011500;Vollmann Licht- und Systemtechnik
+B-8003;LED-Lichtband 1.500 mm, 50 W, Tragschiene;Beleuchtung;Stk;96,00;168,00;3;4;Regal B2;2047110011517;Vollmann Licht- und Systemtechnik
+B-8004;LED-Downlight 12 W, 4000 K, IP44;Beleuchtung;Stk;18,90;33,05;8;4;Regal B2;2047110011524;Vollmann Licht- und Systemtechnik
+B-8005;LED-Downlight 18 W, DALI;Beleuchtung;Stk;36,50;63,90;4;6;Regal B2;2047110011531;Vollmann Licht- und Systemtechnik
+B-8006;LED-Anbauleuchte rund 24 W, Sensor;Beleuchtung;Stk;48,00;84,00;50;4;Regal B2;2047110011548;Lichtmanufaktur Albrand
+B-8007;LED-Außenwandleuchte Anthrazit;Beleuchtung;Stk;54,00;94,50;36;6;Regal B2;2047110011555;Lichtmanufaktur Albrand
+B-8008;LED-Pollerleuchte 80 cm;Beleuchtung;Stk;139,00;243,25;2;6;Regal B2;2047110011562;Lichtmanufaktur Albrand
+B-8009;LED-Mastleuchte 60 W, Parkplatz;Beleuchtung;Stk;389,00;680,75;50;2;Regal B2;2047110011579;Lichtmanufaktur Albrand
+B-8010;Sicherheitsleuchte Rettungszeichen, Einzelbatterie;Beleuchtung;Stk;96,00;168,00;36;6;Regal B2;2047110011586;Vollmann Licht- und Systemtechnik
+B-8011;Zentralbatterie-System 24 Kreise;Beleuchtung;Stk;6.840,00;11.970,00;12;2;Regal B2;2047110011593;Lichtmanufaktur Albrand
+B-8012;DALI-Gateway 64 Adressen;Beleuchtung;Stk;468,00;819,00;12;2;Regal B2;2047110011609;Vollmann Licht- und Systemtechnik
+B-8013;LED-Panel 625x625, 36 W, UGR<19;Beleuchtung;Stk;42,00;73,50;12;4;Regal B2;2047110011616;Lichtmanufaktur Albrand
+B-8014;Präsenzmelder Decke 360°, DALI;Beleuchtung;Stk;118,00;206,50;2;4;Regal B2;2047110011623;Vollmann Licht- und Systemtechnik
+B-8015;LED-Streifen 24 V, 10 m, RGBW;Beleuchtung;Stk;68,00;119,00;0;6;Regal B2;2047110011630;Vollmann Licht- und Systemtechnik
+B-8016;Einbaurahmen Downlight 68 mm, weiß;Beleuchtung;Stk;3,20;5,60;4;6;Regal B2;2047110011647;Vollmann Licht- und Systemtechnik
+T-8001;KNX-Jalousieaktor 8-fach;Gebäudetechnik;Stk;312,00;530,40;6;1;Regal T1;2047110011654;Busware KNX-Systeme GmbH
+T-8002;KNX-Dimmaktor 4-fach, universal;Gebäudetechnik;Stk;348,00;591,60;2;1;Regal T1;2047110011661;Busware KNX-Systeme GmbH
+T-8003;KNX-Tastsensor 4-fach mit Temperaturfühler;Gebäudetechnik;Stk;142,00;241,40;5;1;Regal T1;2047110011678;Busware KNX-Systeme GmbH
+T-8004;KNX-Präsenzmelder;Gebäudetechnik;Stk;164,00;278,80;3;1;Regal T1;2047110011685;Busware KNX-Systeme GmbH
+T-8005;KNX-IP-Router;Gebäudetechnik;Stk;398,00;676,60;5;1;Regal T1;2047110011692;Busware KNX-Systeme GmbH
+T-8006;KNX-Visualisierungsserver;Gebäudetechnik;Stk;1.480,00;2.516,00;6;1;Regal T1;2047110011708;Busware KNX-Systeme GmbH
+T-8007;KNX-Wetterstation GPS;Gebäudetechnik;Stk;689,00;1.171,30;3;1;Regal T1;2047110011715;Busware KNX-Systeme GmbH
+T-8008;KNX-Heizungsaktor 12-fach;Gebäudetechnik;Stk;368,00;625,60;3;1;Regal T1;2047110011722;Busware KNX-Systeme GmbH
+T-8009;KNX-Linienkoppler;Gebäudetechnik;Stk;238,00;404,60;2;1;Regal T1;2047110011739;Busware KNX-Systeme GmbH
+T-8010;KNX-Binäreingang 8-fach;Gebäudetechnik;Stk;188,00;319,60;2;1;Regal T1;2047110011746;Busware KNX-Systeme GmbH
+F-9001;Video-Türsprechanlage 4 Familien, Set;Sicherheit und Kommunikation;Stk;1.124,00;1.910,80;12;4;Regal T2;2047110011753;Brandmeldetechnik Vogler GmbH
+F-9002;Video-Türsprechanlage 8 Familien, Set;Sicherheit und Kommunikation;Stk;1.896,00;3.223,20;12;4;Regal T2;2047110011760;Sprechanlagen Hofacker
+F-9003;"Innenstation 7"" Touch";Sicherheit und Kommunikation;Stk;248,00;421,60;24;2;Regal T2;2047110011777;Sprechanlagen Hofacker
+F-9004;Rauchwarnmelder mit Q-Siegel, Funk;Sicherheit und Kommunikation;Stk;42,00;71,40;6;4;Regal T2;2047110011784;Brandmeldetechnik Vogler GmbH
+F-9005;Hitzewarnmelder Küche;Sicherheit und Kommunikation;Stk;38,00;64,60;2;4;Regal T2;2047110011791;Sprechanlagen Hofacker
+F-9006;Brandmeldezentrale 2 Ringe;Sicherheit und Kommunikation;Stk;3.480,00;5.916,00;0;1;Regal T2;2047110011807;Sprechanlagen Hofacker
+F-9007;Druckknopfmelder rot;Sicherheit und Kommunikation;Stk;46,00;78,20;6;2;Regal T2;2047110011814;Sprechanlagen Hofacker
+F-9008;Optischer Rauchmelder mit Sockel;Sicherheit und Kommunikation;Stk;58,00;98,60;4;1;Regal T2;2047110011821;Sprechanlagen Hofacker
+F-9009;Alarmanlage Funk, Grundset;Sicherheit und Kommunikation;Stk;689,00;1.171,30;12;1;Regal T2;2047110011838;Sprechanlagen Hofacker
+F-9010;Bewegungsmelder Außen 240°, IP55;Sicherheit und Kommunikation;Stk;36,00;61,20;4;2;Regal T2;2047110011845;Sprechanlagen Hofacker
+N-9001;"Netzwerkschrank 19"", 12 HE, Wand";Netzwerk und Daten;Stk;214,00;353,10;2;1;Regal N1;2047110011852;Netzwerkteile Brügger
+N-9002;"Netzwerkschrank 19"", 42 HE, Stand";Netzwerk und Daten;Stk;1.238,00;2.042,70;24;10;Regal N1;2047110011869;Netzwerkteile Brügger
+N-9003;Patchpanel Cat.6a, 24 Port;Netzwerk und Daten;Stk;98,00;161,70;4;10;Regal N1;2047110011876;Netzwerkteile Brügger
+N-9004;Switch 24 Port PoE+, managed;Netzwerk und Daten;Stk;689,00;1.136,85;1;2;Regal N1;2047110011883;Netzwerkteile Brügger
+N-9005;Datendose Cat.6a 2-fach UP;Netzwerk und Daten;Stk;14,80;24,40;100;2;Regal N1;2047110011890;Netzwerkteile Brügger
+N-9006;Patchkabel Cat.6a 2 m, grau;Netzwerk und Daten;Stk;3,40;5,60;4;10;Regal N1;2047110011906;Netzwerkteile Brügger
+N-9007;WLAN-Access-Point Decke;Netzwerk und Daten;Stk;164,00;270,60;24;1;Regal N1;2047110011913;Netzwerkteile Brügger
+N-9008;Glasfaser-Spleißbox 12 Fasern;Netzwerk und Daten;Stk;58,00;95,70;100;10;Regal N1;2047110011920;Netzwerkteile Brügger
+N-9009;RJ45-Stecker feldkonfektionierbar;Netzwerk und Daten;Stk;7,90;13,05;4;2;Regal N1;2047110011937;Netzwerkteile Brügger
+N-9010;"USV 1.500 VA, 19""";Netzwerk und Daten;Stk;548,00;904,20;100;2;Regal N1;2047110011944;Netzwerkteile Brügger
+D-8001;Hohlwanddose luftdicht 68 mm;Dosen und Installation;Stk;0,98;1,90;60;20;Regal D2;2047110011951;Installationsmaterial Fiedler GmbH
+D-8002;Geräteverbindungsdose 2-fach;Dosen und Installation;Stk;1,45;2,85;1.200;20;Regal D2;2047110011968;Installationsmaterial Fiedler GmbH
+D-8003;Elektronikdose tief 68 mm;Dosen und Installation;Stk;1,10;2,15;50;100;Regal D2;2047110011975;Installationsmaterial Fiedler GmbH
+D-8004;Abzweigkasten 150x110, IP65;Dosen und Installation;Stk;5,80;11,30;30;10;Regal D2;2047110011982;Befestigungstechnik Steinhart
+D-8005;Kabelkanal 40x60, 2 m, reinweiß;Dosen und Installation;Stk;6,20;12,10;240;20;Regal D2;2047110011999;Installationsmaterial Fiedler GmbH
+D-8006;Kabelkanal 60x110, 2 m, mit Oberteil;Dosen und Installation;Stk;14,80;28,85;1.200;100;Regal D2;2047110012002;Befestigungstechnik Steinhart
+D-8007;Kabelrinne 300x60, 3 m, verzinkt;Dosen und Installation;Stk;38,40;74,90;50;20;Regal D2;2047110012019;Befestigungstechnik Steinhart
+D-8008;Kabelrinne Deckel 300 mm, 3 m;Dosen und Installation;Stk;21,80;42,50;30;100;Regal D2;2047110012026;Installationsmaterial Fiedler GmbH
+D-8009;Installationsrohr M20 starr, 3 m;Dosen und Installation;Stk;1,25;2,45;1;10;Regal D2;2047110012033;Befestigungstechnik Steinhart
+D-8010;Installationsrohr M32 flexibel, Ring 25 m;Dosen und Installation;Stk;19,80;38,60;50;20;Regal D2;2047110012040;Befestigungstechnik Steinhart
+D-8011;Rohrschelle M20, Beutel 100 St.;Dosen und Installation;Beutel;8,40;16,40;12;4;Regal D2;2047110012057;Installationsmaterial Fiedler GmbH
+D-8012;Rohrschelle M25, Beutel 100 St.;Dosen und Installation;Beutel;9,60;18,70;12;4;Regal D2;2047110012064;Installationsmaterial Fiedler GmbH
+D-8013;Nagelschelle 7-11 mm, Beutel 100 St.;Dosen und Installation;Beutel;3,90;7,60;12;4;Regal D2;2047110012071;Installationsmaterial Fiedler GmbH
+D-8014;Dübel 6 mm, Karton 1.000 St.;Dosen und Installation;Karton;18,40;35,90;8;4;Regal D2;2047110012088;Installationsmaterial Fiedler GmbH
+D-8015;Holzschraube 5x50, Karton 500 St.;Dosen und Installation;Karton;14,60;28,45;20;4;Regal D2;2047110012095;Befestigungstechnik Steinhart
+D-8016;Schwerlastanker M10, Beutel 25 St.;Dosen und Installation;Beutel;19,40;37,85;12;4;Regal D2;2047110012101;Installationsmaterial Fiedler GmbH
+D-8017;Kabelbinder 300 mm schwarz, Beutel 1.000 St.;Dosen und Installation;Beutel;18,90;36,85;8;4;Regal D2;2047110012118;Installationsmaterial Fiedler GmbH
+D-8018;Brandschutzmasse, Kartusche 310 ml;Dosen und Installation;Stk;16,80;32,75;2.500;100;Regal D2;2047110012125;Installationsmaterial Fiedler GmbH
+W-9001;Installationstester VDE 0100 mit Zubehör;Messtechnik und Werkzeug;Stk;1.890,00;2.646,00;1;1;Werkzeuglager W1;2047110012132;Messgeräte Kallenbach KG
+W-9002;Gerätetester DGUV V3 mit Software;Messtechnik und Werkzeug;Stk;1.648,00;2.307,20;1;1;Werkzeuglager W1;2047110012149;Messgeräte Kallenbach KG
+W-9003;Isolationsmessgerät 1.000 V;Messtechnik und Werkzeug;Stk;468,00;655,20;0;1;Werkzeuglager W1;2047110012156;Werkzeughaus Rombach
+W-9004;Wärmebildkamera 320x240;Messtechnik und Werkzeug;Stk;1.349,00;1.888,60;1;1;Werkzeuglager W1;2047110012163;Messgeräte Kallenbach KG
+W-9005;Leitungssuchgerät;Messtechnik und Werkzeug;Stk;289,00;404,60;9;1;Werkzeuglager W1;2047110012170;Messgeräte Kallenbach KG
+W-9006;Zangenmessgerät AC/DC 600 A;Messtechnik und Werkzeug;Stk;186,00;260,40;2;1;Werkzeuglager W1;2047110012187;Messgeräte Kallenbach KG
+W-9007;Spannungsprüfer zweipolig;Messtechnik und Werkzeug;Stk;64,00;89,60;3;1;Werkzeuglager W1;2047110012194;Werkzeughaus Rombach
+W-9008;Akku-Bohrhammer SDS-Plus, 2 Akkus;Messtechnik und Werkzeug;Stk;438,00;613,20;1;1;Werkzeuglager W1;2047110012200;Werkzeughaus Rombach
+W-9009;Akku-Schrauber 18 V Set;Messtechnik und Werkzeug;Stk;289,00;404,60;5;1;Werkzeuglager W1;2047110012217;Messgeräte Kallenbach KG
+W-9010;Kabelschneider bis 52 mm;Messtechnik und Werkzeug;Stk;118,00;165,20;3;1;Werkzeuglager W1;2047110012224;Werkzeughaus Rombach
+W-9011;Presszange Aderendhülsen 0,08-16 mm²;Messtechnik und Werkzeug;Stk;96,00;134,40;9;1;Werkzeuglager W1;2047110012231;Messgeräte Kallenbach KG
+W-9012;Abisolierzange automatisch;Messtechnik und Werkzeug;Stk;42,00;58,80;3;1;Werkzeuglager W1;2047110012248;Messgeräte Kallenbach KG
+W-9013;Werkzeugkoffer VDE 26-tlg.;Messtechnik und Werkzeug;Stk;348,00;487,20;2;1;Werkzeuglager W1;2047110012255;Messgeräte Kallenbach KG
+W-9014;Mauernutfräse 150 mm mit Absaugung;Messtechnik und Werkzeug;Stk;889,00;1.244,60;5;1;Werkzeuglager W1;2047110012262;Werkzeughaus Rombach
+W-9015;Diamant-Trennscheibe 150 mm;Messtechnik und Werkzeug;Stk;36,00;50,40;5;1;Werkzeuglager W1;2047110012279;Werkzeughaus Rombach
+W-9016;Leiter Mehrzweck 3x9 Sprossen;Messtechnik und Werkzeug;Stk;214,00;299,60;2;1;Werkzeuglager W1;2047110012286;Werkzeughaus Rombach
+W-9017;Kabelabroller für Trommeln bis 500 kg;Messtechnik und Werkzeug;Stk;386,00;540,40;3;1;Werkzeuglager W1;2047110012293;Werkzeughaus Rombach
+W-9018;Einziehband Glasfaser 30 m;Messtechnik und Werkzeug;Stk;42,00;58,80;0;1;Werkzeuglager W1;2047110012309;Messgeräte Kallenbach KG
+K-8001;Wago-Klemme 221-412, Karton 500 St.;Kleinmaterial;Karton;118,00;236,00;40;2;Regal K1;2047110012316;Bergfeld Werkzeug und Befestigung
+K-8002;Wago-Klemme 221-415, Karton 250 St.;Kleinmaterial;Karton;94,00;188,00;6;5;Regal K1;2047110012323;Arbeitsschutz Merkle
+K-8003;Aderendhülsen 1,5 mm², Beutel 500 St.;Kleinmaterial;Beutel;4,60;9,20;2;2;Regal K1;2047110012330;Bergfeld Werkzeug und Befestigung
+K-8004;Aderendhülsen 2,5 mm², Beutel 500 St.;Kleinmaterial;Beutel;5,10;10,20;12;5;Regal K1;2047110012347;Bergfeld Werkzeug und Befestigung
+K-8005;Isolierband 19 mm, 10 Rollen;Kleinmaterial;Stk;7,80;15,60;6;2;Regal K1;2047110012354;Arbeitsschutz Merkle
+K-8006;Gips Schnellputz 5 kg;Kleinmaterial;Stk;8,90;17,80;3;4;Regal K1;2047110012361;Arbeitsschutz Merkle
+K-8007;Kabelmarkierer-Set 0-9;Kleinmaterial;Stk;12,40;24,80;6;4;Regal K1;2047110012378;Bergfeld Werkzeug und Befestigung
+K-8008;"Warnschild ""Vorsicht Spannung"", 20 St.";Kleinmaterial;Stk;16,00;32,00;2;4;Regal K1;2047110012385;Arbeitsschutz Merkle
+K-8009;Arbeitshandschuhe Elektriker, Paar;Kleinmaterial;Stk;8,90;17,80;12;5;Regal K1;2047110012392;Arbeitsschutz Merkle
+K-8010;Schutzbrille klar;Kleinmaterial;Stk;6,40;12,80;6;5;Regal K1;2047110012408;Arbeitsschutz Merkle
+S-8001;Abdeckrahmen 1-fach, anthrazit;Schalter und Steckdosen;Stk;3,80;8,35;20;10;Regal S3;2047110012415;Sütterlin Elektro-Großhandel GmbH
+S-8002;Abdeckrahmen 2-fach, anthrazit;Schalter und Steckdosen;Stk;6,10;13,40;10;10;Regal S3;2047110012422;Sütterlin Elektro-Großhandel GmbH
+S-8003;Wippe Universal, anthrazit;Schalter und Steckdosen;Stk;4,20;9,25;10;10;Regal S3;2047110012439;Sütterlin Elektro-Großhandel GmbH
+S-8004;Zentralplatte SCHUKO, anthrazit;Schalter und Steckdosen;Stk;3,90;8,60;30;10;Regal S3;2047110012446;Sütterlin Elektro-Großhandel GmbH
+S-8005;Abdeckrahmen 1-fach, aluminium;Schalter und Steckdosen;Stk;3,80;8,35;10;10;Regal S3;2047110012453;Sütterlin Elektro-Großhandel GmbH
+S-8006;Abdeckrahmen 2-fach, aluminium;Schalter und Steckdosen;Stk;6,10;13,40;40;10;Regal S3;2047110012460;Sütterlin Elektro-Großhandel GmbH
+S-8007;Wippe Universal, aluminium;Schalter und Steckdosen;Stk;4,20;9,25;40;10;Regal S3;2047110012477;Sütterlin Elektro-Großhandel GmbH
+S-8008;Zentralplatte SCHUKO, aluminium;Schalter und Steckdosen;Stk;3,90;8,60;10;10;Regal S3;2047110012484;Sütterlin Elektro-Großhandel GmbH
+S-8009;Abdeckrahmen 1-fach, edelstahl;Schalter und Steckdosen;Stk;6,84;15,05;10;10;Regal S3;2047110012491;Sütterlin Elektro-Großhandel GmbH

@@ -1,0 +1,31 @@
+﻿Titel;Kunde;Kundennummer;Ansprechpartner;Phase;Wert netto;Wahrscheinlichkeit %;Abschluss erwartet;Notizen
+Kunststofftechnik Quenzer GmbH — Hallenbeleuchtung auf LED;Kunststofftechnik Quenzer GmbH;K-1021;Dieter Leibfried;erstkontakt;128.000,00;10;22.01.2027;
+Galvanik Rapp GmbH — Notbeleuchtung nach Vorschrift;Galvanik Rapp GmbH;K-1058;Emre Gaißmaier;erstkontakt;128.000,00;10;21.12.2026;
+Autohaus Stierle GmbH & Co. KG — Wallbox für Firmenparkplatz;Autohaus Stierle GmbH & Co. KG;K-1023;Nikolai Lämmle;erstkontakt;68.900,00;10;08.09.2026;
+Hausverwaltung Seeblick GmbH — PV-Anlage mit Speicher;Hausverwaltung Seeblick GmbH;K-1001;Michael Pfisterer;erstkontakt;96.500,00;10;14.12.2026;Vergleicht zwei Angebote
+Autowerkstatt Kovačević — Netzwerkverkabelung Büro;Autowerkstatt Kovačević;K-1044;Birgit Quenzer;erstkontakt;11.240,00;10;15.10.2026;Wartet auf Baugenehmigung
+Apotheke am Marktplatz Holzgerlingen — Smart Home KNX im Neubau;Apotheke am Marktplatz Holzgerlingen;K-1038;Heiko Pfisterer;erstkontakt;41.800,00;10;13.09.2026;Förderung beantragt
+Bauträger Neckartal GmbH & Co. KG — Zählerschrank-Erneuerung;Bauträger Neckartal GmbH & Co. KG;K-1002;Monika Schwämmle;qualifiziert;284.500,00;25;12.12.2026;Entscheidung im Beirat
+Schreibwaren Mauch — Ladeinfrastruktur Hausverwaltung;Schreibwaren Mauch;K-1032;Matthias Maier-Bühler;qualifiziert;52.400,00;25;20.01.2027;Entscheidung im Beirat
+Metzgerei Gaißmaier — Netzwerkverkabelung Büro;Metzgerei Gaißmaier;K-1012;Carmen Illig;qualifiziert;18.900,00;25;17.12.2026;Budget freigegeben
+Metzgerei Gaißmaier — Smart Home KNX im Neubau;Metzgerei Gaißmaier;K-1012;Carmen Illig;qualifiziert;52.400,00;25;15.09.2026;Vergleicht zwei Angebote
+Hausverwaltung Dürr & Knödler — Zählerschrank-Erneuerung;Hausverwaltung Dürr & Knödler;K-1043;Ulrike Dürr;qualifiziert;52.400,00;25;23.01.2027;Vergleicht zwei Angebote
+Schreinerei Bachmeier GmbH — Sprechanlage für Mehrfamilienhaus;Schreinerei Bachmeier GmbH;K-1008;Verena Stierle;qualifiziert;128.000,00;25;06.12.2026;Förderung beantragt
+Brauerei Schwämmle — Wallbox für Firmenparkplatz;Brauerei Schwämmle;K-1051;Franziska Lämmle;angebot;11.240,00;50;12.01.2027;
+Präzisionsteile Illig GmbH — Smart Home KNX im Neubau;Präzisionsteile Illig GmbH;K-1031;Sven Trautwein;angebot;18.900,00;50;05.01.2027;Vergleicht zwei Angebote
+Logistik Wendler GmbH — Hallenbeleuchtung auf LED;Logistik Wendler GmbH;K-1010;Lars Bräunling;angebot;52.400,00;50;08.09.2026;Entscheidung im Beirat
+Immobilien Hirschmann GmbH — Brandmeldeanlage Nachrüstung;Immobilien Hirschmann GmbH;K-1034;Lars Oesterle;angebot;284.500,00;50;22.11.2026;Entscheidung im Beirat
+Friseursalon Haarwerk Epple — PV-Anlage mit Speicher;Friseursalon Haarwerk Epple;K-1036;Oliver Lämmle;angebot;41.800,00;50;02.12.2026;Entscheidung im Beirat
+Hotel Lindenhof Herrenberg — Hallenbeleuchtung auf LED;Hotel Lindenhof Herrenberg;K-1015;Ines Faulhaber;angebot;68.900,00;50;24.10.2026;
+Logistikzentrum Gäu GmbH — Zählerschrank-Erneuerung;Logistikzentrum Gäu GmbH;K-1039;Heiko Trautwein;angebot;4.680,00;50;10.10.2026;Wartet auf Baugenehmigung
+Weingut Trautwein — Hallenbeleuchtung auf LED;Weingut Trautwein;K-1040;Sven Schäfle;verhandlung;18.900,00;75;17.10.2026;
+Weingut Trautwein — Altbausanierung Elektrik;Weingut Trautwein;K-1040;Sven Schäfle;verhandlung;41.800,00;75;04.12.2026;Budget freigegeben
+Metzgerei Gaißmaier — Altbausanierung Elektrik;Metzgerei Gaißmaier;K-1012;Carmen Illig;verhandlung;128.000,00;75;10.12.2026;Budget freigegeben
+Schreibwaren Mauch — Hallenbeleuchtung auf LED;Schreibwaren Mauch;K-1032;Matthias Maier-Bühler;verhandlung;128.000,00;75;19.10.2026;Entscheidung im Beirat
+Schreibwaren Mauch — Brandmeldeanlage Nachrüstung;Schreibwaren Mauch;K-1032;Matthias Maier-Bühler;verhandlung;18.900,00;75;05.01.2027;Entscheidung im Beirat
+Evangelische Kirchengemeinde Aidlingen — Smart Home KNX im Neubau;Evangelische Kirchengemeinde Aidlingen;K-1060;Petra Luz;gewonnen;1.450,50;100;03.01.2027;Wartet auf Baugenehmigung
+Rechenzentrum Schönbuch GmbH — Wallbox für Firmenparkplatz;Rechenzentrum Schönbuch GmbH;K-1050;Tobias Epple;gewonnen;96.500,00;100;10.11.2026;Budget freigegeben
+Möbelhaus Wacker — Brandmeldeanlage Nachrüstung;Möbelhaus Wacker;K-1048;Michael Illig;gewonnen;24.750,00;100;16.10.2026;
+Musikschule Böblingen-Ost e.V. — Netzwerkverkabelung Büro;Musikschule Böblingen-Ost e.V.;K-1057;Elke Knödler;gewonnen;31.850,00;100;11.01.2027;
+Autohaus Stierle GmbH & Co. KG — Ladeinfrastruktur Hausverwaltung;Autohaus Stierle GmbH & Co. KG;K-1023;Nikolai Lämmle;verloren;128.000,00;0;28.10.2026;Wartet auf Baugenehmigung
+Schlosserei Kienle — PV-Anlage mit Speicher;Schlosserei Kienle;K-1054;Emre Kübler;verloren;68.900,00;0;24.10.2026;Entscheidung im Beirat

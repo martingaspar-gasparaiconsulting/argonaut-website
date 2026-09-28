@@ -53,6 +53,7 @@ import {
 import { buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
 import { importErlaubt, leseRechtStand, type RechtStand } from '@/lib/importRechte';
 import { aufraeumerErlaubt, teileText, zeilenZuCsv, AUFRAEUMER_MAX_PORTIONEN } from '@/lib/importAufraeumer';
+import UmzugStapel from './UmzugStapel';
 import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
@@ -323,6 +324,9 @@ export default function ImportCenterPage() {
   const [kiOffen, setKiOffen] = useState(false);
   const [kiText, setKiText] = useState('');
   const [kiStand, setKiStand] = useState<string | null>(null);
+  // Paket 147: Umzug „alles auf einmal" — Datei wartet, bis das Ziel gewaehlt ist
+  const [wartend, setWartend] = useState<{ datei: File; ziel: string } | null>(null);
+  const [erledigtDateien, setErledigtDateien] = useState<string[]>([]);
   const [spaltenOffen, setSpaltenOffen] = useState(false);
 
   const katalog = useMemo(() => (zielKey ? katalogFuerZiel(zielKey, dbSpalten) : null), [zielKey, dbSpalten]);
@@ -800,6 +804,21 @@ export default function ImportCenterPage() {
       setFehler(err instanceof Error ? err.message : 'Aufbereitung fehlgeschlagen.');
     } finally { setBusy(null); setKiStand(null); }
   }
+
+  // Paket 147: gewaehlte Datei aus dem Umzugsplan einlesen, sobald ihr Ziel aktiv ist
+  useEffect(() => {
+    if (!wartend || zielKey !== wartend.ziel || busy) return;
+    const d = wartend.datei;
+    setWartend(null);
+    void dateiLesen(d);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wartend, zielKey, busy]);
+  // Paket 147: nach jedem Import die Datei im Umzugsplan abhaken
+  useEffect(() => {
+    if (ergebnis && datei && ergebnis.angelegt + ergebnis.aktualisiert > 0) {
+      setErledigtDateien((l) => (l.includes(datei.dateiname) ? l : [...l, datei.dateiname]));
+    }
+  }, [ergebnis, datei]);
 
   function feldSetzen(spalte: string, feldKey: string) {
     setMapping((m) => {
@@ -1921,6 +1940,15 @@ export default function ImportCenterPage() {
             <button type="button" onClick={() => setAbschluss(null)} style={{ ...styles.btnRand, marginTop: 10 }}>Schließen</button>
           </div>
         )}
+
+        {/* --- Paket 147: Umzug Schritt 6 — mehrere Dateien auf einmal --- */}
+        <UmzugStapel
+          dbSpalten={dbSpalten}
+          erlaubt={(k) => importErlaubt(k, rechtStand).ok}
+          erledigt={erledigtDateien}
+          busy={busy !== null}
+          onOeffnen={(d, k) => { zielWaehlen(k); setWartend({ datei: d, ziel: k }); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+        />
 
         {/* --- Schritt 2: Aus welchem System ziehen Sie um? --- */}
         <AltsystemKarte

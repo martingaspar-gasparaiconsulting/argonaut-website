@@ -1,0 +1,151 @@
+﻿Kundennummer;Firma;Vorname;Nachname;Position;Strasse;PLZ;Ort;Telefon;E-Mail;Status;Quelle;Notizen
+K-1001;Hausverwaltung Seeblick GmbH;Michael;Pfisterer;Geschäftsführung;Bahnhofstraße 47;71063;Sindelfingen;07031 45120;verwaltung@seeblick-hv.example;kunde;Bestandskunde;Umsatz Vorjahr 48.920,00 €, Kunde seit 08.03.2011
+K-1002;Bauträger Neckartal GmbH & Co. KG;Monika;Schwämmle;Einkauf;Industriestraße 8;71034;Böblingen;07031 67890;bau@neckartal-projekt.example;kunde;Bestandskunde;Umsatz Vorjahr 127.400,00 €, Kunde seit 22.06.2015
+K-1003;Stadtwerke Sindelfingen Liegenschaften;Jens;Eberhardt;Technische Leitung;Rathausplatz 1;71063;Sindelfingen;07031 94000;liegenschaften@sifi-stadt.example;kunde;Bestandskunde;Umsatz Vorjahr 61.250,00 €, Kunde seit 15.01.2018
+K-1004;Bäckerei Waldmüller e.K.;Matthias;Nägele;Einkauf;Hauptstraße 112;71065;Sindelfingen;07031 33210;kontakt@baeckerei-waldmueller.example;kunde;Bestandskunde;Umsatz Vorjahr 14.780,00 €, Kunde seit 04.09.2013
+K-1005;Autohaus Kienzle GmbH;Karin;Zimmerle;Hausmeister;Daimlerweg 22;71034;Böblingen;07031 88440;technik@autohaus-kienzle.example;kunde;Bestandskunde;Umsatz Vorjahr 33.610,00 €, Kunde seit 11.04.2017
+K-1006;Pflegeheim Sonnenhalde gGmbH;Uwe;Ammerbach;Inhaber;Sonnenhalde 5;71069;Sindelfingen;07031 71230;technik@sonnenhalde-pflege.example;kunde;Bestandskunde;Umsatz Vorjahr 29.840,00 €, Kunde seit 26.11.2019
+K-1007;Praxis Dr. Ellwanger;Selin;Eberhardt;Einkauf;Marktgasse 9;71063;Sindelfingen;07031 22190;praxis@dr-ellwanger.example;kunde;Bestandskunde;Umsatz Vorjahr 8.420,00 €, Kunde seit 18.05.2020
+K-1008;Schreinerei Bachmeier GmbH;Verena;Stierle;Geschäftsführung;Gewerbering 14;71131;Jettingen;07452 55120;info@schreinerei-bachmeier.example;kunde;Bestandskunde;Umsatz Vorjahr 19.260,00 €, Kunde seit 30.08.2016
+K-1009;Gaststätte Zum Hirschen;Birgit;Romano;Geschäftsführung;Kirchstraße 3;71083;Herrenberg;07032 41180;wirt@zum-hirschen-hb.example;kunde;Bestandskunde;Umsatz Vorjahr 11.340,00 €, Kunde seit 09.02.2021
+K-1010;Logistik Wendler GmbH;Lars;Bräunling;Technische Leitung;Am Güterbahnhof 6;71034;Böblingen;07031 92700;hausverwaltung@wendler-logistik.example;kunde;Bestandskunde;Umsatz Vorjahr 42.180,00 €, Kunde seit 03.07.2018
+K-2001;;;Familie Brenner;;Lerchenweg 18;71065;Sindelfingen;07031 284412;brenner.familie@example.org;kunde;Bestandskunde;Umsatz Vorjahr 4.820,00 €, Kunde seit 14.03.2020
+K-2002;;Walter;Simon;;Am Sportplatz 4;71069;Sindelfingen;07031 771208;w.simon@example.org;kunde;Bestandskunde;Umsatz Vorjahr 1.290,00 €, Kunde seit 01.06.2022
+K-2003;;Katrin;Lechner;;Rosenstraße 27;71063;Sindelfingen;0176 28841190;k.lechner@example.org;kunde;Bestandskunde;Umsatz Vorjahr 6.740,00 €, Kunde seit 12.09.2019
+K-2004;;;Familie Özkan;;Goethestraße 51;71034;Böblingen;07031 663270;oezkan.bb@example.org;kunde;Bestandskunde;Umsatz Vorjahr 12.480,00 €, Kunde seit 28.04.2021
+K-2005;;Marcus;Dr. Feldhoff;;Talblick 9;71083;Herrenberg;07032 991840;m.feldhoff@example.org;kunde;Bestandskunde;Umsatz Vorjahr 18.900,00 €, Kunde seit 17.01.2023
+K-2006;;Ingrid;Pfaff;;Wiesenweg 6;71065;Sindelfingen;07031 284977;;kunde;Bestandskunde;Umsatz Vorjahr 2.150,00 €, Kunde seit 05.10.2018
+K-2007;;;Familie Notbohm;;Eichendorffstraße 33;71069;Sindelfingen;0171 4482290;notbohm@example.org;kunde;Bestandskunde;Umsatz Vorjahr 8.310,00 €, Kunde seit 20.11.2022
+K-2008;;Sebastian;Kohl;;Hangweg 12;71131;Jettingen;07452 88140;s.kohl@example.org;kunde;Bestandskunde;Umsatz Vorjahr 3.480,00 €, Kunde seit 06.02.2024
+K-2009;;Beate;Ostermann;;Schillerplatz 2;71063;Sindelfingen;07031 445019;b.ostermann@example.org;kunde;Bestandskunde;Umsatz Vorjahr 5.620,00 €, Kunde seit 22.08.2020
+K-2010;;;Familie Vukovic;;Im Grund 41;71034;Böblingen;0152 33810047;vukovic.fam@example.org;kunde;Bestandskunde;Umsatz Vorjahr 9.870,00 €, Kunde seit 30.05.2023
+K-2011;;Jürgen;Aichinger;;Bergstraße 17;71065;Sindelfingen;07031 776620;;kunde;Bestandskunde;Umsatz Vorjahr 1.740,00 €, Kunde seit 14.07.2021
+K-2012;;Sandra;Reithmeier;;Nelkenweg 8;71069;Sindelfingen;0160 88472210;s.reithmeier@example.org;kunde;Bestandskunde;Umsatz Vorjahr 7.290,00 €, Kunde seit 03.09.2024
+K-2013;;;Familie Dr. Hohenstein;;Parkallee 3;71083;Herrenberg;07032 447180;hohenstein@example.org;kunde;Bestandskunde;Umsatz Vorjahr 24.600,00 €, Kunde seit 19.03.2022
+K-2014;;Emre;Yildiz;;Uhlandstraße 29;71034;Böblingen;0176 55129930;e.yildiz@example.org;kunde;Bestandskunde;Umsatz Vorjahr 4.130,00 €, Kunde seit 27.01.2025
+K-2015;;Helene;Baumgartner;;Am Mühlbach 15;71065;Sindelfingen;07031 284066;h.baumgartner@example.org;kunde;Bestandskunde;Umsatz Vorjahr 3.910,00 €, Kunde seit 11.08.2023
+K-1011;Zahnarztpraxis Dr. Kächele;Heiko;Pfisterer;Einkauf;Lindenweg 34;71093;Weil im Schönbuch;07157 362729;heiko.pfisterer@zahnarztpraxis-dr-kaechele.example;interessent;Website;Branche: Praxis
+K-1012;Metzgerei Gaißmaier;Carmen;Illig;Geschäftsführung;Bahnhofstraße 116;71034;Böblingen;07031 308306;carmen.illig@metzgerei-gaissmaier.example;kunde;Google;Branche: Handel
+K-1013;Autoglas Reutter GmbH;Klaus;Oesterle;Einkauf;Rosenstraße 137;71034;Böblingen;07031 341380;klaus.oesterle@autoglas-reutter.example;interessent;Messe Sindelfingen;Branche: Werkstatt
+K-1014;Wohnbau Schönbuch eG;Monika;Vöhringer;Technische Leitung;Otto-Lilienthal-Straße 56;71088;Holzgerlingen;07031 436729;monika.voehringer@wohnbau-schoenbuch-eg.example;kunde;Messe Sindelfingen;Branche: Wohnungswirtschaft
+K-1015;Hotel Lindenhof Herrenberg;Ines;Faulhaber;Technische Leitung;Schwarzwaldstraße 100;71120;Grafenau;07033 618453;ines.faulhaber@hotel-lindenhof-herrenberg.example;kunde;Empfehlung;Branche: Gastronomie
+K-1016;Kita Sonnenstrahl e.V.;Uwe;Ammerbach;Verwaltung;Brunnenstraße 109;70565;Stuttgart;0711 837989;uwe.ammerbach@kita-sonnenstrahl.example;kunde;Bestandskunde;Branche: Soziales
+K-1017;Druckerei Pfisterer GmbH;Verena;Fetzer;Verwaltung;Rosenstraße 60;71229;Leonberg;07152 729769;verena.fetzer@druckerei-pfisterer.example;kunde;Website;Branche: Produktion
+K-1018;Fitnessstudio Vitalwerk;Ivana;Hägele;Inhaber;Schillerstraße 93;71065;Sindelfingen;07031 971539;ivana.haegele@fitnessstudio-vitalwerk.example;kunde;Bestandskunde;Branche: Freizeit
+K-1019;Blumen Nägele;Carmen;Schwämmle;Objektbetreuung;Kelterstraße 104;71229;Leonberg;07152 768477;carmen.schwaemmle@blumen-naegele.example;kunde;Messe Sindelfingen;Branche: Handel
+K-1020;Steuerkanzlei Ulmer & Partner;Sabine;Schwämmle;Einkauf;Kirchstraße 114;71131;Jettingen;07452 217859;sabine.schwaemmle@steuerkanzlei-ulmer--partner.example;kunde;Bestandskunde;Branche: Büro
+K-1021;Kunststofftechnik Quenzer GmbH;Dieter;Leibfried;Einkauf;Eichendorffstraße 63;71069;Sindelfingen;07031 843546;dieter.leibfried@kunststofftechnik-quenzer.example;kunde;Messe Sindelfingen;Branche: Produktion
+K-1022;Getränkehandel Zeeb;Miriam;Quenzer;Objektbetreuung;Gartenstraße 38;71126;Gäufelden;07032 856889;miriam.quenzer@getraenkehandel-zeeb.example;kunde;Google;Branche: Handel
+K-1023;Autohaus Stierle GmbH & Co. KG;Nikolai;Lämmle;Inhaber;Gewerbestraße 12;71034;Böblingen;07031 274463;nikolai.laemmle@autohaus-stierle.example;kunde;Website;Branche: Werkstatt
+K-1024;Seniorenresidenz Am Stadtpark;Jens;Luz;Objektbetreuung;Wilhelmstraße 120;71101;Schönaich;07031 409210;jens.luz@seniorenresidenz-am-stadtpar.example;kunde;Empfehlung;Branche: Pflege
+K-1025;Ingenieurbüro Dettweiler;Andreas;Dürr;Inhaber;Carl-Benz-Straße 63;71093;Weil im Schönbuch;07157 975082;andreas.duerr@ingenieurbuero-dettweiler.example;kunde;Ausschreibung;Branche: Büro
+K-1026;Bäckerei-Café Luz;Claudia;Gaißmaier;Verwaltung;Carl-Benz-Straße 109;71229;Leonberg;07152 506084;claudia.gaissmaier@baeckerei-café-luz.example;interessent;Website;Branche: Handel
+K-1027;Tischlerei Fetzer;Gabriele;Stierle;Objektbetreuung;Stuttgarter Straße 123;71229;Leonberg;07152 354459;gabriele.stierle@tischlerei-fetzer.example;kunde;Messe Sindelfingen;Branche: Handwerk
+K-1028;Hausverwaltung Göhring GmbH;Birgit;Ulmer;Verwaltung;Hauptstraße 2;71120;Grafenau;07033 363482;birgit.ulmer@hausverwaltung-goehring.example;interessent;Messe Sindelfingen;Branche: Wohnungswirtschaft
+K-1029;Physiotherapie Weidle;Franziska;Mauch;Inhaber;Brunnenstraße 92;71093;Weil im Schönbuch;07157 938366;franziska.mauch@physiotherapie-weidle.example;kunde;Messe Sindelfingen;Branche: Praxis
+K-1030;Landgasthof Rössle;Emre;Romano;Inhaber;Am Hang 133;71263;Weil der Stadt;07033 666046;emre.romano@landgasthof-roessle.example;kunde;Empfehlung;Branche: Gastronomie
+K-1031;Präzisionsteile Illig GmbH;Sven;Trautwein;Einkauf;Am Hang 83;71272;Renningen;07159 201474;sven.trautwein@praezisionsteile-illig.example;kunde;Website;Branche: Produktion
+K-1032;Schreibwaren Mauch;Matthias;Maier-Bühler;Geschäftsführung;Robert-Bosch-Straße 77;71263;Weil der Stadt;07033 499357;matthias.maier-buehler@schreibwaren-mauch.example;kunde;Empfehlung;Branche: Handel
+K-1033;Tierarztpraxis Dr. Faulhaber;Elke;Kächele;Verwaltung;Gartenstraße 18;71116;Gärtringen;07034 919114;elke.kaechele@tierarztpraxis-dr-faulhaber.example;kunde;Ausschreibung;Branche: Praxis
+K-1034;Immobilien Hirschmann GmbH;Lars;Oesterle;Technische Leitung;Hauptstraße 66;71065;Sindelfingen;07031 915679;lars.oesterle@immobilien-hirschmann.example;kunde;Empfehlung;Branche: Wohnungswirtschaft
+K-1035;Maschinenbau Grözinger AG;Birgit;Schäfle;Geschäftsführung;Im Wiesengrund 13;71155;Altdorf;07031 399219;birgit.schaefle@maschinenbau-groezinger.example;kunde;Ausschreibung;Branche: Produktion
+K-1036;Friseursalon Haarwerk Epple;Oliver;Lämmle;Objektbetreuung;Gewerbestraße 119;71126;Gäufelden;07032 391494;oliver.laemmle@friseursalon-haarwerk-epple.example;kunde;Google;Branche: Handwerk
+K-1037;Optik Leibfried;Yasemin;Dürr;Objektbetreuung;Im Wiesengrund 47;71116;Gärtringen;07034 285047;yasemin.duerr@optik-leibfried.example;kunde;Ausschreibung;Branche: Handel
+K-1038;Apotheke am Marktplatz Holzgerlingen;Heiko;Pfisterer;Technische Leitung;Uhlandstraße 85;71083;Herrenberg;07032 856760;heiko.pfisterer@apotheke-am-marktplatz-holzg.example;kunde;Empfehlung;Branche: Handel
+K-1039;Logistikzentrum Gäu GmbH;Heiko;Trautwein;Inhaber;Brunnenstraße 93;70565;Stuttgart;0711 564180;heiko.trautwein@logistikzentrum-gaeu.example;kunde;Google;Branche: Logistik
+K-1040;Weingut Trautwein;Sven;Schäfle;Inhaber;Rosenstraße 38;71139;Ehningen;07034 552809;sven.schaefle@weingut-trautwein.example;kunde;Messe Sindelfingen;Branche: Landwirtschaft
+K-1041;Sportverein TSV Ehningen 1898 e.V.;Laura;Schulze-Wendt;Technische Leitung;Mühlweg 49;71063;Sindelfingen;07031 955195;laura.schulze-wendt@sportverein-tsv-ehningen-189.example;kunde;Empfehlung;Branche: Verein
+K-1042;Restaurant Da Romano;Georg;Kübler;Verwaltung;Gartenstraße 81;71229;Leonberg;07152 594174;georg.kuebler@restaurant-da-romano.example;interessent;Empfehlung;Branche: Gastronomie
+K-1043;Hausverwaltung Dürr & Knödler;Ulrike;Dürr;Verwaltung;Goethestraße 116;71069;Sindelfingen;07031 507807;ulrike.duerr@hausverwaltung-duerr--knoedl.example;kunde;Empfehlung;Branche: Wohnungswirtschaft
+K-1044;Autowerkstatt Kovačević;Birgit;Quenzer;Inhaber;Mörikeweg 67;71101;Schönaich;07031 562181;birgit.quenzer@autowerkstatt-kovacevic.example;kunde;Website;Branche: Werkstatt
+K-1045;Lebensmittelmarkt Hägele;Daniela;Beckhäuser;Technische Leitung;Schwarzwaldstraße 83;71263;Weil der Stadt;07033 471407;daniela.beckhaeuser@lebensmittelmarkt-haegele.example;interessent;Bestandskunde;Branche: Handel
+K-1046;Architekturbüro Blessing;Miriam;Pfisterer;Inhaber;Carl-Benz-Straße 114;71088;Holzgerlingen;07031 635470;miriam.pfisterer@architekturbuero-blessing.example;kunde;Empfehlung;Branche: Büro
+K-1047;Gartenbau Lämmle GmbH;Stefanie;Trautwein;Geschäftsführung;Kelterstraße 71;70565;Stuttgart;0711 602079;stefanie.trautwein@gartenbau-laemmle.example;kunde;Messe Sindelfingen;Branche: Handwerk
+K-1048;Möbelhaus Wacker;Michael;Illig;Einkauf;Goethestraße 34;71131;Jettingen;07452 775320;michael.illig@moebelhaus-wacker.example;interessent;Messe Sindelfingen;Branche: Handel
+K-1049;Pflegedienst Vöhringer;Franziska;Eberhardt;Technische Leitung;Gewerbestraße 124;71065;Sindelfingen;07031 589762;franziska.eberhardt@pflegedienst-voehringer.example;interessent;Website;Branche: Pflege
+K-1050;Rechenzentrum Schönbuch GmbH;Tobias;Epple;Geschäftsführung;Robert-Bosch-Straße 30;71134;Aidlingen;07034 254281;tobias.epple@rechenzentrum-schoenbuch.example;kunde;Bestandskunde;Branche: IT
+K-1051;Brauerei Schwämmle;Franziska;Lämmle;Geschäftsführung;Goethestraße 92;71263;Weil der Stadt;07033 834632;franziska.laemmle@brauerei-schwaemmle.example;kunde;Messe Sindelfingen;Branche: Produktion
+K-1052;Hotel garni Mühlbach;Nadine;Knödler;Verwaltung;Mühlweg 12;70565;Stuttgart;0711 756697;nadine.knoedler@hotel-garni-muehlbach.example;kunde;Messe Sindelfingen;Branche: Gastronomie
+K-1053;Wohnungseigentümergemeinschaft Lindenweg 12;Markus;Hägele;Objektbetreuung;Silcherstraße 39;71063;Sindelfingen;07031 927140;markus.haegele@wohnungseigentuemergemeinsch.example;kunde;Empfehlung;Branche: Wohnungswirtschaft
+K-1054;Schlosserei Kienle;Emre;Kübler;Verwaltung;Talstraße 8;71126;Gäufelden;07032 641227;emre.kuebler@schlosserei-kienle.example;kunde;Google;Branche: Handwerk
+K-1055;Dentallabor Oesterle;Oliver;Kübler;Verwaltung;Silcherstraße 115;71155;Altdorf;07031 495250;oliver.kuebler@dentallabor-oesterle.example;kunde;Bestandskunde;Branche: Produktion
+K-1056;Kfz-Prüfstelle Jauch;Wolfgang;Pfisterer;Einkauf;Mühlweg 91;71155;Altdorf;07031 802280;wolfgang.pfisterer@kfz-pruefstelle-jauch.example;kunde;Website;Branche: Werkstatt
+K-1057;Musikschule Böblingen-Ost e.V.;Elke;Knödler;Verwaltung;Panoramaweg 88;71272;Renningen;07159 338578;elke.knoedler@musikschule-boeblingen-ost.example;kunde;Empfehlung;Branche: Verein
+K-1058;Galvanik Rapp GmbH;Emre;Gaißmaier;Geschäftsführung;Am Hang 66;71159;Mötzingen;07452 783876;emre.gaissmaier@galvanik-rapp.example;interessent;Ausschreibung;Branche: Produktion
+K-1059;Baustoffhandel Seitz;Selin;Blessing;Geschäftsführung;Schillerstraße 32;71263;Weil der Stadt;07033 667024;selin.blessing@baustoffhandel-seitz.example;kunde;Google;Branche: Handel
+K-1060;Evangelische Kirchengemeinde Aidlingen;Petra;Luz;Geschäftsführung;Talstraße 128;71263;Weil der Stadt;07033 216082;petra.luz@evangelische-kirchengemeinde.example;kunde;Google;Branche: Kirche
+K-3001;Gemeinde Schönaich — Bauamt;Lena;Nägele;Sachbearbeitung Hochbau;Kirchplatz 5;71272;Renningen;07159 466446;lena.naegele@renningen-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-3002;Stadt Holzgerlingen — Gebäudemanagement;Heike;Oesterle;Sachbearbeitung Hochbau;Schlossplatz 11;71120;Grafenau;07033 888604;heike.oesterle@grafenau-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-3003;Gemeinde Ehningen — Hochbau;Daniel;Stierle;Sachbearbeitung Hochbau;Kirchplatz 10;71229;Leonberg;07152 275648;daniel.stierle@leonberg-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-3004;Landratsamt Musterkreis — Liegenschaften;Volker;Ulmer;Sachbearbeitung Hochbau;Marktplatz 8;71272;Renningen;07159 321188;volker.ulmer@renningen-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-3005;Stadt Herrenberg — Schulverwaltung;Ulrike;Pfisterer;Sachbearbeitung Hochbau;Kirchplatz 9;70563;Stuttgart;0711 916991;ulrike.pfisterer@stuttgart-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-3006;Gemeinde Gärtringen — Bauhof;Ivana;Wacker;Sachbearbeitung Hochbau;Schlossplatz 8;71155;Altdorf;07031 921024;ivana.wacker@altdorf-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-3007;Zweckverband Kläranlage Würmtal;Michael;Kächele;Sachbearbeitung Hochbau;Schlossplatz 9;71155;Altdorf;07031 874924;michael.kaechele@altdorf-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-3008;Gemeinde Aidlingen — Rathaus;Katharina;Epple;Sachbearbeitung Hochbau;Kirchplatz 12;71263;Weil der Stadt;07033 366383;katharina.epple@weil-der-stadt-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-3009;Stadt Weil der Stadt — Hochbauamt;Stefanie;Göhring;Sachbearbeitung Hochbau;Marktplatz 5;71083;Herrenberg;07032 811121;stefanie.goehring@herrenberg-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-3010;Gemeinde Grafenau — Bauamt;Verena;Reutter;Sachbearbeitung Hochbau;Kirchplatz 11;71063;Sindelfingen;07031 555477;verena.reutter@sindelfingen-verwaltung.example;kunde;Ausschreibung;Öffentlicher Auftraggeber — E-Rechnung (XRechnung) mit Leitweg-ID Pflicht
+K-2016;;;Familie Blessing;;Talstraße 12;71083;Herrenberg;07032 337022;laura.blessing8@privatpost.example;kunde;Google;
+K-2017;;Nikolai;Schulze-Wendt;;Hölderlinweg 9a;71083;Herrenberg;0152 5619000;nikolai.schulze-wendt56@privatpost.example;kunde;Empfehlung;Einfamilienhaus
+K-2018;;Elke;Fetzer;;Gartenstraße 7b;71134;Aidlingen;07034 539901;elke.fetzer86@privatpost.example;kunde;Google;Altbau, Baujahr 1968
+K-2019;;;Familie Ammerbach;;Uhlandstraße 4;71032;Böblingen;07031 738368;franziska.ammerbach67@privatpost.example;interessent;Nachbarschaft;Interesse an PV und Wallbox
+K-2020;;Tobias;Trautwein;;Bahnhofstraße 69b;71093;Weil im Schönbuch;0160 7839227;tobias.trautwein4@privatpost.example;kunde;Bestandskunde;Altbau, Baujahr 1968
+K-2021;;Benedikt;Knödler;;Panoramaweg 10;71139;Ehningen;0160 7590003;benedikt.knoedler83@privatpost.example;kunde;Nachbarschaft;Interesse an PV und Wallbox
+K-2022;;Carmen;Jauch;;Eichendorffstraße 36;71263;Weil der Stadt;07033 761012;carmen.jauch44@privatpost.example;kunde;Empfehlung;Eigentumswohnung
+K-2023;;Hans-Peter;Kovačević;;Am Hang 45b;71139;Ehningen;07034 918860;hans-peter.kovacevic40@privatpost.example;kunde;Google;Interesse an PV und Wallbox
+K-2024;;Daniela;Romano;;Schwarzwaldstraße 32;71263;Weil der Stadt;07033 812139;daniela.romano29@privatpost.example;kunde;Bestandskunde;Eigentumswohnung
+K-2025;;Uwe;Reutter;;Gartenstraße 37;71116;Gärtringen;0176 4510767;uwe.reutter28@privatpost.example;kunde;Empfehlung;Möchte E-Check
+K-2026;;;Familie Beckhäuser;;Lindenweg 9;70565;Stuttgart;0176 8251333;klaus.beckhaeuser51@privatpost.example;kunde;Bestandskunde;Möchte E-Check
+K-2027;;Birgit;Weidle;;Goethestraße 34a;71069;Sindelfingen;07031 541344;birgit.weidle53@privatpost.example;kunde;Empfehlung;Interesse an PV und Wallbox
+K-2028;;Manuela;Kienle;;Talstraße 48;71263;Weil der Stadt;07033 956925;manuela.kienle34@privatpost.example;kunde;Google;Möchte E-Check
+K-2029;;;Familie Zimmerle;;Mühlweg 30;71063;Sindelfingen;07031 896315;christian.zimmerle45@privatpost.example;interessent;Bestandskunde;Interesse an PV und Wallbox
+K-2030;;;Familie Oesterle;;Eichendorffstraße 39;71131;Jettingen;0157 1023888;anja.oesterle68@privatpost.example;kunde;Bestandskunde;Altbau, Baujahr 1968
+K-2031;;Monika;Fetzer;;Wilhelmstraße 4;71034;Böblingen;0152 8035103;monika.fetzer8@privatpost.example;interessent;Bestandskunde;Eigentumswohnung
+K-2032;;Daniel;Aydın;;Brunnenstraße 40;71263;Weil der Stadt;07033 921860;daniel.aydin78@privatpost.example;kunde;Google;Interesse an PV und Wallbox
+K-2033;;Matthias;Schulze-Wendt;;Stuttgarter Straße 33;70565;Stuttgart;0711 271151;matthias.schulze-wendt83@privatpost.example;kunde;Website;Eigentumswohnung
+K-2034;;Sabine;Pfisterer;;Tübinger Straße 23;71155;Altdorf;0157 8327129;sabine.pfisterer97@privatpost.example;kunde;Empfehlung;
+K-2035;;Heiko;Häfele;;Gartenstraße 79;71063;Sindelfingen;0152 8984331;heiko.haefele96@privatpost.example;kunde;Nachbarschaft;
+K-2036;;Sven;Seitz;;Mühlweg 48;71131;Jettingen;07452 315902;sven.seitz1@privatpost.example;kunde;Website;Einfamilienhaus
+K-2037;;Emre;Fetzer;;Bahnhofstraße 28a;71065;Sindelfingen;0160 6494122;emre.fetzer47@privatpost.example;kunde;Nachbarschaft;Einfamilienhaus
+K-2038;;;Familie Weidle;;Panoramaweg 78;71034;Böblingen;0176 6751954;katharina.weidle81@privatpost.example;kunde;Bestandskunde;Interesse an PV und Wallbox
+K-2039;;Petra;Leibfried;;Mörikeweg 4a;71032;Böblingen;0170 4678475;petra.leibfried86@privatpost.example;kunde;Nachbarschaft;Interesse an PV und Wallbox
+K-2040;;;Familie Luz;;Talstraße 16;71065;Sindelfingen;0170 7855965;ines.luz69@privatpost.example;kunde;Website;
+K-2041;;Selin;Oesterle;;Silcherstraße 18;70771;Leinfelden-Echterdingen;0711 783095;selin.oesterle10@privatpost.example;interessent;Nachbarschaft;Eigentumswohnung
+K-2042;;;Familie Fetzer;;Eichendorffstraße 82;71272;Renningen;07159 463525;birgit.fetzer9@privatpost.example;kunde;Nachbarschaft;Eigentumswohnung
+K-2043;;Daniela;Hirschmann;;Panoramaweg 45a;71131;Jettingen;0157 5502562;daniela.hirschmann15@privatpost.example;kunde;Website;Möchte E-Check
+K-2044;;Karin;Leibfried;;Am Stadtpark 69b;71131;Jettingen;0151 4811942;karin.leibfried72@privatpost.example;interessent;Bestandskunde;Eigentumswohnung
+K-2045;;;Familie Epple;;Schillerstraße 21b;71065;Sindelfingen;0157 1293877;verena.epple49@privatpost.example;interessent;Bestandskunde;
+K-2046;;Carmen;Zeeb;;Im Wiesengrund 9a;71263;Weil der Stadt;0171 8515306;carmen.zeeb14@privatpost.example;kunde;Bestandskunde;Eigentumswohnung
+K-2047;;Monika;Knödler;;Am Stadtpark 32;71093;Weil im Schönbuch;0151 6334891;monika.knoedler66@privatpost.example;kunde;Nachbarschaft;Altbau, Baujahr 1968
+K-2048;;Sven;Pfisterer;;Kirchstraße 43;71134;Aidlingen;0176 8378933;sven.pfisterer59@privatpost.example;kunde;Google;
+K-2049;;Matthias;Rapp;;Im Wiesengrund 22;71088;Holzgerlingen;0170 5510626;matthias.rapp3@privatpost.example;kunde;Empfehlung;Möchte E-Check
+K-2050;;Claudia;Hirschmann;;Kelterstraße 23;71120;Grafenau;0157 8032068;claudia.hirschmann77@privatpost.example;kunde;Nachbarschaft;Möchte E-Check
+K-2051;;Silke;Schulze-Wendt;;Goethestraße 81;71083;Herrenberg;07032 674334;silke.schulze-wendt17@privatpost.example;kunde;Website;Eigentumswohnung
+K-2052;;Simone;Hirschmann;;Stuttgarter Straße 20;71101;Schönaich;0160 4925043;simone.hirschmann26@privatpost.example;kunde;Empfehlung;Eigentumswohnung
+K-2053;;Markus;Mauch;;Stuttgarter Straße 57;72070;Tübingen;0152 7165182;markus.mauch42@privatpost.example;kunde;Empfehlung;
+K-2054;;Yasemin;Dettweiler;;Hauptstraße 9;70563;Stuttgart;0151 8345142;yasemin.dettweiler89@privatpost.example;kunde;Bestandskunde;
+K-2055;;Verena;Beckhäuser;;Gartenstraße 86;70565;Stuttgart;0170 9041605;verena.beckhaeuser18@privatpost.example;kunde;Bestandskunde;Möchte E-Check
+K-2056;;Tanja;Petrović;;Wilhelmstraße 61;71069;Sindelfingen;0171 6477851;tanja.petrovic87@privatpost.example;kunde;Google;Interesse an PV und Wallbox
+K-2057;;;Familie Maier-Bühler;;Brunnenstraße 14;72070;Tübingen;07071 489330;christian.maier-buehler59@privatpost.example;interessent;Google;Eigentumswohnung
+K-2058;;Heiko;Oesterle;;Am Hang 47;70563;Stuttgart;0711 506641;heiko.oesterle52@privatpost.example;interessent;Nachbarschaft;Interesse an PV und Wallbox
+K-2059;;;Familie Kächele;;Rosenstraße 27a;71101;Schönaich;07031 886671;yasemin.kaechele92@privatpost.example;kunde;Empfehlung;Einfamilienhaus
+K-2060;;Gabriele;Trautwein;;Kelterstraße 21b;70565;Stuttgart;0711 575087;gabriele.trautwein13@privatpost.example;kunde;Nachbarschaft;Altbau, Baujahr 1968
+K-2061;;Silke;Rapp;;Stuttgarter Straße 88;71088;Holzgerlingen;07031 733106;silke.rapp23@privatpost.example;kunde;Nachbarschaft;Einfamilienhaus
+K-2062;;;Familie Romano;;Am Stadtpark 45;70563;Stuttgart;0152 8744186;silke.romano45@privatpost.example;kunde;Nachbarschaft;Altbau, Baujahr 1968
+K-2063;;Sven;Kovačević;;Panoramaweg 1;71088;Holzgerlingen;0170 1921096;sven.kovacevic80@privatpost.example;kunde;Nachbarschaft;Interesse an PV und Wallbox
+K-2064;;Claudia;Schulze-Wendt;;Brunnenstraße 19;71155;Altdorf;07031 579971;claudia.schulze-wendt8@privatpost.example;interessent;Nachbarschaft;Einfamilienhaus
+K-2065;;Lena;Fetzer;;Eichendorffstraße 23b;71139;Ehningen;07034 528649;lena.fetzer23@privatpost.example;kunde;Nachbarschaft;Einfamilienhaus
+K-2066;;;Familie Dettweiler;;Lindenweg 44;71272;Renningen;0175 8925374;karin.dettweiler85@privatpost.example;kunde;Website;Möchte E-Check
+K-2067;;;Familie Rapp;;Hölderlinweg 44a;70565;Stuttgart;0175 1075767;klaus.rapp61@privatpost.example;kunde;Bestandskunde;Interesse an PV und Wallbox
+K-2068;;Oliver;Wacker;;Am Hang 74a;71101;Schönaich;0157 1301975;oliver.wacker15@privatpost.example;kunde;Google;Einfamilienhaus
+K-2069;;Dieter;Zeeb;;Silcherstraße 62;71063;Sindelfingen;0152 4348624;dieter.zeeb99@privatpost.example;kunde;Bestandskunde;Interesse an PV und Wallbox
+K-2070;;Michael;Weidle;;Eichendorffstraße 20b;71131;Jettingen;0175 2702285;michael.weidle27@privatpost.example;kunde;Empfehlung;Möchte E-Check
+K-2071;;Benedikt;Hägele;;Schwarzwaldstraße 30;71083;Herrenberg;0152 1846438;benedikt.haegele89@privatpost.example;kunde;Empfehlung;Einfamilienhaus
+K-2072;;;Familie Beckhäuser;;Im Wiesengrund 65b;71101;Schönaich;0175 8632638;uwe.beckhaeuser34@privatpost.example;kunde;Empfehlung;Altbau, Baujahr 1968
+K-2073;;Laura;Gaißmaier;;Panoramaweg 35a;71065;Sindelfingen;0157 3593228;laura.gaissmaier72@privatpost.example;kunde;Google;Einfamilienhaus
+K-2074;;Uwe;Ammerbach;;Kirchstraße 24b;72070;Tübingen;07071 237077;uwe.ammerbach49@privatpost.example;kunde;Nachbarschaft;Einfamilienhaus
+K-2075;;;Familie Eberhardt;;Silcherstraße 3;71120;Grafenau;0157 4402477;petra.eberhardt76@privatpost.example;kunde;Nachbarschaft;Einfamilienhaus
+K-2076;;Jens;Beckhäuser;;Mörikeweg 89b;71088;Holzgerlingen;0170 6656424;jens.beckhaeuser16@privatpost.example;kunde;Bestandskunde;Einfamilienhaus
+K-2077;;Luca;Kübler;;Stuttgarter Straße 23;71083;Herrenberg;0176 8013205;luca.kuebler48@privatpost.example;kunde;Bestandskunde;Eigentumswohnung
+K-2078;;Ines;Rapp;;Kelterstraße 36a;71131;Jettingen;0152 7632490;ines.rapp62@privatpost.example;kunde;Bestandskunde;Altbau, Baujahr 1968
+K-2079;;Birgit;Pfisterer;;Rosenstraße 55;71063;Sindelfingen;07031 586192;birgit.pfisterer66@privatpost.example;interessent;Website;Interesse an PV und Wallbox
+K-1001-ALT;HV Seeblick GmbH;Michael;Pfisterer;Geschäftsführung;Bahnhofstraße 47;71063;Sindelfingen;07031 45120;verwaltung@seeblick-hv.example;kunde;Bestandskunde;FALLE: Dublette aus dem Altsystem — gleiche E-Mail wie K-1001

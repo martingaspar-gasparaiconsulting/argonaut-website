@@ -100,7 +100,7 @@ test('Auftraege (Haldenberg 11): Angebote aussortiert, Kunde verknuepft, Brutto 
   assert.equal(map['Art'], 'belegart');
   assert.equal(b.verschluckt, 0);
   assert.equal(r.gut, 1);
-  assert.match(r.fehler[0].meldung, /Angebot.*gemeinsam/);
+  assert.match(r.fehler[0].meldung, /Angebot.*Angebote \(Archiv\)/);
   const a = r.saetze[0];
   assert.deepEqual([a.auftragsnummer, a.netto_summe, a.mwst_summe, a.brutto_summe, a.notizen, a.status], ['A-2026-0184', 284500, 54055, 338555, 'Stand: 62 %', 'beauftragt']);
   assert.ok(!('belegart' in a), 'Filterfeld geht nicht in die Datenbank');

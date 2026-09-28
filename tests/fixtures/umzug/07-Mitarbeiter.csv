@@ -1,0 +1,13 @@
+﻿Personalnummer;Vorname;Nachname;Geburtsdatum;Eintritt;Tätigkeit;Wochenstunden;Bruttolohn;Verrechnungssatz;Urlaubsanspruch;Urlaub genommen;E-Mail;Test-Login
+M-001;Thomas;Haldenberg;12.03.1974;14.04.2009;Geschäftsführer, Elektrotechnikermeister;45;5.800,00;78,00;30;18;thomas.haldenberg@elektro-haldenberg.example;
+M-002;Andrea;Haldenberg;28.09.1977;14.04.2009;Büro, Buchhaltung, Auftragsannahme;25;2.350,00;0,00;30;22;andrea.haldenberg@elektro-haldenberg.example;Test-Login Stufe 3: Voll-Nutzer, alle Module, Vollmacht, Darf abrechnen
+M-003;Kevin;Stadler;04.06.1992;01.08.2014;Elektroniker, Vorarbeiter;40;3.720,00;68,00;30;12;kevin.stadler@elektro-haldenberg.example;Test-Login Stufe 2: Standard-Nutzer (Termine, Aufträge, Aufmaß, Angebote, CRM)
+M-004;Murat;Özdemir;19.01.1985;01.03.2016;Elektroniker Energie- und Gebäudetechnik;40;3.480,00;68,00;30;25;murat.oezdemir@elektro-haldenberg.example;
+M-005;Jonas;Rieker;07.11.1999;01.09.2021;Elektroniker;40;3.190,00;64,00;28;9;jonas.rieker@elektro-haldenberg.example;
+M-006;Patrick;Gruber;23.02.2003;01.08.2024;Elektroniker (Geselle seit 2024);40;2.940,00;58,00;28;14;patrick.gruber@elektro-haldenberg.example;
+M-007;Leon;Kaltenbach;16.05.2007;01.09.2024;Auszubildender, 3. Lehrjahr;40;1.080,00;32,00;28;20;leon.kaltenbach@elektro-haldenberg.example;
+M-008;Emilia;Wachter;30.08.2008;01.09.2025;Auszubildende, 2. Lehrjahr;40;935,00;28,00;28;11;emilia.wachter@elektro-haldenberg.example;Test-Login Stufe 1: Self-Service
+M-009;Rudolf;Merz;2.12.59;01.05.2019;Lager und Fuhrpark, geringfügig beschäftigt;10;545,00;0,00;10;4;rudolf.merz@elektro-haldenberg.example;FALLE: Geburtsdatum im Kurzformat 2.12.59
+M-010;Sophie;Brandl;14.02.1994;01.10.2026;Kauffrau für Büromanagement;30;2.480,00;0,00;30;0;sophie.brandl@elektro-haldenberg.example;
+M-011;Dominik;Hauser;21.07.1990;15.09.2026;Elektroniker Energie- und Gebäudetechnik;40;3.560,00;68,00;30;0;dominik.hauser@elektro-haldenberg.example;
+M-012;Nils;Fender;03.11.1986;01.07.2026;Projektleiter, staatl. gepr. Elektrotechniker;40;4.890,00;92,00;30;0;nils.fender@elektro-haldenberg.example;
