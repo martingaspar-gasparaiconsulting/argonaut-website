@@ -66,6 +66,10 @@ export async function POST(req: Request) {
       if (vorhanden?.id) return NextResponse.json({ rechnungId: vorhanden.id, bereitsVorhanden: true });
       // Verwaiste Verknüpfung -> unten sauber neu anlegen.
     }
+    // Paket 146 (freigegeben 28.09.2026): Archiv aus dem Altsystem wird nie abgerechnet.
+    if (b.status === "abgeschlossen") {
+      return NextResponse.json({ error: "Diese Bestellung stammt aus dem Altsystem (Archiv) und wird nicht abgerechnet." }, { status: 400 });
+    }
     if (b.status === "storniert") {
       return NextResponse.json({ error: "Eine stornierte Bestellung wird nicht abgerechnet." }, { status: 400 });
     }

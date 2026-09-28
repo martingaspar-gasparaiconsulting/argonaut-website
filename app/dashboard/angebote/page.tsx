@@ -51,8 +51,10 @@ function angebotLoeschbar(a: Pick<Angebot, 'status' | 'rechnung_id'>): boolean {
 }
 
 const STATUS_FARBE: Record<string, string> = {
-  entwurf: C.textDim, gesendet: C.cyan, angenommen: C.green, abgelehnt: C.danger, abgelaufen: C.warn,
+  entwurf: C.textDim, gesendet: C.cyan, angenommen: C.green, abgelehnt: C.danger, abgelaufen: C.warn, archiv: C.textDim,
 };
+// Paket 146: Angebote aus dem Altsystem — nur Archiv: kein Zusage-Link, keine Unterschrift, keine Rechnung.
+const ARCHIV = 'archiv';
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function num(s: string) { return leseZahlOder(s, 0); }
 function heutePlus(tage: number) { const d = new Date(); d.setDate(d.getDate() + tage); return d.toISOString().slice(0, 10); }
@@ -90,15 +92,22 @@ export default function AngebotePage() {
 
   const basisUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
+  // Paket 146: das Archiv aus dem Altsystem getrennt (sonst verdraengt es die laufenden Angebote)
+  const [zeigeArchiv, setZeigeArchiv] = useState(false);
+  const [archivAnzahl, setArchivAnzahl] = useState(0);
+
   const laden_ = useCallback(async () => {
     // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Angebote.
     const sid = konkreterStandort(leseStandortCookie());
     let q = supabase.from('angebote')
       .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, kunde_email, kontakt_id');
     if (sid) q = q.or(standortOrFilter(sid));
-    const { data } = await q.order('erstellt_am', { ascending: false });
+    q = zeigeArchiv ? q.eq('status', ARCHIV) : q.neq('status', ARCHIV);
+    const { data } = await q.order('erstellt_am', { ascending: false }).limit(zeigeArchiv ? 500 : 1000);
     setListe((data as Angebot[]) ?? []);
-  }, []);
+    const { count } = await supabase.from('angebote').select('id', { count: 'exact', head: true }).eq('status', ARCHIV);
+    setArchivAnzahl(count ?? 0);
+  }, [zeigeArchiv]);
 
   useEffect(() => {
     (async () => {
@@ -231,7 +240,7 @@ export default function AngebotePage() {
             regel={(() => {
               const t = new Date().toISOString().slice(0, 10);
               const in7 = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-              const offen = liste.filter((a) => a.status !== 'angenommen' && a.status !== 'abgelehnt');
+              const offen = liste.filter((a) => a.status !== 'angenommen' && a.status !== 'abgelehnt' && a.status !== ARCHIV);
               const rot = offen.filter((a) => a.gueltig_bis && a.gueltig_bis < t).length;
               const gelb = offen.filter((a) => a.gueltig_bis && a.gueltig_bis >= t && a.gueltig_bis <= in7).length;
               return augeAmpel('Angebote', { rot, gelb });
@@ -306,7 +315,12 @@ export default function AngebotePage() {
       </div>
 
       {/* --- Liste --- */}
-      <h2 style={styles.h2}>Angebote <span style={{ color: C.textDim, fontWeight: 400 }}>({liste.length})</span></h2>
+      <h2 style={styles.h2}>{zeigeArchiv ? 'Archiv aus dem Altsystem' : 'Angebote'} <span style={{ color: C.textDim, fontWeight: 400 }}>({liste.length})</span></h2>
+      {(archivAnzahl > 0 || zeigeArchiv) && (
+        <button style={{ ...styles.mini, marginBottom: 12 }} onClick={() => setZeigeArchiv((a) => !a)}>
+          {zeigeArchiv ? '← Zurück zu den laufenden Angeboten' : `🗄 Archiv aus dem Altsystem anzeigen (${archivAnzahl.toLocaleString('de-DE')})`}
+        </button>
+      )}
       {laden ? (
         <p style={styles.sub}>Lädt …</p>
       ) : liste.length === 0 ? (
@@ -325,12 +339,12 @@ export default function AngebotePage() {
                 <div style={{ color: C.textDim, fontSize: 13 }}>{eur(a.brutto_summe)} brutto{a.gueltig_bis ? ` · gültig bis ${a.gueltig_bis.split('-').reverse().join('.')}` : ''}</div>
               </div>
               <span style={{ ...styles.badge, color: STATUS_FARBE[a.status] || C.textDim, borderColor: STATUS_FARBE[a.status] || C.border }}>
-                {a.status}
+                {a.status === ARCHIV ? `🗄 Archiv (Altsystem)${a.angebotsnummer ? ` · ${a.angebotsnummer}` : ''}` : a.status}
               </span>
               <div style={styles.itemBtns}>
-                <button style={styles.mini} onClick={() => kopieren(a)}>🔗 Link</button>
+                {a.status !== ARCHIV && <button style={styles.mini} onClick={() => kopieren(a)}>🔗 Link</button>}
                 <a href={`/api/angebot-pdf?id=${encodeURIComponent(a.id)}`} target="_blank" rel="noreferrer" style={styles.miniLink}>⬇ PDF</a>
-                <button style={styles.mini} disabled={busy === a.id} onClick={() => zurUnterschrift(a)}>✍️ Unterschrift</button>
+                {a.status !== ARCHIV && <button style={styles.mini} disabled={busy === a.id} onClick={() => zurUnterschrift(a)}>✍️ Unterschrift</button>}
                 {a.status === 'entwurf' && <button style={styles.mini} disabled={busy === a.id} onClick={() => statusSetzen(a, 'gesendet')}>✓ gesendet</button>}
                 {a.status === 'gesendet' && <button style={{ ...styles.mini, color: C.navy, background: C.green, borderColor: C.green }} disabled={busy === a.id} onClick={() => statusSetzen(a, 'angenommen')}>✓ angenommen</button>}
                 {a.status === 'angenommen' && (a.rechnung_id

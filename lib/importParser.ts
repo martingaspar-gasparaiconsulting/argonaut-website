@@ -706,7 +706,16 @@ export type ImportZiel = {
    * [{bezeichnung, menge, einzelpreis}] in die jsonb-Spalte `spalte` gelegt
    * (Shop-Bestellungen). Ohne Kind-Tabelle.
    */
-  jsonPositionen?: { kopfFeld: string; spalte: string; summeFeld?: string };
+  jsonPositionen?: {
+    kopfFeld: string; spalte: string; summeFeld?: string;
+    /**
+     * Paket 146: Die Positionen gehoeren in eine KIND-Tabelle (Angebote ->
+     * angebot_positionen). `spalte` beginnt dann mit „__" und geht nie in die
+     * Kopf-Tabelle; die Seite schreibt nach dem Kopf die Positionen
+     * (kindZeilen in importMotor). Scheitern sie, wird der Kopf wieder entfernt.
+     */
+    kindTabelle?: { tabelle: string; fremdschluessel: string };
+  };
   felder: ZielFeld[];
 };
 
@@ -2488,6 +2497,48 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'notes', 'kommentar', 'note'] },
     ],
   },
+  // Paket 146: GEMEINSAM freigegeben 27./28.09.2026 — Angebote NUR als Archiv:
+  // Kopf + Summen + Positionen, Status „archiv". Kein Zusage-Link (die Online-
+  // Zusage nimmt nur entwurf/gesendet an), keine Rechnungs-Verknuepfung, der
+  // Nummernkreis bleibt unberuehrt (ARGONAUT vergibt Angebotsnummern nicht
+  // selbst — live geprueft: kein Trigger, keine Check-Regel).
+  {
+    key: 'angebote',
+    label: 'Angebote (Archiv)',
+    icon: '📝',
+    tabelle: 'angebote',
+    beschreibung: 'Frühere Angebote als Archiv mit Summen und Positionen — eine Zeile je Position, gleiche Angebotsnummer = ein Angebot. '
+      + 'Sie bekommen den Status „Archiv": kein Zusage-Link, keine Rechnung, keine Erinnerungen. Der alte Status steht in der Notiz.',
+    schluesselFelder: ['angebotsnummer'],
+    eigeneFelderModul: 'angebote',
+    nurMitKatalog: true,
+    nurNeu: true,
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['kunde_name'] },
+    jsonPositionen: { kopfFeld: 'angebotsnummer', spalte: '__positionen', summeFeld: 'netto_summe', kindTabelle: { tabelle: 'angebot_positionen', fremdschluessel: 'angebot_id' } },
+    ausblenden: ['status', 'token', 'rechnung_id', 'angenommen_am', 'abgelehnt_am', 'genehmigung_noetig', 'genehmigt', 'standort_id'],
+    ergebnisHref: '/dashboard/angebote',
+    felder: [
+      { key: 'angebotsnummer', label: 'Angebotsnummer', typ: 'text', hinweis: 'Zeilen mit gleicher Nummer werden ein Angebot.', alias: ['angebotsnummer', 'angebot nr', 'angebotsnr', 'angebots nr', 'nummer', 'nr', 'belegnummer', 'quote number', 'quote id', 'kva nr'] },
+      { key: 'titel', label: 'Titel', typ: 'text', standard: 'Angebot', alias: ['titel', 'betreff', 'bezeichnung angebot', 'projekt', 'vorhaben', 'subject'] },
+      { key: 'kunde_name', label: 'Kunde', typ: 'text', alias: ['kunde', 'kundenname', 'kunde name', 'firma', 'empfaenger', 'empfänger', 'auftraggeber', 'customer'] },
+      KUNDE_NR_FELD,
+      { key: 'kunde_email', label: 'E-Mail Kunde', typ: 'text', alias: ['email', 'e-mail', 'kunde email', 'mail'] },
+      { key: 'angebotsdatum_alt', label: 'Angebotsdatum (in die Notiz)', typ: 'text', virtuell: 'anhang', anhangAn: 'notiz', nichtInVorlage: true, alias: ['angebotsdatum', 'datum', 'erstellt am', 'belegdatum', 'date'] },
+      { key: 'gueltig_bis', label: 'Gültig bis', typ: 'datum', alias: ['gueltig bis', 'gültig bis', 'bindefrist', 'gueltigkeit', 'gültigkeit', 'ablauf', 'valid until'] },
+      { key: 'netto_summe', label: 'Netto (€)', typ: 'zahl', alias: ['netto', 'nettosumme', 'netto summe', 'summe netto', 'net'] },
+      { key: 'mwst_summe', label: 'MwSt (€)', typ: 'zahl', alias: ['mwst', 'mwst betrag', 'ust', 'umsatzsteuer', 'steuer', 'tax'] },
+      { key: 'brutto_summe', label: 'Brutto (€)', typ: 'zahl', alias: ['brutto', 'bruttosumme', 'brutto summe', 'gesamt', 'gesamtbetrag', 'summe', 'total'] },
+      { key: 'rabatt_prozent', label: 'Rabatt (%)', typ: 'zahl', alias: ['rabatt prozent', 'rabatt %', 'rabatt in prozent'] },
+      { key: 'rabatt_betrag', label: 'Rabatt (€)', typ: 'zahl', alias: ['rabatt', 'rabatt betrag', 'nachlass'] },
+      { key: 'pos_bezeichnung', label: 'Position: Bezeichnung', typ: 'text', virtuell: 'position', positionSpalte: 'bezeichnung', alias: ['positionstext', 'position bezeichnung', 'leistung', 'artikel', 'artikelbezeichnung', 'bezeichnung', 'text', 'beschreibung'] },
+      { key: 'pos_menge', label: 'Position: Menge', typ: 'zahl', virtuell: 'position', positionSpalte: 'menge', alias: ['menge', 'anzahl', 'stueck', 'stück', 'qty'] },
+      { key: 'pos_einheit', label: 'Position: Einheit', typ: 'text', virtuell: 'position', positionSpalte: 'einheit', alias: ['einheit', 'me', 'mengeneinheit'] },
+      { key: 'pos_einzelpreis', label: 'Position: Einzelpreis netto (€)', typ: 'zahl', virtuell: 'position', positionSpalte: 'einzelpreis', alias: ['einzelpreis', 'ep', 'preis', 'stueckpreis', 'stückpreis', 'einheitspreis'] },
+      { key: 'pos_mwst', label: 'Position: MwSt-Satz', typ: 'zahl', virtuell: 'position', positionSpalte: 'mwst_satz', alias: ['mwst satz', 'steuersatz', 'ust satz', 'mwst %'] },
+      { key: 'status_alt', label: 'Status im Altsystem (in die Notiz)', typ: 'text', virtuell: 'anhang', anhangAn: 'notiz', nichtInVorlage: true, alias: ['status', 'angebotsstatus', 'stand', 'state'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar', 'notes'] },
+    ],
+  },
   // Paket 136: Umzug Schritt 4 Rest — Bestand je Filiale (Handel). Setzt
   // Zaehlstaende per Korrektur (lager_buchen), legt nichts an.
   {
@@ -2870,6 +2921,24 @@ Object.assign(BEISPIELE, {
     nachweis_status: 'offen||',
     sachbericht: '||',
     notiz: 'Förderkennzeichen 123-ABC||',
+  },
+  angebote: {
+    angebotsnummer: 'AN-2025-0117|AN-2025-0117|AN-2026-0003',
+    titel: 'Unterverteilung Neubau|Unterverteilung Neubau|Wallbox-Installation',
+    kunde_name: 'Muster Bau GmbH|Muster Bau GmbH|Anna Beispiel',
+    kunde_email: 'info@musterbau.example|info@musterbau.example|anna.beispiel@example.de',
+    gueltig_bis: '31.12.2025|31.12.2025|28.02.2026',
+    netto_summe: '1.850,00|1.850,00|1.290,00',
+    mwst_summe: '351,50|351,50|245,10',
+    brutto_summe: '2.201,50|2.201,50|1.535,10',
+    rabatt_prozent: '||',
+    rabatt_betrag: '||',
+    pos_bezeichnung: 'Unterverteilung 3-reihig inkl. Montage|Leitungsschutzschalter B16|Wallbox 11 kW inkl. Anschluss',
+    pos_menge: '1|10|1',
+    pos_einheit: 'Stk|Stk|Psch',
+    pos_einzelpreis: '1.450,00|40,00|1.290,00',
+    pos_mwst: '19|19|19',
+    notiz: '||',
   },
   shop: {
     extern_id: '#1001|#1001|#1002',
@@ -3416,6 +3485,8 @@ function nachbereiten(
   if (zielKey === 'aufwand') aufwandNachbereiten(werte, nummer, warnungen);
   // Paket 144: Shop-Archiv — IMMER abgeschlossen, nie ins Lager gebucht
   if (zielKey === 'shop') werte.status = 'abgeschlossen';
+  // Paket 146: Angebote aus dem Altsystem — IMMER Archiv (kein Zusage-Link, keine Rechnung, keine Ablaeufe)
+  if (zielKey === 'angebote') werte.status = 'archiv';
   // Paket 143
   if (zielKey === 'kautionen') kautionNachbereiten(werte, nummer, warnungen);
   if (zielKey === 'mietzahlungen') mietzahlungNachbereiten(werte, nummer, warnungen);
@@ -4400,6 +4471,8 @@ export function pruefeAlles(
 
   if (jp && ziel) {
     for (const s of saetze) jsonSummeSetzen(s, ziel, zeilenNummern[saetze.indexOf(s)] ?? 0, warnungen);
+    // Paket 146: Angebote — fehlende Netto/MwSt/Brutto aus den vorhandenen ergaenzen
+    if (zielKey === 'angebote') saetze.forEach((s, i) => angebotSummen(s, zeilenNummern[i] ?? 0, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD));
     if (zusammengefasst > 0) hinweise.push(`${zusammengefasst} Zeilen waren weitere Positionen einer Bestellung und wurden zusammengefasst.`);
   }
   return {
@@ -4441,6 +4514,29 @@ function jsonKopfErgaenzen(kopfSatz: Record<string, unknown>, werte: Record<stri
     else if (k === jp.summeFeld && typeof alt === 'number' && typeof v === 'number' && Math.abs(alt - v) > 0.005) {
       warnungen.push({ zeile: nummer, feld: ziel.felder.find((f) => f.key === k)?.label ?? k, meldung: `Andere Gesamtsumme als in der ersten Zeile dieser Bestellung (${String(alt).replace('.', ',')}) — die erste gilt.` });
     }
+  }
+}
+
+/**
+ * Paket 146: Angebots-Summen vervollstaendigen — aus zwei der drei Werte den
+ * dritten, aus einem allein mit dem Steuersatz (Warnung). Nichts vorhanden =
+ * nichts erfunden (0 wie in der Datenbank).
+ */
+function angebotSummen(satz: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[], steuersatz: number): void {
+  const z = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const n = z(satz.netto_summe); const m = z(satz.mwst_summe); const b = z(satz.brutto_summe);
+  const warn = (text: string) => warnungen.push({ zeile: nummer, feld: 'Summen', meldung: text });
+  if (n !== null && b !== null && m === null) satz.mwst_summe = centRunden(b - n);
+  else if (n !== null && m !== null && b === null) satz.brutto_summe = centRunden(n + m);
+  else if (b !== null && m !== null && n === null) satz.netto_summe = centRunden(b - m);
+  else if (n !== null && m === null && b === null) {
+    satz.mwst_summe = centRunden(n * steuersatz / 100); satz.brutto_summe = centRunden(n + (satz.mwst_summe as number));
+    warn(`Nur Netto in der Datei — MwSt mit ${steuersatz} % gerechnet (bitte prüfen).`);
+  } else if (b !== null && n === null && m === null) {
+    satz.netto_summe = centRunden(b / (1 + steuersatz / 100)); satz.mwst_summe = centRunden(b - (satz.netto_summe as number));
+    warn(`Nur Brutto in der Datei — Netto mit ${steuersatz} % zurückgerechnet (bitte prüfen).`);
+  } else if (n !== null && m !== null && b !== null && Math.abs(n + m - b) > 0.02) {
+    warn('Netto + MwSt ergibt nicht Brutto — bitte prüfen (Werte wie in der Datei übernommen).');
   }
 }
 

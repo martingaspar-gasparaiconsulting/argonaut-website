@@ -36,6 +36,7 @@ import {
   type ImportZiel, type ZielFeld, type Mapping, type FeldTyp, type Tabelle,
 } from './importParser';
 import { systemAliase, DATEV_SPALTEN_KONTAKTE, DATEV_SPALTEN_LIEFERANTEN } from './altsysteme';
+import { centRunden } from './zahlen';
 
 /** Mapping-Wert: diese Spalte als Eigenes Feld uebernehmen. */
 export const EIGEN = '@eigen';
@@ -173,7 +174,9 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
 
   const vorhanden = new Map(eigene.map((c) => [c.spalte, c]));
   // Paket 127: Positionen (Bestellungen) — deren Spalten stehen in der Kinder-Tabelle.
-  const kinderSpalten = new Set((dbSpalten ?? []).filter((c) => basis.kinder && c.tabelle === basis.kinder.tabelle && !c.generiert).map((c) => c.spalte));
+  // Paket 146: auch die Kind-Tabelle der jsonPositionen (Angebote -> angebot_positionen)
+  const kindTabelle = basis.kinder?.tabelle ?? basis.jsonPositionen?.kindTabelle?.tabelle ?? null;
+  const kinderSpalten = new Set((dbSpalten ?? []).filter((c) => kindTabelle && c.tabelle === kindTabelle && !c.generiert).map((c) => c.spalte));
   const nutzbar = (key: string) => {
     const c = vorhanden.get(key);
     return !!c && !c.generiert;
@@ -199,8 +202,11 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
       continue;
     }
     if (f.virtuell === 'position' && basis.jsonPositionen) {
+      const kt = basis.jsonPositionen.kindTabelle;
+      // Paket 146: Positionen in einer Kind-Tabelle — Fremdschluessel und Spalte muessen dort da sein
+      if (kt) (kinderSpalten.has(kt.fremdschluessel) && (!f.positionSpalte || kinderSpalten.has(f.positionSpalte)) ? felder : fehlend).push(f);
       // Paket 144: Positionen als Liste in EINER jsonb-Spalte (Shop-Archiv)
-      (vorhanden.has(basis.jsonPositionen.spalte) ? felder : fehlend).push(f);
+      else (vorhanden.has(basis.jsonPositionen.spalte) ? felder : fehlend).push(f);
       continue;
     }
     if (f.virtuell === 'position') {
@@ -957,5 +963,29 @@ export function positionenJeEintrag(saetze: readonly Record<string, unknown>[], 
     zaehler.set(k, n);
     const vorhanden = s[spalte];
     return typeof vorhanden === 'number' && vorhanden > 0 ? null : n;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Paket 146: Positionen fuer eine Kind-Tabelle (Angebote -> angebot_positionen)
+// ---------------------------------------------------------------------------
+
+/**
+ * Die gesammelten Positionen eines Kopfes (satz[jsonPositionen.spalte]) als
+ * Zeilen fuer die Kind-Tabelle: laufende Position, Besitzer = Betrieb,
+ * gesamt_netto = Menge x Einzelpreis (auf Cent), nur bekannte Schluessel.
+ */
+export function kindZeilen(
+  positionen: unknown, kopfId: string, fremdschluessel: string, owner: string,
+): Record<string, unknown>[] {
+  if (!Array.isArray(positionen)) return [];
+  const erlaubt = new Set(['bezeichnung', 'menge', 'einheit', 'einzelpreis', 'mwst_satz']);
+  return positionen.filter((p) => p && typeof p === 'object').map((p, i) => {
+    const z: Record<string, unknown> = { owner_user_id: owner, [fremdschluessel]: kopfId, position: i + 1 };
+    for (const [k, v] of Object.entries(p as Record<string, unknown>)) if (erlaubt.has(k)) z[k] = v;
+    const menge = typeof z.menge === 'number' ? z.menge : 1;
+    z.menge = menge;
+    if (typeof z.einzelpreis === 'number') z.gesamt_netto = centRunden(menge * z.einzelpreis);
+    return z;
   });
 }

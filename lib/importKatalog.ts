@@ -134,6 +134,8 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'kassen', label: 'Kassen & TSE', icon: '🧮', beschreibung: 'Kassen und TSE je Betriebsstätte für die Mitteilung ans Finanzamt.', musterZiel: 'kassen', zielHref: '/dashboard/kasse/meldung', motor: 'kassen', gruppe: 'finanzen' },
   // Paket 140: GEMEINSAM freigegeben — Mitglieder ohne Bankdaten, nur Chef.
   { key: 'mitglieder', label: 'Mitglieder & Abos', icon: '👥', beschreibung: 'Mitglieder und Abos mit Beitrag, Intervall und Vertragsdaten — ohne Bankverbindung, das SEPA-Mandat wird neu erfasst (nur Geschäftsleitung).', musterZiel: 'mitglieder', zielHref: '/dashboard/mitglieder', motor: 'mitglieder', gruppe: 'finanzen' },
+  // Paket 146: GEMEINSAM freigegeben — Angebote nur als Archiv (kein Zusage-Link, keine Rechnung).
+  { key: 'angebote', label: 'Angebote (Archiv)', icon: '📝', beschreibung: 'Frühere Angebote mit Summen und Positionen als Archiv — ohne Zusage-Link und ohne Rechnung.', musterZiel: 'angebote', zielHref: '/dashboard/angebote', motor: 'angebote', gruppe: 'finanzen' },
   // Paket 144: GEMEINSAM freigegeben — Shop-Bestellungen nur als Archiv.
   { key: 'shop', label: 'Shop-Bestellungen (Archiv)', icon: '🛒', beschreibung: 'Frühere Online-Bestellungen als Archiv — ohne Lagerbuchung, Rechnung oder Mail.', musterZiel: 'shop', zielHref: '/dashboard/shop', motor: 'shop', gruppe: 'finanzen' },
   // Paket 141: GEMEINSAM freigegeben — Spenden immer unbestaetigt.

@@ -32,7 +32,7 @@ import {
   EIGEN, NICHT, MOTOR_TABELLEN, GRUND, eindeutigeKoepfe, katalogFuerZiel, vorschlagMapping, bereinigeMapping,
   spaltenBilanz, eigeneSpalten, eigeneWerteDerZeile, eigeneFelderZuordnen, erkennungsFelder, baueBestandIndex,
   findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
-  sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, erkennungsSpalten, type KundeRoh,
+  sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, erkennungsSpalten, kindZeilen, type KundeRoh,
   verweisAusMitarbeitern, verweisAusLieferanten, istPersonalnummerLabel, type MitarbeiterRoh, type LieferantRoh,
   nachschlagIndex, fehlendeNamen, loeseNachschlag, elternZeilen, positionenJeEintrag, nachschlagPflichtGrund,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
@@ -575,6 +575,13 @@ export default function ImportCenterPage() {
       if (z.kinder) {
         for (let i = 0; i < ids.length; i += 200) {
           await supabase.from(z.kinder.tabelle).delete().in(z.kinder.fremdschluessel, ids.slice(i, i + 200));
+        }
+      }
+      // Paket 146: ebenso die Positionen der Angebote
+      const kt = z.jsonPositionen?.kindTabelle;
+      if (kt) {
+        for (let i = 0; i < ids.length; i += 200) {
+          await supabase.from(kt.tabelle).delete().in(kt.fremdschluessel, ids.slice(i, i + 200));
         }
       }
       for (let i = 0; i < ids.length; i += 200) {
@@ -1511,6 +1518,8 @@ export default function ImportCenterPage() {
 
       const neu: Record<string, unknown>[] = [];
       const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
+      const neuPos: unknown[] = [];                // Paket 146: Positionen je neuem Kopf (Kind-Tabelle)
+      const kindTab = ziel.jsonPositionen?.kindTabelle ?? null;
       const zuAendern: { id: string; werte: Record<string, unknown>; zeile: number }[] = [];
 
       bericht.saetze.forEach((satzRoh, idx) => {
@@ -1580,6 +1589,7 @@ export default function ImportCenterPage() {
           return;
         }
         neu.push({ ...satz, owner_user_id: neuOwner });
+        if (kindTab) neuPos.push(satzRoh[ziel.jsonPositionen!.spalte] ?? []);
         neuZeile.push(dateiZeile);
       });
       gesamtSchreiben = neu.length + zuAendern.length;
@@ -1629,7 +1639,24 @@ export default function ImportCenterPage() {
         if (anhaltenRef.current) break;
         const stapel = neu.slice(p.von, p.bis);
         const { data: neuIds, error } = await supabase.from(ziel.tabelle).insert(stapel).select('id');
-        if (!error) {
+        // Paket 146: Positionen in die Kind-Tabelle; scheitern sie, fliegen die Koepfe wieder raus (keine halben Angebote).
+        let kindFehler: string | null = null;
+        if (!error && kindTab) {
+          const ids0 = ((neuIds as { id: string }[] | null) ?? []).map((r) => String(r.id));
+          if (ids0.length !== stapel.length) kindFehler = 'Rückmeldung der Datenbank unvollständig';
+          else {
+            const kz = ids0.flatMap((id, j) => kindZeilen(neuPos[p.von + j], id, kindTab.fremdschluessel, neuOwner));
+            if (kz.length > 0) {
+              const { error: ek } = await supabase.from(kindTab.tabelle).insert(kz);
+              if (ek) kindFehler = ek.message;
+            }
+          }
+          if (kindFehler && ids0.length > 0) await supabase.from(ziel.tabelle).delete().in('id', ids0);
+        }
+        if (kindFehler) {
+          erg.fehlgeschlagen += stapel.length;
+          for (let j = 0; j < stapel.length; j++) erg.fehler.push({ zeile: neuZeile[p.von + j] ?? 0, feld: 'Positionen', meldung: `Positionen nicht gespeichert (${kindFehler}) — Eintrag nicht übernommen.` });
+        } else if (!error) {
           erg.angelegt += stapel.length;
           const ids = ((neuIds as { id: string }[] | null) ?? []).map((r) => String(r.id));
           ids.forEach((id) => angelegteIds.push(id));
@@ -1653,8 +1680,19 @@ export default function ImportCenterPage() {
                 meldung: e2.message,
               });
             } else {
-              erg.angelegt++;
               const id = ((eineId as { id: string }[] | null) ?? [])[0]?.id;
+              // Paket 146: auch einzeln — erst die Positionen, sonst Kopf wieder weg
+              if (id && kindTab) {
+                const kz = kindZeilen(neuPos[p.von + j], String(id), kindTab.fremdschluessel, neuOwner);
+                const { error: ek } = kz.length > 0 ? await supabase.from(kindTab.tabelle).insert(kz) : { error: null };
+                if (ek) {
+                  await supabase.from(ziel.tabelle).delete().eq('id', id);
+                  erg.fehlgeschlagen++;
+                  erg.fehler.push({ zeile: neuZeile[p.von + j] ?? 0, feld: 'Positionen', meldung: `Positionen nicht gespeichert (${ek.message}) — Eintrag nicht übernommen.` });
+                  continue;
+                }
+              }
+              erg.angelegt++;
               if (id) { angelegteIds.push(id); await eigeneSchreiben([{ id: String(id), dateiZeile: neuZeile[p.von + j] ?? 0 }]); }
             }
           }
