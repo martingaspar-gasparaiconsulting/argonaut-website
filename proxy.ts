@@ -113,9 +113,15 @@ export async function proxy(req: NextRequest) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  // ▄▄▄ PAKET 163 (S3, 28.09.2026): getUser statt getSession ▄▄▄
+  // getSession() glaubt dem Cookie, ohne es beim Anmelde-Dienst zu pruefen —
+  // ein gebastelter Cookie kam damit am Pfoertner vorbei (die Daten schuetzt
+  // danach zwar RLS, aber die Weiche unten entschied mit ungeprueften Angaben).
+  // getUser() laesst den Zugang beim Anmelde-Dienst bestaetigen und frischt
+  // einen abgelaufenen Zugang dabei wie bisher auf (Cookies oben).
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session) {
+  if (!user) {
     return NextResponse.redirect(new URL('/auth/login', req.url))
   }
 
@@ -154,7 +160,7 @@ export async function proxy(req: NextRequest) {
   const { data: customer } = await supabase
     .from('customers')
     .select('status')
-    .eq('email', session.user.email)
+    .eq('email', user.email)
     .single()
 
   if (customer) {
@@ -167,7 +173,7 @@ export async function proxy(req: NextRequest) {
     const { data: mitarbeiter } = await supabase
       .from('mitarbeiter')
       .select('id, darf_verteilen, nutzer_typ')
-      .eq('auth_user_id', session.user.id)
+      .eq('auth_user_id', user.id)
       .maybeSingle()
 
     if (mitarbeiter) {
