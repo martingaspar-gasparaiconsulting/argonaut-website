@@ -4,6 +4,7 @@ import {
   triggerDef, aktionDef, pruefeRegel, platzhalterWerte,
   type AutomationRegel, type Datensatz,
 } from '@/lib/automation';
+import { regelUebernommen } from '@/lib/ablaufMotor';
 
 // ============================================================================
 // ARGONAUT OS · /api/automationen/probe — Probelauf fuer den Betrieb selbst
@@ -54,6 +55,9 @@ export async function GET() {
 
   const regeln = (regelDaten ?? []) as AutomationRegel[];
   const ergebnis: ProbeRegel[] = [];
+  // Paket 157: von einem eingeschalteten Ablauf uebernommen -> die Regel laeuft nicht mehr.
+  const { data: uebernommenDaten } = await supabase.from('ablaeufe').select('alt_regel_id,aktiv').eq('aktiv', true);
+  const uebernommen = (uebernommenDaten ?? []) as { alt_regel_id: string | null; aktiv: boolean }[];
 
   for (const regel of regeln) {
     const t = triggerDef(regel.trigger_typ);
@@ -64,6 +68,15 @@ export async function GET() {
         ausloeser: regel.trigger_typ, aktion: regel.aktion_typ,
         geprueft: 0, faellig: 0, wuerde_laufen: 0, zurueckgestellt: 0, schon_erledigt: 0,
         beispiele: [], hinweis: 'Auslöser oder Aktion ist unbekannt — diese Regel läuft nicht.',
+      });
+      continue;
+    }
+
+    if (regelUebernommen(regel.id, uebernommen)) {
+      ergebnis.push({
+        id: regel.id, name: regel.name, aktiv: regel.aktiv, ausloeser: t.label, aktion: a.label,
+        geprueft: 0, faellig: 0, wuerde_laufen: 0, zurueckgestellt: 0, schon_erledigt: 0, beispiele: [],
+        hinweis: 'Als Ablauf übernommen und dort eingeschaltet — diese Automation läuft nicht mehr (siehe Abläufe).',
       });
       continue;
     }

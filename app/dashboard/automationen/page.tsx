@@ -313,6 +313,15 @@ export default function AutomationenPage() {
         ))}
       </div>
 
+      {/* Paket 157: Nachfolger — Abläufe (Ketten, Freigabe, Protokoll) */}
+      <div style={{ ...karte, borderColor: 'rgba(0,229,255,0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ color: C.textDim, fontSize: 13.5, maxWidth: 760, lineHeight: 1.5 }}>
+          <b style={{ color: C.text }}>Neu: Abläufe.</b> Mehrere Schritte, Wartezeiten, Wenn/Sonst und Ihre Freigabe vor Geld-Schritten.
+          Jede Automation lässt sich dort per Knopf übernehmen — sie läuft weiter, bis Sie den Ablauf einschalten.
+        </div>
+        <a href="/dashboard/ablaeufe" style={{ ...knopf('rand'), textDecoration: 'none' }}>🔀 Zu den Abläufen</a>
+      </div>
+
       {fehler && <div style={{ ...karte, borderColor: 'rgba(224,102,102,0.5)', color: C.danger, fontSize: 14 }}>⚠️ {fehler}</div>}
       {ok && <div style={{ ...karte, borderColor: 'rgba(76,175,125,0.5)', color: C.green, fontSize: 14 }}>✓ {ok}</div>}
 

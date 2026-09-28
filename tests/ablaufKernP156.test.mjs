@@ -41,7 +41,9 @@ test('Kataloge: die fuenf bisherigen Aktionen sind im Motor, Neues ist gekennzei
   assert.equal(ablaufAktion('mahnstufe_erhoehen').geld, true);
   assert.equal(ablaufAktion('mail_senden').kundenpost, true);
   assert.equal(ablaufAktion('webhook_senden').extern, true);
-  for (const k of ['freigabe_chef', 'glocke', 'termin_anlegen', 'pdf_erstellen', 'ki_schritt', 'webhook_senden']) assert.equal(ablaufAktion(k).imMotor, false, k);
+  // Paket 157: freigabe_chef ist jetzt im Motor
+  assert.equal(ablaufAktion('freigabe_chef').imMotor, true);
+  for (const k of ['glocke', 'termin_anlegen', 'pdf_erstellen', 'ki_schritt', 'webhook_senden']) assert.equal(ablaufAktion(k).imMotor, false, k);
   assert.equal(new Set(ABLAUF_AKTIONEN.map((a) => a.key)).size, ABLAUF_AKTIONEN.length);
   assert.equal(EREIGNISSE.find((e) => e.key === 'kontakt_angelegt').werbung, true);
   assert.equal(EREIGNISSE.find((e) => e.key === 'rechnung_angelegt').werbung, false);
@@ -115,11 +117,13 @@ test('Fahrplan: Aktionen bis zum Warten; nach dem Warten Wenn entscheidet; Freig
   assert.deepEqual(fahrplan(leerZweig, null, {}, JETZT).jetzt.map((e) => e.pfad), ['0', '1']);
 });
 
-test('Pruefung: Mahnlauf ist gueltig (aber nicht einschaltbar: Freigabe kann der Motor noch nicht)', () => {
+test('Pruefung: Mahnlauf ist gueltig und seit Paket 157 einschaltbar (Freigabe im Motor); Glocke noch nicht', () => {
   const p = pruefeAblauf(MAHNLAUF);
   assert.deepEqual(p.fehler, []);
-  assert.equal(p.aktivierbar, false);
-  assert.ok(p.hinweise.some((h) => /noch nicht ausführt/.test(h)));
+  assert.equal(p.aktivierbar, true);
+  const mitGlocke = pruefeAblauf({ ...MAHNLAUF, schritte: [...MAHNLAUF.schritte, { id: 'z', typ: 'aktion', aktion: 'glocke', config: { text: 'x' } }] });
+  assert.equal(mitGlocke.aktivierbar, false);
+  assert.ok(mitGlocke.hinweise.some((h) => /noch nicht ausführt/.test(h)));
   // Rechnung ueberfaellig ist Betriebspost -> kein Werbe-Hinweis
   assert.ok(!p.hinweise.some((h) => /Werbung/.test(h)));
 });

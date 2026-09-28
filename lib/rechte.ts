@@ -361,6 +361,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📥 Import-Center', href: '/dashboard/import', modul: 'import', ebene: 3, gruppe: 'verwaltung' },
   // Automationen loesen Mahnungen, Mails und Statuswechsel aus — das bleibt Chefsache.
   { label: '⚡ Automationen', href: '/dashboard/automationen', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
+  // Paket 157 (28.09.26): Abläufe — Nachfolger der Automationen (Ketten, Freigabe, Protokoll). Chefsache.
+  { label: '🔀 Abläufe', href: '/dashboard/ablaeufe', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🔧 Einstellungen', href: '/dashboard/einstellungen', immer: true, ebene: 4, gruppe: 'verwaltung', kern: true },
 ]
 

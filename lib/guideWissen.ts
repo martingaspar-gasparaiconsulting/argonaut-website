@@ -1340,6 +1340,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Eine Vorlage übernehmen und „Automation anlegen“ — die Regel startet pausiert. Dann „🔍 Probelauf“, erst danach „Aktivieren“.', loeschen: '„Löschen“ an der Regel, mit Rückfrage.' },
     landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Mahnwesen (Mahnstufe)', href: '/dashboard/mahnwesen' }, { text: 'Vertrieb/CRM', href: '/dashboard/crm' }],
   },
+  '/dashboard/ablaeufe': {
+    zweck: 'Abläufe sind Ketten aus Schritten, die der Betrieb von allein abarbeitet: ein Auslöser wie „Rechnung ist überfällig", danach Aktionen, Wartezeiten und Wenn/Sonst. Schritte, die Geld betreffen (Mahnstufe), halten an, bis der Chef freigibt. Der Motor prüft stündlich, jeder Schritt steht im Protokoll. Bisherige Automationen lassen sich per Knopf übernehmen.',
+    wer: 'chef',
+    werText: 'Nur der Chef übernimmt, schaltet ein oder aus und erteilt Freigaben. Mitarbeiter sehen den Stand und das Protokoll, ändern aber nichts.',
+    schritte: [
+      'Unter „Bisherige Automationen übernehmen" bei einer Automation „→ Als Ablauf übernehmen" klicken — der Ablauf startet ausgeschaltet, die alte Automation läuft weiter',
+      '„🔍 Probelauf" am Ablauf zeigt je Vorgang, welche Schritte jetzt laufen würden und worauf danach gewartet wird. Es wird nichts ausgeführt',
+      '„Einschalten" — die alte Automation wird dabei ausgeschaltet, damit nichts doppelt läuft; was sie schon erledigt hat, wird nicht wiederholt',
+      'Wartet ein Lauf auf eine Freigabe, steht er oben unter „Freigaben für Sie": „✓ Freigeben" (geht spätestens in einer Stunde weiter) oder „✕ Ablehnen" (mit Rückfrage, der Lauf endet)',
+      'Unter „Letzte Läufe" zeigt „Protokoll" jeden Schritt; ein wartender Lauf lässt sich mit „Abbrechen" beenden. Ist der Vorgang inzwischen erledigt (z. B. Rechnung bezahlt), endet der Lauf von selbst',
+    ],
+    probe: { anlegen: 'Eine pausierte Automation „→ Als Ablauf übernehmen" und „🔍 Probelauf" ansehen — ohne „Einschalten" passiert nichts.', loeschen: 'Löschen eines Ablaufs ist hier noch nicht möglich; „Ausschalten" hält ihn an.' },
+    landetIn: [{ text: 'Automationen', href: '/dashboard/automationen' }, { text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Mahnwesen (Mahnstufe)', href: '/dashboard/mahnwesen' }],
+  },
   '/dashboard/einstellungen': {
     zweck: 'Firmenprofil und Grundeinstellungen: Anschrift, Kontakt, Registerdaten, Steuer, Bankverbindung, Kleinunternehmer-Regel und Akzentfarbe für Dokumente — dazu Anfahrt und Fahrtkosten, API-Schlüssel, Modul-Auswahl fürs Menü und das eigene Passwort.',
     wer: 'chef',

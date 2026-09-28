@@ -41,6 +41,10 @@
       "schedule": "30 7 * * *"
     },
     {
+      "path": "/api/cron/ablaeufe",
+      "schedule": "20 * * * *"
+    },
+    {
       "path": "/api/cron/ki-batch-abholen",
       "schedule": "*/15 * * * *"
     },

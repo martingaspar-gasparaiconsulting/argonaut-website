@@ -111,8 +111,9 @@ export const ABLAUF_AKTIONEN: AblaufAktionDef[] = [
   { key: 'status_aendern', label: 'Status ändern', hinweis: 'Setzt den Status des Vorgangs.', pflicht: ['neuer_status'], imMotor: true },
   { key: 'mahnstufe_erhoehen', label: 'Mahnstufe erhöhen', hinweis: 'Erhöht die Mahnstufe der Rechnung.', geld: true, pflicht: [], imMotor: true },
   { key: 'notiz_anhaengen', label: 'Notiz anhängen', hinweis: 'Schreibt eine Notiz an den Vorgang.', pflicht: ['text'], imMotor: true },
+  // Seit Paket 157 im Motor: der Lauf hält an (Status „freigabe"), bis der Chef auf der Seite zustimmt.
+  { key: 'freigabe_chef', label: 'Freigabe durch den Chef', hinweis: 'Hält an, bis die Geschäftsleitung zustimmt.', pflicht: [], imMotor: true },
   // Neu im Baukasten — der Motor lernt sie in den folgenden Paketen.
-  { key: 'freigabe_chef', label: 'Freigabe durch den Chef', hinweis: 'Hält an, bis die Geschäftsleitung zustimmt.', pflicht: [], imMotor: false },
   { key: 'glocke', label: 'Meldung in der Glocke', hinweis: 'Benachrichtigt die Geschäftsleitung oder das Team.', pflicht: ['text'], imMotor: false },
   { key: 'termin_anlegen', label: 'Termin anlegen', hinweis: 'Legt einen Termin an.', pflicht: ['titel'], imMotor: false },
   { key: 'pdf_erstellen', label: 'PDF erstellen', hinweis: 'Erstellt ein PDF aus einer Vorlage.', pflicht: ['vorlage'], imMotor: false },

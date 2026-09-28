@@ -7,6 +7,7 @@ import {
   alsZahl, istWerbung, type AutomationRegel, type TriggerDef, type Datensatz,
 } from '@/lib/automation';
 import { werbeStatus, WERBE_STATUS_TEXT } from '@/lib/segmente';
+import { regelUebernommen } from '@/lib/ablaufMotor';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/automationen — der Motor des Automations-Bauers
@@ -208,6 +209,13 @@ async function lauf(req: Request) {
 
   const regeln = (regelDaten ?? []) as AutomationRegel[];
   const bericht: Array<Record<string, unknown>> = [];
+
+  // Paket 157: Hat ein EINGESCHALTETER Ablauf diese Regel übernommen, läuft nur
+  // noch der Ablauf — nie beide (sonst doppelte Mail/Mahnung).
+  const { data: uebernommenDaten } = regeln.length > 0
+    ? await admin.from('ablaeufe').select('alt_regel_id,aktiv').eq('aktiv', true).in('alt_regel_id', regeln.map((r) => r.id))
+    : { data: [] };
+  const uebernommen = (uebernommenDaten ?? []) as { alt_regel_id: string | null; aktiv: boolean }[];
   let gesamtOk = 0, gesamtFehler = 0, gesamtUebersprungen = 0, gesamtGeplant = 0;
 
   for (const regel of regeln) {
@@ -215,6 +223,10 @@ async function lauf(req: Request) {
     const a = aktionDef(regel.aktion_typ);
     if (!t || !a) {
       bericht.push({ regel: regel.name, hinweis: 'Ausloeser oder Aktion unbekannt — uebersprungen' });
+      continue;
+    }
+    if (regelUebernommen(regel.id, uebernommen)) {
+      bericht.push({ regel: regel.name, hinweis: 'als Ablauf uebernommen und dort eingeschaltet — uebersprungen' });
       continue;
     }
 
