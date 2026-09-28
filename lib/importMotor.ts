@@ -120,6 +120,8 @@ export type KatalogSpalte = {
  */
 export const SYSTEM_SPALTEN = new Set([
   'id', 'owner_user_id', 'user_id', 'erstellt_von', 'geaendert_von', 'created_by', 'updated_by',
+  // S2 (Paket 162): Nachweis setzt die Datenbank, nie eine Datei
+  'erstellt_von_name', 'entschieden_von', 'entschieden_von_name', 'entschieden_am',
   'created_at', 'updated_at', 'erstellt_am', 'aktualisiert_am', 'geaendert_am', 'deleted_at', 'geloescht_am',
   'standort_id', 'mandant_id', 'tenant_id', 'betrieb_id', 'firma_id', 'lead_id', 'kontakt_id',
   // Werbe-Einwilligungen nie aus einer Datei (UWG) — siehe istEinwilligungSpalte

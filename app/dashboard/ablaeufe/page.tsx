@@ -39,9 +39,11 @@ type AblaufZeile = Ablauf & { id: string; owner_user_id: string; version: number
 type LaufZeile = {
   id: string; ablauf_id: string; ziel_typ: string | null; ziel_id: string | null; status: string; pfad: string | null;
   weiter_am: string | null; meldung: string | null; gestartet_am: string; kontext: { tabelle?: string; slot?: string } | null;
+  /** S2 (Paket 162): wer hat freigegeben/abgelehnt/abgebrochen — setzt die Datenbank (SQL p162). */
+  entschieden_von_name?: string | null; entschieden_am?: string | null;
 };
 type VersionZeile = { id: string; version: number; name: string | null; ausloeser: Ablauf['ausloeser']; schritte: Schritt[]; gespeichert_am: string };
-type ProtokollZeile = { id: string; pfad: string | null; schritt_typ: string | null; ergebnis: string; meldung: string | null; zeit: string };
+type ProtokollZeile = { id: string; pfad: string | null; schritt_typ: string | null; ergebnis: string; meldung: string | null; zeit: string; erstellt_von_name?: string | null };
 type Probe = {
   ok: boolean; error?: string; geprueft?: number; faellig?: number; wuerde_starten?: number; zurueckgestellt?: number; hinweis?: string;
   beispiele?: { vorgang: string; schritte: { pfad: string; text: string }[]; danach: string }[];
@@ -120,13 +122,19 @@ export default function AblaeufePage() {
   const alles = useCallback(async () => {
     setLaden(true); setFehler(null);
     try {
-      const [a, r, l] = await Promise.all([
+      const [a, r, lMit] = await Promise.all([
         supabase.from('ablaeufe').select('*').order('erstellt_am', { ascending: false }),
         supabase.from('automation_regeln').select('*').order('erstellt_am', { ascending: false }),
-        supabase.from('ablauf_laeufe').select('id,ablauf_id,ziel_typ,ziel_id,status,pfad,weiter_am,meldung,gestartet_am,kontext')
+        supabase.from('ablauf_laeufe').select('id,ablauf_id,ziel_typ,ziel_id,status,pfad,weiter_am,meldung,gestartet_am,kontext,entschieden_von_name,entschieden_am')
           .eq('probe', false).order('gestartet_am', { ascending: false }).limit(100),
       ]);
       if (a.error) throw a.error;
+      // S2: Ohne SQL p162 fehlen die Nachweis-Spalten — dann wie bisher laden,
+      // damit Freigaben nie unsichtbar werden.
+      const l = lMit.error
+        ? await supabase.from('ablauf_laeufe').select('id,ablauf_id,ziel_typ,ziel_id,status,pfad,weiter_am,meldung,gestartet_am,kontext')
+          .eq('probe', false).order('gestartet_am', { ascending: false }).limit(100)
+        : lMit;
       const lz = (l.data as LaufZeile[]) ?? [];
       setAblaeufe((a.data as AblaufZeile[]) ?? []);
       setRegeln((r.data as AutomationRegel[]) ?? []);
@@ -320,9 +328,19 @@ export default function AblaeufePage() {
 
   async function zeigeProtokoll(l: LaufZeile) {
     if (protokoll?.laufId === l.id) { setProtokoll(null); return; }
-    const { data, error } = await supabase.from('ablauf_protokoll').select('id,pfad,schritt_typ,ergebnis,meldung,zeit').eq('lauf_id', l.id).order('zeit', { ascending: true });
+    const mit = await supabase.from('ablauf_protokoll').select('id,pfad,schritt_typ,ergebnis,meldung,zeit,erstellt_von_name').eq('lauf_id', l.id).order('zeit', { ascending: true });
+    // S2: Rueckfall ohne Nachweis-Spalte (vor SQL p162)
+    const { data, error } = mit.error
+      ? await supabase.from('ablauf_protokoll').select('id,pfad,schritt_typ,ergebnis,meldung,zeit').eq('lauf_id', l.id).order('zeit', { ascending: true })
+      : mit;
     if (error) { setFehler('Protokoll: ' + error.message); return; }
     setProtokoll({ laufId: l.id, zeilen: (data as ProtokollZeile[]) ?? [] });
+  }
+
+  // S2 (Paket 162): Nachweis am einzelnen Lauf — wer hat entschieden, wann.
+  function entschiedenText(l: LaufZeile): string {
+    if (!l.entschieden_von_name) return '';
+    return ` · entschieden von ${l.entschieden_von_name}${l.entschieden_am ? ` (${fmtZeit(l.entschieden_am)})` : ''}`;
   }
 
   function laufZeile(l: LaufZeile, mitEntscheidung: boolean) {
@@ -339,6 +357,7 @@ export default function AblaeufePage() {
             <div style={klein}>
               Gestartet {fmtZeit(l.gestartet_am)} · <span style={{ color: STATUS_FARBE[l.status] ?? C.textDim, fontWeight: 700 }}>{STATUS_TEXT[l.status] ?? l.status}</span>
               {l.status === 'wartet' && l.weiter_am ? ` bis ${fmtZeit(l.weiter_am)}` : ''}{l.meldung ? ` · ${l.meldung}` : ''}
+              {entschiedenText(l)}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -358,7 +377,7 @@ export default function AblaeufePage() {
           <div style={{ marginTop: 8, padding: 10, borderRadius: 9, background: 'rgba(10,22,40,0.5)' }}>
             {protokoll.zeilen.length === 0 ? <div style={klein}>Noch keine Einträge.</div> : protokoll.zeilen.map((p) => (
               <div key={p.id} style={{ fontSize: 12.5, padding: '2px 0', color: p.ergebnis === 'fehler' ? C.danger : C.text }}>
-                {fmtZeit(p.zeit)} · Schritt {p.pfad ?? '—'} · {p.ergebnis} · {p.meldung}
+                {fmtZeit(p.zeit)} · Schritt {p.pfad ?? '—'} · {p.ergebnis} · {p.meldung}{p.erstellt_von_name ? ` · ${p.erstellt_von_name}` : ''}
               </div>
             ))}
           </div>
