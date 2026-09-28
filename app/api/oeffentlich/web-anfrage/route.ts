@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendeMail, mailLayout } from '@/lib/mail';
-import { escapeHtml } from '@/lib/newsletter';
+import { escapeHtml, istEmailGueltig } from '@/lib/newsletter';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/web-anfrage  (Website-Bauer · Anfrage → CRM)
@@ -60,8 +61,12 @@ export async function POST(req: Request) {
     if (b.privacy !== true) {
       return NextResponse.json({ error: 'Bitte der Datenschutzerklärung zustimmen.' }, { status: 400 });
     }
+    if (email && !istEmailGueltig(email)) return NextResponse.json({ error: 'Bitte eine gültige E-Mail-Adresse angeben.' }, { status: 400 });
 
     const db = admin();
+    // S1: Mengen-Deckel je Absender und je Mail-Adresse (lib/drossel.ts).
+    const zuViel = await drossel(db, 'oeffentlich/web-anfrage', { ip: drosselIp(req.headers), ziel: email ? `${seite}|${email}` : null });
+    if (zuViel) return NextResponse.json({ error: drosselText(zuViel) }, { status: 429 });
 
     // Seiten-Inhaber sicher bestimmen — nur veröffentlichte Seiten nehmen an.
     const { data: seiteRow } = await db

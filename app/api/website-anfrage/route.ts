@@ -19,6 +19,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { sendeMail, mailLayout } from '@/lib/mail'
 import { escapeHtml } from '@/lib/newsletter'
 import { starteDossierOptin } from '@/lib/dossierFunnel'
+import { drossel, drosselIp, drosselText } from '@/lib/drossel'
 
 export const runtime = 'nodejs'
 
@@ -44,6 +45,11 @@ async function reserviereSlot(supabase: SupabaseClient | null, key: string | nul
   const slot_date = key.slice(0, 10)
   const slot_time = key.slice(11).trim()
   if (!/^\d{4}-\d{2}-\d{2}$/.test(slot_date) || !/^\d{2}:\d{2}$/.test(slot_time)) return 'skip' as const
+  // S1: nur Termine ab heute bis 120 Tage voraus — sonst konnte ein Skript
+  // beliebig viele Fantasie-Tage belegen und die Tabelle fuellen.
+  const heute = new Date().toISOString().slice(0, 10)
+  const grenze = new Date(Date.now() + 120 * 86400000).toISOString().slice(0, 10)
+  if (slot_date < heute || slot_date > grenze) return 'skip' as const
   if (!supabase) return 'skip' as const
 
   const { error } = await supabase.from('website_termine').insert({
@@ -158,6 +164,11 @@ export async function POST(req: Request) {
     // Das stoert nicht: sie werden schlicht ignoriert.
 
     const supabase = getSupabase()
+    // S1: Mengen-Deckel je Absender und je Mail-Adresse (lib/drossel.ts).
+    if (supabase) {
+      const zuViel = await drossel(supabase, 'website-anfrage', { ip: drosselIp(req.headers), ziel: email })
+      if (zuViel) return NextResponse.json({ error: drosselText(zuViel) }, { status: 429 })
+    }
 
     // 1. Wunschtermin reservieren (falls gewählt). Doppelbuchung -> 409.
     const slotKey = clean((body as any).wunschterminKey, 30)

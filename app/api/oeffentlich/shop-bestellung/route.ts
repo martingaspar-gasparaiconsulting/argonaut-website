@@ -12,7 +12,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendeMail, mailLayout } from '@/lib/mail';
-import { escapeHtml } from '@/lib/newsletter';
+import { escapeHtml, istEmailGueltig } from '@/lib/newsletter';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
     if (!seite) return NextResponse.json({ error: 'Seite nicht erkannt.' }, { status: 400 });
     if (!besteller) return NextResponse.json({ error: 'Bitte Ihren Namen angeben.' }, { status: 400 });
     if (!email && !telefon) return NextResponse.json({ error: 'Bitte E-Mail oder Telefon angeben.' }, { status: 400 });
+    if (email && !istEmailGueltig(email)) return NextResponse.json({ error: 'Bitte eine gültige E-Mail-Adresse angeben.' }, { status: 400 });
     if (b.privacy !== true) return NextResponse.json({ error: 'Bitte der Datenschutzerklärung zustimmen.' }, { status: 400 });
     if (!eingaben.length) return NextResponse.json({ error: 'Ihr Warenkorb ist leer.' }, { status: 400 });
 
@@ -69,6 +71,9 @@ export async function POST(req: Request) {
     if (!wunsch.size) return NextResponse.json({ error: 'Keine gültigen Positionen.' }, { status: 400 });
 
     const db = admin();
+    // S1: Mengen-Deckel je Absender und je Mail-Adresse + Shop (lib/drossel.ts).
+    const zuViel = await drossel(db, 'oeffentlich/shop-bestellung', { ip: drosselIp(req.headers), ziel: email ? `${seite}|${email}` : null });
+    if (zuViel) return NextResponse.json({ error: drosselText(zuViel) }, { status: 429 });
 
     // Inhaber sicher bestimmen — nur veröffentlichte Seiten nehmen Bestellungen an.
     const { data: s } = await db.from('web_seiten').select('owner_user_id, status').eq('oeffentlich_id', seite).maybeSingle();

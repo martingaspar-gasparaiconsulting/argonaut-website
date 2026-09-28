@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { kopfzeilenRegel } from "./lib/sicherheitsKopfzeilen";
+import { kopfzeilenRegel, rahmenSchutzRegeln } from "./lib/sicherheitsKopfzeilen";
 
 const nextConfig: NextConfig = {
   // Lese-Bibliotheken serverseitig laden statt bündeln (Vercel-sicher).
@@ -19,7 +19,8 @@ const nextConfig: NextConfig = {
   // Beleg-Erkennung abschalten. Die gehoeren einzeln gebaut und im Browser
   // nachgeprueft.
   async headers() {
-    return [kopfzeilenRegel()];
+    // S1 (Paket 161): Rahmen-Schutz nur fuer Dashboard/Betreiber/Anmeldung.
+    return [kopfzeilenRegel(), ...rahmenSchutzRegeln()];
   },
 
   async redirects() {

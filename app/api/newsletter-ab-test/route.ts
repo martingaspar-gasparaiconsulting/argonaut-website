@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server';
 import { sendeMail } from '@/lib/mail';
 import { abmeldeUrl, newsletterMailHtml } from '@/lib/newsletter';
 import { messeMit } from '@/lib/mailMessung';
+import { klickSignatur } from '@/lib/mailKlickSignatur';
 import { pruefeMenge, teileAuf, phase, ergebnis, fehltZumStart } from '@/lib/abTest';
 
 // ============================================================================
@@ -97,7 +98,7 @@ export async function POST(req: Request) {
           abmeldeUrl(origin, a.abmelde_token || ''),
           p.firma_akzentfarbe,
         );
-        const html = schluessel ? messeMit(roh, origin, zeile.id, schluessel) : roh;
+        const html = schluessel ? messeMit(roh, origin, zeile.id, schluessel, klickSignatur) : roh;
         const r = await sendeMail({ an: a.email, betreff, html, absenderName: firmaName, antwortAn });
         if (r.ok) erfolg++; else fehler++;
       }

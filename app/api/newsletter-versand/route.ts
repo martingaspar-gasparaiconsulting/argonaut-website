@@ -4,6 +4,7 @@ import { sendeMail } from '@/lib/mail';
 import { abmeldeUrl, newsletterMailHtml } from '@/lib/newsletter';
 import { werbeKopfzeilen } from '@/lib/werbemail';
 import { messeMit } from '@/lib/mailMessung';
+import { klickSignatur } from '@/lib/mailKlickSignatur';
 
 // ============================================================================
 // ARGONAUT OS · app/api/newsletter-versand/route.ts  (Punkt 29b/29c)
@@ -131,7 +132,7 @@ export async function POST(req: Request) {
       // Ohne Mess-Schlüssel wird NICHT gemessen — die Mail geht trotzdem
       // raus. Eine fehlende Statistik ist kein Grund, niemandem zu schreiben.
       const html = messSchluessel
-        ? messeMit(roh, origin, protokoll.id, messSchluessel)
+        ? messeMit(roh, origin, protokoll.id, messSchluessel, klickSignatur)
         : roh;
       const r = await sendeMail({
         an: a.email,

@@ -5,13 +5,16 @@
 // oeffentlich_id aus web_seiten (status=live). Es wird KEINE Bestellung storniert
 // — der Betrieb erhält den Widerruf per Mail und bestätigt/erledigt ihn. Der
 // Verbraucher bekommt sofort eine Empfangsbestätigung (gesetzlich vorgesehen).
-// Kein SQL. Muster wie web-anfrage (Service-Role, owner nie vom Client).
+// Muster wie web-anfrage (Service-Role, owner nie vom Client).
+// S1 (Paket 161): Mengen-Deckel, Speicherung in shop_widerrufe (SQL p161),
+// Rückfall auf die Firmen-Mail, keine Eingangsbestätigung ohne Zugang.
 // ============================================================================
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendeMail, mailLayout } from '@/lib/mail';
-import { escapeHtml } from '@/lib/newsletter';
+import { escapeHtml, istEmailGueltig } from '@/lib/newsletter';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,10 +51,14 @@ export async function POST(req: Request) {
     if (!seite) return NextResponse.json({ error: 'Seite nicht erkannt.' }, { status: 400 });
     if (!name) return NextResponse.json({ error: 'Bitte Ihren Namen angeben.' }, { status: 400 });
     if (!email) return NextResponse.json({ error: 'Bitte Ihre E-Mail-Adresse angeben.' }, { status: 400 });
+    if (!istEmailGueltig(email)) return NextResponse.json({ error: 'Bitte eine gültige E-Mail-Adresse angeben.' }, { status: 400 });
     if (!ware) return NextResponse.json({ error: 'Bitte angeben, welche Bestellung / Ware Sie widerrufen.' }, { status: 400 });
     if (b.privacy !== true) return NextResponse.json({ error: 'Bitte der Datenschutzerklärung zustimmen.' }, { status: 400 });
 
     const db = admin();
+    // S1: Mengen-Deckel (lib/drossel.ts). Sichtbar abgewiesen, nie still verschluckt.
+    const zuViel = await drossel(db, 'oeffentlich/widerruf', { ip: drosselIp(req.headers), ziel: `${seite}|${email}` });
+    if (zuViel) return NextResponse.json({ error: drosselText(zuViel) }, { status: 429 });
     const { data: s } = await db.from('web_seiten').select('owner_user_id, status').eq('oeffentlich_id', seite).maybeSingle();
     const inh = s as { owner_user_id?: string; status?: string } | null;
     if (!inh || inh.status !== 'live' || !inh.owner_user_id) {
@@ -62,7 +69,24 @@ export async function POST(req: Request) {
     const { data: ciRow } = await db.from('web_ci').select('firma, email').eq('owner_user_id', ownerId).maybeSingle();
     const ci = ciRow as { firma?: string; email?: string } | null;
     const firma = (ci?.firma || '').toString().trim();
-    const betriebMail = (ci?.email || '').toString().trim();
+    let betriebMail = (ci?.email || '').toString().trim();
+    // S1: Ohne Mail-Adresse in der Website-CI ging der Widerruf vorher spurlos
+    // verloren. Rückfall: die Firmen-Mail aus den Einstellungen.
+    if (!betriebMail) {
+      const { data: prof } = await db.from('profiles').select('firma_email').eq('id', ownerId).maybeSingle();
+      betriebMail = ((prof as { firma_email?: string | null } | null)?.firma_email || '').toString().trim();
+    }
+
+    // S1: Widerruf ZUERST speichern (Nachweis des Zugangs, § 355 BGB). Fehlt die
+    // Tabelle noch (SQL p161), läuft es wie bisher nur per Mail weiter.
+    let gespeichert = false;
+    try {
+      const { error: wErr } = await db.from('shop_widerrufe').insert({
+        owner_user_id: ownerId, seite, name, anschrift, email, bestellung, datum, ware,
+      });
+      gespeichert = !wErr;
+      if (wErr) console.error('widerruf speichern:', wErr.message);
+    } catch (e) { console.error('widerruf speichern:', e instanceof Error ? e.message : e); }
 
     const zeilen: Array<[string, string | null]> = [
       ['Name', name],
@@ -77,6 +101,7 @@ export async function POST(req: Request) {
       .join('');
 
     // 1) Widerruf an den Betrieb (Pflicht: der Unternehmer muss ihn erhalten).
+    let betriebErreicht = false;
     if (betriebMail) {
       const html = mailLayout(
         'Elektronischer Widerruf eingegangen',
@@ -86,6 +111,12 @@ export async function POST(req: Request) {
       );
       const r = await sendeMail({ an: betriebMail, betreff: `Widerruf: ${name}`, html, ...(email ? { antwortAn: email } : {}) });
       if (!r.ok) console.error('widerruf Betriebs-Mail:', r.fehler);
+      betriebErreicht = r.ok;
+    }
+    // S1: Weder gespeichert noch beim Betrieb angekommen -> KEINE falsche
+    // Eingangsbestätigung, sondern ehrlich sagen, dass es nicht geklappt hat.
+    if (!gespeichert && !betriebErreicht) {
+      return NextResponse.json({ error: 'Ihr Widerruf konnte gerade nicht zugestellt werden. Bitte senden Sie ihn direkt per E-Mail oder Post an den Händler (siehe Impressum).' }, { status: 503 });
     }
 
     // 2) Empfangsbestätigung an den Verbraucher (gesetzlich vorgesehen).

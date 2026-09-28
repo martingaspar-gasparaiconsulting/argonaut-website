@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { sendeMail, absenderBranding } from '@/lib/mail';
 import { emailNormalisieren, istEmailGueltig, optinBestaetigenUrl, optinBestaetigungHtml } from '@/lib/newsletter';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 // ============================================================================
 // ARGONAUT OS · app/api/oeffentlich/optin/route.ts  (Paket 2b · Double-Opt-In)
@@ -72,11 +73,14 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     const slug = (body?.slug || '').toString().trim().toLowerCase();
     const email = emailNormalisieren(body?.email);
-    const name = (body?.name || '').toString().trim() || null;
+    const name = (body?.name || '').toString().trim().slice(0, 80) || null;
     if (!slug) return NextResponse.json({ ok: false, error: 'Kein Anmelde-Link.' }, { status: 400 });
     if (!istEmailGueltig(email)) return NextResponse.json({ ok: false, error: 'Bitte eine gültige E-Mail-Adresse eingeben.' }, { status: 400 });
 
     const db = admin();
+    // S1: Mengen-Deckel je Absender und je Mail-Adresse + Betrieb (lib/drossel.ts).
+    const zuViel = await drossel(db, 'oeffentlich/optin', { ip: drosselIp(req.headers), ziel: `${slug}|${email}` });
+    if (zuViel) return NextResponse.json({ ok: false, error: drosselText(zuViel) }, { status: 429 });
     const betrieb = await betriebAusSlug(db, slug);
     if (!betrieb) return NextResponse.json({ ok: false, error: 'Diese Anmeldeseite ist nicht (mehr) verfügbar.' }, { status: 404 });
 
@@ -124,7 +128,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, status: 'bestaetigung_gesendet' });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Anmeldung fehlgeschlagen.';
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    // S1: interne Fehlertexte nie nach außen.
+    console.error('optin POST:', e instanceof Error ? e.message : e);
+    return NextResponse.json({ ok: false, error: 'Anmeldung fehlgeschlagen. Bitte später erneut versuchen.' }, { status: 500 });
   }
 }

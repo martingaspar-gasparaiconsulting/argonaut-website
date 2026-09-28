@@ -71,3 +71,38 @@ export function kopfzeile(key: string): string | null {
   const treffer = SICHERHEITS_KOPFZEILEN.find((k) => k.key.toLowerCase() === t);
   return treffer ? treffer.value : null;
 }
+
+// ============================================================================
+// RAHMEN-SCHUTZ nur für die INNEREN Bereiche (S1, Paket 161)
+//
+// Oben steht, warum frame-ancestors NICHT global gesetzt wird: öffentliche
+// Seiten (Berater, Kundenseiten, Landingpages, Buchung, Portal) dürfen
+// eingebettet werden. Das Dashboard, der Betreiber-Bereich und die
+// Anmeldeseiten dagegen NIE von fremden Seiten: sonst kann eine fremde Seite
+// ARGONAUT unsichtbar überlagern und angemeldete Nutzer Knöpfe drücken lassen
+// („Clickjacking"). 'self' erlaubt weiter das Einbetten innerhalb von ARGONAUT
+// (z. B. /buehne zeigt /vorschau) — niemand wird ausgesperrt.
+// ============================================================================
+
+export const RAHMEN_SCHUTZ: Kopfzeile[] = [
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+];
+
+/** Innere Bereiche (Next-Pfadmuster). Öffentliche Türen stehen hier NIE. */
+export const INNERE_BEREICHE: string[] = [
+  '/dashboard',
+  '/dashboard/:pfad*',
+  '/admin',
+  '/admin/:pfad*',
+  '/admin-login',
+  // NICHT /anmelden/<slug>: das ist die ÖFFENTLICHE Newsletter-Anmeldeseite
+  // eines Betriebs und darf auf dessen Webseite eingebettet werden.
+  '/auth/:pfad*',
+  '/webseiten-editor',
+];
+
+/** Regeln für next.config.ts `headers()` — je innerem Bereich eine. */
+export function rahmenSchutzRegeln(): { source: string; headers: Kopfzeile[] }[] {
+  return INNERE_BEREICHE.map((source) => ({ source, headers: RAHMEN_SCHUTZ }));
+}

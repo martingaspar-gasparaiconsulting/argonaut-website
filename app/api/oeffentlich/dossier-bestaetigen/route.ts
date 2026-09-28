@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { sendeMail, mailLayout } from '@/lib/mail';
 import { dossierAusliefernHtml } from '@/lib/dossierMail';
+import { escapeHtml } from '@/lib/newsletter';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/dossier-bestaetigen  (I4 · DOI-Bestätigung)
@@ -57,7 +58,7 @@ export async function GET(req: Request) {
         await sendeMail({
           an: OPERATOR_MAIL,
           betreff: `Neuer Dossier-Lead: ${l.email}`,
-          html: mailLayout('Neuer Dossier-Lead', `<p><b>${l.email}</b>${l.name ? ' · ' + l.name : ''}${l.branche ? ' · ' + l.branche : ''}${l.quelle ? ' · Quelle: ' + l.quelle : ''} hat bestätigt.</p>`),
+          html: mailLayout('Neuer Dossier-Lead', `<p><b>${escapeHtml(l.email)}</b>${l.name ? ' · ' + escapeHtml(l.name) : ''}${l.branche ? ' · ' + escapeHtml(l.branche) : ''}${l.quelle ? ' · Quelle: ' + escapeHtml(l.quelle) : ''} hat bestätigt.</p>`),
         });
       } catch {}
     }

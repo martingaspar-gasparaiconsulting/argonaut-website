@@ -5,6 +5,7 @@ import { brancheAufloesen, dossierKey } from '../../../vorschau/_lib/dossierHtml
 import { dossierPdf } from '@/lib/dossierPdf';
 import { ebookDateiPfad, inhaltsStempel, downloadName } from '@/lib/ebookDatei';
 import type { BausteinZeile } from '@/lib/inhaltBaustein';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/ebook-pdf
@@ -107,6 +108,9 @@ export async function GET(req: Request) {
 
   try {
     const db = admin();
+    // S1: Mengen-Deckel je Absender (lib/drossel.ts) — jeder Aufruf liest Speicher/Datenbank.
+    const zuViel = await drossel(db, 'oeffentlich/ebook-pdf', { ip: drosselIp(req.headers) });
+    if (zuViel) return new NextResponse(drosselText(zuViel), { status: 429, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     const { zeilen, juengste } = await ladeFreigegebene(db);
 
     // Reicht es für ein vollständiges Buch? Sonst das Dossier.

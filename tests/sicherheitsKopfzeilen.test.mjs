@@ -83,3 +83,31 @@ test('kopfzeile() ist unempfindlich gegen Gross- und Kleinschreibung', () => {
   assert.equal(kopfzeile(''), null);
   assert.equal(kopfzeile(null), null);
 });
+
+// ---------- S1 (Paket 161): Rahmen-Schutz NUR fuer innere Bereiche ----------
+import { RAHMEN_SCHUTZ, INNERE_BEREICHE, rahmenSchutzRegeln } from '../out/sicherheitsKopfzeilen.js';
+
+test('S1: Rahmen-Schutz setzt SAMEORIGIN und frame-ancestors self', () => {
+  const xfo = RAHMEN_SCHUTZ.find((k) => k.key === 'X-Frame-Options');
+  const csp = RAHMEN_SCHUTZ.find((k) => k.key === 'Content-Security-Policy');
+  assert.equal(xfo?.value, 'SAMEORIGIN');
+  assert.equal(csp?.value, "frame-ancestors 'self'");
+});
+
+test('S1: Dashboard, Betreiber-Bereich und Login sind geschuetzt', () => {
+  for (const p of ['/dashboard', '/dashboard/:pfad*', '/admin', '/admin/:pfad*', '/admin-login', '/auth/:pfad*']) {
+    assert.ok(INNERE_BEREICHE.includes(p), p + ' fehlt');
+  }
+  assert.equal(rahmenSchutzRegeln().length, INNERE_BEREICHE.length);
+  for (const r of rahmenSchutzRegeln()) assert.equal(r.headers, RAHMEN_SCHUTZ);
+});
+
+test('WAECHTER S1: oeffentliche Tueren bleiben einbettbar', () => {
+  const oeffentlich = ['/', '/p', '/lp', '/w', '/f', '/buchen', '/portal', '/angebot', '/anmelden', '/api', '/vorschau', '/branchen', '/bewerten', '/whatsapp-anmelden', '/signieren', '/p-domain'];
+  for (const q of INNERE_BEREICHE) {
+    for (const o of oeffentlich) {
+      assert.ok(!(q === o || q.startsWith(o + '/')) || o === '/', `${q} wuerde die oeffentliche Tuer ${o} sperren`);
+    }
+    assert.ok(q !== '/:pfad*' && q !== '/', 'nie global');
+  }
+});

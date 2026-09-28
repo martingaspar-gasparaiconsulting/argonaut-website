@@ -26,6 +26,7 @@ import { createClient } from '@supabase/supabase-js';
 import { berechneSlots, type VerfuegbarkeitRow, type TerminRow, type AbwesenheitRow, type TerminArt } from '@/app/dashboard/_components/slotLogik';
 import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
 import { kontaktIdPerEmail } from '@/lib/kontaktZuordnung';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -146,10 +147,11 @@ export async function POST(req: NextRequest) {
     const beginnIso = typeof body?.beginn_am === 'string' ? body.beginn_am : '';
     const endeIso = typeof body?.ende_am === 'string' ? body.ende_am : '';
     const mitarbeiterId = typeof body?.mitarbeiter_id === 'string' && body.mitarbeiter_id ? body.mitarbeiter_id : null;
-    const kundeName = (typeof body?.kunde_name === 'string' ? body.kunde_name : '').trim();
-    const kundeMail = (typeof body?.kunde_email === 'string' ? body.kunde_email : '').trim();
-    const telefon = (typeof body?.telefon === 'string' ? body.telefon : '').trim();
-    const notizIn = (typeof body?.notiz === 'string' ? body.notiz : '').trim();
+    // S1: Längen begrenzt (Name steht in der Mail, Notiz im Kalender des Betriebs).
+    const kundeName = (typeof body?.kunde_name === 'string' ? body.kunde_name : '').trim().slice(0, 120);
+    const kundeMail = (typeof body?.kunde_email === 'string' ? body.kunde_email : '').trim().slice(0, 200);
+    const telefon = (typeof body?.telefon === 'string' ? body.telefon : '').trim().slice(0, 40);
+    const notizIn = (typeof body?.notiz === 'string' ? body.notiz : '').trim().slice(0, 1000);
 
     if (!slug || !artId) return NextResponse.json({ error: 'Buchung unvollständig.' }, { status: 400 });
     if (!kundeName) return NextResponse.json({ error: 'Bitte Ihren Namen angeben.' }, { status: 400 });
@@ -163,6 +165,9 @@ export async function POST(req: NextRequest) {
     }
 
     const db = admin();
+    // S1: Mengen-Deckel je Absender und je Mail-Adresse + Betrieb (lib/drossel.ts).
+    const zuViel = await drossel(db, 'oeffentlich/buchung', { ip: drosselIp(req.headers), ziel: `${slug}|${kundeMail}` });
+    if (zuViel) return NextResponse.json({ error: drosselText(zuViel) }, { status: 429 });
     const betrieb = await betriebAusSlug(db, slug);
     if (!betrieb) return NextResponse.json({ error: 'Diese Buchungsseite ist nicht (mehr) verfügbar.' }, { status: 404 });
 
@@ -185,6 +190,9 @@ export async function POST(req: NextRequest) {
     if (!passt) {
       return NextResponse.json({ error: 'Dieser Termin ist leider gerade vergeben worden. Bitte einen anderen wählen.' }, { status: 409 });
     }
+    // S1: Das Ende kommt aus dem geprüften Slot, NIE vom Browser. Vorher konnte
+    // ein gültiger Beginn mit ende_am=2099 den ganzen Kalender blockieren.
+    const endeSlot = passt.ende;
 
     const notiz = [notizIn, telefon ? `Tel.: ${telefon}` : ''].filter(Boolean).join('\n') || null;
     // Filial-Stempel: Standort des gebuchten Mitarbeiters (falls gewählt), sonst null = fail-open.
@@ -209,7 +217,7 @@ export async function POST(req: NextRequest) {
 
     const { error: insErr } = await db.from('termine').insert({
       owner_user_id: betrieb.ownerId, standort_id: standortId, termin_art_id: art.id,
-      beginn_am: beginnD.toISOString(), ende_am: endeD.toISOString(),
+      beginn_am: beginnD.toISOString(), ende_am: endeSlot.toISOString(),
       titel: `${art.name || 'Termin'} (online gebucht)`,
       kunde_name: kundeName, kunde_email: kundeMail, notiz, kontakt_id: kontaktId,
       mitarbeiter_id: mitarbeiterId, status: 'geplant', quelle: 'online',
@@ -221,7 +229,7 @@ export async function POST(req: NextRequest) {
     try {
       const brand = await absenderBranding(db, betrieb.ownerId);
       const datumStr = beginnD.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' });
-      const zeitStr = `${beginnD.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })}–${endeD.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })} Uhr`;
+      const zeitStr = `${beginnD.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })}–${endeSlot.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })} Uhr`;
       const inhalt = `
         <p>Guten Tag ${escapeHtml(kundeName)},</p>
         <p>vielen Dank — Ihr Termin bei <b>${escapeHtml(betrieb.name)}</b> ist gebucht:</p>

@@ -4,12 +4,15 @@
 // „Was kann ARGONAUT für [Branche]?" — gespeist aus den ECHTEN Branchen-Daten
 // (Schmerzen, Ergebnisse, Module). Läuft über kiFetch (Kosten protokolliert,
 // Haiku = günstig). Erfindet nichts, verweist auf Termin/Test.
-// Missbrauchs-Schutz: gültige Branche nötig, Frage ≤500, Verlauf ≤6, max_tokens klein.
+// Missbrauchs-Schutz: gültige Branche nötig, Frage ≤500, Verlauf ≤6, max_tokens klein,
+// S1: Mengen-Deckel je Besucher (10/Min, 60/Tag) und gesamt (3000/Tag), lib/drossel.ts.
 // AI-Act: klar als KI gekennzeichnet. Body: { slug, frage, verlauf? }.
 // ============================================================================
 
 import { NextResponse } from 'next/server';
 import { kiFetch } from '@/lib/ki';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 import { websiteBrancheBySlug } from '../../../vorschau/_lib/branchen-web';
 import { baukastenFor } from '../../../vorschau/_lib/branchen-bausteine';
 
@@ -31,6 +34,12 @@ export async function POST(req: Request) {
 
     const b = websiteBrancheBySlug(slug);
     if (!b) return NextResponse.json({ error: 'Branche nicht gefunden.' }, { status: 404 });
+
+    // S1: Deckel VOR dem KI-Aufruf — jede Antwort kostet ARGONAUT Geld.
+    try {
+      const zuViel = await drossel(createAdminClient(), 'oeffentlich/branchen-chat', { ip: drosselIp(req.headers) });
+      if (zuViel) return NextResponse.json({ error: drosselText(zuViel) }, { status: 429 });
+    } catch { /* ohne Datenbank-Zugang: wie bisher weiter (nie aussperren) */ }
 
     const bau = baukastenFor(b.kategorie);
     const module = [...bau.stack, ...bau.spezial]

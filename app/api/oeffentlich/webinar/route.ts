@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendeMail, kundenMailLayout } from '@/lib/mail';
 import { escapeHtml, sichereFarbe } from '@/lib/newsletter';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 import {
   pruefeAnmeldung, bestaetigenUrl, kannAnmelden, platzZahlen,
   formatiereTermin, dauerText, anrede, setzePlatzhalter,
@@ -69,7 +70,8 @@ async function webinarPerKey(db: ReturnType<typeof admin>, key: string) {
   const { data } = await db
     .from('webinare')
     .select('id, owner_user_id, titel, beschreibung, referent, aktiv, key')
-    .ilike('key', key)
+    // S1: Platzhalter maskieren — sonst findet „a%“ Schlüssel per Präfix.
+    .ilike('key', key.replace(/[\\%_]/g, (z) => '\\' + z))
     .maybeSingle();
   return (data as WebinarRow | null) ?? null;
 }
@@ -175,6 +177,9 @@ export async function POST(req: Request) {
     if (!geprueft.ok) return NextResponse.json({ ok: false, error: geprueft.fehler }, { status: 400 });
 
     const db = admin();
+    // S1: Mengen-Deckel je Absender und je Mail-Adresse + Webinar (lib/drossel.ts).
+    const zuViel = await drossel(db, 'oeffentlich/webinar', { ip: drosselIp(req.headers), ziel: `${key}|${geprueft.email}` });
+    if (zuViel) return NextResponse.json({ ok: false, error: drosselText(zuViel) }, { status: 429 });
     const w = await webinarPerKey(db, key);
     if (!w || !w.aktiv) {
       return NextResponse.json({ ok: false, error: 'Diese Seite ist nicht verfügbar.' }, { status: 404 });

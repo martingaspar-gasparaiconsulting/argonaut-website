@@ -78,7 +78,9 @@ export async function GET(req: Request) {
       .from('kontakte')
       .update({ werbe_widerspruch_am: new Date().toISOString() })
       .eq('id', lauf.kontakt_id)
-      .eq('owner_user_id', lauf.owner_user_id);
+      .eq('owner_user_id', lauf.owner_user_id)
+      // S1: der erste Widerspruch bleibt der Nachweis — nicht bei jedem Klick überschreiben.
+      .is('werbe_widerspruch_am', null);
     if (kFehler) console.error('[rueckhol-abmelden] Kontakt', kFehler.message);
   }
 

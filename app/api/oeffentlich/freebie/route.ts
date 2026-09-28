@@ -6,6 +6,7 @@ import {
   pruefeAnmeldung, bestaetigenUrl, setzePlatzhalter, anrede,
   STATUS_AKTIV, STATUS_ABGEMELDET,
 } from '@/lib/freebie';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/freebie   (D3)
@@ -120,6 +121,9 @@ export async function POST(req: Request) {
     if (!geprueft.ok) return NextResponse.json({ ok: false, error: geprueft.fehler }, { status: 400 });
 
     const db = admin();
+    // S1: Mengen-Deckel je Absender und je Mail-Adresse + Freebie (lib/drossel.ts).
+    const zuViel = await drossel(db, 'oeffentlich/freebie', { ip: drosselIp(req.headers), ziel: `${key}|${geprueft.email}` });
+    if (zuViel) return NextResponse.json({ ok: false, error: drosselText(zuViel) }, { status: 429 });
     const f = await freebiePerKey(db, key);
     if (!f || !f.aktiv) {
       return NextResponse.json({ ok: false, error: 'Diese Seite ist nicht verfügbar.' }, { status: 404 });

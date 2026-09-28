@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { telefonNormalisieren, istTelefonPlausibel, einwilligungsText } from '@/lib/whatsapp';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 // ============================================================================
 // ARGONAUT OS · app/api/oeffentlich/whatsapp-optin/route.ts  (WhatsApp P2)
@@ -69,11 +70,14 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     const slug = (body?.slug || '').toString().trim().toLowerCase();
     const telefon = telefonNormalisieren((body?.telefon || '').toString());
-    const name = (body?.name || '').toString().trim() || null;
+    const name = (body?.name || '').toString().trim().slice(0, 80) || null;
     if (!slug) return NextResponse.json({ ok: false, error: 'Kein Anmelde-Link.' }, { status: 400 });
     if (!istTelefonPlausibel(telefon)) return NextResponse.json({ ok: false, error: 'Bitte eine gültige Handynummer eingeben (z. B. +49 170 1234567).' }, { status: 400 });
 
     const db = admin();
+    // S1: Mengen-Deckel je Absender und je Nummer + Betrieb (lib/drossel.ts).
+    const zuViel = await drossel(db, 'oeffentlich/whatsapp-optin', { ip: drosselIp(req.headers), ziel: `${slug}|${telefon}` });
+    if (zuViel) return NextResponse.json({ ok: false, error: drosselText(zuViel) }, { status: 429 });
     const betrieb = await betriebAusSlug(db, slug);
     if (!betrieb) return NextResponse.json({ ok: false, error: 'Diese Anmeldeseite ist nicht (mehr) verfügbar.' }, { status: 404 });
 
@@ -87,6 +91,11 @@ export async function POST(req: Request) {
       .maybeSingle();
     const v = vorhanden as { id: string; status: string } | null;
     if (v && v.status === 'aktiv') return NextResponse.json({ ok: true, status: 'bereits' });
+    // S1: Eine Abmeldung darf nicht von Dritten über das Formular aufgehoben
+    // werden (hier gibt es keine Bestätigung wie beim E-Mail-Double-Opt-in).
+    if (v && v.status === 'abgemeldet') {
+      return NextResponse.json({ ok: false, error: 'Diese Nummer wurde abgemeldet. Für eine erneute Anmeldung wenden Sie sich bitte direkt an den Betrieb.' }, { status: 409 });
+    }
 
     const jetzt = new Date().toISOString();
     if (v) {
@@ -109,7 +118,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, status: 'angemeldet' });
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'Anmeldung fehlgeschlagen.';
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    // S1: interne Fehlertexte nie nach außen.
+    console.error('whatsapp-optin POST:', e instanceof Error ? e.message : e);
+    return NextResponse.json({ ok: false, error: 'Anmeldung fehlgeschlagen. Bitte später erneut versuchen.' }, { status: 500 });
   }
 }

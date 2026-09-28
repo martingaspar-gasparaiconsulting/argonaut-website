@@ -157,12 +157,25 @@ export function istUmleitbar(url: unknown): boolean {
   return true;
 }
 
+/**
+ * Signatur-Funktion für einen Klick-Link (S1, Paket 161). Kommt vom Server
+ * (lib/mailKlickSignatur.ts, braucht ein Geheimnis) — diese Datei bleibt rein
+ * und im Browser nutzbar. Ohne Signatur zeigt /mail-klick nur eine
+ * Zwischenseite statt sofort weiterzuleiten.
+ */
+export type KlickSignierer = (versandId: string, schluessel: string, ziel: string) => string;
+
 /** Adresse der Klick-Umleitung. */
-export function klickUrl(origin: unknown, versandId: unknown, schluessel: unknown, ziel: unknown): string {
+export function klickUrl(origin: unknown, versandId: unknown, schluessel: unknown, ziel: unknown, signiere?: KlickSignierer): string {
+  const v = String(versandId ?? '');
+  const s = String(schluessel ?? '');
+  const u = String(ziel ?? '');
+  const h = signiere ? signiere(v, s, u) : '';
   return `${basis(origin)}/api/oeffentlich/mail-klick`
-    + `?v=${encodeURIComponent(String(versandId ?? ''))}`
-    + `&s=${encodeURIComponent(String(schluessel ?? ''))}`
-    + `&u=${encodeURIComponent(String(ziel ?? ''))}`;
+    + `?v=${encodeURIComponent(v)}`
+    + `&s=${encodeURIComponent(s)}`
+    + `&u=${encodeURIComponent(u)}`
+    + (h ? `&h=${encodeURIComponent(h)}` : '');
 }
 
 /**
@@ -170,16 +183,16 @@ export function klickUrl(origin: unknown, versandId: unknown, schluessel: unknow
  * ueber href="…": Ein vollstaendiger HTML-Zerleger waere hier mehr Risiko
  * als Nutzen, und der Mail-Rumpf kommt aus unseren eigenen Vorlagen.
  */
-export function biegeLinksUm(html: unknown, origin: unknown, versandId: unknown, schluessel: unknown): string {
+export function biegeLinksUm(html: unknown, origin: unknown, versandId: unknown, schluessel: unknown, signiere?: KlickSignierer): string {
   return String(html ?? '').replace(/href="([^"]+)"/gi, (ganzes, ziel: string) => {
     if (!istUmleitbar(ziel)) return ganzes;
-    return `href="${klickUrl(origin, versandId, schluessel, ziel)}"`;
+    return `href="${klickUrl(origin, versandId, schluessel, ziel, signiere)}"`;
   });
 }
 
 /** Beides auf einmal: Links umbiegen und das Zaehlbild ans Ende haengen. */
-export function messeMit(html: unknown, origin: unknown, versandId: unknown, schluessel: unknown): string {
-  const mitLinks = biegeLinksUm(html, origin, versandId, schluessel);
+export function messeMit(html: unknown, origin: unknown, versandId: unknown, schluessel: unknown, signiere?: KlickSignierer): string {
+  const mitLinks = biegeLinksUm(html, origin, versandId, schluessel, signiere);
   return mitLinks + pixelHtml(origin, versandId, schluessel);
 }
 

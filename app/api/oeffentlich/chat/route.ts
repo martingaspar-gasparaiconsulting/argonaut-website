@@ -41,6 +41,7 @@ import {
   lohntLead,
 } from '@/lib/setter';
 import { baueLead, buchungsLink, abschlussText } from '@/lib/setterHandeln';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -104,7 +105,8 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const seite = (typeof body?.seite === 'string' ? body.seite : '').trim();
     const frage = (typeof body?.frage === 'string' ? body.frage : '').trim().slice(0, 500);
-    const verlaufRoh: VerlaufItem[] = Array.isArray(body?.verlauf) ? body.verlauf : [];
+    // S1: höchstens die letzten 20 Einträge (vorher ungekürzt in Setter-Logik).
+    const verlaufRoh: VerlaufItem[] = Array.isArray(body?.verlauf) ? (body.verlauf as VerlaufItem[]).slice(-20) : [];
     if (!seite || !frage) return NextResponse.json({ error: 'Bitte eine Frage stellen.' }, { status: 400 });
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -129,6 +131,13 @@ export async function POST(req: Request) {
       }
       kopf = corsKopf(origin);
     }
+
+    // ---- S1 (Paket 161): Deckel JE BESUCHER (lib/drossel.ts) --------------
+    // Die Herkunftsprüfung oben lässt sich ohne Origin-Kopfzeile umgehen
+    // (Skript statt Browser). Ohne diesen Deckel konnte ein Einzelner das
+    // Monatskontingent eines fremden Betriebs verbrennen. 6/Min, 150/Tag.
+    const zuViel = await drossel(db, 'oeffentlich/chat', { ip: drosselIp(req.headers) });
+    if (zuViel) return NextResponse.json({ error: drosselText(zuViel) }, { status: 429, headers: kopf });
 
     // ---- MENGENGRENZE (11.09.2026) ---------------------------------------
     // Bis hierher hat dieser Aufruf noch nichts gekostet. Ab der naechsten

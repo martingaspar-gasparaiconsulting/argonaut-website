@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { sendeMail, absenderBranding } from '@/lib/mail';
 import { emailNormalisieren, istEmailGueltig, optinBestaetigenUrl, optinBestaetigungHtml } from '@/lib/newsletter';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/web-newsletter  (Website-Bauer · Newsletter-DOI)
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    const seite = (b.seite || '').toString().trim();
+    const seite = (b.seite || '').toString().trim().slice(0, 100);
     const email = emailNormalisieren(b.email as string | null | undefined);
     if (!seite) return NextResponse.json({ ok: false, error: 'Seite nicht erkannt.' }, { status: 400 });
     if (!istEmailGueltig(email)) {
@@ -53,6 +54,9 @@ export async function POST(req: Request) {
     }
 
     const db = admin();
+    // S1: Mengen-Deckel je Absender und je Mail-Adresse + Seite (lib/drossel.ts).
+    const zuViel = await drossel(db, 'oeffentlich/web-newsletter', { ip: drosselIp(req.headers), ziel: `${seite}|${email}` });
+    if (zuViel) return NextResponse.json({ ok: false, error: drosselText(zuViel) }, { status: 429 });
 
     // Seiten-Inhaber sicher bestimmen — nur veröffentlichte Seiten nehmen an.
     const { data: seiteRow } = await db

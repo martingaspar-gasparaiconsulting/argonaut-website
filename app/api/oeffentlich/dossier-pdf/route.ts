@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { dossierHtml, dossierKey, brancheAufloesen } from '../../../vorschau/_lib/dossierHtml';
 import { dossierPdf } from '@/lib/dossierPdf';
 import { dossierDateiPfad } from '@/lib/dossierDatei';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/dossier-pdf  (I5)
@@ -57,6 +58,9 @@ export async function GET(req: Request) {
 
   try {
     const db = admin();
+    // S1: Mengen-Deckel je Absender (lib/drossel.ts) — jeder Aufruf liest Speicher/Datenbank.
+    const zuViel = await drossel(db, 'oeffentlich/dossier-pdf', { ip: drosselIp(req.headers) });
+    if (zuViel) return new NextResponse(drosselText(zuViel), { status: 429, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 
     // Cache-Check: liegt das PDF (neue Version) schon im Bucket?
     const { data: liste } = await db.storage.from('dossiers').list('', { limit: 1, search: pfad });

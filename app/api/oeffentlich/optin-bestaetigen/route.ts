@@ -89,10 +89,18 @@ export async function GET(req: Request) {
       return seite(firma, akzent, 'Bereits bestätigt', `Ihre Anmeldung bei ${firma} war schon bestätigt. Sie sind dabei — nichts weiter zu tun.`);
     }
 
+    // S1 (Paket 161): Ein alter Bestätigungs-Link darf eine Abmeldung NIE
+    // aufheben (Abmelden löscht den Token nicht). Wer wieder will, meldet sich
+    // neu an und bekommt einen neuen Link.
+    if (ab.status === 'abgemeldet') {
+      return seite(firma, akzent, 'Abgemeldet', `Sie sind von diesem Newsletter abgemeldet. Wenn Sie ihn wieder erhalten möchten, melden Sie sich bitte erneut an.`);
+    }
+
     await admin
       .from('newsletter_abonnenten')
       .update({ status: 'aktiv', bestaetigt_am: new Date().toISOString() })
-      .eq('id', ab.id);
+      .eq('id', ab.id)
+      .eq('status', 'unbestaetigt');
 
     // Funnel P1: stammt der Kontakt von einer Landingpage, Bestaetigung zaehlen
     // (A-B: mit der Variante, die der Kontakt bei der Anmeldung gesehen hat).

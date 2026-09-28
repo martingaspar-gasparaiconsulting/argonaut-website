@@ -17,6 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 import { girocodeVonDaten } from '@/lib/girocode';
 import { baueBezahllink } from '@/lib/bezahllink';
 import type { IntegrationDatensatz } from '@/lib/konnektoren';
+import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,9 @@ export async function GET(req: NextRequest) {
     if (!token || !id) return NextResponse.json({ error: 'Ungültiger Aufruf.' }, { status: 400 });
 
     const db = admin();
+    // S1: Mengen-Deckel je Absender (lib/drossel.ts) — jeder Aufruf erzeugt ein PDF.
+    const zuViel = await drossel(db, 'oeffentlich/portal/rechnung', { ip: drosselIp(req.headers) });
+    if (zuViel) return NextResponse.json({ error: drosselText(zuViel) }, { status: 429 });
 
     // 1) Token -> Zugang (aktiv)
     const { data: zugang } = await db.from('portal_zugaenge')

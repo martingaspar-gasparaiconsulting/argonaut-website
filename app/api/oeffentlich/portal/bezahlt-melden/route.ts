@@ -58,7 +58,9 @@ export async function POST(req: NextRequest) {
     // 3) Signal setzen — NICHT auf bezahlt setzen.
     const { error } = await db.from('rechnungen')
       .update({ zahlung_gemeldet_am: new Date().toISOString() })
-      .eq('id', id).eq('owner_user_id', ownerId).eq('kontakt_id', kontaktId);
+      .eq('id', id).eq('owner_user_id', ownerId).eq('kontakt_id', kontaktId)
+      // S1: der ERSTE Meldezeitpunkt bleibt stehen (jeder weitere Klick überschrieb ihn).
+      .is('zahlung_gemeldet_am', null);
     if (error) return NextResponse.json({ error: 'Konnte nicht gespeichert werden.' }, { status: 500 });
 
     return NextResponse.json({ ok: true });
