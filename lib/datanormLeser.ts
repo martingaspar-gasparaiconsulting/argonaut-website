@@ -98,7 +98,7 @@ export function dekodiereDatanorm(bytes: Uint8Array): { text: string; zeichensat
 export function istDatanorm(dateiname: string, anfang: string | Uint8Array): boolean {
   if (DN_NAME.test(String(dateiname ?? '').split(/[\\/]/).pop() ?? '')) return true;
   const text = typeof anfang === 'string' ? anfang : cp850(anfang.subarray(0, 400));
-  const erste = text.replace(/^﻿/, '').split(/\r?\n/, 1)[0] ?? '';
+  const erste = text.replace(/^\uFEFF/, '').split(/\r?\n/, 1)[0] ?? '';
   if (/^V;0?5\d?;/i.test(erste)) return true;
   if (/^V/.test(erste) && !erste.slice(0, 10).includes(';') && /^0[34]$/.test(erste.slice(123, 125))) return true;
   return false;
@@ -212,7 +212,7 @@ const EXTRA = [
  */
 export function leseDatanorm(eingabe: string | Uint8Array): DatanormErgebnis {
   const dek = typeof eingabe === 'string' ? { text: eingabe, zeichensatz: 'Text' } : dekodiereDatanorm(eingabe);
-  const zeilenRoh = dek.text.replace(/^﻿/, '').split(/\r?\n/);
+  const zeilenRoh = dek.text.replace(/^\uFEFF/, '').split(/\r?\n/);
   const hinweise: string[] = [];
 
   let version: 4 | 5 | null = null;

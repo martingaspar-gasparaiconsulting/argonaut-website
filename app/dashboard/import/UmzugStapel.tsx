@@ -19,6 +19,7 @@ import { dateiArt, type KatalogSpalte } from '@/lib/importMotor';
 import { erkenneDatei, umzugPlan, type DateiErkennung } from '@/lib/umzugPlan';
 import { istVcard, leseVcard } from '@/lib/vcardLeser';
 import { istDatanorm, leseDatanorm, datanormReihenfolge, DATANORM_ENDUNGEN } from '@/lib/datanormLeser';
+import { istBmecat, leseBmecat } from '@/lib/bmecatLeser';
 
 const C = {
   gold: '#C9A84C', text: '#E8EDF4', dim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', green: '#4CAF7D', warn: '#E0A24C', navy: '#0A1628',
@@ -46,6 +47,11 @@ async function kopfLesen(f: File): Promise<{ kopf: string[]; zeilen: string[][];
   }
   const text = dekodiere(anfang);
   const ersteZeile = text.split(/\r?\n/, 1)[0] ?? '';
+  // Paket 150: BMEcat-Katalog -> Kopf mit den Feldnamen der Artikel (ganze Datei, XML braucht den Zusammenhang)
+  if (istBmecat(f.name, text.slice(0, 5000))) {
+    const b = leseBmecat(dekodiere(new Uint8Array(await f.arrayBuffer())));
+    return { kopf: b.kopf, zeilen: b.zeilen.slice(0, 50), ersteZeile: '', hinweis: `BMEcat ${b.version ?? ''}: ${b.anzahl} Artikel` };
+  }
   if (/\.xml$/i.test(f.name)) return { kopf: [], zeilen: [], ersteZeile: text.slice(0, 4000), hinweis: null };
   // Paket 148: vCard -> Kopf mit den Feldnamen der Kunden
   if (istVcard(f.name, text.slice(0, 200))) { const v = leseVcard(dekodiere(new Uint8Array(await f.arrayBuffer()))); return { kopf: v.kopf, zeilen: v.zeilen.slice(0, 50), ersteZeile, hinweis: `vCard: ${v.anzahl} Kontakte` }; }
