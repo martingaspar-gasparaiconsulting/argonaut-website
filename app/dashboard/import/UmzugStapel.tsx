@@ -16,7 +16,7 @@ import { ZIELE, leseCsv, zielDef } from '@/lib/importParser';
 import { dekodiere } from '@/lib/importFortschritt';
 import { leseXls } from '@/lib/xlsLeser';
 import { dateiArt, type KatalogSpalte } from '@/lib/importMotor';
-import { erkenneDatei, umzugPlan, type DateiErkennung } from '@/lib/umzugPlan';
+import { erkenneDatei, umzugPlan, datevStapel, type DateiErkennung } from '@/lib/umzugPlan';
 import { istVcard, leseVcard } from '@/lib/vcardLeser';
 import { istDatanorm, leseDatanorm, datanormReihenfolge, DATANORM_ENDUNGEN } from '@/lib/datanormLeser';
 import { istBmecat, leseBmecat } from '@/lib/bmecatLeser';
@@ -91,6 +91,24 @@ export default function UmzugStapel(props: {
     }
     for (const f of dateien) {
       try {
+        // Paket 152: DATEV Debitoren/Kreditoren -> zweimal einplanen (Kunden UND Lieferanten)
+        const kopfBytes = new Uint8Array(await f.slice(0, 64).arrayBuffer());
+        if (/^\uFEFF?"?EXTF"?;/i.test(dekodiere(kopfBytes))) {
+          const dv = datevStapel(dekodiere(new Uint8Array(await f.arrayBuffer())));
+          if (dv) {
+            const sicher = (z: string): DateiErkennung => ({ datei: f.name, ziel: z, sicher: true, kandidaten: [], sonder: null });
+            if (dv.debitoren > 0 || dv.kreditoren === 0) {
+              const z = props.erlaubt('kontakte') ? 'kontakte' : '';
+              neu.push({ datei: f, erkennung: sicher(z), ziel: z, hinweis: `DATEV: ${dv.debitoren} Debitoren (Kunden)` });
+            }
+            if (dv.kreditoren > 0) {
+              const kopie = new File([f], `${f.name} (Kreditoren)`, { type: f.type });
+              const z = props.erlaubt('lieferanten') ? 'lieferanten' : '';
+              neu.push({ datei: kopie, erkennung: { ...sicher(z), datei: kopie.name }, ziel: z, hinweis: `DATEV: ${dv.kreditoren} Kreditoren (Lieferanten) — dieselbe Datei, die Debitoren werden dort übersprungen` });
+            }
+            continue;
+          }
+        }
         const k = await kopfLesen(f);
         const e = erkenneDatei(f.name, k.kopf, k.zeilen, { dbSpalten: props.dbSpalten, erlaubt: props.erlaubt, ersteZeile: k.ersteZeile });
         neu.push({ datei: f, erkennung: e, ziel: e.ziel ?? '', hinweis: k.hinweis });

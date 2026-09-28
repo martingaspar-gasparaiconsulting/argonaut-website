@@ -14,9 +14,9 @@
 // ============================================================
 
 import { ZIELE, zielDef, fehlendePflichtfelder, normal, type ImportZiel } from './importParser';
-import { katalogFuerZiel, vorschlagMapping, EIGEN, type KatalogSpalte } from './importMotor';
+import { katalogFuerZiel, vorschlagMapping, EIGEN, leseDatev, datevZaehlen, DATEV_KATEGORIEN, type KatalogSpalte } from './importMotor';
 
-export type SonderWeg = { art: 'bank' | 'erechnung' | 'gaeb' | 'datev_buchungen'; titel: string; href: string; grund: string };
+export type SonderWeg = { art: 'bank' | 'erechnung' | 'gaeb' | 'datev_buchungen' | 'datev_andere'; titel: string; href: string; grund: string };
 
 export type ZielTreffer = { ziel: string; label: string; punkte: number; erkannt: number; spalten: number; pflichtFehlt: string[] };
 
@@ -34,7 +34,26 @@ const SONDER: Record<SonderWeg['art'], Omit<SonderWeg, 'art'>> = {
   erechnung: { titel: 'E-Rechnung (XRechnung/ZUGFeRD)', href: '/dashboard/eingangsrechnungen', grund: 'E-Rechnungen liest ARGONAUT unter Eingangsrechnungen mit allen Positionen ein.' },
   gaeb: { titel: 'GAEB-Leistungsverzeichnis', href: '/dashboard/bau-lv', grund: 'GAEB-Dateien liest ARGONAUT unter Bau & LV ein.' },
   datev_buchungen: { titel: 'DATEV-Buchungsstapel', href: '/dashboard/import', grund: 'Buchungsstapel bleiben beim Steuerberater — ARGONAUT übernimmt Debitoren/Kreditoren (Stammdaten), keine Buchungen.' },
+  datev_andere: { titel: 'DATEV-Datei', href: '/dashboard/import', grund: 'Übernommen werden aus DATEV nur Debitoren/Kreditoren (Stammdaten).' },
 };
+
+/**
+ * Paket 152: Die uebrigen DATEV-Formatkategorien — jede mit ihrem Grund.
+ * 16 (Debitoren/Kreditoren) ist KEIN Sonderweg, sondern wird aufgeteilt (datevStapel).
+ */
+const DATEV_GRUND: Record<number, { art: SonderWeg['art']; grund: string }> = {
+  21: { art: 'datev_buchungen', grund: SONDER.datev_buchungen.grund },
+  65: { art: 'datev_buchungen', grund: 'Wiederkehrende Buchungen bleiben beim Steuerberater — ARGONAUT übernimmt keine Buchungen.' },
+  20: { art: 'datev_andere', grund: 'Der Kontenplan (Sachkonten-Beschriftungen) bleibt beim Steuerberater — in ARGONAUT wählen Sie nur Ihren Kontenrahmen.' },
+  46: { art: 'datev_andere', grund: 'Zahlungsbedingungen aus DATEV werden nicht übernommen — in ARGONAUT gibt es dafür keine Liste je Kunde. Zahlungsziel und Skonto stehen auf Ihren Rechnungen.' },
+  48: { art: 'datev_andere', grund: 'Diverse Adressen (zusätzliche Liefer- und Rechnungsadressen) werden noch nicht übernommen — die Hauptadresse kommt mit den Debitoren/Kreditoren.' },
+};
+
+/** DATEV-Kopf „EXTF";700;16;"Debitoren/Kreditoren";… -> Kategorie (null = keine DATEV-Datei). */
+export function datevKategorie(ersteZeile: string): number | null {
+  const m = /^"?extf"?;\s*"?\d*"?;\s*"?(\d+)"?;/i.exec(ersteZeile.trim());
+  return m ? Number(m[1]) : null;
+}
 
 function sonder(art: SonderWeg['art']): SonderWeg { return { art, ...SONDER[art] }; }
 
@@ -47,11 +66,34 @@ export function erkenneSonderweg(dateiname: string, kopf: readonly string[], ers
     if (/gaeb/i.test(ersteZeile)) return sonder('gaeb');
   }
   if (/\.(sta|mt940|camt|camt\.053)$/.test(n) || /camt\.05[234]/i.test(ersteZeile)) return sonder('bank');
-  if (/^"?extf"?;/i.test(ersteZeile) && /buchungsstapel|;21;/i.test(ersteZeile)) return sonder('datev_buchungen');
+  const kat = datevKategorie(ersteZeile);
+  if (kat !== null && kat !== 16) {
+    const g = DATEV_GRUND[kat];
+    const name = DATEV_KATEGORIEN[kat] ?? `Kategorie ${kat}`;
+    return g ? { ...sonder(g.art), titel: `DATEV: ${name}`, grund: g.grund }
+      : { ...sonder('datev_andere'), titel: `DATEV: ${name}` };
+  }
   const k = new Set(kopf.map((x) => normal(x)));
   const hat = (...w: string[]) => w.some((x) => k.has(x));
   if (hat('buchungstag', 'buchungsdatum') && hat('verwendungszweck', 'buchungstext') && (hat('betrag', 'umsatz', 'betrag eur') || hat('valuta', 'wertstellung'))) return sonder('bank');
   return null;
+}
+
+/**
+ * Paket 152: DATEV Debitoren/Kreditoren im Umzug-Stapel. Eine DATEV-Datei
+ * enthaelt beide — also wird sie ZWEIMAL eingeplant: als Kunden (Debitoren)
+ * und als Lieferanten (Kreditoren). Beim Import faellt jeweils die andere
+ * Sorte mit Grund heraus (lib/importMotor datevKontoArt). null = keine
+ * DATEV-Stammdatendatei.
+ */
+export function datevStapel(text: string): { kopf: string[]; zeilen: string[][]; debitoren: number; kreditoren: number; sonst: number } | null {
+  // leseDatev liefert null ohne EXTF-Kopf und einen Fehler fuer jede andere Kategorie als 16
+  const d = leseDatev(text);
+  if (!d || d.fehler) return null;
+  const { kopf, zeilen } = d.tabelle;
+  const i = kopf.findIndex((k) => normal(k) === 'konto');
+  if (i < 0) return { kopf, zeilen, debitoren: 0, kreditoren: 0, sonst: zeilen.length };
+  return { kopf, zeilen, ...datevZaehlen(zeilen, i, d.kopf.sachkontenlaenge) };
 }
 
 /** Woerter des Dateinamens (ohne Endung, Nummern, Fuellwoerter). */
