@@ -54,6 +54,7 @@ import { buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
 import { importErlaubt, leseRechtStand, type RechtStand } from '@/lib/importRechte';
 import { aufraeumerErlaubt, teileText, zeilenZuCsv, AUFRAEUMER_MAX_PORTIONEN } from '@/lib/importAufraeumer';
 import UmzugStapel from './UmzugStapel';
+import { istVcard, leseVcard } from '@/lib/vcardLeser';
 import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
@@ -689,6 +690,13 @@ export default function ImportCenterPage() {
           };
         } else {
           const text = dekodiere(bytes);
+          if (istVcard(f.name, text.slice(0, 200))) {
+            // Paket 148: vCard (.vcf) -> Tabelle mit den Feldnamen der Kunden
+            const v = leseVcard(text);
+            leseHinweise.push(`vCard erkannt: ${zahlDe(v.anzahl)} Kontakte.`, ...v.hinweise);
+            if (zielKey !== 'kontakte' && zielKey !== 'lieferanten') leseHinweise.push('Tipp: vCards gehören meist zum Ziel „Kunden & Kontakte".');
+            neu = { dateiname: f.name, blatt: null, trennzeichen: '', kopf: eindeutigeKoepfe(v.kopf), zeilen: v.zeilen, abgeschnitten: 0, groesse: f.size };
+          } else {
           // Schritt 2: DATEV-Format (Kopf "EXTF") erkennen — erste Zeile ist
           // der Formatkopf, die Spaltennamen stehen in der zweiten.
           const dv = leseDatev(text);
@@ -701,6 +709,7 @@ export default function ImportCenterPage() {
             zeilen: tab.zeilen, abgeschnitten: 0, groesse: f.size,
             datev: dv ? dv.kopf : null,
           };
+          }
         }
         if (neu.kopf.length === 0) throw new Error('In der Datei ist keine Kopfzeile mit Spaltennamen zu erkennen.');
       } else {
@@ -2005,7 +2014,7 @@ export default function ImportCenterPage() {
           <div style={styles.stufe}>
             <div style={styles.stufenTitel}>2 · Datei auswählen</div>
             <p style={styles.stufenText}>
-              Excel (.xlsx, auch altes .xls), CSV oder eine DATEV-Datei (Debitoren/Kreditoren). Die erste Zeile muss die
+              Excel (.xlsx, auch altes .xls), CSV, vCard (.vcf) oder eine DATEV-Datei (Debitoren/Kreditoren). Die erste Zeile muss die
               Spaltenüberschriften enthalten — beim DATEV-Format erkennt ARGONAUT den Formatkopf selbst.
               CSV, .xls und DATEV liest ARGONAUT <b style={{ color: C.text }}>direkt in Ihrem Browser</b> — die Datei verlässt Ihren Rechner nicht.
               .xlsx wird auf dem Server gelesen und sofort verworfen, <b style={{ color: C.text }}>nicht gespeichert</b>.
@@ -2038,7 +2047,7 @@ export default function ImportCenterPage() {
               </span>
             </div>
             <input
-              type="file" accept=".csv,.txt,.xlsx,.xlsm,.xls"
+              type="file" accept=".csv,.txt,.xlsx,.xlsm,.xls,.vcf"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) dateiLesen(f); e.target.value = ''; }}
               disabled={busy !== null}
               style={styles.dateiFeld}
