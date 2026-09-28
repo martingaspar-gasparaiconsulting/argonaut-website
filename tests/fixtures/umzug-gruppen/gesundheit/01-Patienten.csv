@@ -1,0 +1,3 @@
+Patienten-Nr;Vorname;Nachname;Geburtsdatum;Telefon;E-Mail;Krankenkasse;Allergien;Diagnose
+P-1001;Helga;Brandl;12.05.1956;07031 887766;h.brandl@example.de;AOK;Pflaster;Gonarthrose re.
+P-1002;Timo;Kraus;03.09.1990;0176 2233445;timo.kraus@example.de;TK;;LWS-Syndrom

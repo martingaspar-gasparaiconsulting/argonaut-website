@@ -1,0 +1,4 @@
+Kundennr;Anrede;Vorname;Nachname;Firma;Strasse;PLZ;Ort;E-Mail;Telefon;Kunde seit
+10001;Herr;Jonas;Weber;;Lindenweg 4;71032;Böblingen;jonas.weber@example.de;07031 112233;12.03.2019
+10002;Frau;Petra;Sommer;;Bahnhofstr. 17;71034;Böblingen;p.sommer@example.de;0171 5566778;01.07.2021
+10003;;;;Radtreff Schönbuch e.V.;Am Sportplatz 2;71093;Weil im Schönbuch;info@radtreff.example;07157 4455;05.05.2020

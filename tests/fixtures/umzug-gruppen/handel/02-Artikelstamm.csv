@@ -1,0 +1,4 @@
+Artikelnummer;Bezeichnung;EAN;Warengruppe;Einkaufspreis netto;Verkaufspreis brutto;MwSt %;Bestand;Mindestbestand;Lieferant
+FK-1001;Trekkingrad Alu 28 Zoll;4012345000011;Fahrräder;489,00;899,00;19;4;2;Velo Großhandel GmbH
+ZB-2001;Fahrradschloss Bügel;4012345000028;Zubehör;11,20;24,95;19;35;10;Velo Großhandel GmbH
+ER-3001;Schlauch 28 Zoll Presta;4012345000035;Ersatzteile;2,10;5,99;19;120;40;Schwalbe Vertrieb

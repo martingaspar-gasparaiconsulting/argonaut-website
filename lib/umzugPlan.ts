@@ -15,8 +15,9 @@
 
 import { ZIELE, zielDef, fehlendePflichtfelder, normal, type ImportZiel } from './importParser';
 import { katalogFuerZiel, vorschlagMapping, EIGEN, leseDatev, datevZaehlen, DATEV_KATEGORIEN, type KatalogSpalte } from './importMotor';
+import { anwaltSperrGrund, ANWALT_FREIGABE, type AnwaltBereich } from './anwaltFreigabe';
 
-export type SonderWeg = { art: 'bank' | 'erechnung' | 'gaeb' | 'datev_buchungen' | 'datev_andere'; titel: string; href: string; grund: string };
+export type SonderWeg = { art: 'bank' | 'erechnung' | 'gaeb' | 'datev_buchungen' | 'datev_andere' | 'geschuetzt'; titel: string; href: string; grund: string };
 
 export type ZielTreffer = { ziel: string; label: string; punkte: number; erkannt: number; spalten: number; pflichtFehlt: string[] };
 
@@ -35,6 +36,8 @@ const SONDER: Record<SonderWeg['art'], Omit<SonderWeg, 'art'>> = {
   gaeb: { titel: 'GAEB-Leistungsverzeichnis', href: '/dashboard/bau-lv', grund: 'GAEB-Dateien liest ARGONAUT unter Bau & LV ein.' },
   datev_buchungen: { titel: 'DATEV-Buchungsstapel', href: '/dashboard/import', grund: 'Buchungsstapel bleiben beim Steuerberater — ARGONAUT übernimmt Debitoren/Kreditoren (Stammdaten), keine Buchungen.' },
   datev_andere: { titel: 'DATEV-Datei', href: '/dashboard/import', grund: 'Übernommen werden aus DATEV nur Debitoren/Kreditoren (Stammdaten).' },
+  // Paket 155: Grund kommt je Datei (Anwalt-Sperre oder nur Geschaeftsleitung) — siehe erkenneDatei.
+  geschuetzt: { titel: 'Besonders geschützte Daten', href: '/dashboard/import', grund: '' },
 };
 
 /**
@@ -140,6 +143,14 @@ function namensBonus(ziel: ImportZiel, woerter: readonly string[]): number {
  * (ohne Eigene Felder) + Dateinamen-Bonus − Abzug, wenn ein Pflichtfeld
  * nicht zugeordnet werden kann. „sicher" = klarer Vorsprung vor Platz 2.
  */
+/**
+ * Paket 155: Warum eine Datei mit geschuetzten Daten (Patienten, Tiere, Hilfsmittel, Akten)
+ * nicht importiert werden kann — Anwalt-Sperre, sonst fehlendes Recht. null = darf.
+ */
+export function geschuetztGrund(bereich: AnwaltBereich, erlaubt: boolean, freigabe: Readonly<Record<AnwaltBereich, boolean>> = ANWALT_FREIGABE): string | null {
+  return anwaltSperrGrund(bereich, freigabe) ?? (erlaubt ? null : 'Diese Daten importiert nur die Geschäftsleitung.');
+}
+
 export function erkenneDatei(
   dateiname: string, kopf: readonly string[], zeilen: readonly string[][],
   opt: { dbSpalten?: KatalogSpalte[] | null; erlaubt?: (zielKey: string) => boolean; ersteZeile?: string } = {},
@@ -150,7 +161,9 @@ export function erkenneDatei(
   const treffer: ZielTreffer[] = [];
   for (const basis of ZIELE) {
     if (basis.bestandSetzen) continue;                // Bestand je Filiale nur gezielt
-    if (opt.erlaubt && !opt.erlaubt(basis.key)) continue;
+    // Paket 155: Ziele hinter dem Anwalt-Schalter werden IMMER mitgewertet — gewinnen sie,
+    // wird die Datei gesperrt statt einem anderen Ziel (z. B. Kunden) zugeschlagen.
+    if (opt.erlaubt && !opt.erlaubt(basis.key) && !basis.anwalt) continue;
     const k = katalogFuerZiel(basis.key, opt.dbSpalten ?? null);
     if (!k) continue;
     if (basis.nurMitKatalog && opt.dbSpalten && !opt.dbSpalten.some((c) => c.tabelle === basis.tabelle)) continue;
@@ -164,6 +177,18 @@ export function erkenneDatei(
     treffer.push({ ziel: basis.key, label: basis.label, punkte: Math.round(punkte * 1000) / 1000, erkannt, spalten: kopf.length, pflichtFehlt });
   }
   treffer.sort((a, b) => b.punkte - a.punkte || b.erkannt - a.erkannt);
+  // Paket 155: Patienten-, Tier-, Hilfsmittel-, Kanzleidaten nie einem anderen Ziel zuschlagen.
+  // Ist das beste Ziel geschuetzt und (noch) nicht nutzbar, gibt es KEIN Ziel, sondern einen Sonderweg mit Grund.
+  const bester = treffer[0];
+  const besterDef = bester ? zielDef(bester.ziel) : undefined;
+  if (bester && besterDef?.anwalt && bester.punkte >= 0.3 && bester.pflichtFehlt.length === 0) {
+    const grund = geschuetztGrund(besterDef.anwalt, opt.erlaubt ? opt.erlaubt(besterDef.key) : true);
+    if (grund) {
+      return { datei: dateiname, ziel: null, sicher: true, kandidaten: treffer.slice(0, 5), sonder: { art: 'geschuetzt', ...SONDER.geschuetzt, titel: `${besterDef.label} — besonders geschützte Daten`, grund } };
+    }
+  }
+  // Nicht erlaubte geschuetzte Ziele tauchen sonst nie als Vorschlag auf.
+  if (opt.erlaubt) for (let i = treffer.length - 1; i >= 0; i--) if (!opt.erlaubt(treffer[i].ziel)) treffer.splice(i, 1);
   const [erster, zweiter] = treffer;
   const sicher = !!erster && erster.punkte >= 0.5 && erster.pflichtFehlt.length === 0 && (!zweiter || erster.punkte - zweiter.punkte >= 0.15);
   return { datei: dateiname, ziel: erster && erster.punkte >= 0.3 && erster.pflichtFehlt.length === 0 ? erster.ziel : null, sicher, kandidaten: treffer.slice(0, 5), sonder: null };

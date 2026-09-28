@@ -820,7 +820,10 @@ export const ZIELE: ImportZiel[] = [
       { key: 'kategorie', label: 'Kategorie', typ: 'text', alias: ['kategorie', 'warengruppe', 'gruppe', 'sparte', 'rubrik'] },
       { key: 'einheit', label: 'Einheit', typ: 'text', standard: 'Stk', alias: ['einheit', 'me', 'mengeneinheit', 'verpackungseinheit', 'einh'] },
       { key: 'einkaufspreis', label: 'Einkaufspreis', typ: 'zahl', standard: 0, alias: ['einkaufspreis', 'ek', 'ek-preis', 'ekpreis', 'einkauf', 'nettoeinkauf', 'bezugspreis'] },
-      { key: 'verkaufspreis', label: 'Verkaufspreis', typ: 'zahl', standard: 0, alias: ['verkaufspreis', 'vk', 'vk-preis', 'vkpreis', 'preis', 'verkauf', 'listenpreis', 'nettopreis'] },
+      { key: 'verkaufspreis', label: 'Verkaufspreis', typ: 'zahl', standard: 0, alias: ['verkaufspreis', 'vk', 'vk-preis', 'vkpreis', 'preis', 'verkauf', 'listenpreis', 'nettopreis', 'vk netto', 'verkaufspreis netto', 'preis netto'] },
+      // Paket 155 (Claude-Befund Schritt 8): Kassen/Shops fuehren den Ladenpreis BRUTTO. ARGONAUT rechnet mit netto —
+      // ohne Umrechnung stuende jeder Artikel 19 % zu teuer auf der Rechnung. MwSt-Satz aus der Zeile (Spalte bleibt Eigenes Feld).
+      { key: 'vk_brutto', label: 'Verkaufspreis brutto (wird netto gerechnet)', typ: 'zahl', virtuell: 'rechnen', nichtInVorlage: true, alias: ['vk brutto', 'vk-preis brutto', 'bruttopreis', 'preis brutto', 'bruttoverkaufspreis', 'brutto vk', 'vk inkl mwst', 'preis inkl mwst', 'verkaufspreis inkl mwst', 'ladenpreis', 'endpreis'] },
       { key: 'aktueller_bestand', label: 'Bestand', typ: 'zahl', standard: 0, alias: ['bestand', 'aktueller bestand', 'lagerbestand', 'menge', 'stueckzahl', 'anzahl'] },
       { key: 'mindestbestand', label: 'Mindestbestand', typ: 'zahl', standard: 0, alias: ['mindestbestand', 'meldebestand', 'minbestand', 'min', 'sicherheitsbestand'] },
       { key: 'lagerort', label: 'Lagerort', typ: 'text', alias: ['lagerort', 'lagerplatz', 'regal', 'fach', 'ort'] },
@@ -3646,6 +3649,8 @@ export function pruefeZeile(
   if (fehler.length > 0) return { werte: null, fehler, warnungen };
 
   virtuelleFelderAufloesen(ziel, werte);
+  // Paket 155: Artikel mit Brutto-Ladenpreis -> netto (Satz aus der MwSt-Spalte der Zeile, sonst Standard mit Warnung)
+  if (zielKey === 'artikel') artikelBruttoZuNetto(werte, kopf, zeile, mapping, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD);
   nachbereiten(zielKey, werte, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD, ziel);
   // Paket 138: Rechenfelder sind nur Zwischenwerte — nie in die Datenbank.
   for (const f of ziel.felder) if (f.virtuell === 'rechnen') delete werte[f.key];
@@ -3688,6 +3693,38 @@ export function pruefeZeile(
  * Buchhändler (7 %) oder einem Kleinunternehmer (0 %) rechnete die Datei
  * falsch zurueck, und die Warnung nannte den Satz nicht einmal.
  */
+/** Paket 155: MwSt-Satz aus einer Spalte der Zeile („19", „7 %", „0,07") — nur plausible Saetze. */
+export function mwstAusZeile(kopf: readonly string[], zeile: readonly string[], mapping: Mapping): number | null {
+  for (let i = 0; i < kopf.length; i++) {
+    const n = normal(kopf[i]);
+    if (!/^(mwst|ust|umsatzsteuer|steuersatz|steuer|mehrwertsteuer|vat|tax)( ?%| satz| prozent| rate| in %)?$/.test(n)) continue;
+    const m = mapping[kopf[i]];
+    if (m && m !== '@eigen') continue;              // anderweitig zugeordnet -> nicht anfassen
+    const roh = String(zeile[i] ?? '').replace('%', '').trim();
+    if (!roh) continue;
+    let v = leseZahlGemeinsam(roh);
+    if (v === null || !Number.isFinite(v)) continue;
+    if (v > 0 && v < 1) v = Math.round(v * 10000) / 100;
+    if (v >= 0 && v <= 27) return v;
+  }
+  return null;
+}
+
+function artikelBruttoZuNetto(
+  werte: Record<string, unknown>, kopf: readonly string[], zeile: readonly string[], mapping: Mapping,
+  nummer: number, warnungen: ZeilenFehler[], standard: number,
+): void {
+  const b = werte.vk_brutto;
+  if (typeof b !== 'number') return;
+  // Netto aus der Datei geht immer vor.
+  if (typeof werte.verkaufspreis === 'number' && werte.verkaufspreis !== 0) return;
+  const satz = mwstAusZeile(kopf, zeile, mapping);
+  werte.verkaufspreis = centRunden(b / (1 + (satz ?? standard) / 100));
+  if (satz === null) {
+    warnungen.push({ zeile: nummer, feld: 'Verkaufspreis', meldung: `Brutto-Preis mit ${standard} % in netto umgerechnet (keine MwSt-Spalte) — bei ermäßigtem Satz bitte prüfen.` });
+  }
+}
+
 function nachbereiten(
   zielKey: string,
   werte: Record<string, unknown>,
