@@ -102,6 +102,8 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'produkte', label: 'Markt-Produkte (Direktvermarktung)', icon: '🧺', beschreibung: 'Produktkatalog für Ernte & Direktvermarktung.', vorlage: V + 'produkte-import-vorlage.csv', zielHref: '/dashboard/ernte', gruppe: 'betrieb' },
   { key: 'tiergruppen', label: 'Tierbestand', icon: '🐄', beschreibung: 'Tiergruppen und Bestände.', vorlage: V + 'tiergruppen-import-vorlage.csv', zielHref: '/dashboard/tierbestand', motor: 'tiergruppen', gruppe: 'betrieb' },
   { key: 'ertraege', label: 'Anlagen (Erträge/Energie)', icon: '☀️', beschreibung: 'PV-/BHKW-Anlagen für Erträge & Monitoring.', vorlage: V + 'ertraege-anlagen-import-vorlage.csv', zielHref: '/dashboard/ertraege', motor: 'ertraege', gruppe: 'betrieb' },
+  // Paket 151: Umzug Schritt 7 — Termine aus Kalendern (.ics) oder Listen
+  { key: 'termine', label: 'Termine / Kalender', icon: '📅', beschreibung: 'Termine aus Outlook, Google oder Apple (.ics) oder einer Liste — ohne automatische Mails.', musterZiel: 'termine', zielHref: '/dashboard/termine', motor: 'termine', gruppe: 'betrieb' },
   // Paket 132: Umzug Schritt 4 — Handwerk & Handel (Vorlage aus dem Feld-Katalog)
   { key: 'einsaetze', label: 'Einsätze / Plantafel', icon: '🗓', beschreibung: 'Geplante Einsätze mit Mitarbeiter, Zeit und Einsatzort für die Dispo.', musterZiel: 'einsaetze', zielHref: '/dashboard/dispo', motor: 'einsaetze', gruppe: 'betrieb' },
   { key: 'tickets', label: 'Service-Tickets', icon: '🎫', beschreibung: 'Offene und alte Tickets mit Nummer, Status und Priorität.', musterZiel: 'tickets', zielHref: '/dashboard/service', motor: 'tickets', gruppe: 'betrieb' },

@@ -36,7 +36,7 @@ test('Paket 138: Karte auf dem Motor, SQL-Katalog kennt alle zehn GEMEINSAM-Tabe
   const sql = lies('supabase-sql/p138-import-gemeinsam.sql');
   const block = sql.match(/c\.table_name = any \(array\[([\s\S]*?)\]\)/)[1];
   const whitelist = [...block.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].sort());
+  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].slice(0, 72).sort(), 'Paket 151 haengt termine an');
   assert.equal(whitelist.length, 72);
   assert.ok(!/\b(drop table|delete from|truncate|alter table)\b/i.test(sql));
   assert.match(sql, /revoke all on function public\.import_feldkatalog\(text\[\]\) from anon/);

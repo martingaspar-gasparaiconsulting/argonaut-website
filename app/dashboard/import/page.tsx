@@ -57,6 +57,7 @@ import UmzugStapel from './UmzugStapel';
 import { istVcard, leseVcard } from '@/lib/vcardLeser';
 import { istDatanorm, leseDatanorm, datanormReihenfolge, DATANORM_ENDUNGEN } from '@/lib/datanormLeser';
 import { istBmecat, leseBmecat } from '@/lib/bmecatLeser';
+import { istIcal, leseIcal } from '@/lib/icalLeser';
 import { naechsteFaelligkeitString } from '../_components/wartungsLogik';
 import {
   PAKET_GROESSE, LESE_SEITE, GRENZEN_UMZUG, dateiWeg, dekodiere, pakete, tempoProMs, restMs, restText,
@@ -724,6 +725,12 @@ export default function ImportCenterPage() {
             leseHinweise.push(...b.hinweise);
             if (zielKey !== 'artikel') leseHinweise.push('Tipp: BMEcat gehört zum Ziel „Artikel & Preise".');
             neu = { dateiname: f.name, blatt: null, trennzeichen: '', kopf: eindeutigeKoepfe(b.kopf), zeilen: b.zeilen, abgeschnitten: 0, groesse: f.size };
+          } else if (istIcal(f.name, text.slice(0, 200))) {
+            // Paket 151: iCalendar (.ics) -> Tabelle mit den Feldnamen der Termine
+            const c = leseIcal(text);
+            leseHinweise.push(...c.hinweise);
+            if (zielKey !== 'termine') leseHinweise.push('Tipp: Kalender-Dateien gehören zum Ziel „Termine / Kalender".');
+            neu = { dateiname: f.name, blatt: null, trennzeichen: '', kopf: eindeutigeKoepfe(c.kopf), zeilen: c.zeilen, abgeschnitten: 0, groesse: f.size };
           } else if (istVcard(f.name, text.slice(0, 200))) {
             // Paket 148: vCard (.vcf) -> Tabelle mit den Feldnamen der Kunden
             const v = leseVcard(text);
@@ -2049,7 +2056,7 @@ export default function ImportCenterPage() {
           <div style={styles.stufe}>
             <div style={styles.stufenTitel}>2 · Datei auswählen</div>
             <p style={styles.stufenText}>
-              Excel (.xlsx, auch altes .xls), CSV, vCard (.vcf), DATANORM 4/5 vom Großhandel (DATANORM.001 — mit DATPREIS.001 gemeinsam auswählen), BMEcat-Katalog (.xml)
+              Excel (.xlsx, auch altes .xls), CSV, vCard (.vcf), DATANORM 4/5 vom Großhandel (DATANORM.001 — mit DATPREIS.001 gemeinsam auswählen), BMEcat-Katalog (.xml), Kalender (.ics)
               oder eine DATEV-Datei (Debitoren/Kreditoren). Die erste Zeile muss die
               Spaltenüberschriften enthalten — beim DATEV-Format erkennt ARGONAUT den Formatkopf selbst.
               CSV, .xls und DATEV liest ARGONAUT <b style={{ color: C.text }}>direkt in Ihrem Browser</b> — die Datei verlässt Ihren Rechner nicht.
@@ -2083,7 +2090,7 @@ export default function ImportCenterPage() {
               </span>
             </div>
             <input
-              type="file" multiple accept={`.csv,.txt,.xlsx,.xlsm,.xls,.vcf,.xml,${DATANORM_ENDUNGEN}`}
+              type="file" multiple accept={`.csv,.txt,.xlsx,.xlsm,.xls,.vcf,.ics,.xml,${DATANORM_ENDUNGEN}`}
               onChange={(e) => { const liste = Array.from(e.target.files ?? []); e.target.value = ''; if (liste.length > 0) void dateienGewaehlt(liste); }}
               disabled={busy !== null}
               style={styles.dateiFeld}

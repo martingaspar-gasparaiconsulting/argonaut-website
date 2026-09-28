@@ -20,6 +20,7 @@ import { erkenneDatei, umzugPlan, type DateiErkennung } from '@/lib/umzugPlan';
 import { istVcard, leseVcard } from '@/lib/vcardLeser';
 import { istDatanorm, leseDatanorm, datanormReihenfolge, DATANORM_ENDUNGEN } from '@/lib/datanormLeser';
 import { istBmecat, leseBmecat } from '@/lib/bmecatLeser';
+import { istIcal, leseIcal } from '@/lib/icalLeser';
 
 const C = {
   gold: '#C9A84C', text: '#E8EDF4', dim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', green: '#4CAF7D', warn: '#E0A24C', navy: '#0A1628',
@@ -53,6 +54,8 @@ async function kopfLesen(f: File): Promise<{ kopf: string[]; zeilen: string[][];
     return { kopf: b.kopf, zeilen: b.zeilen.slice(0, 50), ersteZeile: '', hinweis: `BMEcat ${b.version ?? ''}: ${b.anzahl} Artikel` };
   }
   if (/\.xml$/i.test(f.name)) return { kopf: [], zeilen: [], ersteZeile: text.slice(0, 4000), hinweis: null };
+  // Paket 151: iCalendar -> Kopf mit den Feldnamen der Termine (ganze Datei: Termine koennen am Ende stehen)
+  if (istIcal(f.name, text.slice(0, 200))) { const c = leseIcal(dekodiere(new Uint8Array(await f.arrayBuffer()))); return { kopf: c.kopf, zeilen: c.zeilen.slice(0, 50), ersteZeile, hinweis: `Kalender: ${c.anzahl} Termine` }; }
   // Paket 148: vCard -> Kopf mit den Feldnamen der Kunden
   if (istVcard(f.name, text.slice(0, 200))) { const v = leseVcard(dekodiere(new Uint8Array(await f.arrayBuffer()))); return { kopf: v.kopf, zeilen: v.zeilen.slice(0, 50), ersteZeile, hinweis: `vCard: ${v.anzahl} Kontakte` }; }
   // Letzte (evtl. abgeschnittene) Zeile weglassen
@@ -111,7 +114,7 @@ export default function UmzugStapel(props: {
         ARGONAUT erkennt je Datei, wohin sie gehört, und schlägt die Reihenfolge vor — erst Kunden, Artikel und Lieferanten, dann alles, was darauf verweist.
         Danach öffnen Sie Datei für Datei; jede wird wie gewohnt geprüft und lässt sich einzeln rückgängig machen. Gelesen wird nur die Kopfzeile, direkt in Ihrem Browser.
       </div>
-      <input type="file" multiple accept={`.csv,.txt,.xls,.xlsx,.xlsm,.xml,.vcf,${DATANORM_ENDUNGEN}`} disabled={liest || props.busy}
+      <input type="file" multiple accept={`.csv,.txt,.xls,.xlsx,.xlsm,.xml,.vcf,.ics,${DATANORM_ENDUNGEN}`} disabled={liest || props.busy}
         onChange={(e) => { void dateienGewaehlt(e.target.files); e.target.value = ''; }} style={{ color: C.text, fontSize: 13 }} />
       {liest && <div style={{ color: C.dim, fontSize: 12.5, marginTop: 6 }}>Dateien werden erkannt …</div>}
 

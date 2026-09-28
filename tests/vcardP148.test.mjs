@@ -78,6 +78,6 @@ test('Leer/kaputt: Hinweis statt Absturz', () => {
 test('Seiten: Import-Center und Umzugsstapel nehmen .vcf an', () => {
   const s = lies('app/dashboard/import/page.tsx');
   assert.ok(s.includes('if (istVcard(f.name, text.slice(0, 200))) {'));
-  assert.ok(s.includes('accept={`.csv,.txt,.xlsx,.xlsm,.xls,.vcf,.xml,${DATANORM_ENDUNGEN}`}'), 'seit Paket 149/150 mit DATANORM-Endungen und BMEcat');
+  assert.ok(s.includes('accept={`.csv,.txt,.xlsx,.xlsm,.xls,.vcf,.ics,.xml,${DATANORM_ENDUNGEN}`}'), 'seit Paket 149-151 mit DATANORM, BMEcat, iCal');
   assert.ok(lies('app/dashboard/import/UmzugStapel.tsx').includes('istVcard(f.name'));
 });

@@ -1782,6 +1782,43 @@ export const ZIELE: ImportZiel[] = [
       { key: 'kunde_telefon', label: 'Kunde Telefon', typ: 'text', alias: ['kunde telefon', 'telefon kunde', 'telefon', 'tel'] },
     ],
   },
+  // Paket 151: Termine (Umzug Schritt 7 — iCal/.ics aus Outlook, Google, Apple und
+  // Kalender-Listen). Live geprueft 28.09.2026: ende_am Pflicht mit Regel
+  // ende > beginn, quelle Pflicht (Standard 'intern'), Mitarbeiter duerfen mit
+  // „darf ändern" für den Betrieb anlegen. Importierte Termine bekommen KEINE
+  // automatischen Mails (Bestaetigung/Erinnerung gelten als erledigt).
+  {
+    key: 'termine',
+    label: 'Termine / Kalender',
+    icon: '📅',
+    tabelle: 'termine',
+    beschreibung: 'Termine aus Outlook, Google, Apple (.ics) oder einer Kalender-Liste. Ohne Uhrzeit = ganzer Tag, ohne Ende = 1 Stunde. '
+      + 'Der Kunde wird verknüpft, wenn es ihn gibt. Für importierte Termine gehen keine Bestätigungs- oder Erinnerungs-Mails raus.',
+    schluesselFelder: ['beginn_am+titel'],
+    eigeneFelderModul: 'termine',
+    nurMitKatalog: true,
+    kundeVerweis: { spalte: 'kontakt_id', ausFeldern: ['kunde_email', 'kunde_name'] },
+    ergebnisHref: '/dashboard/termine',
+    ausblenden: ['firma_id', 'mitarbeiter_id', 'einsatz_id', 'auftrag_id', 'termin_art_id', 'standort_id', 'quelle', 'terminart',
+      'bestaetigung_gesendet_am', 'erinnerung_gesendet_am', 'erinnerung_min'],
+    listen: [{ feld: 'status', label: 'Status', standard: 'geplant', textFeld: 'notiz', liste: liste(['geplant', 'abgesagt'], { bestaetigt: 'geplant', 'bestätigt': 'geplant', confirmed: 'geplant', tentative: 'geplant', vorlaeufig: 'geplant', 'vorläufig': 'geplant', offen: 'geplant', neu: 'geplant', cancelled: 'abgesagt', canceled: 'abgesagt', storniert: 'abgesagt', abgesagt: 'abgesagt', ausgefallen: 'abgesagt' }) }],
+    felder: [
+      { key: 'titel', label: 'Titel', typ: 'text', standard: 'Termin', alias: ['titel', 'betreff', 'subject', 'summary', 'termin', 'bezeichnung', 'anlass', 'titel des termins'] },
+      { key: 'beginn_am', label: 'Beginn', typ: 'zeitpunkt', pflicht: true, hinweis: 'Datum und Uhrzeit (deutsche Zeit). Nur ein Datum = ganzer Tag.', alias: ['beginn', 'beginn am', 'start', 'startzeit', 'von', 'datum', 'anfangsdatum', 'beginnt am', 'start date', 'start time', 'dtstart'] },
+      // standard '' — die Datenbank verlangt ende_am (Pflicht), der Motor darf die Zeile trotzdem nicht
+      // ablehnen: terminNachbereiten rechnet das Ende (1 Stunde bzw. ganzer Tag).
+      { key: 'ende_am', label: 'Ende', typ: 'zeitpunkt', standard: '', hinweis: 'Leer: Beginn + 1 Stunde.', alias: ['ende', 'ende am', 'bis', 'endzeit', 'enddatum', 'endet am', 'end date', 'end time', 'dtend'] },
+      { key: 'ort', label: 'Ort', typ: 'text', alias: ['ort', 'location', 'adresse', 'raum', 'treffpunkt', 'terminort'] },
+      { key: 'beschreibung', label: 'Beschreibung', typ: 'text', alias: ['beschreibung', 'description', 'details', 'inhalt', 'text'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'kommentar', 'notes'] },
+      { key: 'kunde_name', label: 'Kunde', typ: 'text', alias: ['kunde', 'kundenname', 'kunde name', 'teilnehmer', 'patient', 'klient', 'gast', 'attendee', 'mit'] },
+      KUNDE_NR_FELD,
+      { key: 'kunde_email', label: 'Kunde E-Mail', typ: 'text', alias: ['kunde email', 'kunde e-mail', 'e-mail', 'email', 'mail', 'teilnehmer email'] },
+      { key: 'kunde_telefon', label: 'Kunde Telefon', typ: 'text', alias: ['kunde telefon', 'telefon', 'tel', 'handy', 'mobil'] },
+      { key: 'ressource', label: 'Raum / Gerät', typ: 'text', alias: ['ressource', 'raum', 'geraet', 'gerät', 'behandlungsraum', 'arbeitsplatz'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'geplant', hinweis: 'geplant · abgesagt', alias: ['status', 'stand', 'zusage'] },
+    ],
+  },
   {
     key: 'tickets',
     label: 'Service-Tickets',
@@ -2704,6 +2741,20 @@ Object.assign(BEISPIELE, {
     kunde_email: '|info@muster.de|',
     kunde_telefon: '07031 123456||',
   },
+  // Paket 151
+  termine: {
+    titel: 'Aufmaß Bad|Beratung Wallbox|Betriebsurlaub',
+    beginn_am: '14.10.2026 08:30|15.10.2026 14:00|22.12.2026',
+    ende_am: '14.10.2026 10:00||',
+    ort: 'Hauptstraße 5, 71032 Böblingen|Im Büro|',
+    beschreibung: 'Fliesen mitbringen||',
+    notiz: '||',
+    kunde_name: 'Anna Müller|Muster GmbH|',
+    kunde_email: 'anna.mueller@kunde.example|info@muster.de|',
+    kunde_telefon: '07031 123456||',
+    ressource: '|Besprechungsraum|',
+    status: 'geplant|geplant|geplant',
+  },
   tickets: {
     ticket_nummer: 'TK-2026-0041|TK-2026-0042|TK-2026-0043',
     betreff: 'Sicherung fliegt raus|Rückfrage Angebot Wallbox|Rauchmelder piept',
@@ -3487,6 +3538,8 @@ function nachbereiten(
   if (zielKey === 'shop') werte.status = 'abgeschlossen';
   // Paket 146: Angebote aus dem Altsystem — IMMER Archiv (kein Zusage-Link, keine Rechnung, keine Ablaeufe)
   if (zielKey === 'angebote') werte.status = 'archiv';
+  // Paket 151: Termine — ganzer Tag / 1 Stunde, keine automatischen Mails
+  if (zielKey === 'termine') terminNachbereiten(werte, nummer, warnungen);
   // Paket 143
   if (zielKey === 'kautionen') kautionNachbereiten(werte, nummer, warnungen);
   if (zielKey === 'mietzahlungen') mietzahlungNachbereiten(werte, nummer, warnungen);
@@ -4186,6 +4239,33 @@ function einsatzNachbereiten(werte: Record<string, unknown>, nummer: number, war
     werte.ende_am = plusMinutenLokal(beginn, 60);
     warnungen.push({ zeile: nummer, feld: 'Ende', meldung: 'Kein gültiges Ende — Einsatz auf 1 Stunde gesetzt.' });
   } else if (ende) werte.ende_am = ende;
+}
+
+/**
+ * Paket 151: Termine wie das Termin-Modul. Nur ein Datum = ganzer Tag
+ * (00:00 bis 00:00 des Folgetags); ohne gueltiges Ende 1 Stunde (die
+ * Datenbank verlangt ende > beginn). Quelle „import"; Bestaetigung und
+ * Erinnerung gelten als erledigt — ein Umzug verschickt keine Kunden-Mails.
+ */
+function terminNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  const b = typeof werte.beginn_am === 'string' ? werte.beginn_am : '';
+  let e = typeof werte.ende_am === 'string' ? werte.ende_am : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(b)) {
+    werte.beginn_am = `${b}T00:00`;
+    const bis = /^\d{4}-\d{2}-\d{2}$/.test(e) && e > b ? e : plusMinutenLokal(`${b}T00:00`, 24 * 60).slice(0, 10);
+    e = `${bis}T00:00`;
+    warnungen.push({ zeile: nummer, feld: 'Beginn', meldung: 'Nur ein Datum ohne Uhrzeit — als ganztägiger Termin übernommen.' });
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(e)) e = `${e}T23:59`;
+  const beginn = String(werte.beginn_am ?? '');
+  if (beginn.includes('T') && !(e > beginn)) {
+    if (e) warnungen.push({ zeile: nummer, feld: 'Ende', meldung: 'Ende liegt nicht nach dem Beginn — Termin auf 1 Stunde gesetzt.' });
+    e = plusMinutenLokal(beginn, 60);
+  }
+  if (e) werte.ende_am = e;
+  werte.quelle = 'import';
+  const jetzt = new Date().toISOString();
+  werte.bestaetigung_gesendet_am = jetzt;
+  werte.erinnerung_gesendet_am = jetzt;
 }
 
 /** Mengen-Einheiten des Leistungskatalogs (wie leistungLogik EINHEITEN_MENGE). */

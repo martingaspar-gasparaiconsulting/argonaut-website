@@ -71,6 +71,8 @@ export const MOTOR_TABELLEN = [
   // Paket 138: GEMEINSAM-Block (freigegeben 27.09.2026) — Katalog fuer alle neun Punkte auf einmal
   'gutschein', 'foerder_vorhaben', 'mitglieder', 'spende', 'angebote', 'angebot_positionen',
   'projektleistungen', 'immo_kaution', 'immo_zahlungen', 'shop_bestellungen',
+  // Paket 151: Umzug Schritt 7 — Termine (iCal)
+  'termine',
 ] as const;
 
 // ---------------------------------------------------------------------------
