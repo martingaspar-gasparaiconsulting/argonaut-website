@@ -77,7 +77,8 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   { key: 'lizenzen', label: 'IT-Lizenzen', icon: '🖥️', beschreibung: 'Software-Lizenzen für Assets & Lizenzen (IT).', vorlage: V + 'lizenzen-import-vorlage.csv', zielHref: '/dashboard/itassets', gruppe: 'vertraege_objekte' },
 
   // --- Betrieb & Branche ----------------------------------------------------
-  { key: 'aufwand', label: 'Aufwand / Leistungen', icon: '⏱', beschreibung: 'Erfasste Leistungen und Zeiten zum Abrechnen.', vorlage: V + 'aufwand-import-vorlage.csv', zielHref: '/dashboard/aufwand', gruppe: 'betrieb' },
+  // Paket 142: GEMEINSAM freigegeben — nur NICHT abgerechnete Stunden.
+  { key: 'aufwand', label: 'Aufwand / Leistungen', icon: '⏱', beschreibung: 'Erfasste, noch nicht abgerechnete Stunden je Projekt — schon Abgerechnetes bleibt draußen.', musterZiel: 'aufwand', zielHref: '/dashboard/aufwand', motor: 'aufwand', gruppe: 'betrieb' },
   { key: 'bde', label: 'Maschinen (BDE/MDE)', icon: '📟', beschreibung: 'Maschinenstammdaten für die Betriebsdatenerfassung.', vorlage: V + 'bde-maschinen-import-vorlage.csv', zielHref: '/dashboard/bde', motor: 'bde', gruppe: 'betrieb' },
   { key: 'chargen', label: 'Chargen & Serien', icon: '🔬', beschreibung: 'Chargen-/Serien-Lose mit Rückverfolgbarkeit.', vorlage: V + 'chargen-import-vorlage.csv', zielHref: '/dashboard/chargen', motor: 'chargen', gruppe: 'betrieb' },
   { key: 'zuschnitt', label: 'Zuschnitt-Teile', icon: '📐', beschreibung: 'Teilelisten mit Länge und Stückzahl für die Zuschnitt-Optimierung.', vorlage: V + 'zuschnitt-teile-import-vorlage.csv', zielHref: '/dashboard/zuschnitt', motor: 'zuschnitt', gruppe: 'betrieb' },

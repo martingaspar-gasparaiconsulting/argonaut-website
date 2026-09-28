@@ -685,6 +685,11 @@ export type ImportZiel = {
    */
   ablehnenWenn?: { feld: string; werte: string[]; grund: string };
   /**
+   * Paket 142: Zeile faellt heraus, sobald dieses Filterfeld ueberhaupt einen
+   * Wert hat (Aufwand mit Rechnungsnummer = schon abgerechnet).
+   */
+  ablehnenWennGefuellt?: { feld: string; grund: string };
+  /**
    * Paket 134: Wertegrenzen, die die Datenbank prueft (check-Regel). Eine
    * Zeile ausserhalb faellt mit Grund heraus — sonst scheitert das ganze Paket.
    */
@@ -2350,6 +2355,41 @@ export const ZIELE: ImportZiel[] = [
       { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'bemerkung', 'kommentar', 'notes'] },
     ],
   },
+  // Paket 142: GEMEINSAM freigegeben 27.09.2026 — Aufwand NUR nicht
+  // abgerechnet. Schon Abgerechnetes steht in den alten Rechnungen und faellt
+  // mit Grund heraus; abgerechnet ist immer false, keine Rechnungs-Verknuepfung.
+  {
+    key: 'aufwand',
+    label: 'Aufwand / Leistungen (offen)',
+    icon: '⏱',
+    tabelle: 'projektleistungen',
+    beschreibung: 'Erfasste, NOCH NICHT abgerechnete Stunden je Projekt — sie erscheinen im Aufwand-Cockpit und in der Projekt-Abrechnung. '
+      + 'Bereits abgerechnete Zeilen (Haken „abgerechnet" oder Rechnungsnummer) bleiben in Ihrer Datei.',
+    schluesselFelder: ['datum+beschreibung+stunden'],
+    eigeneFelderModul: 'projektleistungen',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/aufwand',
+    ausblenden: ['abgerechnet', 'rechnung_id', 'projekt_id'],
+    ablehnenWenn: { feld: 'abgerechnet_alt', werte: ['ja', 'j', 'x', 'yes', 'y', 'true', 'wahr', '1', 'abgerechnet', 'berechnet', 'fakturiert', 'verrechnet', 'in rechnung gestellt', 'billed', 'invoiced'], grund: 'Bereits abgerechnet — steht in der alten Rechnung und wird nicht noch einmal übernommen. Die Zeile bleibt in Ihrer Datei.' },
+    ablehnenWennGefuellt: { feld: 'rechnung_alt', grund: 'Hat schon eine Rechnungsnummer — bereits abgerechnet, wird nicht noch einmal übernommen. Die Zeile bleibt in Ihrer Datei.' },
+    nachschlag: { ausFeld: 'projekt', tabelle: 'projekte', nameSpalte: 'name', spalte: 'projekt_id', textFeld: 'beschreibung', label: 'Projekt' },
+    grenzen: [{ feld: 'stunden', groesserAls: 0, grund: 'Keine Stunden (0 oder leer) — ohne Stunden gibt es nichts abzurechnen.' }],
+    felder: [
+      { key: 'projekt', label: 'Projekt', typ: 'text', virtuell: 'nachschlag', hinweis: 'Name des Projekts wie in ARGONAUT — sonst steht er in der Beschreibung.', alias: ['projekt', 'projektname', 'project', 'auftrag', 'baustelle', 'job'] },
+      { key: 'datum', label: 'Datum', typ: 'datum', pflicht: true, alias: ['datum', 'tag', 'leistungsdatum', 'date', 'erfasst am'] },
+      { key: 'beschreibung', label: 'Beschreibung', typ: 'text', pflicht: true, alias: ['beschreibung', 'taetigkeit', 'tätigkeit', 'leistung', 'text', 'notiz', 'description', 'task', 'aufgabe'] },
+      { key: 'stunden', label: 'Stunden', typ: 'zahl', alias: ['stunden', 'std', 'h', 'hours', 'anzahl stunden', 'menge'] },
+      { key: 'dauer', label: 'Dauer (h:mm)', typ: 'text', virtuell: 'rechnen', hinweis: '„1:30" oder „1,5" — wird in Stunden umgerechnet, wenn keine Stunden-Spalte da ist.', alias: ['dauer', 'zeit', 'duration', 'arbeitszeit', 'zeitaufwand'] },
+      { key: 'minuten', label: 'Minuten', typ: 'zahl', virtuell: 'rechnen', alias: ['minuten', 'min', 'minutes'] },
+      { key: 'stundensatz', label: 'Stundensatz (€ netto)', typ: 'zahl', alias: ['stundensatz', 'satz', 'preis pro stunde', 'euro pro stunde', 'rate', 'hourly rate', 'verrechnungssatz'] },
+      { key: 'mwst_satz', label: 'MwSt-Satz', typ: 'zahl', standard: 19, alias: ['mwst', 'mwst satz', 'ust', 'steuersatz'] },
+      { key: 'kunde_name', label: 'Kunde', typ: 'text', alias: ['kunde_name', 'kunde', 'kundenname', 'auftraggeber', 'client', 'customer'] },
+      { key: 'mitarbeiter_alt', label: 'Mitarbeiter (in die Beschreibung)', typ: 'text', virtuell: 'anhang', anhangAn: 'beschreibung', nichtInVorlage: true, alias: ['mitarbeiter', 'bearbeiter', 'erfasst von', 'user', 'employee', 'wer'] },
+      { key: 'leistungsart_alt', label: 'Leistungsart (in die Beschreibung)', typ: 'text', virtuell: 'anhang', anhangAn: 'beschreibung', nichtInVorlage: true, alias: ['leistungsart', 'art', 'kategorie', 'category', 'service'] },
+      { key: 'abgerechnet_alt', label: 'Abgerechnet (zum Aussortieren)', typ: 'text', virtuell: 'filter', nichtInVorlage: true, alias: ['abgerechnet', 'berechnet', 'fakturiert', 'verrechnet', 'billed', 'invoiced', 'status', 'abrechnungsstatus'] },
+      { key: 'rechnung_alt', label: 'Rechnungsnummer (zum Aussortieren)', typ: 'text', virtuell: 'filter', nichtInVorlage: true, alias: ['rechnungsnummer', 'rechnung nr', 'rechnung', 'rechnungs nr', 'invoice', 'invoice number', 'beleg'] },
+    ],
+  },
   // Paket 136: Umzug Schritt 4 Rest — Bestand je Filiale (Handel). Setzt
   // Zaehlstaende per Korrektur (lager_buchen), legt nichts an.
   {
@@ -2733,6 +2773,17 @@ Object.assign(BEISPIELE, {
     sachbericht: '||',
     notiz: 'Förderkennzeichen 123-ABC||',
   },
+  aufwand: {
+    projekt: 'Website Relaunch|Website Relaunch|Wartung Serverpark',
+    datum: '05.07.2026|06.07.2026|10.07.2026',
+    beschreibung: 'Konzeption & Abstimmung|Umsetzung Startseite|Vor-Ort-Einsatz Netzwerk',
+    stunden: '3,5|6|2',
+    dauer: '||',
+    minuten: '||',
+    stundensatz: '95,00|95,00|110,00',
+    mwst_satz: '19|19|19',
+    kunde_name: 'Mustermann GmbH|Mustermann GmbH|Beispiel AG',
+  },
   spenden: {
     datum: '15.03.2026|02.04.2026|10.05.2026',
     spender_name: 'Anna Beispiel|Muster Bau GmbH|Bernd Test',
@@ -2949,6 +3000,8 @@ export const GELDFELDER: readonly string[] = [
   'einzelpreis', 'gesamt_netto',
   // Paket 140: Mitgliedsbeitrag (und kuenftig Spende, Kaution) — nie still 0 €
   'betrag',
+  // Paket 142: Stundensatz (Aufwand, Retainer)
+  'stundensatz',
 ];
 
 export type ZeilenOptionen = {
@@ -2999,6 +3052,13 @@ export function pruefeZeile(
     if (w && ziel.ablehnenWenn.werte.some((x) => normal(x) === w)) {
       const label = ziel.felder.find((f) => f.key === ziel.ablehnenWenn!.feld)?.label ?? ziel.ablehnenWenn.feld;
       return { werte: null, fehler: [{ zeile: nummer, feld: label, meldung: ziel.ablehnenWenn.grund }], warnungen };
+    }
+  }
+  if (ziel.ablehnenWennGefuellt) {
+    const i = kopf.findIndex((sp) => mapping[sp] === ziel.ablehnenWennGefuellt!.feld);
+    if (i >= 0 && String(zeile[i] ?? '').trim() !== '') {
+      const label = ziel.felder.find((f) => f.key === ziel.ablehnenWennGefuellt!.feld)?.label ?? ziel.ablehnenWennGefuellt.feld;
+      return { werte: null, fehler: [{ zeile: nummer, feld: label, meldung: ziel.ablehnenWennGefuellt.grund }], warnungen };
     }
   }
   const dezimal = opt.dezimal ?? 'unbekannt';
@@ -3221,6 +3281,8 @@ function nachbereiten(
   if (zielKey === 'mitglieder') mitgliedNachbereiten(werte, nummer, warnungen);
   // Paket 141
   if (zielKey === 'spenden') spendeNachbereiten(werte, nummer, warnungen);
+  // Paket 142
+  if (zielKey === 'aufwand') aufwandNachbereiten(werte, nummer, warnungen);
   // Schritt 3 Teil 2
   if (zielKey === 'mitarbeiter') {
     aufListe(werte, 'status', MA_STATUS, 'aktiv', '', 'Status', nummer, warnungen);
@@ -3643,6 +3705,46 @@ function spendeNachbereiten(werte: Record<string, unknown>, nummer: number, warn
   }
   if (spendeAltBestaetigt(werte.notiz)) {
     warnungen.push({ zeile: nummer, feld: 'Bestätigung', meldung: 'Im Altsystem schon bestätigt — in ARGONAUT bitte KEINE zweite Zuwendungsbestätigung ausstellen.' });
+  }
+}
+
+/**
+ * Paket 142: „1:30", „1,5", „90 min" -> Stunden. null = nicht lesbar.
+ */
+export function dauerInStunden(text: unknown): number | null {
+  const t = String(text ?? '').trim().toLowerCase();
+  if (!t) return null;
+  let m = t.match(/^(\d{1,4}):([0-5]\d)(?::[0-5]\d)?$/);
+  if (m) return centRunden(Number(m[1]) + Number(m[2]) / 60);
+  m = t.match(/^(\d+(?:[.,]\d+)?)\s*(min|minuten|minutes)?$/);
+  if (!m) m = t.match(/^(\d+(?:[.,]\d+)?)\s*(h|std|stunden|hours)$/);
+  if (!m) return null;
+  const n = leseZahlGemeinsam(m[1]);
+  if (n === null) return null;
+  return centRunden(/^min/.test(m[2] ?? '') ? n / 60 : n);
+}
+
+/**
+ * Paket 142: Aufwand (GEMEINSAM freigegeben 27.09.2026) — nur nicht
+ * abgerechnete Stunden. abgerechnet ist IMMER false; Stunden notfalls aus
+ * Dauer oder Minuten.
+ */
+function aufwandNachbereiten(werte: Record<string, unknown>, nummer: number, warnungen: ZeilenFehler[]): void {
+  werte.abgerechnet = false;
+  if (typeof werte.stunden !== 'number' || werte.stunden === 0) {
+    const ausDauer = werte.dauer !== undefined ? dauerInStunden(werte.dauer) : null;
+    const ausMinuten = typeof werte.minuten === 'number' ? centRunden(werte.minuten / 60) : null;
+    const neu = ausDauer ?? ausMinuten;
+    if (neu !== null) werte.stunden = neu;
+    else if (werte.dauer !== undefined) warnungen.push({ zeile: nummer, feld: 'Dauer (h:mm)', meldung: `„${werte.dauer}" ist keine lesbare Dauer.` });
+  }
+  // Ohne lesbare Stunden greift die Grenze (> 0) und die Zeile faellt mit Grund heraus.
+  if (typeof werte.stunden !== 'number') werte.stunden = 0;
+  if (typeof werte.stunden === 'number' && werte.stunden > 24) {
+    warnungen.push({ zeile: nummer, feld: 'Stunden', meldung: `${String(werte.stunden).replace('.', ',')} Stunden in einer Zeile — bitte prüfen (Wochensumme?).` });
+  }
+  if (werte.stundensatz === undefined || werte.stundensatz === 0) {
+    warnungen.push({ zeile: nummer, feld: 'Stundensatz', meldung: 'Kein Stundensatz — bitte vor dem Abrechnen nachtragen.' });
   }
 }
 
