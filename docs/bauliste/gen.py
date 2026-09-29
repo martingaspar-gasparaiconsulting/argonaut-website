@@ -9,7 +9,7 @@ tot_bis_test=0; tot_s3=0; tot_ext=0; done=0
 for sid,_,_,rows in S:
     for r in rows:
         p=int(r[5])
-        if r[6] in ("live","läuft"): done+=p; continue
+        if r[6]=="live": done+=p; continue
         if sid in("s0","s1","s2"): tot_bis_test+=p
         elif sid=="s3": tot_s3+=p
         else: tot_ext+=p
@@ -22,7 +22,7 @@ for sid,t,u,rows in S:
     for nr,pak,heute,loes,wer,push,stat in rows:
         wl,wc=WER[wer]
         tr.append(f'''<tr class="z-{st_cls(stat)}"><td class="nr" data-l="Nr">{esc(nr)}</td><td class="pak" data-l="Paket"><strong>{esc(pak)}</strong><span class="st st-{st_cls(stat)}">{'✓ erledigt' if stat=='live' else esc(stat)}</span></td><td class="heute" data-l="Heute: fehlt oder läuft falsch">{esc(heute)}</td><td class="loes" data-l="Lösung">{esc(loes)}</td><td class="wer" data-l="Wer"><span class="w w-{wc}">{wl}</span></td><td class="push" data-l="Pushes">{esc(push)}</td></tr>''')
-    n=sum(int(r[5]) for r in rows if r[6] not in("live","läuft"))
+    n=sum(int(r[5]) for r in rows if r[6]!="live")
     secs.append(f'''<section id="{sid}"><header class="sh"><h2>{esc(t)}</h2><p>{esc(u)} · <b>{n} offene Pushes</b></p></header><div class="tw"><table><thead><tr><th>Nr</th><th>Paket</th><th>Heute: fehlt oder läuft falsch</th><th>Lösung</th><th>Wer</th><th>Pushes</th></tr></thead><tbody>{"".join(tr)}</tbody></table></div></section>''')
 body=f'''<title>ARGONAUT Bauliste</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -102,7 +102,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 29.09.2026 · _p170 live</div>
+<div class="eyebrow">ARGONAUT OS · Stand 29.09.2026 · _p173 live</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
