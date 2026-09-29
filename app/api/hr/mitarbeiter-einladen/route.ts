@@ -4,7 +4,7 @@
 // POST { mitarbeiter_id } ->
 //   1) prueft, dass der eingeloggte Nutzer (Chef) Besitzer des Mitarbeiters ist
 //   2) legt per Supabase-Admin (Service-Role) ein bestaetigtes Login-Konto an
-//      (bzw. setzt fuer ein bestehendes Konto ein neues Einmal-Passwort)
+//      (ein bestehendes Konto wird seit Paket 169 NIE uebernommen -> 409)
 //   3) verknuepft die auth_user_id mit der mitarbeiter-Zeile
 //   4) gibt E-Mail + Einmal-Passwort + Login-Link zurueck, damit der Chef den
 //      Zugang direkt an den Mitarbeiter weitergeben kann (kein Mailversand noetig)
@@ -15,6 +15,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { KONTO_KENNZEICHEN } from "@/lib/kontoSchutz";
 
 export const runtime = "nodejs";
 
@@ -94,20 +95,26 @@ export async function POST(req: Request) {
       email,
       password: tempPw,
       email_confirm: true,
+      // Paket 169: Kennzeichen, zu welchem Betrieb das Konto gehoert (nur Server kann es setzen)
+      app_metadata: { [KONTO_KENNZEICHEN]: user.id },
     });
 
     if (createErr) {
-      // E-Mail existiert evtl. schon -> bestehendes Konto + neues Passwort
       const existiert = /already|registered|exist|duplicate/i.test(createErr.message || "");
       if (existiert) {
-        const { data: liste } = await admin.auth.admin.listUsers();
-        const treffer = liste?.users?.find((u) => (u.email || "").toLowerCase() === email);
-        if (!treffer) {
-          return NextResponse.json({ error: "Es existiert bereits ein Konto mit dieser E-Mail, konnte aber nicht zugeordnet werden." }, { status: 409 });
-        }
-        authUserId = treffer.id;
-        const { error: pwErr } = await admin.auth.admin.updateUserById(authUserId, { password: tempPw });
-        if (pwErr) throw pwErr;
+        // ▄▄▄ Paket 169 (K1, 29.09.2026) — kein stilles Uebernehmen mehr ▄▄▄
+        // Hier wurde bis heute ein bestehendes Konto allein ueber die E-Mail
+        // gesucht, sein Passwort ueberschrieben und dem Chef im Klartext
+        // zurueckgegeben = Kontouebernahme (fremde Mitarbeiter, Demo-, Betreiber-
+        // Konten). Gleiche Regel wie in zugang-reset seit 15.09.: nie uebernehmen.
+        return NextResponse.json({
+          error:
+            "Zu dieser E-Mail-Adresse gibt es bereits einen Zugang. " +
+            "Aus Sicherheitsgruenden wird ein bestehendes Konto hier nicht uebernommen. " +
+            "Gehoert der Zugang zu dieser Person, kann sie sich ueber 'Passwort vergessen' " +
+            "selbst ein neues Passwort setzen. Ist die Adresse versehentlich doppelt " +
+            "vergeben, bitte den Support kontaktieren.",
+        }, { status: 409 });
       } else {
         console.error("Konto-Erstellung fehlgeschlagen:", createErr);
         return NextResponse.json({ error: "Zugang konnte nicht erstellt werden: " + createErr.message }, { status: 500 });
@@ -120,11 +127,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Konto angelegt, aber keine Benutzer-ID ermittelt." }, { status: 500 });
     }
 
-    // Verknuepfung schreiben (Owner-Client, RLS-konform)
-    const { error: updErr } = await supabase
+    // Verknuepfung schreiben — Paket 169: per Service-Schluessel, weil die
+    // Datenbank auth_user_id fuer angemeldete Nutzer sperrt (SQL p169).
+    // Nur die eigene Zeile, nur wenn noch leer.
+    const { error: updErr } = await admin
       .from("mitarbeiter")
       .update({ auth_user_id: authUserId })
-      .eq("id", mitarbeiterId);
+      .eq("id", mitarbeiterId)
+      .eq("owner_user_id", user.id)
+      .is("auth_user_id", null);
 
     if (updErr) {
       console.error("Verknuepfung fehlgeschlagen:", updErr);

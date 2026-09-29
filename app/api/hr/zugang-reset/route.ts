@@ -17,6 +17,8 @@
 import { createClient } from "@/lib/supabase-server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { KONTO_KENNZEICHEN } from "@/lib/kontoSchutz";
+import { pruefeMitarbeiterKonto, kennzeichenSetzen } from "@/lib/kontoSchutzServer";
 
 export const runtime = "nodejs";
 
@@ -85,7 +87,16 @@ export async function POST(req: Request) {
     let modus: "zurueckgesetzt" | "neu_eingeladen";
 
     if (authUserId) {
-      // FALL A: bestehender Zugang -> nur neues Passwort setzen
+      // FALL A: bestehender Zugang -> nur neues Passwort setzen.
+      // ▄▄▄ Paket 169 (K2, 29.09.2026) ▄▄▄ auth_user_id stand frei beschreibbar
+      // in der Mitarbeiter-Zeile. Vorher pruefen, dass das Konto wirklich zu
+      // diesem Mitarbeiter dieses Betriebs gehoert (nie Chef, Betreiber, Kunde,
+      // fremder Betrieb).
+      const urteil = await pruefeMitarbeiterKonto(admin, { zielId: authUserId, betrieb: user.id, maEmail: ma.email });
+      if (!urteil.ja) {
+        return NextResponse.json({ error: urteil.grund }, { status: 403 });
+      }
+      if (urteil.kennzeichenNachtragen) await kennzeichenSetzen(admin, authUserId, user.id);
       const { error: pwErr } = await admin.auth.admin.updateUserById(authUserId, { password: tempPw });
       if (pwErr) {
         console.error("Passwort-Reset fehlgeschlagen:", pwErr);
@@ -98,6 +109,7 @@ export async function POST(req: Request) {
         email,
         password: tempPw,
         email_confirm: true,
+        app_metadata: { [KONTO_KENNZEICHEN]: user.id },
       });
       if (createErr) {
         const existiert = /already|registered|exist|duplicate/i.test(createErr.message || "");
@@ -133,11 +145,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Konto angelegt, aber keine Benutzer-ID ermittelt." }, { status: 500 });
       }
 
-      // Verknuepfung schreiben (Owner-Client, RLS-konform)
-      const { error: updErr } = await supabase
+      // Verknuepfung schreiben — Paket 169: per Service-Schluessel (SQL p169
+      // sperrt auth_user_id fuer angemeldete Nutzer), nur eigene, leere Zeile.
+      const { error: updErr } = await admin
         .from("mitarbeiter")
         .update({ auth_user_id: authUserId })
-        .eq("id", mitarbeiterId);
+        .eq("id", mitarbeiterId)
+        .eq("owner_user_id", user.id)
+        .is("auth_user_id", null);
       if (updErr) {
         console.error("Verknuepfung fehlgeschlagen:", updErr);
         return NextResponse.json({ error: "Zugang erstellt, aber Verknuepfung fehlgeschlagen. Bitte erneut versuchen." }, { status: 500 });

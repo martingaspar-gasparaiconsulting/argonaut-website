@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { zweiFaktorStand } from '@/lib/zweiFaktorServer';
 import { helferPlaetze, darfHelferSetzen, darfZuruecksetzen } from '@/lib/zweiFaktorTeam';
 import { rolleImBetrieb, maxPersonen, faktorZuruecksetzen } from '@/lib/zweiFaktorTeamServer';
+import { pruefeMitarbeiterKonto } from '@/lib/kontoSchutzServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/zwei-faktor/team — Zwei-Faktor im Team (Paket 164 Stufe 2)
@@ -61,15 +62,19 @@ export async function POST(req: Request) {
   if (!body.mitarbeiterId || !/^[0-9a-f-]{36}$/i.test(body.mitarbeiterId)) return NextResponse.json({ ok: false, error: 'Mitarbeiter fehlt.' }, { status: 400 });
   const admin = createAdminClient();
   const ich = await rolleImBetrieb(admin, a.user.id);
-  const { data: zielDaten } = await admin.from('mitarbeiter').select('id, vorname, nachname, auth_user_id')
+  const { data: zielDaten } = await admin.from('mitarbeiter').select('id, vorname, nachname, auth_user_id, email')
     .eq('id', body.mitarbeiterId).eq('owner_user_id', ich.betrieb).maybeSingle();
-  const ziel = zielDaten as { id: string; vorname: string | null; nachname: string | null; auth_user_id: string | null } | null;
+  const ziel = zielDaten as { id: string; vorname: string | null; nachname: string | null; auth_user_id: string | null; email: string | null } | null;
   if (!ziel || !ziel.auth_user_id) return NextResponse.json({ ok: false, error: 'Mitarbeiter mit Zugang nicht gefunden.' }, { status: 404 });
   const zielName = [ziel.vorname, ziel.nachname].filter(Boolean).join(' ') || 'Mitarbeiter';
 
   if (body.aktion === 'zuruecksetzen') {
     const d = darfZuruecksetzen({ userId: a.user.id, betrieb: ich.betrieb, rolle: ich.rolle, aal2: a.aal2 }, { userId: ziel.auth_user_id, betrieb: ich.betrieb, istChef: false });
     if (!d.ja) return NextResponse.json({ ok: false, error: d.grund }, { status: 403 });
+    // Paket 169 (K2): auth_user_id nie blind vertrauen — Konto muss zu diesem
+    // Mitarbeiter dieses Betriebs gehoeren (nie Chef, Betreiber, fremder Betrieb).
+    const k = await pruefeMitarbeiterKonto(admin, { zielId: ziel.auth_user_id, betrieb: ich.betrieb, maEmail: ziel.email });
+    if (!k.ja) return NextResponse.json({ ok: false, error: k.grund }, { status: 403 });
     const f = await faktorZuruecksetzen(admin, { betrieb: ich.betrieb, zielUserId: ziel.auth_user_id, zielName, durchUserId: a.user.id, durchRolle: ich.rolle as 'chef' | 'helfer' });
     if (f) return NextResponse.json({ ok: false, error: f }, { status: 502 });
     return NextResponse.json({ ok: true, meldung: `Zwei-Faktor-Anmeldung von ${zielName} zurückgesetzt. Daten und Rechte bleiben; beim nächsten Anmelden wird neu eingerichtet.` });
@@ -86,6 +91,8 @@ export async function POST(req: Request) {
       admin.from('zwei_faktor_helfer').select('mitarbeiter_id').eq('owner_user_id', ich.betrieb),
       maxPersonen(admin, ich.betrieb),
     ]);
+    const k = await pruefeMitarbeiterKonto(admin, { zielId: ziel.auth_user_id, betrieb: ich.betrieb, maEmail: ziel.email });
+    if (!k.ja) return NextResponse.json({ ok: false, error: k.grund }, { status: 403 });
     const liste = ((helfer ?? []) as { mitarbeiter_id: string }[]).map((h) => h.mitarbeiter_id);
     if (!darfHelferSetzen({ rolle: ich.rolle, anzahlHelfer: liste.length, maxPersonen: max, schonHelfer: liste.includes(ziel.id) })) {
       return NextResponse.json({ ok: false, error: `Höchstens ${helferPlaetze(max)} Vertretung(en). Für mehr bitte beim ARGONAUT-Support melden.` }, { status: 409 });
