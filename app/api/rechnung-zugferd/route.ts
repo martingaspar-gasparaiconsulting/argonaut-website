@@ -43,7 +43,9 @@ export async function POST(req: NextRequest) {
     const origin = req.nextUrl.origin;
     const pdfResp = await fetch(`${origin}/api/rechnung-pdf`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // Paket 175: die PDF-Route verlangt jetzt die Anmeldung — die Sitzung des
+      // Aufrufers wird durchgereicht (damit kommen auch Logo und Farben mit).
+      headers: { 'Content-Type': 'application/json', cookie: req.headers.get('cookie') || '' },
       body: JSON.stringify({
         rechnung,
         positionen,

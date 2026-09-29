@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { baueMarke, CI_SPALTEN, type CiRoh, type Marke } from '@/lib/markeCi';
@@ -156,6 +157,10 @@ function baueHtml(auftrag: any, positionen: any[], kontaktName: string, firmaNam
 }
 
 export async function POST(req: NextRequest) {
+  // Paket 175 (Befund H4): nur mit Login. Vorher liess sich ohne Anmeldung ein
+  // echt aussehendes PDF auf ARGONAUTs PDF-Dienst erzeugen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   try {
     const body = await req.json();
     const auftrag = body?.auftrag;

@@ -14,8 +14,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
-import { istMitarbeiterKennung } from '@/lib/nurGeschaeftsleitung';
+import { abrechnungPruefen } from '@/lib/nurGeschaeftsleitung';
 import { quellSchreiber } from '@/lib/abrechnungServer';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { drosselSchluessel, type DrosselRegel } from '@/lib/drossel';
+
+// Paket 175 (Befund M6): die Route war ein Mail-Relais fuer JEDEN Angemeldeten —
+// beliebige Adresse, beliebiger Anhang, ohne Deckel. Jetzt: nur wer abrechnen darf
+// (Chef oder Mitarbeiter mit „Darf abrechnen"), nur PDF/XML bis 10 MB, und
+// hoechstens 300 Rechnungs-Mails je Betrieb und Tag.
+const MAX_ANHANG_BYTES = 10 * 1024 * 1024;
+const ERLAUBTE_TYPEN = ['application/pdf', 'application/xml', 'text/xml'];
+const TAGES_DECKEL: DrosselRegel = { art: 'ziel', max: 300, fensterSek: 86400 };
+
+async function deckelErreicht(betrieb: string): Promise<boolean> {
+  try {
+    const salz = process.env.ANALYTICS_SALT || process.env.SUPABASE_SERVICE_ROLE_KEY || 'argonaut-os-standardsalz';
+    const schluessel = drosselSchluessel('rechnung-senden', TAGES_DECKEL, betrieb, salz);
+    if (!schluessel) return false;
+    const { data, error } = await createAdminClient().rpc('drossel_zaehlen', {
+      p_schluessel: schluessel, p_max: TAGES_DECKEL.max, p_fenster_sek: TAGES_DECKEL.fensterSek,
+    });
+    if (error) return false; // Zaehler nicht erreichbar: nie aussperren (wie lib/drossel)
+    return data === false;
+  } catch {
+    return false;
+  }
+}
 
 export const runtime = 'nodejs';
 
@@ -35,10 +60,10 @@ export async function POST(req: NextRequest) {
     // „Darf abrechnen" (27.09.26): Absender (Firmenname, Antwortadresse, Farbe) ist
     // immer der BETRIEB. Schickte ein Mitarbeiter, stand bisher „Ihr Dienstleister"
     // ohne Antwortadresse in der Mail — sein eigenes Profil hat keine Firmendaten.
-    let chef: unknown = null;
-    try { chef = (await supabase.rpc('mein_chef_id')).data; } catch { chef = null; }
-    const mitarbeiter = istMitarbeiterKennung(chef);
-    const absenderId = mitarbeiter ? String(chef).trim() : user.id;
+    const abr = await abrechnungPruefen(supabase, user.id, 'Rechnungen verschickt die Geschäftsleitung oder wer das Recht „Darf abrechnen" hat.');
+    if (!abr.ok) return NextResponse.json({ error: abr.fehler }, { status: 403 });
+    const mitarbeiter = abr.mitarbeiter;
+    const absenderId = abr.betrieb;
 
     const body = await req.json().catch(() => ({}));
     const an = typeof body?.an === 'string' ? body.an.trim() : '';
@@ -51,11 +76,19 @@ export async function POST(req: NextRequest) {
     if (!istMail(an)) return NextResponse.json({ error: 'Keine gültige Empfänger-E-Mail.' }, { status: 400 });
     if (!inhaltBase64) return NextResponse.json({ error: 'Keine Datei zum Versenden übergeben.' }, { status: 400 });
 
+    if (!ERLAUBTE_TYPEN.includes(typ)) return NextResponse.json({ error: 'Nur PDF- oder XML-Rechnungen können versendet werden.' }, { status: 400 });
+
     let anhangBuffer: Buffer;
     try {
       anhangBuffer = Buffer.from(inhaltBase64, 'base64');
     } catch {
       return NextResponse.json({ error: 'Anhang konnte nicht gelesen werden.' }, { status: 400 });
+    }
+    if (anhangBuffer.length === 0 || anhangBuffer.length > MAX_ANHANG_BYTES) {
+      return NextResponse.json({ error: 'Der Anhang ist leer oder größer als 10 MB.' }, { status: 400 });
+    }
+    if (await deckelErreicht(absenderId)) {
+      return NextResponse.json({ error: 'Heute wurden schon sehr viele Rechnungen verschickt. Bitte versuchen Sie es morgen erneut oder melden Sie sich beim Support.' }, { status: 429 });
     }
 
     const betreff = (typeof body?.betreff === 'string' && body.betreff.trim())

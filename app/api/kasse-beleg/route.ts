@@ -27,6 +27,7 @@ function admin() {
 
 type PosIn = { artikel_id?: string | null; bezeichnung?: string; menge?: number; einzelpreis?: number; mwst_satz?: number };
 const r2 = (n: number) => Math.round(n * 100) / 100;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: Request) {
   try {
@@ -43,13 +44,33 @@ export async function POST(req: Request) {
 
     const db = admin();
 
-    // 1) Owner (Betrieb) auflösen
+    // 1) Owner (Betrieb) auflösen.
+    // Paket 175: zuerst die Mitarbeiter-Zeile. Vorher reichte ein eigenes Profil,
+    // damit der Beleg unter der Kennung des Mitarbeiters landete (nicht beim Betrieb).
     let ownerId = user.id;
-    const { data: prof } = await db.from('profiles').select('id').eq('id', user.id).maybeSingle();
-    if (!prof) {
-      const { data: ma } = await db.from('mitarbeiter').select('owner_user_id').eq('auth_user_id', user.id).maybeSingle();
-      if (ma?.owner_user_id) ownerId = String(ma.owner_user_id);
-      else return NextResponse.json({ error: 'Betrieb konnte nicht ermittelt werden.' }, { status: 403 });
+    const { data: ma } = await db.from('mitarbeiter').select('owner_user_id').eq('auth_user_id', user.id).limit(1).maybeSingle();
+    if (ma?.owner_user_id) {
+      ownerId = String(ma.owner_user_id);
+    } else {
+      const { data: prof } = await db.from('profiles').select('id').eq('id', user.id).maybeSingle();
+      if (!prof) return NextResponse.json({ error: 'Betrieb konnte nicht ermittelt werden.' }, { status: 403 });
+    }
+
+    // Paket 175 (Befund H3): Artikel nur aus dem EIGENEN Betrieb. Vorher buchte
+    // die Kasse (Service-Rolle) Lager auf jede mitgeschickte Artikel-Kennung,
+    // auch auf die eines fremden Betriebs. Geprueft wird VOR der TSE-Signatur.
+    const artikelIds = Array.from(new Set(posIn.map((p) => String(p.artikel_id ?? '').trim()).filter(Boolean)));
+    if (artikelIds.length > 0) {
+      if (artikelIds.some((id) => !UUID.test(id))) {
+        return NextResponse.json({ error: 'Unbekannter Artikel im Warenkorb.' }, { status: 400 });
+      }
+      const { data: eigene, error: aErr } = await db.from('artikel').select('id')
+        .eq('owner_user_id', ownerId).in('id', artikelIds);
+      if (aErr) return NextResponse.json({ error: 'Artikel konnten nicht geprüft werden.' }, { status: 503 });
+      const gefunden = new Set(((eigene ?? []) as { id: string }[]).map((z) => String(z.id)));
+      if (artikelIds.some((id) => !gefunden.has(id))) {
+        return NextResponse.json({ error: 'Ein Artikel im Warenkorb gehört nicht zu Ihrem Betrieb.' }, { status: 400 });
+      }
     }
 
     // 2) Auf WELCHE Filiale wird gebucht? Bewusst hier, VOR dem ersten

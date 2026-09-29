@@ -1,3 +1,4 @@
+import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { NextRequest, NextResponse } from 'next/server';
 import { steuerGruppen, weichtAb, satzText, type SteuerPosten } from '../../dashboard/_components/steuerLogik';
 import { girocodeVonDaten } from '../../../lib/girocode';
@@ -452,6 +453,10 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
 }
 
 export async function POST(req: NextRequest) {
+  // Paket 175 (Befund H4): nur mit Login. Vorher liess sich ohne Anmeldung ein
+  // echt aussehendes PDF auf ARGONAUTs PDF-Dienst erzeugen.
+  const absage = await nurAngemeldet();
+  if (absage) return absage;
   try {
     const body = await req.json();
     const rechnung = body?.rechnung;

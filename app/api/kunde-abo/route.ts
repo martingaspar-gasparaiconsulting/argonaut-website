@@ -5,6 +5,7 @@ import { ibanGueltig } from '@/lib/sepa'
 import { sendeMail, mailLayout } from '@/lib/mail'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { aboRechnungHtml, aboRechnungPdf } from '@/lib/aboRechnungPdf'
+import { istMitarbeiterKennung } from '@/lib/nurGeschaeftsleitung'
 
 // ============================================================================
 // ARGONAUT OS · /api/kunde-abo  (Onboarding C · Schritt 5 · Teil 1)
@@ -32,6 +33,20 @@ export async function POST(req: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ ok: false, error: 'Nicht angemeldet.' }, { status: 401 })
+
+  // Paket 175 (Befund M12): Abo und SEPA-Mandat schliesst nur die
+  // Geschaeftsleitung ab — nie ein Mitarbeiter (mein_chef_id() liefert dann den Chef).
+  let chef: unknown = null
+  try {
+    const r = await supabase.rpc('mein_chef_id')
+    if (r.error) throw r.error
+    chef = r.data
+  } catch {
+    return NextResponse.json({ ok: false, error: 'Die Berechtigung kann gerade nicht geprüft werden. Bitte später erneut versuchen.' }, { status: 503 })
+  }
+  if (istMitarbeiterKennung(chef)) {
+    return NextResponse.json({ ok: false, error: 'Das ARGONAUT-Abo mit SEPA-Mandat schließt die Geschäftsleitung ab.' }, { status: 403 })
+  }
 
   let body: {
     stufe?: string; mitarbeiterAnzahl?: number;
