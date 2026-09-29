@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import LeadDetailClient, { type LeadDetail } from './LeadDetailClient'
+import AblaufKnoepfe from '../../_components/AblaufKnoepfe'
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -25,6 +26,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <a href="/dashboard/leads" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)', textDecoration: 'none', marginBottom: '24px' }}>
           {'\u2190'} {'Zur\u00fcck zur \u00dcbersicht'}
         </a>
+        {/* Paket 168: Ablauf-Knöpfe (nur Geschäftsleitung, nur eingeschaltete) */}
+        <AblaufKnoepfe modul="leads" vorgangId={lead.id} />
         <LeadDetailClient lead={lead} />
       </main>
     </div>

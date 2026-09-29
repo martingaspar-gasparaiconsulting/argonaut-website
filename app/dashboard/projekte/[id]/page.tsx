@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
+import AblaufKnoepfe from '../../_components/AblaufKnoepfe';
 
 // ============================================================
 // ARGONAUT OS · MODUL PROJEKTE · P3 — Projekt-Detailseite
@@ -662,6 +663,9 @@ export default function ProjektDetailPage() {
   return (
     <div style={{ background: BRAND.navy, minHeight: '100vh', color: '#fff', padding: '28px 24px', fontFamily: 'DM Sans, sans-serif' }}>
       <a href="/dashboard/projekte" style={{ ...btnGhost, marginBottom: 16 }}>← Zur Übersicht</a>
+
+      {/* Paket 168: Ablauf-Knöpfe (nur Geschäftsleitung, nur eingeschaltete) */}
+      <AblaufKnoepfe modul="projekte" vorgangId={projekt.id} />
 
       {/* Projekt-Kopf */}
       <div style={{ ...card, borderLeft: `4px solid ${projekt.farbe || BRAND.cyan}`, marginTop: 16, marginBottom: 18 }}>

@@ -12,7 +12,7 @@
 
 import { aktionDef, triggerDef, type Bedingung } from './automation';
 import {
-  ereignisDef,
+  ereignisDef, knopfModul,
   ablaufAktion, ABLAUF_AKTIONEN, GRENZEN, istGruppe, ausloeserHatVorgang, VORGANG_AKTIONEN, aktionFelder,
   type Ablauf, type Ausloeser, type Schritt, type SchrittAktion, type BedingungsGruppe,
 } from './ablauf';
@@ -146,7 +146,8 @@ export function plusErlaubt(schritte: readonly Schritt[], listePfad: string, art
  * Aktionen, die einen Vorgang ändern (Paket 159).
  */
 export function aktionenFuer(a: Ausloeser): { key: string; label: string; imMotor: boolean }[] {
-  const t = a.art === 'datum' ? triggerDef(a.trigger) : a.art === 'ereignis' ? ereignisDef(a.ereignis) : undefined;
+  const t = a.art === 'datum' ? triggerDef(a.trigger) : a.art === 'ereignis' ? ereignisDef(a.ereignis)
+    : a.art === 'knopf' && a.modul ? knopfModul(a.modul) : undefined;
   const mitVorgang = ausloeserHatVorgang(a);
   return ABLAUF_AKTIONEN
     .filter((x) => {

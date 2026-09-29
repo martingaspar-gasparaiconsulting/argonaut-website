@@ -22,7 +22,7 @@ import {
   type Datensatz, type AutomationRegel,
 } from './automation';
 import {
-  pruefeGruppe, fuellePlatzhalter, standardWerte, ausloeserIstWerbung, pruefeAblauf, ablaufAktion, ereignisDef,
+  pruefeGruppe, fuellePlatzhalter, standardWerte, ausloeserIstWerbung, pruefeAblauf, ablaufAktion, ereignisDef, knopfModul,
   type Ablauf, type Ausloeser, type SchrittAktion, type Fahrplan,
 } from './ablauf';
 import { werbeStatus, WERBE_STATUS_TEXT } from './segmente';
@@ -52,6 +52,8 @@ export const STATUS_FELD: Record<string, string> = {
 /** Wo das Notizfeld einer Tabelle steht. */
 export const NOTIZ_FELD: Record<string, string> = {
   rechnungen: 'notizen', angebote: 'notiz', kontakte: 'notizen', aufgaben: 'beschreibung', projekte: 'beschreibung',
+  auftraege: 'notizen', termine: 'notiz',
+  // leads: bewusst KEIN Notizfeld — „nachricht" ist der Text des Anfragenden und bleibt unverändert.
 };
 
 // ---------------------------------------------------------------------------
@@ -68,6 +70,11 @@ export function ausloeserZiel(a: Ausloeser | null | undefined): Ziel | null {
   if (a?.art === 'ereignis') {
     const e = ereignisDef(a.ereignis);
     return e ? { tabelle: e.tabelle, zielTyp: e.zielTyp, datumFeld: '' } : null;
+  }
+  // Paket 168: Knopf auf einer Modulseite — der Vorgang ist der Datensatz der Seite.
+  if (a?.art === 'knopf') {
+    const k = a.modul ? knopfModul(a.modul) : undefined;
+    return k ? { tabelle: k.tabelle, zielTyp: k.zielTyp, datumFeld: '' } : null;
   }
   if (!a || a.art !== 'datum') return null;
   const t = triggerDef(a.trigger);
@@ -242,6 +249,7 @@ export function aktionPlanen(
       return { art: 'aendern', tabelle: 'rechnungen', id: zielId, daten: { mahnstufe: jetzige + 1, letzte_mahnung_am: nurDatum(jetzt) }, meldung: `Mahnstufe ${jetzige} → ${jetzige + 1}` };
     }
     case 'notiz_anhaengen': {
+      if (ziel.tabelle === 'leads') return { art: 'fehler', meldung: 'Anfragen haben kein Notizfeld' };
       const spalte = NOTIZ_FELD[ziel.tabelle] ?? 'notiz';
       const zeile = text('text') || `Ablauf: ${ablauf.name}`;
       const alt = typeof satz[spalte] === 'string' ? (satz[spalte] as string) : '';

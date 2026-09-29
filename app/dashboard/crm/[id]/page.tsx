@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import AdressBlock from "../../_components/AdressBlock";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
+import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C3+C4+C5 Kontakt-Detailseite
@@ -886,6 +887,9 @@ export default function CrmDetailPage() {
         <button onClick={() => router.push("/dashboard/crm")} style={zurueckBtn}>
           ← Zurück zur Kontaktliste
         </button>
+
+        {/* Paket 168: Ablauf-Knöpfe (nur Geschäftsleitung, nur eingeschaltete) */}
+        <AblaufKnoepfe modul="kontakte" vorgangId={id} />
 
         {/* Kopf */}
         <div

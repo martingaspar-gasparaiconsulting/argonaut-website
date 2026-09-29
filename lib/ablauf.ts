@@ -72,7 +72,7 @@ export const AUSLOESER_ARTEN: { art: Ausloeser['art']; label: string; hinweis: s
   { art: 'ereignis', label: 'Ereignis', hinweis: 'Wenn in einem Modul etwas passiert (z. B. Rechnung bezahlt) — der Ablauf startet beim nächsten Durchgang, spätestens nach einer Stunde.', imMotor: true },
   // „Webhook rein" ist GESTRICHEN (Martins Sicherheits-Regel 28.09.2026): interne Abläufe
   // werden nie von außen angestoßen. Der Typ bleibt nur für alte Daten; pruefeAblauf lehnt ihn ab.
-  { art: 'knopf', label: 'Knopf', hinweis: 'Per Knopfdruck auf der Seite Abläufe (Knöpfe in den Modulen folgen).', imMotor: true },
+  { art: 'knopf', label: 'Knopf', hinweis: 'Per Knopfdruck — auf der Seite Abläufe (ohne Vorgang) oder direkt auf einer Kunden-, Anfrage-, Auftrags- oder Projektseite (mit Vorgang).', imMotor: true },
 ];
 
 /**
@@ -94,6 +94,23 @@ export const EREIGNISSE: EreignisDef[] = [
 
 export function ereignisDef(key: unknown): EreignisDef | undefined {
   return EREIGNISSE.find((e) => e.key === key);
+}
+
+/**
+ * Paket 168: Module mit einem Knopf auf der Detailseite. werbung: Post an den
+ * Kunden aus diesem Knopf gilt als Werbung (nur mit Einwilligung).
+ * Rechnung und Angebot bewusst NICHT (Kern-Geld-Seiten, nur gemeinsam).
+ */
+export type KnopfModulDef = { modul: string; label: string; einzahl: string; tabelle: string; zielTyp: string; werbung: boolean };
+export const KNOPF_MODULE: KnopfModulDef[] = [
+  { modul: 'kontakte', label: 'Kunden', einzahl: 'Kunde', tabelle: 'kontakte', zielTyp: 'kontakt', werbung: true },
+  { modul: 'leads', label: 'Anfragen', einzahl: 'Anfrage', tabelle: 'leads', zielTyp: 'lead', werbung: false },
+  { modul: 'auftraege', label: 'Aufträge', einzahl: 'Auftrag', tabelle: 'auftraege', zielTyp: 'auftrag', werbung: false },
+  { modul: 'projekte', label: 'Projekte', einzahl: 'Projekt', tabelle: 'projekte', zielTyp: 'projekt', werbung: false },
+];
+
+export function knopfModul(modul: unknown): KnopfModulDef | undefined {
+  return KNOPF_MODULE.find((k) => k.modul === modul);
 }
 
 export type AblaufAktionDef = {
@@ -351,6 +368,7 @@ export type AblaufPruefung = { fehler: string[]; hinweise: string[]; aktivierbar
 export function ausloeserIstWerbung(a: Ausloeser): boolean {
   if (a.art === 'datum') return istWerbung(a.trigger);
   if (a.art === 'ereignis') return EREIGNISSE.find((e) => e.key === a.ereignis)?.werbung ?? true;
+  if (a.art === 'knopf' && a.modul) return knopfModul(a.modul)?.werbung ?? true;
   return true;
 }
 
@@ -376,8 +394,8 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
       if (a.rhythmus === 'woechentlich' && !(Number.isInteger(a.wochentag) && (a.wochentag as number) >= 1 && (a.wochentag as number) <= 7)) fehler.push('Wochentag bitte wählen (Montag bis Sonntag).');
       if (a.rhythmus === 'monatlich' && !(Number.isInteger(a.tag) && (a.tag as number) >= 1 && (a.tag as number) <= 31)) fehler.push('Tag im Monat bitte 1 bis 31.');
     }
-    // Knopf direkt im Modul (mit Vorgang) kommt später — speichern ja, einschalten noch nicht.
-    if (a.art === 'knopf' && a.modul) nochNichtImMotor = true;
+    // Paket 168: Knopf direkt im Modul (mit Vorgang) — nur für die Module der Liste.
+    if (a.art === 'knopf' && a.modul && !knopfModul(a.modul)) fehler.push('Knopf: Dieses Modul hat (noch) keinen Ablauf-Knopf.');
     if ((a.art === 'datum' || a.art === 'ereignis') && zaehleBedingungen(a.filter) > GRENZEN.bedingungen) fehler.push(`Höchstens ${GRENZEN.bedingungen} Bedingungen.`);
   }
   if (!Array.isArray(ablauf.schritte) || ablauf.schritte.length === 0) fehler.push('Mindestens ein Schritt.');
@@ -411,8 +429,10 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
         if (!def.imMotor) nochNichtImMotor = true;
         // Paket 158: Mahnstufe nur bei Rechnungen — passt die Aktion nicht zum Auslöser, gleich sagen.
         const zielTypen = aktionDef(def.key)?.zielTypen;
-        const zielTyp = a?.art === 'datum' ? triggerDef(a.trigger)?.zielTyp : a?.art === 'ereignis' ? ereignisDef(a.ereignis)?.zielTyp : undefined;
+        const zielTyp = a?.art === 'datum' ? triggerDef(a.trigger)?.zielTyp : a?.art === 'ereignis' ? ereignisDef(a.ereignis)?.zielTyp
+          : a?.art === 'knopf' && a.modul ? knopfModul(a.modul)?.zielTyp : undefined;
         if (zielTypen && zielTyp && !zielTypen.includes(zielTyp)) fehler.push(`Schritt ${nr} (${def.label}): passt nicht zu diesem Auslöser.`);
+        if (def.key === 'notiz_anhaengen' && zielTyp === 'lead') fehler.push(`Schritt ${nr} (${def.label}): Anfragen haben kein Notizfeld — bitte „Aufgabe anlegen" nehmen.`);
         for (const p of def.pflicht) if (!String(s.config?.[p] ?? '').trim()) fehler.push(`Schritt ${nr} (${def.label}): „${p}" fehlt.`);
         if (def.key === 'freigabe_chef') freigabe = true;
         if (!mitVorgang && (VORGANG_AKTIONEN.includes(def.key) || (def.key === 'mail_senden' && s.config?.an !== 'feste_adresse'))) {
@@ -525,7 +545,7 @@ export function ausloeserText(a: Ausloeser): string {
     return `${r}${wann}${a.uhrzeit ? ` um ${a.uhrzeit} Uhr` : ''}`;
   }
   if (a.art === 'webhook') return 'Von außen (Webhook)';
-  return a.modul ? `Per Knopf im Modul ${a.modul}` : 'Per Knopf auf der Seite Abläufe';
+  return a.modul ? `Per Knopf auf der Seite ${knopfModul(a.modul)?.einzahl ?? a.modul}` : 'Per Knopf auf der Seite Abläufe';
 }
 
 export function schrittText(s: Schritt): string {

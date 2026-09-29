@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
+import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
 import { leseZahlOder } from '@/lib/zahlen';
 
 // ============================================================
@@ -615,6 +616,9 @@ export default function AuftragDetail() {
         >
           ← Zurück zu den Aufträgen
         </button>
+
+        {/* Paket 168: Ablauf-Knöpfe (nur Geschäftsleitung, nur eingeschaltete) */}
+        <AblaufKnoepfe modul="auftraege" vorgangId={id} />
 
         <div
           style={{

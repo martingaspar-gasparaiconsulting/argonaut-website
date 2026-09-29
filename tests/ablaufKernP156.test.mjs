@@ -126,10 +126,10 @@ test('Pruefung: Mahnlauf ist gueltig und seit Paket 157 einschaltbar (Freigabe i
   // Paket 167 (bewusste Aenderung): Glocke ist im Motor -> einschaltbar.
   assert.equal(mitGlocke.aktivierbar, true);
   assert.ok(!mitGlocke.hinweise.some((h) => /noch nicht ausführt/.test(h)));
-  // Knopf direkt im Modul fuehrt der Motor weiterhin noch nicht aus.
+  // Paket 168 (bewusste Aenderung): Knopf im Modul gibt es — aber nicht auf der Rechnungsseite (Kern-Geld, gemeinsam).
   const imModul = pruefeAblauf({ ...MAHNLAUF, ausloeser: { art: 'knopf', modul: 'rechnungen' } });
   assert.equal(imModul.aktivierbar, false);
-  assert.ok(imModul.hinweise.some((h) => /noch nicht ausführt/.test(h)));
+  assert.ok(imModul.fehler.some((f) => /keinen Ablauf-Knopf/.test(f)));
   // Rechnung ueberfaellig ist Betriebspost -> kein Werbe-Hinweis
   assert.ok(!p.hinweise.some((h) => /Werbung/.test(h)));
 });

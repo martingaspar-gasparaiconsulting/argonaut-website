@@ -14,7 +14,7 @@ import {
   type Bedingung, type Operator, type FeldDef,
 } from '@/lib/automation';
 import {
-  pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion, ausloeserHatVorgang, EREIGNISSE, aktionFelder,
+  pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion, ausloeserHatVorgang, EREIGNISSE, aktionFelder, KNOPF_MODULE,
   type Ablauf, type Ausloeser, type Schritt, type BedingungsGruppe, type SchrittAktion,
 } from '@/lib/ablauf';
 import {
@@ -232,7 +232,10 @@ export default function AblaufEditor({ start, busy, onSpeichern, onAbbrechen }: 
   start: Entwurf; busy: boolean; onSpeichern: (e: Entwurf) => void; onAbbrechen: () => void;
 }) {
   const [e, setE] = useState<Entwurf>(start);
-  const trigger = e.ausloeser.art === 'datum' ? e.ausloeser.trigger : TRIGGER[0].key;
+  // Bedingungsfelder passend zum Vorgang (Paket 168: auch bei Ereignis und Knopf im Modul)
+  const zielTypOhneDatum = e.ausloeser.art === 'ereignis' ? EREIGNISSE.find((x) => x.key === (e.ausloeser as { ereignis?: string }).ereignis)?.zielTyp
+    : e.ausloeser.art === 'knopf' ? KNOPF_MODULE.find((k) => k.modul === (e.ausloeser as { modul?: string }).modul)?.zielTyp : undefined;
+  const trigger = e.ausloeser.art === 'datum' ? e.ausloeser.trigger : (TRIGGER.find((t) => t.zielTyp === zielTypOhneDatum)?.key ?? TRIGGER[0].key);
   const felder = useMemo(() => triggerDef(trigger)?.felder ?? [], [trigger]);
   const pruefung = useMemo(() => pruefeAblauf({ ...e, name: e.name }), [e]);
   const setSchritte = (s: Schritt[]) => setE((x) => ({ ...x, schritte: s }));
@@ -323,9 +326,20 @@ export default function AblaufEditor({ start, busy, onSpeichern, onAbbrechen }: 
           );
         })()}
         {e.ausloeser.art === 'knopf' && (
-          <div style={{ ...klein, marginBottom: 6 }}>Startet mit „▶ Jetzt starten" auf der Seite Abläufe — ohne Vorgang. Knöpfe direkt in den Modulen folgen.</div>
+          <div style={{ marginBottom: 8 }}>
+            <label style={beschriftung}>Wo erscheint der Knopf?</label>
+            <select value={e.ausloeser.modul ?? ''} onChange={(ev) => setE((x) => ({ ...x, ausloeser: ev.target.value ? { art: 'knopf', modul: ev.target.value } : { art: 'knopf' } }))} style={{ ...feld, maxWidth: 360 }}>
+              <option value="">Auf der Seite Abläufe (ohne Vorgang)</option>
+              {KNOPF_MODULE.map((k) => <option key={k.modul} value={k.modul}>Auf jeder Seite: {k.einzahl}</option>)}
+            </select>
+            <div style={{ ...klein, marginTop: 5 }}>
+              {e.ausloeser.modul
+                ? 'Der Knopf erscheint oben auf der Detailseite (nur für die Geschäftsleitung). Der Vorgang der Seite ist dann {{name}}, {{nummer}} … — je Vorgang läuft der Ablauf einmal.'
+                : 'Startet mit „▶ Jetzt starten" auf der Seite Abläufe — ohne Vorgang.'}
+            </div>
+          </div>
         )}
-        {e.ausloeser.art !== 'datum' && e.ausloeser.art !== 'ereignis' && (
+        {e.ausloeser.art !== 'datum' && e.ausloeser.art !== 'ereignis' && !(e.ausloeser.art === 'knopf' && e.ausloeser.modul) && (
           <div style={{ ...klein, marginBottom: 6 }}>Ohne Vorgang gehen nur Aktionen, die nichts Bestehendes ändern: Aufgabe anlegen, Mail an eine feste Adresse, Warten, Freigabe, Stopp. So liest sich das: {ausloeserText(e.ausloeser)}.</div>
         )}
         {e.ausloeser.art === 'datum' && (<>

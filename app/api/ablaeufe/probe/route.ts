@@ -55,6 +55,26 @@ export async function GET(req: Request) {
       }],
     });
   }
+  // Paket 168: Knopf auf einer Modulseite — Probe mit einem Beispiel-Vorgang des Betriebs.
+  if (ziel && ablauf.ausloeser.art === 'knopf') {
+    const { data: juengster } = await supabase.from(ziel.tabelle).select('*').eq('owner_user_id', user.id).limit(1);
+    const satz = ((juengster ?? []) as Datensatz[])[0];
+    if (!satz) return NextResponse.json({ ok: true, zeitpunkt: jetzt.toISOString(), pruefung, beispiele: [], hinweis: `${ausloeserText(ablauf.ausloeser)} — noch kein Vorgang zum Ausprobieren vorhanden.` });
+    await ergaenzeKontakte(supabase, user.id, [satz]);
+    const f = fahrplan(ablauf, null, satz, jetzt);
+    const z = zustandNach(f.danach);
+    return NextResponse.json({
+      ok: true, zeitpunkt: jetzt.toISOString(), pruefung,
+      hinweis: `${ausloeserText(ablauf.ausloeser)} — so liefe es für einen Beispiel-Vorgang.`,
+      beispiele: [{
+        vorgang: String(satz.auftragsnummer ?? satz.titel ?? satz.name ?? ([satz.vorname, satz.nachname].filter(Boolean).join(' ') || satz.firma) ?? 'Vorgang'),
+        schritte: f.jetzt.map((e) => (e.art === 'bedingung'
+          ? { pfad: e.pfad, text: e.ergebnis ? 'Wenn: ja → Dann-Zweig' : 'Wenn: nein → Sonst-Zweig' }
+          : { pfad: e.pfad, text: `${schrittText(e.schritt)}: ${planText(aktionPlanen(e.schritt, ablauf, ziel, user.id, satz, jetzt))}` })),
+        danach: z.meldung,
+      }],
+    });
+  }
   if (!ziel || ablauf.ausloeser.art !== 'datum') {
     return NextResponse.json({ ok: true, zeitpunkt: jetzt.toISOString(), pruefung, faellig: 0, wuerde_starten: 0, zurueckgestellt: 0, beispiele: [], hinweis: 'Dieser Auslöser läuft noch nicht im Motor.' });
   }
