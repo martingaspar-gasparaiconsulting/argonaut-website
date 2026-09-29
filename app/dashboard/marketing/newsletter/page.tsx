@@ -265,7 +265,8 @@ export default function NewsletterAbonnenten() {
         setSendeMeldung({ art: 'fehler', text: j?.error || 'Versand fehlgeschlagen.' });
       } else {
         const nachsatz = j.fehler > 0 ? ` (${j.fehler} nicht zustellbar)` : '';
-        setSendeMeldung({ art: 'ok', text: `✓ An ${j.gesendet} Abonnenten gesendet${nachsatz}.` });
+        const ohne = j.hinweis ? ` ${j.hinweis}` : '';
+        setSendeMeldung({ art: 'ok', text: `✓ An ${j.gesendet} Abonnenten gesendet${nachsatz}.${ohne}` });
         setBetreff('');
         setInhalt('');
         laden();
@@ -426,6 +427,10 @@ export default function NewsletterAbonnenten() {
           <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(17px, 1.5vw, 24px)', marginBottom: 14 }}>
             Abonnent hinzufügen
           </div>
+          <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 14px', fontSize: 'clamp(12px, 1vw, 16px)', lineHeight: 1.5 }}>
+            Von Hand eingetragene Adressen erhalten den Newsletter erst, wenn am Kontakt eine Einwilligung hinterlegt ist
+            oder sich die Person über Ihre Anmeldeseite bestätigt angemeldet hat.
+          </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: '2 1 240px' }}>
               <label style={labelStyle}>E-Mail *</label>

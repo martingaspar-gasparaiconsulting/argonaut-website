@@ -4,6 +4,8 @@ import { cronGuard } from '@/lib/cronGuard';
 import { sendeMail } from '@/lib/mail';
 import { TEST_STEPS, naechsterSchrittIndex } from '@/lib/dossierSequenz';
 import { tagesBudget, mengeFuerWerbelauf, begruendung } from '@/lib/mailBudget';
+import { werbeKopfzeilen } from '@/lib/werbemail';
+import { werbePrueferLaden, betreiberKennung } from '@/lib/werbeErlaubnisServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/dossier-sequenz
@@ -17,6 +19,10 @@ import { tagesBudget, mengeFuerWerbelauf, begruendung } from '@/lib/mailBudget';
 // im kostenlosen Tarif (100/Tag) das Dreifache des ganzen Tageskontingents.
 // Werbepost darf die Betriebspost (Mahnungen, Termine, Auswertungen) nicht
 // verdraengen; der Deckel kommt deshalb aus lib/mailBudget.
+//
+// Paket 173 (29.09.2026, Befund M7): Wer bei ARGONAUT in einem anderen Kanal
+// widersprochen hat (nach seiner Dossier-Bestaetigung), bekommt keine Tipps
+// mehr; jede Mail traegt die Kopfzeile List-Unsubscribe.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -40,7 +46,7 @@ async function erlaubt(req: Request): Promise<boolean> {
   return (await cronGuard(req, { betreiberErlaubt: true })) === null;
 }
 
-type SeqLead = { id: string; email: string; name: string | null; seq_schritt: number | null; abmelde_token: string | null };
+type SeqLead = { id: string; email: string; name: string | null; seq_schritt: number | null; abmelde_token: string | null; bestaetigt_am: string | null };
 
 async function lauf(req: Request) {
   if (!(await erlaubt(req))) {
@@ -54,7 +60,7 @@ async function lauf(req: Request) {
 
   const { data, error } = await admin
     .from('dossier_leads')
-    .select('id, email, name, seq_schritt, abmelde_token')
+    .select('id, email, name, seq_schritt, abmelde_token, bestaetigt_am')
     .eq('seq_quelle', 'test')
     .eq('seq_status', 'aktiv')
     .lte('seq_naechster_am', jetzt.toISOString())
@@ -63,9 +69,22 @@ async function lauf(req: Request) {
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
   const leads = (data ?? []) as SeqLead[];
-  let gesendet = 0, fertig = 0, fehler = 0;
+  let gesendet = 0, fertig = 0, fehler = 0, gesperrt = 0;
+
+  const betreiber = betreiberKennung();
+  const darf = betreiber ? await werbePrueferLaden(admin, leads.map((l) => ({ betrieb: betreiber, email: l.email }))) : null;
 
   for (const l of leads) {
+    if (betreiber && darf) {
+      const erlaubnis = darf(betreiber, l.email, { nurWiderspruch: true, kanalBestaetigtAm: l.bestaetigt_am });
+      if (!erlaubnis.erlaubt) {
+        if (erlaubnis.grund === 'widersprochen') {
+          await admin.from('dossier_leads').update({ seq_status: 'abgemeldet' }).eq('id', l.id);
+        }
+        gesperrt++;
+        continue;
+      }
+    }
     const idx = Math.max(0, l.seq_schritt ?? 0);
     const step = TEST_STEPS[idx];
     if (!step) {
@@ -77,7 +96,7 @@ async function lauf(req: Request) {
     const vars = { name: l.name || null, abmeldeUrl, terminUrl: `${BASIS_URL}/demo`, testUrl: `${BASIS_URL}/testen` };
 
     try {
-      const r = await sendeMail({ an: l.email, betreff: step.betreff, html: step.html(vars) });
+      const r = await sendeMail({ an: l.email, betreff: step.betreff, html: step.html(vars), kopfzeilen: werbeKopfzeilen(abmeldeUrl) });
       if (!r.ok) throw new Error(r.fehler || 'Versand fehlgeschlagen');
       gesendet++;
     } catch {
@@ -103,7 +122,7 @@ async function lauf(req: Request) {
   if (gedeckelt) console.warn(`[dossier-sequenz] ${hinweis}`);
 
   return NextResponse.json({
-    ok: true, geprueft: leads.length, gesendet, fertig, fehler,
+    ok: true, geprueft: leads.length, gesendet, fertig, fehler, gesperrt,
     gedeckelt, tagesbudget: budget, deckel: MAX_PRO_DURCHGANG, hinweis,
   });
 }

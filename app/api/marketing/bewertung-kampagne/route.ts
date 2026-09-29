@@ -4,6 +4,10 @@ import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
 import {
   empfaengerPool, bereinigeEmpfaenger, kampagneKennzahlen, bewertungsLink,
 } from '@/lib/bewertungKampagne';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { betriebDerSitzung, erlaubteEmpfaenger } from '@/lib/werbeErlaubnisServer';
+import { ablehnungsHinweis } from '@/lib/werbeErlaubnis';
+import { werbeVersandTeile } from '@/lib/werbeAbmeldeLink';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/bewertung-kampagne/route.ts
@@ -13,8 +17,20 @@ import {
 // öffentliche Abgabe /bewerten/<token>). NEU: viele Kunden auf einmal einladen.
 //   GET  -> { ok, pool, kennzahlen, firma }   (Empfänger + Antwortquote)
 //   POST { empfaenger:[{name,email}] } -> { ok, gesendet, fehler, uebersprungen }
-// Alles RLS-scoped / owner-hart. Kein SQL nötig.
+// Alles RLS-scoped / owner-hart.
+//
+// Paket 173 (29.09.2026, Befund H7): Eine Bewertungsbitte ist Werbung
+// (BGH VI ZR 225/17). Eingeladen wird nur, wer eingewilligt und nicht
+// widersprochen hat; jede Mail trägt Abmeldelink, Widerspruchshinweis und
+// List-Unsubscribe. Absender, Firma und Besitzer ist immer der BETRIEB —
+// auch wenn ein Mitarbeiter die Kampagne startet.
 // ============================================================================
+
+function basisUrl(req: Request): string {
+  const gesetzt = (process.env.NEXT_PUBLIC_SITE_URL || '').trim();
+  if (gesetzt) return gesetzt.replace(/\/+$/, '');
+  try { return new URL(req.url).origin; } catch { return ''; }
+}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,11 +63,23 @@ export async function GET() {
     hole(supabase, 'bewertungsanfragen', 'kunde_email, status, sterne, veroeffentlicht'),
   ]);
 
-  const pool = empfaengerPool(kontakte, anfragen);
+  const roherPool = empfaengerPool(kontakte, anfragen);
   const kennzahlen = kampagneKennzahlen(anfragen);
-  const brand = await absenderBranding(supabase, user.id);
+  const betrieb = await betriebDerSitzung(supabase, user.id);
+  let admin: ReturnType<typeof createAdminClient> | null = null;
+  try { admin = createAdminClient(); } catch { admin = null; }
+  // Paket 173: nur wer eingeladen werden DARF, steht zur Auswahl.
+  const pruefung = admin ? await erlaubteEmpfaenger(admin, betrieb, roherPool) : { ok: false, erlaubt: [], abgelehnt: [] };
+  const brand = await absenderBranding(admin ?? supabase, betrieb);
 
-  return NextResponse.json({ ok: true, pool, kennzahlen, firma: brand.firma });
+  return NextResponse.json({
+    ok: true,
+    pool: pruefung.erlaubt,
+    ohneEinwilligung: pruefung.ok ? pruefung.abgelehnt.length : roherPool.length,
+    hinweis: pruefung.ok ? (ablehnungsHinweis(pruefung.abgelehnt) || undefined) : 'Die Einwilligungen können gerade nicht geprüft werden.',
+    kennzahlen,
+    firma: brand.firma,
+  });
 }
 
 export async function POST(req: Request) {
@@ -68,20 +96,35 @@ export async function POST(req: Request) {
   // Schon-Eingeladene serverseitig ausschließen (Doppel-Einladung vermeiden).
   const anfragen = await hole(supabase, 'bewertungsanfragen', 'kunde_email');
   const bereits = new Set(anfragen.map((a) => String(a.kunde_email ?? '').trim().toLowerCase()).filter(Boolean));
-  const ziel = empfaenger.filter((e) => !bereits.has(e.email.toLowerCase()));
-  const uebersprungen = empfaenger.length - ziel.length;
+  const offen = empfaenger.filter((e) => !bereits.has(e.email.toLowerCase()));
+  const uebersprungen = empfaenger.length - offen.length;
 
-  const brand = await absenderBranding(supabase, user.id);
-  const origin = req.headers.get('origin') || (() => { try { return new URL(req.url).origin; } catch { return ''; } })();
+  // Paket 173: nur mit Einwilligung, nie nach Widerspruch — serverseitig, nicht der Auswahl im Browser glauben.
+  const betrieb = await betriebDerSitzung(supabase, user.id);
+  let admin: ReturnType<typeof createAdminClient>;
+  try { admin = createAdminClient(); } catch {
+    return NextResponse.json({ ok: false, error: 'Die Einwilligungen können gerade nicht geprüft werden.' }, { status: 503 });
+  }
+  const pruefung = await erlaubteEmpfaenger(admin, betrieb, offen);
+  if (!pruefung.ok) {
+    return NextResponse.json({ ok: false, error: 'Die Einwilligungen können gerade nicht geprüft werden.' }, { status: 503 });
+  }
+  const ziel = pruefung.erlaubt;
+  const ohneEinwilligung = pruefung.abgelehnt.length;
+
+  const brand = await absenderBranding(admin, betrieb);
+  const origin = basisUrl(req);
 
   let gesendet = 0;
   let fehler = 0;
 
   await Promise.all(ziel.map(async (e) => {
     try {
+      const teile = werbeVersandTeile(origin, betrieb, e.email);
+      if (!teile) { fehler++; return; }
       const token = globalThis.crypto.randomUUID(); // 165: kein ratbarer Rueckfall
       const { error } = await supabase.from('bewertungsanfragen').insert({
-        owner_user_id: user.id,
+        owner_user_id: betrieb,
         kunde_name: e.name || null,
         kunde_email: e.email,
         token,
@@ -101,7 +144,11 @@ export async function POST(req: Request) {
              text-decoration:none;padding:13px 26px;border-radius:8px;">★ Jetzt bewerten</a>
         </p>
         <p style="color:#5b6b7d;font-size:13px;">Falls der Knopf nicht funktioniert: ${escapeHtml(link)}</p>`;
-      const html = kundenMailLayout(brand.firma, brand.akzent, 'Ihre Meinung zählt', inhalt);
+      const html = kundenMailLayout(brand.firma, brand.akzent, 'Ihre Meinung zählt', inhalt, {
+        werbung: true,
+        abmeldeLink: teile.abmeldeLink,
+        grund: `Sie erhalten diese E-Mail, weil Sie Kunde bei ${brand.firma} sind und eingewilligt haben.`,
+      });
 
       const r = await sendeMail({
         an: e.email,
@@ -109,6 +156,8 @@ export async function POST(req: Request) {
         html,
         absenderName: brand.firma,
         antwortAn: brand.email,
+        kopfzeilen: teile.kopfzeilen,
+        kundenPost: true,
       });
       if (r.ok) gesendet++; else fehler++;
     } catch {
@@ -116,5 +165,5 @@ export async function POST(req: Request) {
     }
   }));
 
-  return NextResponse.json({ ok: true, gesendet, fehler, uebersprungen });
+  return NextResponse.json({ ok: true, gesendet, fehler, uebersprungen, ohneEinwilligung, hinweis: ablehnungsHinweis(pruefung.abgelehnt) || undefined });
 }

@@ -174,6 +174,7 @@ export default function BewertungenPage() {
       {/* Einladen */}
       <div style={styles.card}>
         <h2 style={styles.cardTitel}>Kunde um Bewertung bitten</h2>
+        <p style={{ ...styles.sub, margin: '0 0 12px' }}>Die E-Mail geht nur an Kunden, die am Kontakt eine Einwilligung zur Werbung tragen und nicht widersprochen haben. Ohne Einwilligung wird die Anfrage trotzdem angelegt — den Link geben Sie dann persönlich weiter.</p>
         {fehler && <div style={styles.err}>{fehler}</div>}
         {ok && <div style={styles.ok}>{ok}</div>}
         <div style={styles.formGrid}>

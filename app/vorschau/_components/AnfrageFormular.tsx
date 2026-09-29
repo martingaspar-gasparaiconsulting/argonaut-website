@@ -30,6 +30,8 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
   })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
+  // Paket 173 (Befund H8): das Dossier nur mit eigenem Haekchen, vorher lief der Double-Opt-in ungefragt an.
+  const [dossierSerie, setDossierSerie] = useState(false)
   const [reload, setReload] = useState(0)
   const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }))
 
@@ -46,7 +48,7 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
     try {
       const res = await fetch('/api/website-anfrage', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...f, branche: branche ?? null }),
+        body: JSON.stringify({ ...f, branche: branche ?? null, dossierSerie }),
       })
       if (res.status === 409) {
         const j = await res.json().catch(() => ({}))
@@ -151,8 +153,12 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
                 Art. 7 Abs. 1 DSGVO ohnehin unwirksam. Pflicht ist die INFORMATION nach
                 Art. 13 DSGVO — die steht hier. Beim spaeteren Bestellvorgang gehoert das
                 AGB-Haekchen wieder hin, zusammen mit dem § 312j-Button. */}
-            <p style={{ fontSize: '.82rem', color: '#8fa9b6', lineHeight: 1.5, margin: '16px 0 0' }}>
-              Ihre Angaben verwenden wir ausschließlich, um Ihre Anfrage zu bearbeiten. Wie wir mit
+            <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', margin: '16px 0 0', cursor: 'pointer', fontSize: '.85rem', color: '#b9cdd6', lineHeight: 1.5 }}>
+              <input type="checkbox" checked={dossierSerie} onChange={(e) => setDossierSerie(e.target.checked)} style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: GOLD, flexShrink: 0 }} />
+              <span>Ja, senden Sie mir zusätzlich das ARGONAUT-Dossier und weitere Informationen zu ARGONAUT per E-Mail. Ich bestätige das per Link in einer E-Mail und kann es jederzeit abbestellen.</span>
+            </label>
+            <p style={{ fontSize: '.82rem', color: '#8fa9b6', lineHeight: 1.5, margin: '12px 0 0' }}>
+              Ihre Angaben verwenden wir, um Ihre Anfrage zu bearbeiten. Werbe-E-Mails erhalten Sie nur, wenn Sie das Häkchen oben setzen. Wie wir mit
               Ihren Daten umgehen, steht in der{' '}
               <a href="/datenschutz" style={{ color: TEAL }}>Datenschutzerklärung</a>.
             </p>

@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { sendeMail, absenderBranding, kundenMailLayout } from '@/lib/mail';
 import { escapeHtml, textZuHtml } from '@/lib/newsletter';
 import { werbeDeckel, tagesBudget, WERBE_ANTEIL, begruendung } from '@/lib/mailBudget';
+import { werbePrueferLaden } from '@/lib/werbeErlaubnisServer';
+import { werbeVersandTeile } from '@/lib/werbeAbmeldeLink';
 import {
   erinnerungFaellig, nachbereitungFaellig, nachbereitungFuer,
   setzePlatzhalter, anrede, abmeldenUrl, formatiereTermin, dauerText, endetAm,
@@ -108,14 +110,14 @@ type TerminRow = {
 type AnmeldungRow = {
   id: string; owner_user_id: string; webinar_id: string; termin_id: string;
   email: string; name: string | null; status: string; teilnahme: string;
-  nachbereitung_am: string | null; abmelde_token: string | null;
+  nachbereitung_am: string | null; abmelde_token: string | null; bestaetigt_am: string | null;
 };
 type WebinarRow = { id: string; titel: string; referent: string; aufzeichnung_url: string | null };
 type VersandRow = { anmeldung_id: string; art: string; stufe: number };
 
 // Je eine Zeichenkette, nicht zusammengesetzt (siehe tests/selectLiteral.test.mjs).
 const TERMIN_SPALTEN = 'id, owner_user_id, webinar_id, beginnt_am, dauer_minuten, kapazitaet, zugang_url, status';
-const ANMELDUNG_SPALTEN = 'id, owner_user_id, webinar_id, termin_id, email, name, status, teilnahme, nachbereitung_am, abmelde_token';
+const ANMELDUNG_SPALTEN = 'id, owner_user_id, webinar_id, termin_id, email, name, status, teilnahme, nachbereitung_am, abmelde_token, bestaetigt_am';
 
 async function lauf(req: Request) {
   if (!(await erlaubt(req))) return NextResponse.json({ ok: false, error: 'Nicht autorisiert.' }, { status: 401 });
@@ -181,19 +183,9 @@ async function lauf(req: Request) {
   const webinarJeId = new Map(((webinareRoh ?? []) as WebinarRow[]).map((w) => [w.id, w]));
 
   // Werbewiderspruch: nur fuer die Nachbereitung nachschlagen. Siehe Dateikopf.
-  const widerspruch = new Set<string>();
-  const mailsFuerPruefung = Array.from(new Set(anmeldungen.map((a) => a.email.toLowerCase())));
-  if (mailsFuerPruefung.length > 0) {
-    const { data: kontakteRoh } = await db
-      .from('kontakte')
-      .select('owner_user_id, email, werbe_widerspruch_am')
-      .in('email', mailsFuerPruefung)
-      .not('werbe_widerspruch_am', 'is', null)
-      .limit(5000);
-    for (const k of ((kontakteRoh ?? []) as { owner_user_id: string; email: string | null }[])) {
-      widerspruch.add(`${k.owner_user_id}|${String(k.email ?? '').toLowerCase()}`);
-    }
-  }
+  // Paket 173: aus ALLEN Kanaelen (Sperrliste, Kontakt, Newsletter) — nicht mehr
+  // nur kontakte.werbe_widerspruch_am, und ohne Gross-/Kleinschreibungs-Luecke.
+  const darf = await werbePrueferLaden(db, anmeldungen.map((a) => ({ betrieb: a.owner_user_id, email: a.email })));
 
   const brandingCache = new Map<string, { firma: string; akzent: string; email: string | undefined }>();
   async function brandingVon(ownerId: string) {
@@ -269,7 +261,7 @@ async function lauf(req: Request) {
         const r = await sendeMail({
           an: a.email, betreff,
           html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt),
-          absenderName: marke.firma, antwortAn: marke.email,
+          absenderName: marke.firma, antwortAn: marke.email, kundenPost: true,
           ...(kalender ? { anhaenge: [kalender] } : {}),
         });
         if (!r.ok) throw new Error(r.fehler);
@@ -287,7 +279,8 @@ async function lauf(req: Request) {
 
     // Nachbereitung ist Werbung: Deckel UND Werbewiderspruch gelten.
     if (nachbereitet >= deckelWerbung) { uebersprungen++; continue; }
-    if (widerspruch.has(`${a.owner_user_id}|${a.email.toLowerCase()}`)) {
+    const teile = werbeVersandTeile(basis, a.owner_user_id, a.email);
+    if (!darf(a.owner_user_id, a.email, { nurWiderspruch: true, kanalBestaetigtAm: a.bestaetigt_am }).erlaubt || !teile) {
       // Kein Versand, aber vermerken — sonst wird es bei jedem Lauf neu geprüft.
       if (!probe) {
         await db.from('webinar_anmeldung')
@@ -318,16 +311,19 @@ async function lauf(req: Request) {
       const inhalt = `
         <p style="margin:0 0 12px;">${escapeHtml(anrede(a.name))}</p>
         <div style="margin:0 0 12px;">${textZuHtml(text)}</div>
-        ${aufzeichnung}
-        <p style="margin:26px 0 0;border-top:1px solid #eeeeee;padding-top:14px;color:#8a94a6;font-size:12px;line-height:1.5;">
-          Sie erhalten diese E-Mail, weil Sie sich für „${escapeHtml(w.titel)}" angemeldet hatten.
-          <a href="${abmeldenUrl(basis, a.abmelde_token || '')}" style="color:#8a94a6;">Hier mit einem Klick abmelden</a>.
-        </p>`;
+        ${aufzeichnung}`;
 
+      // Paket 173: Werbe-Fuss mit dem kanaluebergreifenden Abmeldelink + List-Unsubscribe.
       const r = await sendeMail({
         an: a.email, betreff,
-        html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt),
+        html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt, {
+          werbung: true,
+          abmeldeLink: teile.abmeldeLink,
+          grund: `Sie erhalten diese E-Mail, weil Sie sich für „${w.titel}" bei ${marke.firma} angemeldet hatten.`,
+        }),
         absenderName: marke.firma, antwortAn: marke.email,
+        kopfzeilen: teile.kopfzeilen,
+        kundenPost: true,
       });
       if (!r.ok) throw new Error(r.fehler);
 

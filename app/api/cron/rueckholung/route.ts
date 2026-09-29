@@ -10,6 +10,8 @@ import {
   tageZwischen, plusTage, STOPP_TEXT,
   type Schritt, type Strecke,
 } from '@/lib/rueckholung';
+import { werbeKopfzeilen } from '@/lib/werbemail';
+import { werbePrueferLaden } from '@/lib/werbeErlaubnisServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/rueckholung — die Rückhol-Strecke (3.15 Paket 3)
@@ -155,6 +157,11 @@ async function lauf(req: Request) {
     const kontaktJeId = new Map<string, KontaktRow>();
     for (const k of kontakte) kontaktJeId.set(String(k.id), k);
 
+    // Paket 173 (Befund M7): Widerspruch aus JEDEM Kanal (Newsletter-Abmeldung,
+    // Abmeldelink einer anderen Werbe-Mail …) — nicht nur am Kontakt.
+    const darf = await werbePrueferLaden(db, kontakte.map((k) => ({ betrieb: s.owner_user_id, email: k.email })));
+    const gesperrt = (email: unknown) => !darf(s.owner_user_id, email, { nurWiderspruch: true }).erlaubt;
+
     // Als Kaufdatum gilt der Zahlungseingang; ohne den das Fälligkeitsdatum.
     // Belegte Spalten — kein geratenes „rechnungsdatum".
     const kaeufe = letzterKaufJeKontakt(
@@ -196,6 +203,7 @@ async function lauf(req: Request) {
 
       const r = istRuhend(k, kaeufe.get(kid) ?? null, heute, s.ruhe_tage);
       if (!r.ruhend) continue;
+      if (gesperrt(k.email)) continue;
 
       if (probe) { wuerdeAufnehmen.push(String(k.email ?? '')); continue; }
       neueZeilen.push({
@@ -232,7 +240,10 @@ async function lauf(req: Request) {
 
       const k = l.kontakt_id ? kontaktJeId.get(String(l.kontakt_id)) : undefined;
       const kauf = l.kontakt_id ? (kaeufe.get(String(l.kontakt_id)) ?? null) : null;
-      const e = entscheide(l, strecke, k ?? null, kauf, heute);
+      const e0 = entscheide(l, strecke, k ?? null, kauf, heute);
+      const e: typeof e0 = e0.tun === 'senden' && gesperrt(l.email)
+        ? { tun: 'stopp', stopp: 'widersprochen', grund: STOPP_TEXT.widersprochen }
+        : e0;
 
       if (e.tun === 'warten') continue;
 
@@ -281,18 +292,21 @@ async function lauf(req: Request) {
 
         const inhalt = `
           <p style="margin:0 0 12px;">${escapeHtml(anrede(k ?? null))}</p>
-          <div style="margin:0 0 12px;">${textZuHtml(text)}</div>
-          <p style="margin:26px 0 0;border-top:1px solid #eeeeee;padding-top:14px;color:#8a94a6;font-size:12px;line-height:1.5;">
-            Sie erhalten diese E-Mail, weil Sie Kunde bei ${escapeHtml(marke.firma)} sind.
-            <a href="${abUrl}" style="color:#8a94a6;">Hier keine Werbung mehr erhalten</a>.
-          </p>`;
+          <div style="margin:0 0 12px;">${textZuHtml(text)}</div>`;
 
+        // Paket 173: Werbe-Fuss (Abmeldelink + Widerspruchshinweis), List-Unsubscribe, Antwort nie an ARGONAUT.
         const r = await sendeMail({
           an: l.email,
           betreff,
-          html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt),
+          html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt, {
+            werbung: true,
+            abmeldeLink: abUrl,
+            grund: `Sie erhalten diese E-Mail, weil Sie Kunde bei ${marke.firma} sind.`,
+          }),
           absenderName: marke.firma,
           antwortAn: marke.email,
+          kopfzeilen: werbeKopfzeilen(abUrl),
+          kundenPost: true,
         });
         if (!r.ok) throw new Error(r.fehler);
 

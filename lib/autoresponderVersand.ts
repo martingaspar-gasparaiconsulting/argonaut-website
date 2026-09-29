@@ -14,6 +14,7 @@ import { sendeMail } from './mail';
 import { autoresponderMailHtml, autoresponderAbmeldeUrl } from './newsletter';
 import { werbeKopfzeilen } from './werbemail';
 import { faelligerSchritt, naechsterAktiverSchrittNachPosition, tageAddieren } from './autoresponder';
+import { werbePrueferLaden } from './werbeErlaubnisServer';
 
 export type LaufRow = {
   id: string;
@@ -97,8 +98,23 @@ export async function verschickeFaellige(
   let fertig = 0;
   let uebersprungen = 0;
 
+  // Paket 173: vor JEDEM Versand pruefen — auch Laeufe, die vor dem 29.09.
+  // ohne Einwilligung eingetragen wurden, und Empfaenger, die inzwischen in
+  // einem ANDEREN Kanal widersprochen haben. Laedt die Pruefung nicht, geht
+  // nichts raus (Antwort „unbekannt").
+  const darf = await werbePrueferLaden(admin, laeufe.map((l) => ({ betrieb: l.owner_user_id, email: l.email })));
+
   for (const l of laeufe) {
     try {
+      const erlaubnis = darf(l.owner_user_id, l.email);
+      if (!erlaubnis.erlaubt) {
+        if (erlaubnis.grund === 'widersprochen') {
+          await admin.from('autoresponder_lauf').update({ status: 'abgemeldet' }).eq('id', l.id).eq('owner_user_id', l.owner_user_id);
+        }
+        uebersprungen++;
+        continue;
+      }
+
       const seq = await seqLaden(l.sequenz_id);
       if (!seq || seq.status !== 'aktiv') {
         uebersprungen++;

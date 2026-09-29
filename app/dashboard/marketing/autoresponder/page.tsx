@@ -295,7 +295,8 @@ export default function AutoresponderSeite() {
       } else {
         const ns = j.uebersprungen > 0 ? ` (${j.uebersprungen} übersprungen)` : '';
         const sofort = j.sofortGesendet > 0 ? ` · ${j.sofortGesendet} sofort gesendet` : '';
-        setEMeldung({ art: 'ok', text: `✓ ${j.eingetragen} eingetragen${ns}${sofort}.` });
+        const ohne = j.hinweis ? ` ${j.hinweis}` : '';
+        setEMeldung({ art: 'ok', text: `✓ ${j.eingetragen} eingetragen${ns}${sofort}.${ohne}` });
         setEText('');
         setEAusNewsletter(false);
         laden();
@@ -566,7 +567,7 @@ export default function AutoresponderSeite() {
               </span>
             </label>
             <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '10px 0 0', fontSize: 'clamp(12px, 1vw, 16px)', lineHeight: 1.5 }}>
-              Tragen Sie nur Empfänger ein, die eingewilligt haben. Jede Mail enthält automatisch einen Abmelde-Link (§7 UWG).
+              Aufgenommen werden nur Adressen mit bestätigter Newsletter-Anmeldung oder mit Einwilligung am Kontakt — alle anderen werden automatisch abgelehnt und mit Grund angezeigt. Jede Mail enthält einen Abmelde-Link (§ 7 UWG); eine Abmeldung gilt für alle Werbe-E-Mails Ihres Betriebs.
             </p>
             {eMeldung && (
               <p style={{ fontFamily: 'DM Sans, sans-serif', margin: '14px 0 0', fontSize: 'clamp(13px, 1.13vw, 18px)', color: eMeldung.art === 'ok' ? C.green : C.danger }}>

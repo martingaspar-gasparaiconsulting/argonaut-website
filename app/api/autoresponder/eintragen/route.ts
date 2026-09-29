@@ -4,6 +4,8 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { emailNormalisieren, istEmailGueltig } from '@/lib/newsletter';
 import { ersterAktiverSchritt, naechsterVersandAm } from '@/lib/autoresponder';
 import { verschickeFaellige, type LaufRow } from '@/lib/autoresponderVersand';
+import { teileEmpfaenger, ablehnungsHinweis } from '@/lib/werbeErlaubnis';
+import { werbeFaktenLaden } from '@/lib/werbeErlaubnisServer';
 
 // ============================================================================
 // ARGONAUT OS · app/api/autoresponder/eintragen/route.ts  (Paket 2)
@@ -16,6 +18,14 @@ import { verschickeFaellige, type LaufRow } from '@/lib/autoresponderVersand';
 // Quellen: manuell eingegebene E-Mails UND/ODER die aktive Newsletter-Liste.
 // Doppelte werden uebersprungen (ein Empfaenger nur einmal je Sequenz).
 // RLS sorgt dafuer, dass nur die eigene Sequenz/Liste erreichbar ist.
+//
+// ▄▄▄ PAKET 173 (29.09.2026, Befund K6) ▄▄▄
+// Eine Info-Serie ist Werbung. Bis heute lief sie an JEDE eingetippte Adresse
+// los, Tag-0-Mail sofort, bis 1.000 auf einmal — ohne Einwilligung. Jetzt
+// kommt nur in die Serie, wer nachweisbar eingewilligt hat (bestaetigte
+// Newsletter-Anmeldung oder Einwilligung am Kontakt) und nicht widersprochen
+// hat (lib/werbeErlaubnis). Kann die Pruefung nicht laden, wird NIEMAND
+// eingetragen. Wer abgelehnt wurde, steht mit Grund in der Antwort.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -42,7 +52,7 @@ export async function POST(req: Request) {
     // Sequenz laden (RLS: nur eigene) + aktive Schritte holen.
     const { data: seq } = await supabase
       .from('autoresponder_sequenz')
-      .select('id, status')
+      .select('id, status, owner_user_id')
       .eq('id', sequenzId)
       .maybeSingle();
     if (!seq) return NextResponse.json({ ok: false, error: 'Sequenz nicht gefunden.' }, { status: 404 });
@@ -90,6 +100,33 @@ export async function POST(req: Request) {
       );
     }
 
+    // Paket 173: nur wer eingewilligt und nicht widersprochen hat.
+    const betrieb = String((seq as { owner_user_id?: string | null }).owner_user_id ?? '').trim();
+    let admin: ReturnType<typeof createServiceClient>;
+    try {
+      admin = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+        process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+      );
+    } catch {
+      return NextResponse.json({ ok: false, error: 'Die Einwilligung kann gerade nicht geprüft werden. Bitte später erneut versuchen.' }, { status: 503 });
+    }
+    const fakten = await werbeFaktenLaden(admin, betrieb, Array.from(kandidaten.keys()));
+    if (!fakten) {
+      return NextResponse.json({ ok: false, error: 'Die Einwilligung kann gerade nicht geprüft werden. Bitte später erneut versuchen.' }, { status: 503 });
+    }
+    const pruefung = teileEmpfaenger(Array.from(kandidaten.keys()), fakten);
+    const ohneErlaubnis = pruefung.abgelehnt;
+    for (const a of ohneErlaubnis) kandidaten.delete(a.email);
+    const hinweis = ablehnungsHinweis(ohneErlaubnis);
+    if (kandidaten.size === 0) {
+      return NextResponse.json({
+        ok: false,
+        error: 'Keine der Adressen darf diese Serie erhalten. ' + hinweis,
+        abgelehnt: ohneErlaubnis.length,
+      }, { status: 400 });
+    }
+
     // Schon eingetragene Empfaenger dieser Sequenz ermitteln (Dedupe).
     const { data: vorhanden } = await supabase
       .from('autoresponder_lauf')
@@ -132,10 +169,6 @@ export async function POST(req: Request) {
     let sofortGesendet = 0;
     if (eingetragen > 0 && Math.round(erster.verzoegerung_tage ?? 0) === 0) {
       try {
-        const admin = createServiceClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-          process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-        );
         const { data: neue } = await admin
           .from('autoresponder_lauf')
           .select('id, owner_user_id, sequenz_id, email, name, abmelde_token, naechste_position, gestartet_am')
@@ -153,7 +186,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, eingetragen, uebersprungen, sofortGesendet });
+    return NextResponse.json({ ok: true, eingetragen, uebersprungen, sofortGesendet, abgelehnt: ohneErlaubnis.length, hinweis: hinweis || undefined });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Eintragen fehlgeschlagen.';
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

@@ -171,7 +171,7 @@ export function laufWerte(ablauf: Pick<Ablauf, 'name' | 'ausloeser'>, satz: Date
 export type AktionPlan =
   | { art: 'anlegen'; tabelle: string; daten: Record<string, unknown>; meldung: string }
   | { art: 'aendern'; tabelle: string; id: string; daten: Record<string, unknown>; meldung: string }
-  | { art: 'mail'; an: string; betreff: string; text: string; meldung: string }
+  | { art: 'mail'; an: string; betreff: string; text: string; meldung: string; werbung: boolean }
   // Paket 167
   | { art: 'glocke'; an: 'chef' | 'team'; titel: string; text: string; link: string; meldung: string }
   | { art: 'pdf'; vorlage: 'schreiben' | 'vorgangsblatt'; titel: string; text: string; zeilen: [string, string][]; meldung: string }
@@ -228,12 +228,15 @@ export function aktionPlanen(
       const an = empfaengerAdresse(satz, cfg);
       if (!an || !an.includes('@')) return { art: 'uebersprungen', meldung: 'keine E-Mail-Adresse hinterlegt' };
       // Werbung nur mit Einwilligung und ohne Widerspruch — Betriebspost (Mahnung, Angebot) läuft immer.
-      if (ausloeserIstWerbung(ablauf.ausloeser) && cfg.an !== 'feste_adresse') {
+      const werbung = ausloeserIstWerbung(ablauf.ausloeser) && cfg.an !== 'feste_adresse';
+      if (werbung) {
         const st = werbeStatus(satz, 'kontakte');
         if (st !== 'erlaubt') return { art: 'uebersprungen', meldung: `kein Werbeversand: ${WERBE_STATUS_TEXT[st]}` };
       }
       const betreff = text('betreff') || ablauf.name;
-      return { art: 'mail', an, betreff, text: text('text'), meldung: `Mail an ${an}` };
+      // Paket 173: werbung = true -> der Versand prüft zusätzlich die Sperrliste
+      // aller Kanäle und hängt Abmeldelink + Widerspruchshinweis an.
+      return { art: 'mail', an, betreff, text: text('text'), meldung: `Mail an ${an}`, werbung };
     }
     case 'status_aendern': {
       const neu = String(cfg.neuer_status ?? '').trim();

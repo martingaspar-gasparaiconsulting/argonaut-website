@@ -4,6 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import { sendeMail, absenderBranding, kundenMailLayout } from '@/lib/mail';
 import { escapeHtml, textZuHtml } from '@/lib/newsletter';
 import { werbeDeckel, tagesBudget, begruendung } from '@/lib/mailBudget';
+import { werbeKopfzeilen } from '@/lib/werbemail';
+import { werbePrueferLaden } from '@/lib/werbeErlaubnisServer';
 import {
   entscheide, nachVersandWerte, setzePlatzhalter, anrede, abmeldenUrl,
   type StreckenSchritt,
@@ -126,11 +128,26 @@ async function lauf(req: Request) {
     return brandingCache.get(ownerId)!;
   }
 
-  let gesendet = 0, fertig = 0, uebersprungen = 0, fehler = 0;
+  let gesendet = 0, fertig = 0, uebersprungen = 0, fehler = 0, gesperrt = 0;
   const wuerde: { email: string; schritt: number }[] = [];
+
+  // Paket 173 (Befund M7): ein Widerspruch in einem ANDEREN Kanal dieses
+  // Betriebs (Newsletter, Rueckholung, Abmeldelink …) stoppt auch diese Strecke —
+  // es sei denn, die Freebie-Bestaetigung ist juenger als der Widerspruch.
+  const darf = await werbePrueferLaden(db, zeilen.map((z) => ({ betrieb: z.owner_user_id, email: z.email })));
 
   for (const l of zeilen) {
     if (gesendet >= deckel) break; // Deckel: der Rest kommt morgen dran.
+
+    const erlaubnis = darf(l.owner_user_id, l.email, { nurWiderspruch: true, kanalBestaetigtAm: l.bestaetigt_am });
+    if (!erlaubnis.erlaubt) {
+      if (erlaubnis.grund === 'widersprochen' && !probe) {
+        await db.from('freebie_lead').update({ status: 'abgemeldet', abgemeldet_am: jetztIso, faellig_am: null })
+          .eq('id', l.id).eq('owner_user_id', l.owner_user_id);
+      }
+      gesperrt++;
+      continue;
+    }
 
     const strecke = streckeJeFreebie.get(l.freebie_id) ?? [];
     const e = entscheide(l, strecke, jetztIso);
@@ -165,18 +182,21 @@ async function lauf(req: Request) {
 
       const inhalt = `
         <p style="margin:0 0 12px;">${escapeHtml(anrede(l.name))}</p>
-        <div style="margin:0 0 12px;">${textZuHtml(text)}</div>
-        <p style="margin:26px 0 0;border-top:1px solid #eeeeee;padding-top:14px;color:#8a94a6;font-size:12px;line-height:1.5;">
-          Sie erhalten diese E-Mail, weil Sie „${escapeHtml(titel)}" angefordert haben.
-          <a href="${abUrl}" style="color:#8a94a6;">Hier mit einem Klick abmelden</a>.
-        </p>`;
+        <div style="margin:0 0 12px;">${textZuHtml(text)}</div>`;
 
+      // Paket 173: Werbe-Fuss (Abmeldelink + Widerspruchshinweis) und List-Unsubscribe.
       const r = await sendeMail({
         an: l.email,
         betreff,
-        html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt),
+        html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt, {
+          werbung: true,
+          abmeldeLink: abUrl,
+          grund: `Sie erhalten diese E-Mail, weil Sie „${titel}" bei ${marke.firma} angefordert haben.`,
+        }),
         absenderName: marke.firma,
         antwortAn: marke.email,
+        kopfzeilen: werbeKopfzeilen(abUrl),
+        kundenPost: true,
       });
       if (!r.ok) throw new Error(r.fehler);
 
@@ -194,7 +214,7 @@ async function lauf(req: Request) {
     ok: true,
     probe: probe || undefined,
     geprueft: zeilen.length,
-    gesendet, fertig, uebersprungen, fehler,
+    gesendet, fertig, uebersprungen, fehler, gesperrt,
     wuerdeSenden: probe ? wuerde.slice(0, 20) : undefined,
     hinweis: begruendung(budget, deckel, gesendet),
   });

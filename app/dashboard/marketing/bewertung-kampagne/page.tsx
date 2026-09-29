@@ -17,8 +17,8 @@ const C = {
 
 type Empfaenger = { name: string; email: string };
 type Kennzahlen = { eingeladen: number; abgegeben: number; offen: number; antwortquote: number; avgSterne: number | null; veroeffentlicht: number };
-type Daten = { ok: boolean; error?: string; pool: Empfaenger[]; kennzahlen: Kennzahlen; firma: string };
-type Sendeergebnis = { ok: boolean; error?: string; gesendet?: number; fehler?: number; uebersprungen?: number };
+type Daten = { ok: boolean; error?: string; pool: Empfaenger[]; kennzahlen: Kennzahlen; firma: string; ohneEinwilligung?: number; hinweis?: string };
+type Sendeergebnis = { ok: boolean; error?: string; gesendet?: number; fehler?: number; uebersprungen?: number; ohneEinwilligung?: number };
 
 export default function BewertungKampagnePage() {
   const [daten, setDaten] = useState<Daten | null>(null);
@@ -68,6 +68,7 @@ export default function BewertungKampagnePage() {
       const teile = [`${j.gesendet ?? 0} Einladung(en) verschickt`];
       if (j.uebersprungen) teile.push(`${j.uebersprungen} übersprungen (schon eingeladen)`);
       if (j.fehler) teile.push(`${j.fehler} fehlgeschlagen`);
+      if (j.ohneEinwilligung) teile.push(`${j.ohneEinwilligung} ohne Einwilligung nicht eingeladen`);
       setErg(teile.join(' · '));
       await laden_();
     } catch { setFehler('Versand fehlgeschlagen.'); } finally { setSenden(false); }
@@ -103,8 +104,13 @@ export default function BewertungKampagnePage() {
               <div>
                 <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 800, fontSize: 16 }}>Kunden einladen</div>
                 <div style={{ color: C.textDim, fontSize: 13, marginTop: 2 }}>
-                  {daten.pool.length} Kontakt{daten.pool.length === 1 ? '' : 'e'} mit E-Mail, noch nicht eingeladen · max. 50 pro Kampagne
+                  {daten.pool.length} Kontakt{daten.pool.length === 1 ? '' : 'e'} mit Einwilligung, noch nicht eingeladen · max. 50 pro Kampagne
                 </div>
+                {!!daten.ohneEinwilligung && (
+                  <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 4, maxWidth: 640, lineHeight: 1.5 }}>
+                    {daten.ohneEinwilligung} weitere Kontakt{daten.ohneEinwilligung === 1 ? '' : 'e'} ohne Einwilligung bzw. mit Widerspruch — eine Bewertungsbitte per E-Mail ist Werbung und geht nur mit Einwilligung. Den Link können Sie persönlich weitergeben.
+                  </div>
+                )}
               </div>
               {daten.pool.length > 0 && (
                 <button onClick={alle} style={{ background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}`, borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>

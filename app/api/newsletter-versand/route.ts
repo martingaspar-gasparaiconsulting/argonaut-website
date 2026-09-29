@@ -5,6 +5,9 @@ import { abmeldeUrl, newsletterMailHtml } from '@/lib/newsletter';
 import { werbeKopfzeilen } from '@/lib/werbemail';
 import { messeMit } from '@/lib/mailMessung';
 import { klickSignatur } from '@/lib/mailKlickSignatur';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { betriebDerSitzung, erlaubteEmpfaenger } from '@/lib/werbeErlaubnisServer';
+import { ablehnungsHinweis } from '@/lib/werbeErlaubnis';
 
 // ============================================================================
 // ARGONAUT OS · app/api/newsletter-versand/route.ts  (Punkt 29b/29c)
@@ -27,6 +30,12 @@ import { klickSignatur } from '@/lib/mailKlickSignatur';
 // Versand trotzdem im Protokoll, statt spurlos zu verschwinden.
 //
 // Gemessen werden nur SUMMEN, nie einzelne Empfänger — siehe lib/mailMessung.
+//
+// Paket 173 (29.09.2026, Befund M8): „aktiv" allein ist kein Nachweis. Es gehen
+// nur Mails an bestätigte Double-Opt-in-Anmeldungen oder an Adressen mit
+// Einwilligung am Kontakt — und nie an jemanden, der in irgendeinem Kanal
+// widersprochen hat (lib/werbeErlaubnis). Wer ausgelassen wurde, steht als
+// Zahl mit Grund in der Antwort.
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -84,9 +93,25 @@ export async function POST(req: Request) {
     // Typ ausgeschrieben statt abgeleitet: macht unten die Casts überflüssig
     // und zeigt auf einen Blick, womit gearbeitet wird.
     type Abo = { email: string | null; abmelde_token: string | null };
-    const empfaenger = ((abos ?? []) as Abo[]).filter((a): a is Abo & { email: string } => !!a.email);
-    if (empfaenger.length === 0) {
+    const alle = ((abos ?? []) as Abo[]).filter((a): a is Abo & { email: string } => !!a.email);
+    if (alle.length === 0) {
       return NextResponse.json({ ok: false, error: 'Es gibt keine aktiven Abonnenten.' }, { status: 400 });
+    }
+    // Paket 173: nur bestätigte Einwilligungen ohne Widerspruch.
+    const betrieb = await betriebDerSitzung(supabase, user.id);
+    let pruefung: Awaited<ReturnType<typeof erlaubteEmpfaenger<Abo & { email: string }>>>;
+    try {
+      pruefung = await erlaubteEmpfaenger(createAdminClient(), betrieb, alle);
+    } catch {
+      pruefung = { ok: false, erlaubt: [], abgelehnt: [] };
+    }
+    if (!pruefung.ok) {
+      return NextResponse.json({ ok: false, error: 'Die Einwilligungen können gerade nicht geprüft werden. Bitte später erneut versuchen.' }, { status: 503 });
+    }
+    const empfaenger = pruefung.erlaubt;
+    const hinweis = ablehnungsHinweis(pruefung.abgelehnt);
+    if (empfaenger.length === 0) {
+      return NextResponse.json({ ok: false, error: 'Keiner der Abonnenten hat eine bestätigte Anmeldung. ' + hinweis }, { status: 400 });
     }
     if (empfaenger.length > MAX_EMPFAENGER) {
       return NextResponse.json(
@@ -155,7 +180,7 @@ export async function POST(req: Request) {
       .update({ erfolg_anzahl: erfolg, fehler_anzahl: fehler })
       .eq('id', protokoll.id);
 
-    return NextResponse.json({ ok: true, gesendet: erfolg, fehler, gesamt: empfaenger.length });
+    return NextResponse.json({ ok: true, gesendet: erfolg, fehler, gesamt: empfaenger.length, ausgelassen: pruefung.abgelehnt.length, hinweis: hinweis || undefined });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Versand fehlgeschlagen.';
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

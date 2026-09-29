@@ -8,6 +8,10 @@ import {
 } from '@/lib/automation';
 import { werbeStatus, WERBE_STATUS_TEXT } from '@/lib/segmente';
 import { regelUebernommen } from '@/lib/ablaufMotor';
+import { escapeHtml } from '@/lib/newsletter';
+import { werbungErlaubt } from '@/lib/werbeErlaubnisServer';
+import { werbeVersandTeile } from '@/lib/werbeAbmeldeLink';
+import { WERBE_GRUND_TEXT } from '@/lib/werbeErlaubnis';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/automationen — der Motor des Automations-Bauers
@@ -134,18 +138,33 @@ async function fuehreAus(
       // bei Post an den Kunden. Betriebspost — Zahlungserinnerung, Angebot,
       // Termin — laeuft weiter: ein Werbewiderspruch darf eine Mahnung nicht
       // aushebeln. Post an eine feste eigene Adresse ist ohnehin keine Werbung.
-      if (istWerbung(regel.trigger_typ) && cfg.an !== 'feste_adresse') {
+      const werbung = istWerbung(regel.trigger_typ) && cfg.an !== 'feste_adresse';
+      let teile: ReturnType<typeof werbeVersandTeile> = null;
+      if (werbung) {
         const status = werbeStatus(satz, 'kontakte');
         if (status !== 'erlaubt') {
           return { ergebnis: 'uebersprungen', meldung: `kein Werbeversand: ${WERBE_STATUS_TEXT[status]}` };
         }
+        // Paket 173 (Befund H10/M7): auch ein Widerspruch aus einem ANDEREN Kanal zählt.
+        const erlaubnis = await werbungErlaubt(admin, regel.owner_user_id, an, { nurWiderspruch: true });
+        if (!erlaubnis.erlaubt) return { ergebnis: 'uebersprungen', meldung: `kein Werbeversand: ${WERBE_GRUND_TEXT[erlaubnis.grund]}` };
+        teile = werbeVersandTeile((process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com').replace(/\/+$/, ''), regel.owner_user_id, an);
+        if (!teile) return { ergebnis: 'fehler', meldung: 'Abmeldelink konnte nicht erstellt werden — keine Werbe-Mail verschickt' };
       }
 
       const betreff = text('betreff') || regel.name;
-      const inhalt = text('text').split('\n').map((z) => `<p style="margin:0 0 10px">${z || '&nbsp;'}</p>`).join('');
+      // Paket 173: Platzhalter tragen Kundendaten aus Formularen — entschärfen.
+      const inhalt = text('text').split('\n').map((z) => `<p style="margin:0 0 10px">${z ? escapeHtml(z) : '&nbsp;'}</p>`).join('');
       const marke = await absenderBranding(admin, regel.owner_user_id);
-      const html = kundenMailLayout(marke.firma, marke.akzent, betreff, inhalt);
-      const r = await sendeMail({ an, betreff, html });
+      const html = kundenMailLayout(marke.firma, marke.akzent, betreff, inhalt, teile
+        ? { werbung: true, abmeldeLink: teile.abmeldeLink, grund: `Sie erhalten diese E-Mail von ${marke.firma}.` }
+        : undefined);
+      // Paket 173: Absender und Antwort-Adresse des BETRIEBS, nie „ARGONAUT OS" / info@.
+      const r = await sendeMail({
+        an, betreff, html,
+        absenderName: marke.firma, antwortAn: marke.email, kundenPost: true,
+        ...(teile ? { kopfzeilen: teile.kopfzeilen } : {}),
+      });
       if (!r.ok) return { ergebnis: 'fehler', meldung: r.fehler };
       return { ergebnis: 'ok', meldung: `Mail an ${an}` };
     }

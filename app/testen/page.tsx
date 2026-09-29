@@ -38,6 +38,8 @@ export default function TestenPage() {
   const [f, setF] = useState({ name: '', unternehmen: '', email: '', telefon: '', branche: '', nachricht: '' })
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [error, setError] = useState('')
+  // Paket 173 (Befund H8): die Tipp-Serie nur mit eigenem Haekchen, vorher lief sie ungefragt an.
+  const [dossierSerie, setDossierSerie] = useState(false)
   const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }))
 
   async function submit(e: React.FormEvent) {
@@ -55,6 +57,7 @@ export default function TestenPage() {
           kontaktwunsch: 'E-Mail',
           angebot: '7 Tage kostenlos testen',
           preis: 'kostenlos (7 Tage)',
+          dossierSerie,
         }),
       })
       if (!res.ok) throw new Error()
@@ -148,8 +151,12 @@ export default function TestenPage() {
                   Art. 7 Abs. 1 DSGVO ohnehin unwirksam. Pflicht ist die INFORMATION nach
                   Art. 13 DSGVO — die steht hier. Beim spaeteren Bestellvorgang gehoert das
                   AGB-Haekchen wieder hin, zusammen mit dem § 312j-Button. */}
-              <p style={{ fontSize: '.82rem', color: '#8fa9b6', lineHeight: 1.5, margin: '16px 0 0' }}>
-                Ihre Angaben verwenden wir ausschließlich, um Ihren Testzugang einzurichten. Wie wir mit
+              <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', margin: '16px 0 0', cursor: 'pointer', fontSize: '.85rem', color: '#b9cdd6', lineHeight: 1.5 }}>
+                <input type="checkbox" checked={dossierSerie} onChange={(e) => setDossierSerie(e.target.checked)} style={{ marginTop: '3px', width: '16px', height: '16px', accentColor: GOLD, flexShrink: 0 }} />
+                <span>Ja, senden Sie mir zusätzlich das ARGONAUT-Dossier und während der Testphase bis zu fünf Tipps per E-Mail. Ich bestätige das per Link in einer E-Mail und kann es jederzeit abbestellen.</span>
+              </label>
+              <p style={{ fontSize: '.82rem', color: '#8fa9b6', lineHeight: 1.5, margin: '12px 0 0' }}>
+                Ihre Angaben verwenden wir, um Ihren Testzugang einzurichten. Werbe-E-Mails erhalten Sie nur, wenn Sie das Häkchen oben setzen. Wie wir mit
                 Ihren Daten umgehen, steht in der{' '}
                 <a href="/datenschutz" style={{ color: TEAL }}>Datenschutzerklärung</a>.
               </p>

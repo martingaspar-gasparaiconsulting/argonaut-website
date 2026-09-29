@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { rechtsgrundFuer, istEmail, type KontaktRoh } from '@/lib/zielgruppe';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { widerspruchEintragen } from '@/lib/werbeErlaubnisServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/marketing/zielgruppe   (D5 Teil 1)
@@ -109,11 +111,17 @@ export async function POST(req: Request) {
 
       // Auch im Verteiler abmelden — sonst widerspricht jemand und bekommt
       // trotzdem weiter Post, weil er dort noch als aktiv steht.
-      const { data: k } = await supabase.from('kontakte').select('email').eq('id', kontaktId).maybeSingle();
+      const { data: k } = await supabase.from('kontakte').select('email, owner_user_id').eq('id', kontaktId).maybeSingle();
       const mail = String((k as { email?: string } | null)?.email ?? '').trim().toLowerCase();
       if (mail) {
         await supabase.from('newsletter_abonnenten')
           .update({ status: 'abgemeldet' }).eq('email', mail);
+        // Paket 173: Sperrliste + alle anderen Kanaele. Der Kontakt wurde eben
+        // mit der Sitzung (RLS) gelesen — der Betrieb ist also bestaetigt.
+        try {
+          const betrieb = String((k as { owner_user_id?: string } | null)?.owner_user_id ?? '');
+          await widerspruchEintragen(createAdminClient(), betrieb, mail, 'crm');
+        } catch (e) { console.error('Widerspruch Sperrliste', e instanceof Error ? e.message : e); }
       }
       return NextResponse.json({ ok: true });
     }

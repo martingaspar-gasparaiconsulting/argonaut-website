@@ -21,7 +21,8 @@ function btnLine(href: string, label: string): string {
   return `<a href="${href}" style="display:inline-block;background:transparent;color:#C9A84C;text-decoration:none;font-weight:800;padding:12px 22px;border-radius:8px;border:1px solid #C9A84C;">${label}</a>`;
 }
 function abmelde(url: string): string {
-  return `<p style="color:#8FA3BE;font-size:12px;margin-top:26px;border-top:1px solid #24344a;padding-top:14px;">Sie möchten keine weiteren Mails zum Test? <a href="${url}" style="color:#8FA3BE;">Hier mit einem Klick abmelden</a>.</p>`;
+  // Paket 173: Widerspruchshinweis nach § 7 Abs. 3 Nr. 4 UWG (Wortlaut wie lib/werbemail FUSS_WIDERSPRUCH).
+  return `<p style="color:#8FA3BE;font-size:12px;line-height:1.5;margin-top:26px;border-top:1px solid #24344a;padding-top:14px;">Sie erhalten diese E-Mail, weil Sie das ARGONAUT-Dossier angefordert und bestätigt haben. Sie möchten keine weiteren Mails zum Test? <a href="${url}" style="color:#8FA3BE;">Hier mit einem Klick abmelden</a>.<br>Sie können der Verwendung Ihrer E-Mail-Adresse für Werbung jederzeit widersprechen, ohne dass hierfür andere als die Übermittlungskosten nach den Basistarifen entstehen.</p>`;
 }
 
 // Die Test-Strecke. Reihenfolge = Versand-Reihenfolge; tag = Tage ab Bestätigung.

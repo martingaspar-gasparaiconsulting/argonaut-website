@@ -19,6 +19,16 @@ import { kiEntwurf } from './ablaufKi';
 import { baueNutzlast, webhookGrundgeheimnis, webhookSchluessel, webhookKoepfe } from './ablaufWebhook';
 import { sendeWebhook } from './ablaufWebhookSenden';
 import { datumDeutsch } from './automation';
+import { escapeHtml } from './newsletter';
+import { werbungErlaubt } from './werbeErlaubnisServer';
+import { createAdminClient } from './supabase-admin';
+import { werbeVersandTeile } from './werbeAbmeldeLink';
+import { WERBE_GRUND_TEXT } from './werbeErlaubnis';
+
+/** Grundadresse für Abmeldelinks in Mails aus Abläufen. */
+function basisUrl(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com').trim().replace(/\/+$/, '');
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type Db = {
@@ -60,9 +70,37 @@ async function fuehreAus(db: Db, plan: AktionPlan, ownerId: string, u: Umfeld): 
   if (plan.art === 'pdf') return pdfErstellen(db, ownerId, plan, u);
   if (plan.art === 'ki') return kiSchritt(db, ownerId, plan, u);
   if (plan.art === 'webhook') return webhook(plan, u);
+  return mailSenden(db, ownerId, plan);
+}
+
+/**
+ * Paket 173 (Befund H10): Mail aus einem Ablauf.
+ *  - Absendername und Antwort-Adresse sind die des BETRIEBS (vorher „ARGONAUT OS",
+ *    Antworten landeten bei info@argonaut-os.com), kundenPost wie bei der Rückholung.
+ *  - Der Text wird entschärft — Platzhalter tragen Kundendaten aus Formularen.
+ *  - Werbung: Sperrliste aller Kanäle, Abmeldelink, Widerspruchshinweis, List-Unsubscribe.
+ */
+export async function mailSenden(db: Db, ownerId: string, plan: Extract<AktionPlan, { art: 'mail' }>): Promise<Ergebnis> {
+  let teile: ReturnType<typeof werbeVersandTeile> = null;
+  if (plan.werbung) {
+    // Die Sperrliste liest nur der Server-Schlüssel (werbe_fakten) — auch beim Knopf, der mit der Sitzung läuft.
+    let pruefDb: Db = db;
+    try { pruefDb = createAdminClient() as unknown as Db; } catch { /* Motor läuft ohnehin mit Service-Rolle */ }
+    const erlaubnis = await werbungErlaubt(pruefDb, ownerId, plan.an, { nurWiderspruch: true });
+    if (!erlaubnis.erlaubt) return { ergebnis: 'uebersprungen', meldung: `kein Werbeversand: ${WERBE_GRUND_TEXT[erlaubnis.grund]}` };
+    teile = werbeVersandTeile(basisUrl(), ownerId, plan.an);
+    if (!teile) return { ergebnis: 'fehler', meldung: 'Abmeldelink konnte nicht erstellt werden — keine Werbe-Mail verschickt' };
+  }
   const marke = await absenderBranding(db, ownerId);
-  const inhalt = plan.text.split('\n').map((z) => `<p style="margin:0 0 10px">${z || '&nbsp;'}</p>`).join('');
-  const r = await sendeMail({ an: plan.an, betreff: plan.betreff, html: kundenMailLayout(marke.firma, marke.akzent, plan.betreff, inhalt) });
+  const inhalt = plan.text.split('\n').map((z) => `<p style="margin:0 0 10px">${z ? escapeHtml(z) : '&nbsp;'}</p>`).join('');
+  const html = kundenMailLayout(marke.firma, marke.akzent, plan.betreff, inhalt, teile
+    ? { werbung: true, abmeldeLink: teile.abmeldeLink, grund: `Sie erhalten diese E-Mail von ${marke.firma}.` }
+    : undefined);
+  const r = await sendeMail({
+    an: plan.an, betreff: plan.betreff, html,
+    absenderName: marke.firma, antwortAn: marke.email, kundenPost: true,
+    ...(teile ? { kopfzeilen: teile.kopfzeilen } : {}),
+  });
   return r.ok ? { ergebnis: 'ok', meldung: plan.meldung } : { ergebnis: 'fehler', meldung: r.fehler };
 }
 

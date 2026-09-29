@@ -4,6 +4,8 @@ import { sendeMail, absenderBranding, kundenMailLayout } from '@/lib/mail';
 import { werbeDeckel, tagesBudget, begruendung } from '@/lib/mailBudget';
 import { entscheide, mailFuerSchritt, weiterWerte, stoppWerte } from '@/lib/leadNachfass';
 import { cronGuard } from '../../../../lib/cronGuard';
+import { werbePrueferLaden } from '@/lib/werbeErlaubnisServer';
+import { werbeVersandTeile } from '@/lib/werbeAbmeldeLink';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/lead-nachfass   (Vertrieb · C4)
@@ -23,7 +25,18 @@ import { cronGuard } from '../../../../lib/cronGuard';
 // (Mahnungen, Terminerinnerungen) nicht aus dem Tageskontingent draengen.
 //
 // Ausloesung: Vercel-Cron (Bearer CRON_SECRET) oder ?secret=.
+//
+// Paket 173 (29.09.2026, Befund M7): Wer beim Betrieb in irgendeinem Kanal
+// widersprochen hat, bekommt keinen Nachfass mehr (Kette wird gestoppt). Jede
+// Mail traegt Abmeldelink, Widerspruchshinweis und List-Unsubscribe. Ob der
+// Nachfass ohne Einwilligung zulaessig ist, prueft der Anwalt (R34).
 // ============================================================================
+
+function basisUrl(req: Request): string {
+  const gesetzt = (process.env.NEXT_PUBLIC_SITE_URL || '').trim();
+  if (gesetzt) return gesetzt.replace(/\/+$/, '');
+  try { return new URL(req.url).origin; } catch { return ''; }
+}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -111,6 +124,9 @@ async function lauf(req: Request) {
   let uebersprungen = 0;
   let fehler = 0;
 
+  const basis = basisUrl(req);
+  const darf = await werbePrueferLaden(db, zeilen.map((z) => ({ betrieb: z.owner_user_id, email: z.email })));
+
   for (const l of zeilen) {
     if (gesendet >= deckel) break; // Deckel: der Rest kommt morgen dran.
 
@@ -125,6 +141,17 @@ async function lauf(req: Request) {
       gestoppt++;
       continue;
     }
+
+    const erlaubnis = darf(l.owner_user_id, l.email, { nurWiderspruch: true });
+    if (!erlaubnis.erlaubt) {
+      if (erlaubnis.grund === 'widersprochen') {
+        await db.from('leads').update(stoppWerte('gestoppt')).eq('id', l.id).eq('owner_user_id', l.owner_user_id);
+        gestoppt++;
+      } else uebersprungen++;
+      continue;
+    }
+    const teile = werbeVersandTeile(basis, l.owner_user_id, l.email);
+    if (!teile) { uebersprungen++; continue; }
 
     try {
       const marke = await brandingVon(l.owner_user_id);
@@ -144,9 +171,15 @@ async function lauf(req: Request) {
       const r = await sendeMail({
         an: String(l.email),
         betreff: mail.betreff,
-        html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt),
+        html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt, {
+          werbung: true,
+          abmeldeLink: teile.abmeldeLink,
+          grund: `Sie erhalten diese E-Mail, weil Sie bei ${marke.firma} angefragt haben.`,
+        }),
         absenderName: marke.firma,
         antwortAn: marke.email,
+        kopfzeilen: teile.kopfzeilen,
+        kundenPost: true,
       });
       if (!r.ok) throw new Error(r.fehler);
 

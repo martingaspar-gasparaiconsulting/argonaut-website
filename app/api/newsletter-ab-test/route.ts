@@ -4,6 +4,9 @@ import { sendeMail } from '@/lib/mail';
 import { abmeldeUrl, newsletterMailHtml } from '@/lib/newsletter';
 import { messeMit } from '@/lib/mailMessung';
 import { klickSignatur } from '@/lib/mailKlickSignatur';
+import { werbeKopfzeilen } from '@/lib/werbemail';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { betriebDerSitzung, erlaubteEmpfaenger } from '@/lib/werbeErlaubnisServer';
 import { pruefeMenge, teileAuf, phase, ergebnis, fehltZumStart } from '@/lib/abTest';
 
 // ============================================================================
@@ -72,7 +75,16 @@ export async function POST(req: Request) {
      * ein abgebrochener Lauf steht trotzdem im Protokoll (Muster aus
      * app/api/newsletter-versand/route.ts).
      */
-    async function verschicke(betreff: string, inhalt: string, gruppe: Abo[]) {
+    async function verschicke(betreff: string, inhalt: string, gruppeRoh: Abo[]) {
+      // Paket 173: erst HIER filtern (nicht vor teileAuf) — die Gruppen müssen
+      // beim Start und beim Rest gleich aufgeteilt werden, sonst bekäme jemand
+      // die Mail doppelt. Wer nicht darf, bekommt einfach keine.
+      let gruppe: Abo[] = [];
+      try {
+        const betrieb = await betriebDerSitzung(supabase, user!.id);
+        const pr = await erlaubteEmpfaenger(createAdminClient(), betrieb, gruppeRoh);
+        gruppe = pr.ok ? pr.erlaubt : [];
+      } catch { gruppe = []; }
       const { data: zeileRoh, error: zeileFehler } = await supabase
         .from('newsletter_versand')
         .insert({
@@ -99,7 +111,13 @@ export async function POST(req: Request) {
           p.firma_akzentfarbe,
         );
         const html = schluessel ? messeMit(roh, origin, zeile.id, schluessel, klickSignatur) : roh;
-        const r = await sendeMail({ an: a.email, betreff, html, absenderName: firmaName, antwortAn });
+        const abmelde = abmeldeUrl(origin, a.abmelde_token || '');
+        const r = await sendeMail({
+          an: a.email, betreff, html, absenderName: firmaName, antwortAn,
+          // Paket 173: wie der normale Newsletter — Abmeldeknopf in Gmail/Outlook, Antwort nie an ARGONAUT.
+          kopfzeilen: werbeKopfzeilen(abmelde, { einKlick: true }),
+          kundenPost: true,
+        });
         if (r.ok) erfolg++; else fehler++;
       }
 

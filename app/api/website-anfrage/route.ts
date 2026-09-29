@@ -201,9 +201,12 @@ export async function POST(req: Request) {
     const internOk = await benachrichtigeIntern(payload)
     await bestaetigeInteressent(payload)
 
-    // Automatischer Dossier-Double-Opt-in: Termin- UND Test-Route laufen hier
-    // durch. Best effort — ein Fehler hier darf die Anfrage nie scheitern lassen.
-    if (email) {
+    // Dossier-Double-Opt-in NUR mit eigenem Haekchen (Paket 173, Befund H8).
+    // Vorher startete JEDE Anfrage ungefragt eine Werbeserie. Die Anfrage selbst
+    // stuetzt sich auf Art. 6 Abs. 1 lit. b DSGVO — eine Werbeserie nicht.
+    // Best effort — ein Fehler hier darf die Anfrage nie scheitern lassen.
+    const dossierGewuenscht = (body as any).dossierSerie === true
+    if (email && dossierGewuenscht) {
       const quelle = (payload.angebot || '').toLowerCase().includes('test') ? 'test' : 'termin'
       try { await starteDossierOptin(email, name, branche, quelle) } catch {}
     }

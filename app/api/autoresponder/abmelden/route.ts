@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { escapeHtml, sichereFarbe } from '@/lib/newsletter';
+import { widerspruchEintragen } from '@/lib/werbeErlaubnisServer';
 
 // ============================================================================
 // ARGONAUT OS · app/api/autoresponder/abmelden/route.ts  (Paket 2)
@@ -57,6 +58,11 @@ export async function GET(req: Request) {
     if (error) return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Es gab ein technisches Problem. Bitte versuchen Sie es später erneut.');
     if (!data || data.length === 0) {
       return seite('Info-Serie', '#1a2332', 'Abmeldung', 'Dieser Link ist nicht mehr gültig — vielleicht sind Sie bereits abgemeldet.');
+    }
+
+    // Paket 173: die Abmeldung gilt fuer ALLE Werbe-Mails dieses Betriebs.
+    for (const z of data as { email?: string | null; owner_user_id?: string | null }[]) {
+      await widerspruchEintragen(admin, String(z.owner_user_id ?? ''), z.email, 'serie');
     }
 
     // Branding des versendenden Kunden fuer die Bestaetigungsseite laden.
@@ -119,11 +125,16 @@ export async function POST(req: Request) {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
     const admin = createClient(url, key);
-    const { error } = await admin
+    const { data, error } = await admin
       .from('autoresponder_lauf')
       .update({ status: 'abgemeldet' })
-      .eq('abmelde_token', token);
+      .eq('abmelde_token', token)
+      .select('email, owner_user_id');
     if (error) return new Response(null, { status: 500 });
+    // Paket 173: die Abmeldung gilt fuer ALLE Werbe-Mails dieses Betriebs.
+    for (const z of (data ?? []) as { email?: string | null; owner_user_id?: string | null }[]) {
+      await widerspruchEintragen(admin, String(z.owner_user_id ?? ''), z.email, 'serie');
+    }
     return new Response(null, { status: 200 });
   } catch {
     return new Response(null, { status: 500 });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { seitenUrl, STATUS_ABGEMELDET } from '@/lib/freebie';
+import { widerspruchEintragen } from '@/lib/werbeErlaubnisServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/freebie-abmelden   (D3)
@@ -44,10 +45,10 @@ export async function GET(req: Request) {
     const db = admin();
     const { data } = await db
       .from('freebie_lead')
-      .select('id, freebie_id, status')
+      .select('id, owner_user_id, email, freebie_id, status')
       .eq('abmelde_token', token)
       .maybeSingle();
-    const l = (data as { id: string; freebie_id: string; status: string } | null) ?? null;
+    const l = (data as { id: string; owner_user_id: string; email: string; freebie_id: string; status: string } | null) ?? null;
 
     // Unbekanntes Token: trotzdem freundlich bestaetigen. Wer abmelden will,
     // soll nie eine Fehlermeldung sehen und es nochmal versuchen muessen.
@@ -66,6 +67,9 @@ export async function GET(req: Request) {
         faellig_am: null,
       }).eq('id', l.id);
     }
+
+    // Paket 173: die Abmeldung gilt fuer ALLE Werbe-Mails dieses Betriebs.
+    await widerspruchEintragen(db, l.owner_user_id, l.email, 'freebie');
 
     return NextResponse.redirect(key ? `${seitenUrl(basis, key)}?abgemeldet=1` : `${basis}/?abgemeldet=1`);
   } catch (e: unknown) {

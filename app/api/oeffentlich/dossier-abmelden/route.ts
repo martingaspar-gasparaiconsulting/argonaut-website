@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { widerspruchEintragen, betreiberKennung } from '@/lib/werbeErlaubnisServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/dossier-abmelden
@@ -30,10 +31,13 @@ export async function GET(req: Request) {
   if (!token) return seite('Link ungültig', 'Dieser Abmelde-Link ist nicht vollständig. Bitte nutzen Sie den Link aus der E-Mail.');
   try {
     const db = admin();
-    const { data } = await db.from('dossier_leads').select('id').eq('abmelde_token', token).maybeSingle();
-    const l = data as { id: string } | null;
+    const { data } = await db.from('dossier_leads').select('id, email').eq('abmelde_token', token).maybeSingle();
+    const l = data as { id: string; email: string | null } | null;
     if (!l) return seite('Bereits erledigt', 'Wir konnten keinen aktiven Eintrag finden — vermutlich sind Sie schon abgemeldet. Alles gut.');
     await db.from('dossier_leads').update({ seq_status: 'abgemeldet' }).eq('id', l.id);
+    // Paket 173: gilt fuer ALLE Werbe-Mails von ARGONAUT (Termin-Nachfass u. a.).
+    const betreiber = betreiberKennung();
+    if (betreiber) await widerspruchEintragen(db, betreiber, l.email, 'dossier');
     return seite('Abgemeldet', 'Sie erhalten keine weiteren Mails zum Test. Ihr Dossier bleibt gültig — und Sie können jederzeit wieder auf uns zukommen.');
   } catch {
     return seite('Kleiner Fehler', 'Das hat gerade nicht geklappt. Bitte versuchen Sie es später noch einmal oder antworten Sie kurz auf eine unserer Mails.');

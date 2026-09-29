@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { widerspruchEintragen } from '@/lib/werbeErlaubnisServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/rueckhol-abmelden
@@ -58,7 +59,7 @@ export async function GET(req: Request) {
 
   const { data, error } = await db
     .from('rueckhol_lauf')
-    .select('id, owner_user_id, kontakt_id, status')
+    .select('id, owner_user_id, kontakt_id, email, status')
     .eq('id', id)
     .limit(1);
 
@@ -67,7 +68,7 @@ export async function GET(req: Request) {
     return seite('Das hat gerade nicht geklappt', 'Bitte versuchen Sie es in ein paar Minuten noch einmal oder antworten Sie auf die E-Mail.');
   }
 
-  const lauf = (data ?? [])[0] as { id: string; owner_user_id: string; kontakt_id: string | null; status: string } | undefined;
+  const lauf = (data ?? [])[0] as { id: string; owner_user_id: string; kontakt_id: string | null; email: string | null; status: string } | undefined;
   if (!lauf) {
     return seite('Schon erledigt', 'Zu diesem Link gibt es nichts mehr zu tun. Sie erhalten keine weitere Werbung von uns.');
   }
@@ -83,6 +84,9 @@ export async function GET(req: Request) {
       .is('werbe_widerspruch_am', null);
     if (kFehler) console.error('[rueckhol-abmelden] Kontakt', kFehler.message);
   }
+
+  // 1b) Paket 173: Sperrliste + alle anderen Kanaele (Newsletter, Serien …).
+  await widerspruchEintragen(db, lauf.owner_user_id, lauf.email, 'rueckholung');
 
   // 2) Den laufenden Vorgang beenden, damit morgen nichts mehr rausgeht.
   if (lauf.status === 'aktiv') {
