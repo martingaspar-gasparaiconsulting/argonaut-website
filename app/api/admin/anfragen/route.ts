@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient as createServerClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { betreiberGuard } from '@/lib/betreiberGuard'
 
 // ============================================================================
 // ARGONAUT OS · app/api/admin/anfragen/route.ts
@@ -12,12 +12,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 async function adminGuard(): Promise<NextResponse | null> {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'nicht angemeldet' }, { status: 401 })
-  const { data: profil } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (!profil || profil.role !== 'admin') return NextResponse.json({ error: 'kein Zugriff' }, { status: 403 })
-  return null
+  // Paket 170 (K4, 29.09.2026): Doppelschloss wie alle Betreiber-Wege — Rolle admin UND
+  // ANALYSE_BETREIBER_ID UND bei eingerichtetem Faktor bestaetigter Code (lib/betreiberGuard).
+  return betreiberGuard();
 }
 
 export async function GET() {

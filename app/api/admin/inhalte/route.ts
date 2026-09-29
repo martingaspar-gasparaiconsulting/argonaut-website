@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient as createServer } from '@/lib/supabase-server';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 import { offeneKapitel, mengen, KATEGORIEN, istBausteinTyp, type BausteinTyp, type BausteinZeile } from '@/lib/inhaltBaustein';
 import { SYSTEM_PROMPT, frageFuer, modellWahl, MAX_TOKENS, schaetzeKosten } from '@/lib/inhaltPrompt';
 import { bereiteVor, absenden, MAX_JE_STAPEL, type Auftrag } from '@/lib/kiBatch';
 import { websiteBranchen } from '../../../vorschau/_lib/branchen-web';
+import { betreiberPruefung } from '@/lib/betreiberGuard';
 
 // ============================================================================
 // ARGONAUT OS · /api/admin/inhalte  (Inhalts-Werkstatt · Erzeugung)
@@ -64,16 +64,10 @@ function adminDb() {
 
 /** Gibt null zurueck, wenn alles in Ordnung ist — sonst die Absage samt Nutzer-ID. */
 async function pruefeAdmin(): Promise<{ absage: NextResponse } | { userId: string }> {
-  const supabase = await createServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { absage: NextResponse.json({ ok: false, error: 'Nicht angemeldet.' }, { status: 401 }) };
-
-  const { data: profil } = await supabase
-    .from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profil || (profil as { role?: string }).role !== 'admin') {
-    return { absage: NextResponse.json({ ok: false, error: 'Kein Zugriff.' }, { status: 403 }) };
-  }
-  return { userId: user.id };
+  // Paket 170 (K4, 29.09.2026): Doppelschloss wie alle Betreiber-Wege — Rolle admin UND
+  // ANALYSE_BETREIBER_ID UND bei eingerichtetem Faktor bestaetigter Code (lib/betreiberGuard).
+  const p = await betreiberPruefung();
+  return p.absage ? { absage: p.absage } : { userId: p.userId };
 }
 
 /**

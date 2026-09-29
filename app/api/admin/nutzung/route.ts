@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '@/lib/supabase-server';
+import { betreiberGuard } from '@/lib/betreiberGuard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,21 +25,7 @@ function adminDb() {
   );
 }
 
-async function betreiberGuard(): Promise<NextResponse | null> {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ ok: false, error: 'Nicht angemeldet.' }, { status: 401 });
-
-  const { data: profil } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profil || (profil as { role?: string }).role !== 'admin') {
-    return NextResponse.json({ ok: false, error: 'Kein Zugriff.' }, { status: 403 });
-  }
-  const betreiber = process.env.ANALYSE_BETREIBER_ID;
-  if (!betreiber || user.id !== betreiber) {
-    return NextResponse.json({ ok: false, error: 'Kein Zugriff.' }, { status: 403 });
-  }
-  return null;
-}
+// Paket 170: eigene Kopie des Schlosses entfernt (ohne Zwei-Faktor) -> zentrales lib/betreiberGuard.
 
 export async function GET(req: Request) {
   const gesperrt = await betreiberGuard();

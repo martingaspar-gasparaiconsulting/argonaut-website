@@ -46,5 +46,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!profil || profil.role !== 'admin') redirect('/admin-login');
 
+  // Paket 170 (K4, 29.09.2026): zweites Schloss wie lib/betreiberGuard — nur die Betreiber-
+  // Kennung aus ANALYSE_BETREIBER_ID. Ohne Variable kommt niemand durch (zumachen statt durchlassen).
+  const betreiber = process.env.ANALYSE_BETREIBER_ID;
+  if (!betreiber || user.id !== betreiber) redirect('/admin-login');
+
   return <>{children}</>;
 }

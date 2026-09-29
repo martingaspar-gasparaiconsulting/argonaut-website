@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient as createServer } from '@/lib/supabase-server';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 import { dossierHtml, dossierKey } from '../../../vorschau/_lib/dossierHtml';
 import { dossierPdf } from '@/lib/dossierPdf';
 import { dossierDateiPfad, istAktuelleFassung, keyAusDatei, DOSSIER_VERSION } from '@/lib/dossierDatei';
+import { betreiberGuard } from '@/lib/betreiberGuard';
 
 // ============================================================================
 // ARGONAUT OS · /api/admin/dossiers  (Control-Room · Branchen-Dossiers)
@@ -46,16 +46,9 @@ function adminDb() {
 
 /** Gibt null zurueck, wenn alles in Ordnung ist — sonst die Absage. */
 async function pruefeAdmin(): Promise<NextResponse | null> {
-  const supabase = await createServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ ok: false, error: 'Nicht angemeldet.' }, { status: 401 });
-
-  const { data: profil } = await supabase
-    .from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profil || (profil as { role?: string }).role !== 'admin') {
-    return NextResponse.json({ ok: false, error: 'Kein Zugriff.' }, { status: 403 });
-  }
-  return null;
+  // Paket 170 (K4, 29.09.2026): Doppelschloss wie alle Betreiber-Wege — Rolle admin UND
+  // ANALYSE_BETREIBER_ID UND bei eingerichtetem Faktor bestaetigter Code (lib/betreiberGuard).
+  return betreiberGuard();
 }
 
 // ---------------------------------------------------------------------------

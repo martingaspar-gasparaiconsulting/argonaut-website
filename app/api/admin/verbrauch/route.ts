@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { SCHWELLEN } from '@/lib/schwellen';
+import { betreiberGuard } from '@/lib/betreiberGuard';
 
 // ============================================================================
 // ARGONAUT OS · Welle 4 · app/api/admin/verbrauch/route.ts
@@ -23,12 +23,9 @@ type RouteRow = { route: string; anzahl: number; kosten_usd: number };
 type SpeicherRow = { owner_key: string; bytes: number; dateien: number };
 
 async function adminGuard(): Promise<NextResponse | null> {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'nicht angemeldet' }, { status: 401 });
-  const { data: profil } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profil || profil.role !== 'admin') return NextResponse.json({ error: 'kein Zugriff' }, { status: 403 });
-  return null;
+  // Paket 170 (K4, 29.09.2026): Doppelschloss wie alle Betreiber-Wege — Rolle admin UND
+  // ANALYSE_BETREIBER_ID UND bei eingerichtetem Faktor bestaetigter Code (lib/betreiberGuard).
+  return betreiberGuard();
 }
 
 const istUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);

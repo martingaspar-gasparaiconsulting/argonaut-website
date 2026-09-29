@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createClient as createServerClient } from '../../../../lib/supabase-server';
 import { DEMO_BETRIEBE, demoEmail, demoPasswort, type DemoBetrieb } from '../../../../lib/demoBetriebe';
 import { kategorieModule } from '../../../../lib/branchenkatalog';
 import { aktiveSeeder, zugangSeeder, ZUGANG_TABELLEN } from '../../../../lib/uebungswelt';
 import { DEMO_TOKEN } from '../../../../lib/beispielKern';
 import { branchenSchritte } from '../../../../lib/onboardingBranchen';
+import { betreiberGuard } from '../../../../lib/betreiberGuard';
 
 // ============================================================================
 // ARGONAUT OS · app/api/admin/demo-betriebe/route.ts
@@ -46,12 +46,9 @@ function service() {
 type Admin = ReturnType<typeof service>;
 
 async function adminGuard(): Promise<NextResponse | null> {
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ ok: false, error: 'nicht angemeldet' }, { status: 401 });
-  const { data: profil } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-  if (!profil || profil.role !== 'admin') return NextResponse.json({ ok: false, error: 'kein Zugriff' }, { status: 403 });
-  return null;
+  // Paket 170 (K4, 29.09.2026): Doppelschloss wie alle Betreiber-Wege — Rolle admin UND
+  // ANALYSE_BETREIBER_ID UND bei eingerichtetem Faktor bestaetigter Code (lib/betreiberGuard).
+  return betreiberGuard();
 }
 
 type Ergebnis = {

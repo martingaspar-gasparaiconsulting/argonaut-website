@@ -1,23 +1,19 @@
 // ============================================================
 // ARGONAUT OS · Admin-Route: CTA-Modus umschalten (nur Betreiber)
 // Setzt betreiber_flags.cta_modus = 'termin' | 'beide' | 'bestellen'. Auth: eingeloggt
-// UND (falls gesetzt) user.id === ANALYSE_BETREIBER_ID. Schreiben via Service-Role.
+// UND user.id === ANALYSE_BETREIBER_ID (Paket 170: ohne Variable niemand). Schreiben via Service-Role.
 // ============================================================
 import { NextResponse } from 'next/server';
-import { createClient as createServer } from '@/lib/supabase-server';
+import { betreiberGuard } from '@/lib/betreiberGuard';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  const supabase = await createServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ ok: false, error: 'Nicht angemeldet.' }, { status: 401 });
-
-  const betreiber = process.env.ANALYSE_BETREIBER_ID;
-  if (betreiber && user.id !== betreiber) {
-    return NextResponse.json({ ok: false, error: 'Kein Zugriff.' }, { status: 403 });
-  }
+  // Paket 170 (K4, 29.09.2026): vorher kam ohne ANALYSE_BETREIBER_ID jeder Angemeldete durch
+  // (keine Rollenpruefung). Jetzt Doppelschloss wie alle Betreiber-Wege.
+  const absage = await betreiberGuard();
+  if (absage) return absage;
 
   const body = await req.json().catch(() => ({}));
   const raw = body?.modus;
