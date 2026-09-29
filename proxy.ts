@@ -7,7 +7,7 @@ import { gebuchteModulKeys, pfadGebucht, modulKeyFuerPfad, type TenantModulRow }
 import { abgeschalteteModuleAmStandort, istModulAmStandortAktiv, type StandortModulRow } from './lib/standortModule'
 import { STANDORT_COOKIE } from './lib/aktiverStandort'
 import { konkreterStandort } from './lib/standortDaten'
-import { PRUEF_PFAD, EINRICHT_PFAD } from './lib/zweiFaktor'
+import { PRUEF_PFAD, EINRICHT_PFAD, pflichtAn } from './lib/zweiFaktor'
 import { zweiFaktorStand } from './lib/zweiFaktorServer'
 
 // ============================================================================
@@ -130,10 +130,11 @@ export async function proxy(req: NextRequest) {
   // ▄▄▄ PAKET 164 (Stufe 1): Zwei-Faktor-Anmeldung ▄▄▄
   // Wer einen zweiten Faktor eingerichtet hat, muss ihn in dieser Sitzung
   // bestätigt haben (aal2) — sonst geht es zur Code-Eingabe. Wer keinen hat,
-  // merkt in Stufe 1 nichts (pflicht: false). Faktoren aus getUser() (vom
+  // merkt nichts — AUSSER die Pflicht ist an (Stufe 2, Schalter ZWEI_FAKTOR_PFLICHT=an
+  // in Vercel): dann geht es ohne Faktor zur Einrichtungs-Seite. Faktoren aus getUser() (vom
   // Anmelde-Dienst), aal über getClaims() (geprüft) — nie aus dem Cookie.
   {
-    const { weg } = await zweiFaktorStand(supabase, user, false)
+    const { weg } = await zweiFaktorStand(supabase, user, pflichtAn(process.env))
     if (weg !== 'weiter') {
       const ziel = new URL(weg === 'pruefen' ? PRUEF_PFAD : EINRICHT_PFAD, req.url)
       ziel.searchParams.set('weiter', pfad)

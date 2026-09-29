@@ -31,6 +31,8 @@ export default function ZweiFaktorEinrichten() {
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
+  // Stufe 2: bei Pflicht kein „Später" und kein „Entfernen" (durchgesetzt wird im Pfoertner).
+  const [pflicht, setPflicht] = useState(false);
 
   const laden = useCallback(async () => {
     const supabase = createClient();
@@ -42,6 +44,11 @@ export default function ZweiFaktorEinrichten() {
     setAal2(stufe?.currentLevel === 'aal2');
     setFaktorId(aktiv?.id ?? null);
     setStand(aktiv ? 'an' : 'aus');
+    try {
+      const r = await fetch('/api/zwei-faktor/stand');
+      const j = await r.json() as { pflicht?: boolean };
+      setPflicht(j.pflicht === true);
+    } catch { /* ohne Angabe: Knöpfe wie bisher */ }
   }, []);
 
   useEffect(() => {
@@ -115,7 +122,9 @@ export default function ZweiFaktorEinrichten() {
           <p style={S.text}>Mit der Zwei-Faktor-Anmeldung reicht ein gestohlenes Passwort nicht mehr: Bei jeder Anmeldung kommt zusätzlich ein 6-stelliger Code aus einer App auf dem Handy dazu.</p>
           <p style={S.klein}>Benötigt: eine Authenticator-App, z. B. Google Authenticator, Microsoft Authenticator oder 1Password.</p>
           <button type="button" onClick={starten} disabled={busy} style={{ ...S.knopf, opacity: busy ? 0.6 : 1 }}>{busy ? 'Startet …' : 'Einrichten starten'}</button>
-          <button type="button" onClick={() => { window.location.href = weiter; }} style={S.knopfRand}>Später</button>
+          {pflicht
+            ? <p style={{ ...S.klein, marginTop: 12 }}>Für diesen Zugang ist die Zwei-Faktor-Anmeldung vorgeschrieben — danach geht es direkt weiter.</p>
+            : <button type="button" onClick={() => { window.location.href = weiter; }} style={S.knopfRand}>Später</button>}
         </>)}
 
         {stand === 'qr' && (
@@ -152,7 +161,7 @@ export default function ZweiFaktorEinrichten() {
           ) : (<>
             <p style={S.text}>Neue Notfall-Codes ersetzen die alten vollständig.</p>
             <button type="button" onClick={async () => { setBusy(true); setFehler(null); await neueCodes(); setBusy(false); }} disabled={busy} style={{ ...S.knopf, opacity: busy ? 0.6 : 1 }}>Neue Notfall-Codes erzeugen</button>
-            <button type="button" onClick={entfernen} disabled={busy} style={{ ...S.knopfRand, color: '#E06666', borderColor: 'rgba(224,102,102,0.5)' }}>Zwei-Faktor-Anmeldung entfernen</button>
+            {!pflicht && <button type="button" onClick={entfernen} disabled={busy} style={{ ...S.knopfRand, color: '#E06666', borderColor: 'rgba(224,102,102,0.5)' }}>Zwei-Faktor-Anmeldung entfernen</button>}
           </>)}
           <button type="button" onClick={() => { window.location.href = weiter; }} style={S.knopfRand}>Zurück</button>
         </>)}

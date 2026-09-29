@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase-server';
 import { zweiFaktorStand } from '../../lib/zweiFaktorServer';
+import { pflichtAn } from '../../lib/zweiFaktor';
 
 // ============================================================================
 // ARGONAUT OS · app/admin/layout.tsx
@@ -30,11 +31,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!user) redirect('/admin-login');
 
-  // Paket 164 (Stufe 1): mit eingerichtetem zweiten Faktor nur nach Code-Eingabe (aal2).
+  // Paket 164: mit eingerichtetem zweiten Faktor nur nach Code-Eingabe (aal2); bei Pflicht (Stufe 2) ohne Faktor zur Einrichtung.
   {
-    if ((await zweiFaktorStand(supabase, user, false)).weg === 'pruefen') {
-      redirect('/auth/zwei-faktor?weiter=/admin/command-center');
-    }
+    const { weg } = await zweiFaktorStand(supabase, user, pflichtAn(process.env));
+    if (weg === 'pruefen') redirect('/auth/zwei-faktor?weiter=/admin/command-center');
+    if (weg === 'einrichten') redirect('/auth/zwei-faktor/einrichten?weiter=/admin/command-center');
   }
 
   const { data: profil } = await supabase

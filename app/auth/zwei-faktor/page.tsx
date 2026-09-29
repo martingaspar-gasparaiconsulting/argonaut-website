@@ -23,6 +23,7 @@ export default function ZweiFaktorPruefen() {
   const [notfallCode, setNotfallCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+  const [hinweis, setHinweis] = useState<string | null>(null);
 
   useEffect(() => {
     const ziel = sichererWeiter(new URLSearchParams(window.location.search).get('weiter'));
@@ -61,6 +62,19 @@ export default function ZweiFaktorPruefen() {
     } catch { setFehler('Notfall-Code gerade nicht prüfbar.'); setBusy(false); }
   }
 
+  async function hilfeAnfordern() {
+    setBusy(true); setFehler(null); setHinweis(null);
+    try {
+      const r = await fetch('/api/zwei-faktor/hilfe', { method: 'POST' });
+      const j = await r.json() as { ok?: boolean; schon?: boolean; anBetreiber?: boolean; error?: string };
+      if (!r.ok || !j.ok) setFehler(j.error ?? 'Anfrage gerade nicht möglich.');
+      else setHinweis(j.schon ? 'Die Anfrage liegt bereits vor.' : j.anBetreiber
+        ? 'Anfrage an den ARGONAUT-Support gesendet. Nach Prüfung der Identität wird zurückgesetzt.'
+        : 'Anfrage an die Geschäftsleitung gesendet. Nach dem Zurücksetzen neu anmelden und die App neu einrichten.');
+    } catch { setFehler('Anfrage gerade nicht möglich.'); }
+    setBusy(false);
+  }
+
   async function abmelden() {
     await createClient().auth.signOut();
     window.location.href = '/auth/login';
@@ -83,10 +97,14 @@ export default function ZweiFaktorPruefen() {
             <input value={notfallCode} onChange={(e) => setNotfallCode(e.target.value)} autoComplete="off" autoFocus maxLength={14} placeholder="XXXXX-XXXXX" style={{ ...S.eingabe, letterSpacing: 2 }} aria-label="Notfall-Code" />
             <button type="submit" disabled={busy} style={{ ...S.knopf, opacity: busy ? 0.6 : 1 }}>{busy ? 'Prüft …' : 'Notfall-Code einlösen'}</button>
             <div style={{ marginTop: 16 }}><button type="button" onClick={() => { setNotfall(false); setFehler(null); }} style={S.link}>Zurück zur Code-Eingabe</button></div>
-            <p style={{ ...S.klein, marginTop: 14 }}>Keine Notfall-Codes mehr? Dann hilft der ARGONAUT-Support: support@argonaut-os.com (nach Prüfung der Identität wird die Zwei-Faktor-Anmeldung zurückgesetzt).</p>
+            <div style={{ marginTop: 16, borderTop: '1px solid rgba(143,163,190,0.18)', paddingTop: 12 }}>
+              <p style={S.klein}>Keine Notfall-Codes mehr? Dann Hilfe anfordern: Die Geschäftsleitung (oder ihre Vertretung) setzt die Zwei-Faktor-Anmeldung zurück — Daten und Rechte bleiben erhalten.</p>
+              <button type="button" onClick={hilfeAnfordern} disabled={busy} style={{ ...S.knopfRand, marginTop: 8 }}>Hilfe anfordern</button>
+            </div>
           </form>
         )}
         {fehler && <div style={S.fehler}>{fehler}</div>}
+        {hinweis && <div style={S.gut}>{hinweis}</div>}
         <div style={{ marginTop: 22, borderTop: '1px solid rgba(143,163,190,0.18)', paddingTop: 14 }}>
           <button type="button" onClick={abmelden} style={S.link}>Abmelden</button>
         </div>

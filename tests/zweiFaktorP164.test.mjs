@@ -81,13 +81,15 @@ test('Server-Stand: aal nur über getClaims; Fehler = Code verlangen; ohne Fakto
 
 test('Code-Wächter: Pfoertner, Admin, Betreiber-Wege; kein getSession; Stufe 1 ohne Pflicht', () => {
   const proxy = lies('proxy.ts');
-  assert.match(proxy, /const \{ weg \} = await zweiFaktorStand\(supabase, user, false\)/, 'Stufe 1: pflicht false');
+  // Stufe 2 (bewusste Aenderung): Pflicht kommt nur aus dem Schalter ZWEI_FAKTOR_PFLICHT.
+  assert.match(proxy, /const \{ weg \} = await zweiFaktorStand\(supabase, user, pflichtAn\(process\.env\)\)/);
   assert.ok(proxy.indexOf('zweiFaktorStand(') > proxy.indexOf("return NextResponse.redirect(new URL('/auth/login', req.url))"), 'erst Anmeldung, dann Zwei-Faktor');
   assert.ok(proxy.indexOf('zweiFaktorStand(') < proxy.indexOf('BETREIBER-BUCHUNGS-GATE'), 'vor allen anderen Weichen');
   assert.match(proxy, /if \(weg !== 'weiter'\) \{\n      const ziel = new URL\(weg === 'pruefen' \? PRUEF_PFAD : EINRICHT_PFAD, req\.url\)/);
   assert.match(proxy, /return NextResponse\.redirect\(ziel\)/);
-  assert.match(lies('app/admin/layout.tsx'), /zweiFaktorStand\(supabase, user, false\)\)\.weg === 'pruefen'/);
-  assert.match(lies('lib/betreiberGuard.ts'), /zweiFaktorStand\(supabase, user, false\)\)\.weg !== 'weiter'/);
+  assert.match(lies('app/admin/layout.tsx'), /const \{ weg \} = await zweiFaktorStand\(supabase, user, pflichtAn\(process\.env\)\);\n    if \(weg === 'pruefen'\) redirect/);
+  assert.match(lies('app/admin/layout.tsx'), /if \(weg === 'einrichten'\) redirect\('\/auth\/zwei-faktor\/einrichten/);
+  assert.match(lies('lib/betreiberGuard.ts'), /zweiFaktorStand\(supabase, user, pflichtAn\(process\.env\)\)\)\.weg !== 'weiter'/);
   for (const f of ['lib/zweiFaktor.ts', 'lib/zweiFaktorServer.ts', 'app/api/zwei-faktor/notfall/route.ts', 'app/api/zwei-faktor/notfall-codes/route.ts', 'app/api/zwei-faktor/ereignis/route.ts']) {
     assert.ok(!/\.getSession\(/.test(lies(f)), f + ' ohne getSession');
   }
