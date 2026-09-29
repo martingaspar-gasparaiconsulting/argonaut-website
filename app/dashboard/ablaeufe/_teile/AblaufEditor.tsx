@@ -10,16 +10,16 @@
 
 import { useState, useMemo, type CSSProperties, type ReactNode } from 'react';
 import {
-  TRIGGER, OPERATOR_LABEL, aktionDef, triggerDef,
+  TRIGGER, OPERATOR_LABEL, triggerDef,
   type Bedingung, type Operator, type FeldDef,
 } from '@/lib/automation';
 import {
-  pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion, ausloeserHatVorgang, EREIGNISSE,
+  pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion, ausloeserHatVorgang, EREIGNISSE, aktionFelder,
   type Ablauf, type Ausloeser, type Schritt, type BedingungsGruppe, type SchrittAktion,
 } from '@/lib/ablauf';
 import {
   einfuegen, ersetzen, entfernen, verschieben, neuerSchritt, plusErlaubt, aktionenFuer, neuerAusloeser,
-  bedingungDazu, bedingungAendern, bedingungWeg, verknuepfungSetzen, listeAn, type NeuArt,
+  bedingungDazu, bedingungAendern, bedingungWeg, verknuepfungSetzen, listeAn, AUSWAHL_TEXT, type NeuArt,
 } from '@/lib/ablaufEditor';
 
 const C = {
@@ -141,13 +141,15 @@ function Plus({ schritte, listePfad, ausloeser, onWahl }: {
 // Einstellungen einer Aktion
 // ---------------------------------------------------------------------------
 function AktionFelder({ s, onChange }: { s: SchrittAktion; onChange: (s: SchrittAktion) => void }) {
-  const def = aktionDef(s.aktion);
+  const felder = aktionFelder(s.aktion);
   const setze = (k: string, w: string) => onChange({ ...s, config: { ...s.config, [k]: w } });
   if (s.aktion === 'freigabe_chef') return <div style={klein}>Der Lauf hält hier an. Unter „Freigaben für Sie" entscheiden Sie: „✓ Freigeben" oder „✕ Ablehnen".</div>;
-  if (!def) return <div style={klein}>{ablaufAktion(s.aktion)?.hinweis ?? ''} Diesen Baustein führt der Motor noch nicht aus.</div>;
+  if (felder.length === 0) return <div style={klein}>{ablaufAktion(s.aktion)?.hinweis ?? ''} Diesen Baustein führt der Motor noch nicht aus.</div>;
   return (
     <div style={{ display: 'grid', gap: 9 }}>
-      {def.felder.map((fd) => {
+      {s.aktion === 'ki_schritt' && <div style={klein}>Der Baustein schreibt nur einen Entwurf — er erscheint unter „Ergebnisse aus Abläufen“ und wird nie verschickt. An den KI-Dienst geht nur dieser Auftrag mit den eingesetzten Platzhaltern.</div>}
+      {s.aktion === 'webhook_senden' && <div style={klein}>Nur https, nur fremde Programme (z. B. n8n). Gesendet werden Ablauf, Vorgangs-Kennung, Nummer, Name und Betrag — weitere Felder nur, wenn Sie sie unten nennen. Bank-, Steuer-, Gesundheits- und Zugangsdaten gehen nie raus. Nur an Empfänger mit AVV.</div>}
+      {felder.map((fd) => {
         if (fd.key === 'adresse' && s.config.an !== 'feste_adresse') return null;
         const wert = String(s.config[fd.key] ?? '');
         return (
@@ -157,7 +159,7 @@ function AktionFelder({ s, onChange }: { s: SchrittAktion; onChange: (s: Schritt
               <textarea value={wert} onChange={(e) => setze(fd.key, e.target.value)} rows={fd.key === 'text' ? 6 : 3} style={{ ...feld, resize: 'vertical' }} />
             ) : fd.typ === 'auswahl' && fd.optionen ? (
               <select value={wert} onChange={(e) => setze(fd.key, e.target.value)} style={feld}>
-                {fd.optionen.map((o) => <option key={o} value={o}>{o === 'kunde' ? 'an den Kunden' : o === 'feste_adresse' ? 'an eine feste Adresse' : o}</option>)}
+                {fd.optionen.map((o) => <option key={o} value={o}>{AUSWAHL_TEXT[o] ?? o}</option>)}
               </select>
             ) : (
               <input type={fd.typ === 'zahl' ? 'number' : 'text'} value={wert} onChange={(e) => setze(fd.key, e.target.value)} style={feld} />

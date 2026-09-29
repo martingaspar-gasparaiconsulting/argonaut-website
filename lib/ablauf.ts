@@ -20,8 +20,9 @@
 
 import {
   pruefeBedingung, triggerDef, istWerbung, aktionDef, alsDatum, datumDeutsch, euro,
-  type Bedingung, type Datensatz, type AutomationRegel,
+  type Bedingung, type Datensatz, type AutomationRegel, type AktionsFeld,
 } from './automation';
+import { pruefeWebhookUrl, gesperrtesFeld, felderListe } from './ablaufWebhookPruefung';
 
 // ---------------------------------------------------------------------------
 // 1) Typen
@@ -109,6 +110,8 @@ export type AblaufAktionDef = {
   pflicht: string[];
   /** Führt der Motor sie schon aus? (sonst nur planbar, noch nicht aktivierbar) */
   imMotor: boolean;
+  /** Einstellungsfelder der neuen Bausteine (Paket 167) — die alten stehen in lib/automation.ts. */
+  felder?: AktionsFeld[];
 };
 
 export const ABLAUF_AKTIONEN: AblaufAktionDef[] = [
@@ -120,17 +123,51 @@ export const ABLAUF_AKTIONEN: AblaufAktionDef[] = [
   { key: 'notiz_anhaengen', label: 'Notiz anhängen', hinweis: 'Schreibt eine Notiz an den Vorgang.', pflicht: ['text'], imMotor: true },
   // Seit Paket 157 im Motor: der Lauf hält an (Status „freigabe"), bis der Chef auf der Seite zustimmt.
   { key: 'freigabe_chef', label: 'Freigabe durch den Chef', hinweis: 'Hält an, bis die Geschäftsleitung zustimmt.', pflicht: [], imMotor: true },
-  // Neu im Baukasten — der Motor lernt sie in den folgenden Paketen.
-  { key: 'glocke', label: 'Meldung in der Glocke', hinweis: 'Benachrichtigt die Geschäftsleitung oder das Team.', pflicht: ['text'], imMotor: false },
-  { key: 'termin_anlegen', label: 'Termin anlegen', hinweis: 'Legt einen Termin an.', pflicht: ['titel'], imMotor: false },
-  { key: 'pdf_erstellen', label: 'PDF erstellen', hinweis: 'Erstellt ein PDF aus einer Vorlage.', pflicht: ['vorlage'], imMotor: false },
-  { key: 'ki_schritt', label: 'KI-Baustein', hinweis: 'Lässt einen Text von einem Baustein schreiben (Entwurf, nie direkt versendet).', pflicht: ['auftrag'], imMotor: false },
-  { key: 'webhook_senden', label: 'Webhook senden', hinweis: 'Schickt die Daten an eine Adresse (z. B. n8n).', extern: true, pflicht: ['url'], imMotor: false },
+  // Paket 167: die neuen Bausteine — jetzt im Motor.
+  { key: 'glocke', label: 'Meldung in der Glocke', hinweis: 'Benachrichtigt die Geschäftsleitung oder das Team (Glocke oben rechts).', pflicht: ['text'], imMotor: true,
+    felder: [
+      { key: 'an', label: 'An', typ: 'auswahl', optionen: ['chef', 'team'], standard: 'chef', pflicht: true },
+      { key: 'titel', label: 'Überschrift', typ: 'text', standard: 'Ablauf: {{ablauf}}' },
+      { key: 'text', label: 'Meldung', typ: 'mehrzeilig', pflicht: true, standard: '{{name}} {{nummer}}' },
+    ] },
+  { key: 'termin_anlegen', label: 'Termin anlegen', hinweis: 'Legt einen Termin im Kalender an (ohne Mail an den Kunden).', pflicht: ['titel'], imMotor: true,
+    felder: [
+      { key: 'titel', label: 'Titel des Termins', typ: 'text', pflicht: true, standard: 'Termin: {{name}}' },
+      { key: 'in_tagen', label: 'In ... Tagen (0 = heute)', typ: 'zahl', standard: 1 },
+      { key: 'uhrzeit', label: 'Uhrzeit (HH:MM, Berliner Zeit)', typ: 'text', standard: '09:00' },
+      { key: 'dauer_min', label: 'Dauer in Minuten', typ: 'zahl', standard: 60 },
+      { key: 'ort', label: 'Ort', typ: 'text' },
+      { key: 'beschreibung', label: 'Beschreibung', typ: 'mehrzeilig' },
+    ] },
+  { key: 'pdf_erstellen', label: 'PDF erstellen', hinweis: 'Erstellt ein PDF (Schreiben oder Vorgangsblatt) und legt es unter „Ergebnisse" ab.', pflicht: ['vorlage'], imMotor: true,
+    felder: [
+      { key: 'vorlage', label: 'Vorlage', typ: 'auswahl', optionen: ['schreiben', 'vorgangsblatt'], standard: 'schreiben', pflicht: true },
+      { key: 'titel', label: 'Titel', typ: 'text', standard: '{{ablauf}} – {{name}}' },
+      { key: 'text', label: 'Text (bei Schreiben)', typ: 'mehrzeilig' },
+    ] },
+  { key: 'ki_schritt', label: 'KI-Baustein (Entwurf)', hinweis: 'Lässt einen Text von einem Baustein schreiben — nur als Entwurf unter „Ergebnisse", nie direkt versendet.', pflicht: ['auftrag'], imMotor: true,
+    felder: [
+      { key: 'titel', label: 'Titel des Entwurfs', typ: 'text', standard: 'Entwurf: {{name}}' },
+      { key: 'auftrag', label: 'Auftrag an den Baustein', typ: 'mehrzeilig', pflicht: true, standard: 'Einen kurzen, freundlichen Text an {{name}} zum Vorgang {{nummer}} formulieren, in der Sie-Form.' },
+    ] },
+  { key: 'webhook_senden', label: 'Webhook senden (nach außen)', hinweis: 'Schickt ausgewählte Daten signiert an eine https-Adresse (z. B. n8n). Nur nach außen.', extern: true, pflicht: ['url'], imMotor: true,
+    felder: [
+      { key: 'url', label: 'Adresse (https://…)', typ: 'text', pflicht: true },
+      { key: 'felder', label: 'Zusätzliche Felder, mit Komma (z. B. email, telefon)', typ: 'text' },
+    ] },
 ];
 
 export function ablaufAktion(key: string): AblaufAktionDef | undefined {
   return ABLAUF_AKTIONEN.find((a) => a.key === key);
 }
+
+/** Einstellungsfelder einer Aktion — alte aus lib/automation.ts, neue aus diesem Katalog. */
+export function aktionFelder(key: string): AktionsFeld[] {
+  return aktionDef(key)?.felder ?? ablaufAktion(key)?.felder ?? [];
+}
+
+/** Höchstens so viele KI-Bausteine je Ablauf (Kosten). */
+export const MAX_KI_SCHRITTE = 3;
 
 /**
  * Hat ein Lauf dieses Auslösers einen Vorgang (Rechnung, Angebot …)?
@@ -349,6 +386,7 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
   let anzahl = 0;
   const werbung = a ? ausloeserIstWerbung(a) : true;
   const mitVorgang = ausloeserHatVorgang(a);
+  let kiAnzahl = 0;
   const gehe = (liste: readonly Schritt[], tiefe: number, freigabeDavor: boolean, wo: string): void => {
     if (tiefe > GRENZEN.tiefe) { fehler.push(`Zu tief verschachtelt (höchstens ${GRENZEN.tiefe} Wenn-Ebenen).`); return; }
     let freigabe = freigabeDavor;
@@ -389,12 +427,46 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
           hinweise.push(`Schritt ${nr}: Diese Mail gilt als Werbung — sie geht nur an Kunden mit Einwilligung und ohne Widerspruch.`);
         }
         if (def.extern) hinweise.push(`Schritt ${nr}: Daten gehen nach außen — nur an Adressen, mit denen ein Vertrag besteht (AVV).`);
+        // ---- Paket 167: die neuen Bausteine ----
+        const c = (s.config ?? {}) as Record<string, unknown>;
+        if (def.key === 'glocke') {
+          if (!['chef', 'team'].includes(String(c.an ?? 'chef'))) fehler.push(`Schritt ${nr} (${def.label}): Empfänger bitte „chef" oder „team".`);
+          if (c.an === 'team') hinweise.push(`Schritt ${nr}: Die Meldung sehen alle Mitarbeiter mit Zugang — bitte keine Beträge oder vertraulichen Angaben in den Text.`);
+        }
+        if (def.key === 'termin_anlegen') {
+          const t = Number(c.in_tagen ?? 0);
+          if (!Number.isInteger(t) || t < 0 || t > GRENZEN.wartenTage) fehler.push(`Schritt ${nr} (${def.label}): „In ... Tagen" 0 bis ${GRENZEN.wartenTage}.`);
+          if (String(c.uhrzeit ?? '').trim() && !/^([01]\d|2[0-3]):[0-5]\d$/.test(String(c.uhrzeit).trim())) fehler.push(`Schritt ${nr} (${def.label}): Uhrzeit bitte als HH:MM.`);
+          const d = Number(c.dauer_min ?? 60);
+          if (!Number.isInteger(d) || d < 5 || d > 1440) fehler.push(`Schritt ${nr} (${def.label}): Dauer 5 bis 1440 Minuten.`);
+          // Schleife: „Termin angelegt" -> „Termin anlegen" würde sich selbst immer wieder auslösen.
+          if (a?.art === 'ereignis' && a.ereignis === 'termin_angelegt') fehler.push(`Schritt ${nr} (${def.label}): Bei „Termin angelegt" darf kein Termin angelegt werden — das würde sich endlos selbst auslösen.`);
+        }
+        if (def.key === 'pdf_erstellen') {
+          const v = String(c.vorlage ?? '');
+          if (!['schreiben', 'vorgangsblatt'].includes(v)) fehler.push(`Schritt ${nr} (${def.label}): Vorlage bitte „schreiben" oder „vorgangsblatt".`);
+          if (v === 'schreiben' && !String(c.text ?? '').trim()) fehler.push(`Schritt ${nr} (${def.label}): Text für das Schreiben fehlt.`);
+          if (v === 'vorgangsblatt' && !mitVorgang) fehler.push(`Schritt ${nr} (${def.label}): Das Vorgangsblatt braucht einen Vorgang — bei diesem Auslöser gibt es keinen.`);
+        }
+        if (def.key === 'ki_schritt') {
+          kiAnzahl++;
+          hinweise.push(`Schritt ${nr}: Der Auftrag samt eingesetzter Platzhalter geht an den KI-Dienst (AVV). Ergebnis ist nur ein Entwurf unter „Ergebnisse" — verschickt wird nichts.`);
+        }
+        if (def.key === 'webhook_senden') {
+          const u = pruefeWebhookUrl(c.url);
+          if (!u.erlaubt) fehler.push(`Schritt ${nr} (${def.label}): ${u.hinweis}`);
+          for (const f of felderListe(c.felder)) {
+            if (!/^[a-z_][a-z0-9_]*(\.[a-z_][a-z0-9_]*)?$/i.test(f)) fehler.push(`Schritt ${nr} (${def.label}): Feldname „${f}" ungültig.`);
+            else if (gesperrtesFeld(f)) fehler.push(`Schritt ${nr} (${def.label}): Feld „${f}" wird nie nach außen geschickt (Bank-, Steuer-, Gesundheits- oder Zugangsdaten).`);
+          }
+        }
         if (def.key === 'status_aendern' && s.config?.neuer_status === 'bezahlt') fehler.push(`Schritt ${nr}: „bezahlt" setzt nur der Zahlungseingang, nie ein Ablauf.`);
       } else if (s.typ !== 'stopp') fehler.push(`Schritt ${nr}: unbekannter Schritt.`);
     });
   };
   gehe(ablauf.schritte ?? [], 1, false, '');
   if (anzahl > GRENZEN.schritte) fehler.push(`Höchstens ${GRENZEN.schritte} Schritte.`);
+  if (kiAnzahl > MAX_KI_SCHRITTE) fehler.push(`Höchstens ${MAX_KI_SCHRITTE} KI-Bausteine je Ablauf.`);
   if (nochNichtImMotor) hinweise.push('Enthält Bausteine, die der Motor noch nicht ausführt — speichern geht, einschalten noch nicht.');
   return { fehler, hinweise, aktivierbar: fehler.length === 0 && !nochNichtImMotor };
 }

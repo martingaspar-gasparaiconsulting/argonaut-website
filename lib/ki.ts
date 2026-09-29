@@ -377,8 +377,11 @@ async function holeAntwort(options: RequestInit): Promise<Response> {
  * @param route  Sprechender Name der Funktion, z.B. "ki-auge", "dashboard-chat".
  * @param options Exakt dieselben fetch-Optionen wie bisher (method/headers/body).
  */
-export async function kiFetch(route: string, options: RequestInit): Promise<Response> {
-  const userId = await ermittleUserId()
+export async function kiFetch(route: string, options: RequestInit, fuerNutzer?: string | null): Promise<Response> {
+  // Paket 167: Hintergrund-Läufe (Ablauf-Motor, ohne Login-Cookie) nennen den
+  // Betrieb ausdrücklich — dann gelten Rate-Limit, Demo-Deckel und Firmen-Topf
+  // wie bei jedem anderen Aufruf, und die Kosten landen beim richtigen Betrieb.
+  const userId = fuerNutzer || await ermittleUserId()
 
   // --- Rate-Limit (Bot-/Endlosschleifen-Schutz, "Horror-Faktor") ---
   // Nutzt die bestehende ki_nutzung-Tabelle: zu viele Aufrufe je Minute -> 429,

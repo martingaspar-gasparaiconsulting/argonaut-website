@@ -94,7 +94,9 @@ test('Neue Starts: EINMALIG, nichts doppelt nach der Übernahme, Deckel je 24 St
 test('Laufbereit nur eingeschaltet UND einschaltbar; alte Regel ruht, sobald ihr Ablauf läuft', () => {
   assert.equal(laufbereit(MAHNLAUF), true);
   assert.equal(laufbereit({ ...MAHNLAUF, aktiv: false }), false);
-  assert.equal(laufbereit({ ...MAHNLAUF, schritte: [{ id: 'x', typ: 'aktion', aktion: 'glocke', config: { text: 'x' } }] }), false);
+  // Paket 167: Glocke ist im Motor; nicht einschaltbar bleibt z. B. der Knopf im Modul.
+  assert.equal(laufbereit({ ...MAHNLAUF, schritte: [{ id: 'x', typ: 'aktion', aktion: 'glocke', config: { text: 'x' } }] }), true);
+  assert.equal(laufbereit({ ...MAHNLAUF, ausloeser: { art: 'knopf', modul: 'rechnungen' } }), false);
   assert.equal(laufbereit({ ...MAHNLAUF, schritte: [{ id: 'e', typ: 'aktion', aktion: 'mahnstufe_erhoehen', config: {} }] }), false, 'Geld ohne Freigabe');
   assert.equal(regelUebernommen('r1', [{ alt_regel_id: 'r1', aktiv: true }]), true);
   assert.equal(regelUebernommen('r1', [{ alt_regel_id: 'r1', aktiv: false }]), false);
@@ -134,8 +136,9 @@ test('Aktionen planen: Aufgabe, Status, Mahnstufe, Notiz — immer mit Besitzer,
   assert.deepEqual(n.daten, { notizen: 'alt\nAblauf Mahnlauf am 28.09.2026' });
   assert.equal(plan(MAHNLAUF.schritte[3], { id: 'a1', notiz: null }, zielA).daten.notiz, 'Ablauf Mahnlauf am 28.09.2026');
   const glocke = plan({ id: 'g', typ: 'aktion', aktion: 'glocke', config: { text: 'x' } });
-  assert.equal(glocke.art, 'fehler', 'noch nicht im Motor');
-  assert.match(glocke.meldung, /führt der Motor noch nicht aus/, 'klarer Grund im Protokoll');
+  // Paket 167 (bewusste Aenderung): Glocke wird jetzt geplant.
+  assert.equal(glocke.art, 'glocke');
+  assert.equal(glocke.an, 'chef');
   assert.equal(plan({ id: 'g', typ: 'aktion', aktion: 'raketenstart', config: {} }).art, 'fehler');
 });
 

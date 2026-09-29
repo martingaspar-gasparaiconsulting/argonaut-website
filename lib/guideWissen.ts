@@ -1341,7 +1341,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Mahnwesen (Mahnstufe)', href: '/dashboard/mahnwesen' }, { text: 'Vertrieb/CRM', href: '/dashboard/crm' }],
   },
   '/dashboard/ablaeufe': {
-    zweck: 'Abläufe sind Ketten aus Schritten, die der Betrieb von allein abarbeitet: ein Auslöser wie „Rechnung ist überfällig", danach Aktionen, Wartezeiten und Wenn/Sonst. Schritte, die Geld betreffen (Mahnstufe), halten an, bis der Chef freigibt. Der Motor prüft stündlich, jeder Schritt steht im Protokoll. Vorlagen je Branche, eigener Baukasten mit „＋" zwischen den Karten, Fassungen zum Zurückholen; bisherige Automationen lassen sich per Knopf übernehmen.',
+    zweck: 'Abläufe sind Ketten aus Schritten, die der Betrieb von allein abarbeitet: ein Auslöser wie „Rechnung ist überfällig", danach Aktionen, Wartezeiten und Wenn/Sonst. Schritte, die Geld betreffen (Mahnstufe), halten an, bis der Chef freigibt. Der Motor prüft stündlich, jeder Schritt steht im Protokoll. Vorlagen je Branche, eigener Baukasten mit „＋" zwischen den Karten, Fassungen zum Zurückholen; bisherige Automationen lassen sich per Knopf übernehmen. Bausteine: Aufgabe, Mail, Status, Mahnstufe, Notiz, Meldung in der Glocke, Termin, PDF, KI-Entwurf (wird nie verschickt) und Webhook nach außen; Entwürfe und PDFs liegen unter „Ergebnisse aus Abläufen".',
     wer: 'chef',
     werText: 'Nur der Chef übernimmt, schaltet ein oder aus und erteilt Freigaben. Mitarbeiter sehen den Stand und das Protokoll, ändern aber nichts.',
     schritte: [

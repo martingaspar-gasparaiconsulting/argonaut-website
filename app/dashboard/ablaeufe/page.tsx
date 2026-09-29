@@ -23,7 +23,9 @@ import { nichtsGeschrieben, NICHT_GESPEICHERT } from '@/lib/speichernPruefen';
 import Leerzustand from '../_components/Leerzustand';
 import AblaufEditor, { type Entwurf } from './_teile/AblaufEditor';
 import { ABLAUF_VORLAGEN, GRUPPEN, vorlagenFuer, type BranchenGruppe, type AblaufVorlage } from '@/lib/ablaufVorlagen';
-import { neueFassungNoetig, kopie } from '@/lib/ablaufEditor';
+import { neueFassungNoetig, kopie, enthaeltAktion } from '@/lib/ablaufEditor';
+import AblaufErgebnisse from './_teile/AblaufErgebnisse';
+import WebhookSchluessel from './_teile/WebhookSchluessel';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -439,6 +441,8 @@ export default function AblaeufePage() {
         </div>
       )}
 
+      {chef && <AblaufErgebnisse supabase={supabase} />}
+
       {chef && !editor && (
         <div style={karte}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
@@ -500,6 +504,7 @@ export default function AblaeufePage() {
                 )}
               </div>
               <div style={{ marginTop: 10 }}><SchrittListe schritte={a.schritte} /></div>
+              {chef && enthaeltAktion(a.schritte, 'webhook_senden') && <WebhookSchluessel ablaufId={a.id} />}
               {p.fehler.map((f) => <div key={f} style={{ fontSize: 12.5, color: C.danger, marginTop: 4 }}>⚠️ {f}</div>)}
               {p.hinweise.map((h) => <div key={h} style={{ fontSize: 12.5, color: C.warn, marginTop: 4 }}>ℹ️ {h}</div>)}
               {versionen?.ablaufId === a.id && (

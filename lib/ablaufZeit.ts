@@ -47,3 +47,27 @@ export function slotKennung(ablaufId: string, slot: string): string {
   const h = createHash('sha256').update(`ablauf-slot|${ablaufId}|${slot}`).digest('hex');
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
+
+/**
+ * Paket 167 (Termin anlegen): Zeitpunkt „heute + inTagen um HH:MM" in
+ * BERLINER Zeit als echter Zeitpunkt (UTC). Sommer-/Winterzeit wird über den
+ * Versatz am Zielzeitpunkt bestimmt (zweimal nachgerechnet, damit auch der
+ * Umstellungstag stimmt). Ungültige Uhrzeit -> 09:00.
+ */
+export function berlinZeitpunkt(jetzt: Date, inTagen: number, uhrzeit: string): Date {
+  const t = berlinTeile(jetzt);
+  const uhr = /^([01]\d|2[0-3]):[0-5]\d$/.test(String(uhrzeit ?? '').trim()) ? String(uhrzeit).trim() : '09:00';
+  const [h, m] = uhr.split(':').map(Number);
+  const [jahr, monat, tag] = (t?.datum ?? jetzt.toISOString().slice(0, 10)).split('-').map(Number);
+  const tage = Math.max(0, Math.trunc(Number(inTagen) || 0));
+  const wunsch = Date.UTC(jahr, monat - 1, tag + tage, h, m);   // „Wanduhr" Berlin als wäre es UTC
+  const versatz = (ms: number): number => {
+    const b = berlinTeile(new Date(ms));
+    if (!b) return 0;
+    const [bj, bm, bt] = b.datum.split('-').map(Number);
+    return Date.UTC(bj, bm - 1, bt, b.stunde, b.minute) - ms;
+  };
+  let ms = wunsch - versatz(wunsch);
+  ms = wunsch - versatz(ms);
+  return new Date(ms);
+}

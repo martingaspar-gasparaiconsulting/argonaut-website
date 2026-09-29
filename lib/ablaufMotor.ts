@@ -26,6 +26,8 @@ import {
   type Ablauf, type Ausloeser, type SchrittAktion, type Fahrplan,
 } from './ablauf';
 import { werbeStatus, WERBE_STATUS_TEXT } from './segmente';
+import { berlinZeitpunkt } from './ablaufZeit';
+import { pruefeWebhookUrl } from './ablaufWebhookPruefung';
 
 // ---------------------------------------------------------------------------
 // 1) Schutzgeländer (wie beim bisherigen Automations-Motor)
@@ -163,10 +165,34 @@ export type AktionPlan =
   | { art: 'anlegen'; tabelle: string; daten: Record<string, unknown>; meldung: string }
   | { art: 'aendern'; tabelle: string; id: string; daten: Record<string, unknown>; meldung: string }
   | { art: 'mail'; an: string; betreff: string; text: string; meldung: string }
+  // Paket 167
+  | { art: 'glocke'; an: 'chef' | 'team'; titel: string; text: string; link: string; meldung: string }
+  | { art: 'pdf'; vorlage: 'schreiben' | 'vorgangsblatt'; titel: string; text: string; zeilen: [string, string][]; meldung: string }
+  | { art: 'ki'; titel: string; auftrag: string; meldung: string }
+  | { art: 'webhook'; url: string; felder: string; werte: Record<string, string>; meldung: string }
   | { art: 'uebersprungen'; meldung: string }
   | { art: 'fehler'; meldung: string };
 
 function nurDatum(d: Date): string { return d.toISOString().slice(0, 10); }
+
+/** Vorgangsblatt: die wichtigsten Angaben eines Vorgangs als Zeilen (nur einfache Werte). */
+export const VORGANGSBLATT_FELDER: [string, string][] = [
+  ['rechnungsnummer', 'Rechnungsnummer'], ['angebotsnummer', 'Angebotsnummer'], ['auftragsnummer', 'Auftragsnummer'], ['nummer', 'Nummer'],
+  ['titel', 'Titel'], ['betreff', 'Betreff'], ['kunde_name', 'Kunde'], ['firma', 'Firma'], ['vorname', 'Vorname'], ['nachname', 'Nachname'],
+  ['status', 'Status'], ['zahlungsstatus', 'Zahlungsstatus'], ['rechnungsdatum', 'Rechnungsdatum'], ['faellig_am', 'Fällig am'],
+  ['gueltig_bis', 'Gültig bis'], ['beginn_am', 'Beginn'], ['ende_am', 'Ende'], ['ort', 'Ort'], ['mahnstufe', 'Mahnstufe'],
+];
+
+export function vorgangsblattZeilen(satz: Datensatz, werte: Record<string, string>): [string, string][] {
+  const zeilen: [string, string][] = [];
+  for (const [feld, label] of VORGANGSBLATT_FELDER) {
+    const v = satz[feld];
+    if (v === null || v === undefined || v === '' || typeof v === 'object') continue;
+    zeilen.push([label, fuellePlatzhalter(`{{${feld}}}`, satz, {})]);
+  }
+  if (werte.betrag) zeilen.push(['Betrag', werte.betrag]);
+  return zeilen.slice(0, 30);
+}
 
 export function aktionPlanen(
   s: SchrittAktion, ablauf: Pick<Ablauf, 'name' | 'ausloeser'>, ziel: Ziel, ownerId: string, satz: Datensatz, jetzt: Date,
@@ -220,6 +246,53 @@ export function aktionPlanen(
       const zeile = text('text') || `Ablauf: ${ablauf.name}`;
       const alt = typeof satz[spalte] === 'string' ? (satz[spalte] as string) : '';
       return { art: 'aendern', tabelle: ziel.tabelle, id: zielId, daten: { [spalte]: ((alt ? alt + '\n' : '') + zeile).slice(0, 8000) }, meldung: 'Notiz angehängt' };
+    }
+    case 'glocke': {
+      const an = cfg.an === 'team' ? 'team' : 'chef';
+      const inhalt = text('text').slice(0, 500);
+      if (!inhalt.trim()) return { art: 'uebersprungen', meldung: 'Meldung ist leer' };
+      const titel = (text('titel') || `Ablauf: ${ablauf.name}`).slice(0, 160);
+      return { art: 'glocke', an, titel, text: inhalt, link: '/dashboard/ablaeufe', meldung: `Glocke an ${an === 'team' ? 'das Team' : 'die Geschäftsleitung'}: „${titel}"` };
+    }
+    case 'termin_anlegen': {
+      const titel = text('titel').slice(0, 300) || `Ablauf: ${ablauf.name}`;
+      const beginn = berlinZeitpunkt(jetzt, alsZahl(cfg.in_tagen) ?? 0, String(cfg.uhrzeit ?? '09:00'));
+      const dauer = Math.min(1440, Math.max(5, Math.trunc(alsZahl(cfg.dauer_min) ?? 60)));
+      const ende = new Date(beginn.getTime() + dauer * 60000);
+      const kontaktId = ziel.zielTyp === 'kontakt' ? zielId : (typeof satz.kontakt_id === 'string' ? satz.kontakt_id : null);
+      return {
+        art: 'anlegen', tabelle: 'termine', meldung: `Termin „${titel}" am ${beginn.toISOString()}`,
+        daten: {
+          owner_user_id: ownerId, titel, beschreibung: text('beschreibung') || null, ort: text('ort') || null,
+          beginn_am: beginn.toISOString(), ende_am: ende.toISOString(), quelle: 'ablauf',
+          kontakt_id: kontaktId || null, auftrag_id: ziel.zielTyp === 'auftrag' ? zielId : (typeof satz.auftrag_id === 'string' ? satz.auftrag_id : null),
+          // Vom Ablauf angelegt: KEINE Bestätigungs-/Erinnerungs-Mail an Kunden (wie beim Import).
+          bestaetigung_gesendet_am: jetzt.toISOString(), erinnerung_gesendet_am: jetzt.toISOString(),
+        },
+      };
+    }
+    case 'pdf_erstellen': {
+      const vorlage = cfg.vorlage === 'vorgangsblatt' ? 'vorgangsblatt' : 'schreiben';
+      const titel = (text('titel') || ablauf.name || 'Dokument').slice(0, 160);
+      if (vorlage === 'vorgangsblatt') {
+        if (!zielId) return { art: 'fehler', meldung: 'Vorgangsblatt ohne Vorgang' };
+        return { art: 'pdf', vorlage, titel, text: '', zeilen: vorgangsblattZeilen(satz, werte), meldung: `PDF „${titel}" (Vorgangsblatt)` };
+      }
+      const inhalt = text('text').slice(0, 20000);
+      if (!inhalt.trim()) return { art: 'uebersprungen', meldung: 'Text für das Schreiben ist leer' };
+      return { art: 'pdf', vorlage, titel, text: inhalt, zeilen: [], meldung: `PDF „${titel}" (Schreiben)` };
+    }
+    case 'ki_schritt': {
+      const auftrag = text('auftrag').slice(0, 4000);
+      if (!auftrag.trim()) return { art: 'uebersprungen', meldung: 'Auftrag ist leer' };
+      const titel = (text('titel') || `Entwurf: ${ablauf.name}`).slice(0, 160);
+      return { art: 'ki', titel, auftrag, meldung: `Entwurf „${titel}" (nur Entwurf, nichts wird verschickt)` };
+    }
+    case 'webhook_senden': {
+      const url = String(cfg.url ?? '').trim();
+      const pruef = pruefeWebhookUrl(url);
+      if (!pruef.erlaubt) return { art: 'fehler', meldung: `Adresse abgelehnt: ${pruef.hinweis}` };
+      return { art: 'webhook', url: pruef.normalisiert, felder: String(cfg.felder ?? ''), werte, meldung: `Webhook an ${pruef.host}` };
     }
     default:
       return { art: 'fehler', meldung: `Unbekannte Aktion: ${s.aktion}` };

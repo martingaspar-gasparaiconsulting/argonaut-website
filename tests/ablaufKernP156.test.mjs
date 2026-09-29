@@ -43,7 +43,8 @@ test('Kataloge: die fuenf bisherigen Aktionen sind im Motor, Neues ist gekennzei
   assert.equal(ablaufAktion('webhook_senden').extern, true);
   // Paket 157: freigabe_chef ist jetzt im Motor
   assert.equal(ablaufAktion('freigabe_chef').imMotor, true);
-  for (const k of ['glocke', 'termin_anlegen', 'pdf_erstellen', 'ki_schritt', 'webhook_senden']) assert.equal(ablaufAktion(k).imMotor, false, k);
+  // Paket 167 (bewusste Aenderung): die neuen Bausteine sind jetzt im Motor.
+  for (const k of ['glocke', 'termin_anlegen', 'pdf_erstellen', 'ki_schritt', 'webhook_senden']) assert.equal(ablaufAktion(k).imMotor, true, k);
   assert.equal(new Set(ABLAUF_AKTIONEN.map((a) => a.key)).size, ABLAUF_AKTIONEN.length);
   assert.equal(EREIGNISSE.find((e) => e.key === 'kontakt_angelegt').werbung, true);
   assert.equal(EREIGNISSE.find((e) => e.key === 'rechnung_angelegt').werbung, false);
@@ -122,8 +123,13 @@ test('Pruefung: Mahnlauf ist gueltig und seit Paket 157 einschaltbar (Freigabe i
   assert.deepEqual(p.fehler, []);
   assert.equal(p.aktivierbar, true);
   const mitGlocke = pruefeAblauf({ ...MAHNLAUF, schritte: [...MAHNLAUF.schritte, { id: 'z', typ: 'aktion', aktion: 'glocke', config: { text: 'x' } }] });
-  assert.equal(mitGlocke.aktivierbar, false);
-  assert.ok(mitGlocke.hinweise.some((h) => /noch nicht ausführt/.test(h)));
+  // Paket 167 (bewusste Aenderung): Glocke ist im Motor -> einschaltbar.
+  assert.equal(mitGlocke.aktivierbar, true);
+  assert.ok(!mitGlocke.hinweise.some((h) => /noch nicht ausführt/.test(h)));
+  // Knopf direkt im Modul fuehrt der Motor weiterhin noch nicht aus.
+  const imModul = pruefeAblauf({ ...MAHNLAUF, ausloeser: { art: 'knopf', modul: 'rechnungen' } });
+  assert.equal(imModul.aktivierbar, false);
+  assert.ok(imModul.hinweise.some((h) => /noch nicht ausführt/.test(h)));
   // Rechnung ueberfaellig ist Betriebspost -> kein Werbe-Hinweis
   assert.ok(!p.hinweise.some((h) => /Werbung/.test(h)));
 });

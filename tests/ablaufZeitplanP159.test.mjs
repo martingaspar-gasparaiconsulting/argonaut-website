@@ -105,6 +105,8 @@ test('Code: gemeinsamer Ausführer streng je Betrieb; Zeitplan im Motor; Knopf n
     if (/^plan\.tabelle\)\.insert\(\{ \.\.\.plan\.daten, owner_user_id: ownerId \}\)/.test(stueck)) continue;
     if (/^'ablauf_protokoll'\)\.insert\(\{\s*owner_user_id: lauf\.owner_user_id/.test(stueck)) continue;
     if (/^'ablauf_laeufe'\)\.insert\(\{\s*owner_user_id: ablauf\.owner_user_id/.test(stueck)) continue;
+    // Paket 167: Firmenname aus dem Profil DES Betriebs (Profil-Kennung = Betrieb)
+    if (/^'profiles'\)\.select\('firma_name'\)\.eq\('id', ownerId\)/.test(stueck)) continue;
     assert.match(stueck, /owner_user_id/, `ohne Betriebs-Filter: db.from(${stueck.slice(0, 80)}`);
   }
   assert.match(aus, /if \(r\.ergebnis === 'fehler'\) \{/);

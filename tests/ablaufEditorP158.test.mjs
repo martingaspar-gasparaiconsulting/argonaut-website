@@ -90,7 +90,7 @@ test('Das „+" zeigt nur passende Aktionen; noch nicht im Motor = gekennzeichne
   assert.ok(r.includes('mahnstufe_erhoehen'));
   assert.ok(!aktionenFuer({ art: 'datum', trigger: 'angebot_ohne_antwort', tage: 0 }).some((a) => a.key === 'mahnstufe_erhoehen'), 'Mahnstufe nur bei Rechnungen');
   assert.equal(aktionenFuer({ art: 'datum', trigger: 'rechnung_ueberfaellig', tage: 0 }).find((a) => a.key === 'freigabe_chef').imMotor, true);
-  assert.equal(aktionenFuer({ art: 'datum', trigger: 'rechnung_ueberfaellig', tage: 0 }).find((a) => a.key === 'glocke').imMotor, false);
+  assert.equal(aktionenFuer({ art: 'datum', trigger: 'rechnung_ueberfaellig', tage: 0 }).find((a) => a.key === 'glocke').imMotor, true, 'seit Paket 167 im Motor');
 });
 
 test('Bedingungen bearbeiten: UND/ODER, verschachtelte Gruppe', () => {

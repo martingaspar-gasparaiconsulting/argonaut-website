@@ -13,7 +13,7 @@
 import { aktionDef, triggerDef, type Bedingung } from './automation';
 import {
   ereignisDef,
-  ablaufAktion, ABLAUF_AKTIONEN, GRENZEN, istGruppe, ausloeserHatVorgang, VORGANG_AKTIONEN,
+  ablaufAktion, ABLAUF_AKTIONEN, GRENZEN, istGruppe, ausloeserHatVorgang, VORGANG_AKTIONEN, aktionFelder,
   type Ablauf, type Ausloeser, type Schritt, type SchrittAktion, type BedingungsGruppe,
 } from './ablauf';
 
@@ -114,7 +114,7 @@ export function neueId(schritte: readonly Schritt[]): string {
 /** Standard-Einstellungen einer Aktion (aus dem Automations-Katalog). */
 export function standardConfig(aktion: string): Record<string, unknown> {
   const cfg: Record<string, unknown> = {};
-  for (const f of aktionDef(aktion)?.felder ?? []) if (f.standard !== undefined) cfg[f.key] = f.standard;
+  for (const f of aktionFelder(aktion)) if (f.standard !== undefined) cfg[f.key] = f.standard;
   return cfg;
 }
 
@@ -221,3 +221,16 @@ export function fehlendeFelder(s: SchrittAktion): string[] {
   const d = ablaufAktion(s.aktion);
   return (d?.pflicht ?? []).filter((p) => !String(s.config?.[p] ?? '').trim());
 }
+
+/** Kommt diese Aktion irgendwo im Ablauf vor (auch in Wenn/Sonst)? — Paket 167 */
+export function enthaeltAktion(schritte: readonly Schritt[], aktion: string): boolean {
+  return schritte.some((s) => (s.typ === 'aktion' && s.aktion === aktion)
+    || (s.typ === 'wenn' && (enthaeltAktion(s.dann ?? [], aktion) || enthaeltAktion(s.sonst ?? [], aktion))));
+}
+
+/** Anzeige der Auswahl-Werte im Editor (Paket 167). */
+export const AUSWAHL_TEXT: Record<string, string> = {
+  kunde: 'an den Kunden', feste_adresse: 'an eine feste Adresse',
+  chef: 'an die Geschäftsleitung', team: 'an das ganze Team',
+  schreiben: 'Schreiben (Titel + Text)', vorgangsblatt: 'Vorgangsblatt (Angaben des Vorgangs)',
+};
