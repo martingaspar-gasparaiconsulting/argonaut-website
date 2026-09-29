@@ -11,6 +11,18 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
+function zahlOder0(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
+}
+
+/** Ohne KI: ab mehr als 6 Wochen (30 Arbeitstage) im Jahr ist ein BEM anzubieten (§ 167 Abs. 2 SGB IX). */
+function bemHinweis(krankTage: unknown): string {
+  return zahlOder0(krankTage) > 30
+    ? '• Mehr als sechs Wochen Arbeitsunfähigkeit in zwölf Monaten: Betriebliches Eingliederungsmanagement anbieten (§ 167 Abs. 2 SGB IX) — Einladung schriftlich, Teilnahme freiwillig.'
+    : '';
+}
+
 type SchulungEck = { kategorie: string; status: string; tageBis: number | null };
 type Payload = {
   urlaubsanspruch: number;
@@ -50,12 +62,16 @@ export async function POST(req: NextRequest) {
             })
             .join('\n');
 
+    // Paket 176 (Befund H12): KEINE Krankheitsdaten an die KI. Krankheitstage und
+    // erst recht „Muster" (Krankmeldungen am Wochenende) sind Gesundheitsdaten
+    // (Art. 9 DSGVO) und Verhaltensauswertung (§ 26 BDSG, KI-VO Anhang III Nr. 4).
+    // Der einzige Hinweis dazu — Eingliederungsmanagement ab 6 Wochen — wird
+    // unten OHNE KI aus der Zahl gebildet.
     const userText = [
       'Anonyme Eckdaten EINES Mitarbeiters (keine Namen):',
-      `- Urlaubsanspruch: ${body.urlaubsanspruch ?? 0} Tage`,
-      `- Bereits genehmigt genommen (laufendes Jahr): ${body.genommen ?? 0} Tage`,
-      `- Resturlaub: ${body.rest ?? 0} Tage`,
-      `- Krankheitstage (laufendes Jahr): ${body.krankTage ?? 0} Tage in ${body.krankEintraege ?? 0} Meldung(en), davon ${body.wochenendNah ?? 0} direkt an einem Wochenende (Mo-Beginn oder Fr-Ende)`,
+      `- Urlaubsanspruch: ${zahlOder0(body.urlaubsanspruch)} Tage`,
+      `- Bereits genehmigt genommen (laufendes Jahr): ${zahlOder0(body.genommen)} Tage`,
+      `- Resturlaub: ${zahlOder0(body.rest)} Tage`,
       `- Stammdaten vollständig: ${body.stammVollstaendig ? 'ja' : 'nein'}`,
       '',
       'Schulungen:',
@@ -68,7 +84,7 @@ Gib eine kurze, sachliche Einschätzung auf Deutsch:
 - 3 bis 5 knappe Punkte, je ein Satz.
 - Konkret und handlungsorientiert: Was sollte der Chef konkret tun?
 - Priorisiere rechtlich/haftungsrelevante Themen zuerst (abgelaufene Pflicht-Schulungen, drohender Urlaubsverfall, fehlende Stammdaten).
-- Auffällige Krankheitsmuster strikt sachlich-neutral formulieren — KEINE Verdächtigungen, kein Vorwurf, höchstens "im Blick behalten".
+- Zu Krankheit und Fehlzeiten erhältst du bewusst KEINE Angaben — äußere dich dazu nicht.
 - Wenn alles in Ordnung ist, sage das klar und kurz.
 - Keine Einleitung, keine Anrede, keine Schlussfloskel. Beginne direkt mit den Punkten und nutze "•" als Aufzählungszeichen.`;
 
@@ -104,7 +120,9 @@ Gib eine kurze, sachliche Einschätzung auf Deutsch:
           .trim()
       : '';
 
-    return NextResponse.json({ auswertung: text || 'Es wurde keine Einschätzung erzeugt.' });
+    const bem = bemHinweis(body.krankTage);
+    const auswertung = [text || 'Es wurde keine Einschätzung erzeugt.', bem].filter(Boolean).join('\n');
+    return NextResponse.json({ auswertung });
   } catch {
     return NextResponse.json({ error: 'Unerwarteter Fehler bei der KI-Auswertung.' }, { status: 500 });
   }

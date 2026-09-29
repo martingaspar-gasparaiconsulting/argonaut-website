@@ -27,10 +27,13 @@
 // sind bewusst duenn gehalten.
 // ============================================================================
 
+import { kostenUsd } from './kiPreise';
+
 const BASIS = 'https://api.anthropic.com/v1/messages/batches';
 const VERSION = '2023-06-01';
 
 /** Grenzen der Schnittstelle. Konservativ gesetzt — lieber zwei Stapel als einer, der abgewiesen wird. */
+
 export const MAX_JE_STAPEL = 1000;
 export const MAX_ZEICHEN_GESAMT = 8_000_000;
 
@@ -59,6 +62,9 @@ export type BatchErgebnis = {
   ok: boolean;
   text: string;
   fehler?: string;
+  /** Paket 176: fuer das KI-Kostenprotokoll (ki_nutzung). */
+  modell?: string;
+  verbrauch?: Record<string, unknown>;
 };
 
 // ---------------------------------------------------------------------------
@@ -180,8 +186,13 @@ export function textAus(zeile: unknown): BatchErgebnis | null {
     .join('')
     .trim();
 
-  if (!text) return { custom_id: customId, ok: false, text: '', fehler: 'Leere Antwort erhalten.' };
-  return { custom_id: customId, ok: true, text };
+  // Paket 176: auch ein Stapel kostet Geld — Modell und Verbrauch mitnehmen,
+  // damit er im KI-Kostenprotokoll erscheint (vorher fehlten Stapel dort ganz).
+  const modell = typeof nachricht?.model === 'string' ? nachricht.model : undefined;
+  const verbrauch = nachricht?.usage && typeof nachricht.usage === 'object' ? (nachricht.usage as Record<string, unknown>) : undefined;
+  const extra = { ...(modell ? { modell } : {}), ...(verbrauch ? { verbrauch } : {}) };
+  if (!text) return { custom_id: customId, ok: false, text: '', fehler: 'Leere Antwort erhalten.', ...extra };
+  return { custom_id: customId, ok: true, text, ...extra };
 }
 
 export function fehlerText(art: string, meldung?: string): string {
@@ -317,4 +328,57 @@ export async function abholen(externId: string): Promise<{ ok: true; ergebnisse:
   } catch (err: unknown) {
     return { ok: false, fehler: err instanceof Error ? err.message : 'Unbekannter Fehler beim Abholen.' };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Paket 176: Stapel ins KI-Kostenprotokoll
+// ---------------------------------------------------------------------------
+
+export type StapelProtokollZeile = {
+  user_id: string;
+  route: string;
+  modell: string;
+  tokens_rein: number;
+  tokens_raus: number;
+  tokens_cache_write: number;
+  tokens_cache_read: number;
+  kosten_usd: number;
+};
+
+function zahl(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/**
+ * Eine Protokollzeile je Modell fuer einen abgeholten Stapel — mit dem
+ * Stapel-Preis (halber Preis). Route bekommt den Zusatz „ (Stapel)", damit
+ * die Auswertung Stapel und Einzelaufrufe unterscheiden kann.
+ */
+export function stapelProtokoll(ergebnisse: BatchErgebnis[], ownerId: string, route: string): StapelProtokollZeile[] {
+  const jeModell = new Map<string, { input_tokens: number; output_tokens: number; cache_creation_input_tokens: number; cache_read_input_tokens: number }>();
+  for (const e of ergebnisse ?? []) {
+    if (!e?.verbrauch) continue;
+    const m = e.modell || 'unbekannt';
+    const s = jeModell.get(m) ?? { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
+    s.input_tokens += zahl(e.verbrauch.input_tokens);
+    s.output_tokens += zahl(e.verbrauch.output_tokens);
+    s.cache_creation_input_tokens += zahl(e.verbrauch.cache_creation_input_tokens);
+    s.cache_read_input_tokens += zahl(e.verbrauch.cache_read_input_tokens);
+    jeModell.set(m, s);
+  }
+  const zeilen: StapelProtokollZeile[] = [];
+  for (const [modell, u] of jeModell) {
+    zeilen.push({
+      user_id: ownerId,
+      route: `${String(route || 'stapel').slice(0, 80)} (Stapel)`,
+      modell,
+      tokens_rein: u.input_tokens,
+      tokens_raus: u.output_tokens,
+      tokens_cache_write: u.cache_creation_input_tokens,
+      tokens_cache_read: u.cache_read_input_tokens,
+      kosten_usd: kostenUsd(modell, u, true),
+    });
+  }
+  return zeilen;
 }

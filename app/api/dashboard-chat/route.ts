@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       supabase.from("projekte").select("id, status, archiviert"),
       supabase.from("hr_abwesenheiten").select("id, mitarbeiter_id, typ, von, bis, status"),
       supabase.from("hr_zeiterfassung").select("id, mitarbeiter_id, datum, kommen_um, gehen_um"),
-      supabase.from("mitarbeiter").select("id, vorname, nachname, status"),
+      supabase.from("mitarbeiter").select("id, status"),
     ]);
 
     const leads = leadsR.data || [];
@@ -73,10 +73,6 @@ export async function POST(req: Request) {
     const low = (s: any) => String(s || "").toLowerCase();
     const heute = new Date().toISOString().slice(0, 10);
 
-    const maName: Record<string, string> = {};
-    for (const m of mitarbeiter as any[]) {
-      maName[m.id] = [m.vorname, m.nachname].filter(Boolean).join(" ") || "Mitarbeiter";
-    }
 
     // Kennzahlen
     const leadsOffen = leads.filter((l: any) => !LEAD_ERLEDIGT.includes(low(l.status))).length;
@@ -91,14 +87,14 @@ export async function POST(req: Request) {
 
     const projekteLaufend = projekte.filter((p: any) => !p.archiviert && !PROJEKT_ERLEDIGT.includes(low(p.status))).length;
 
-    const kranke = abwesenheiten.filter((a: any) => {
-      const istKrank = low(a.typ).includes("krank");
+    // Paket 176 (Befund H12): KEINE Namen und KEIN Grund an die KI — wer krank ist,
+    // ist ein Gesundheitsdatum (Art. 9 DSGVO). Nur die Zahl aller heutigen
+    // Abwesenheiten (Urlaub, Krankheit u. a. zusammen) geht in den Kontext.
+    const abwesendHeute = abwesenheiten.filter((a: any) => {
       const von = a.von ? String(a.von).slice(0, 10) : null;
       const bis = a.bis ? String(a.bis).slice(0, 10) : von;
-      const aktiv = von && bis && von <= heute && heute <= bis;
-      return istKrank && aktiv && !["abgelehnt", "storniert"].includes(low(a.status));
-    });
-    const krankeNamen = kranke.map((a: any) => maName[a.mitarbeiter_id] || "Mitarbeiter");
+      return von && bis && von <= heute && heute <= bis && !["abgelehnt", "storniert"].includes(low(a.status));
+    }).length;
     const eingestempelt = zeiten.filter((z: any) => z.datum && String(z.datum).slice(0, 10) === heute && z.kommen_um && !z.gehen_um).length;
 
     const mitarbeiterAktiv = mitarbeiter.filter((m: any) => low(m.status) === "aktiv").length || mitarbeiter.length;
@@ -117,7 +113,7 @@ export async function POST(req: Request) {
 - Bereits bezahlter Umsatz (Summe aller Zahlungseingänge): ${eur(umsatzBezahlt)}
 - Laufende Projekte: ${projekteLaufend} (insgesamt ${projekte.length})
 - Mitarbeiter: ${mitarbeiterAktiv} aktiv (insgesamt ${mitarbeiter.length} erfasst)
-- Aktuell krankgemeldet: ${kranke.length}${krankeNamen.length ? " (" + krankeNamen.join(", ") + ")" : ""}
+- Heute abwesend (Urlaub, Krankheit u. a. zusammen, ohne Namen): ${abwesendHeute}
 - Jetzt eingestempelt (im Dienst): ${eingestempelt}
 - KI-Anfragen diesen Monat: ${kiUsed} von ${kiLimit}
 Nennen Sie konkrete Zahlen aus diesen Daten. Steht eine Zahl nicht darin, sagen Sie das ehrlich und nennen Sie die Seite, auf der man nachsehen kann.`

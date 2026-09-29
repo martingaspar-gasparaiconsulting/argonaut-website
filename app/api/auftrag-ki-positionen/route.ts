@@ -1,13 +1,16 @@
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { kiPositionSaeubern } from "@/lib/kiPreisRegel";
 
 export const runtime = "nodejs";
 
 // ============================================================
 // ARGONAUT OS · MODUL 5 (Vertrag/Auftrag) · A8+ — KI-Positionsvorschläge mit RAG
 // Freitext/Diktat -> RAG (echte Preise aus den EIGENEN Dokumenten des Betriebs)
-//   -> Claude -> Positions-JSON. Preis gefunden = "dokument", sonst "geschaetzt".
+//   -> Claude -> Positions-JSON. Preis gefunden = "dokument", sonst "fehlt".
+// Paket 176: KEINE Schätzpreise mehr — ohne Preis aus den Dokumenten steht 0
+// und „[Preis bitte ergänzen]" (lib/kiPreisRegel, serverseitig erzwungen).
 // Herkunft ist NUR intern (Vorschlags-Anzeige) — nie gespeichert, nie im PDF.
 // ============================================================
 
@@ -19,14 +22,14 @@ const SYSTEM_PROMPT =
   "Du erhältst ggf. AUSZÜGE AUS DEN EIGENEN DOKUMENTEN DES BETRIEBS (Preislisten, frühere Angebote). Diese enthalten die ECHTEN, tatsächlichen Netto-Preise des Betriebs.\n\n" +
   "Preis-Regeln für jede Position:\n" +
   "- Findest du für die Leistung einen passenden Preis in den Dokument-Auszügen, übernimm GENAU diesen Netto-Preis und setze \"quelle\": \"dokument\" sowie \"quelle_datei\" auf den Dateinamen der Quelle.\n" +
-  "- Findest du KEINEN passenden Preis in den Auszügen (neue/exotische Leistung), schätze einen marktüblichen Netto-Preis und setze \"quelle\": \"geschaetzt\" (quelle_datei bleibt leer).\n\n" +
+  "- Findest du KEINEN passenden Preis in den Auszügen, setze \"einzelpreis\": 0 und \"quelle\": \"fehlt\" (quelle_datei bleibt leer). Schätze NIEMALS einen Preis — der Betrieb trägt ihn selbst ein.\n\n" +
   "Antworte AUSSCHLIESSLICH mit einem gültigen JSON-Objekt, ohne Markdown, ohne Backticks, ohne Erklärung. Struktur exakt:\n" +
   "{ \"positionen\": [ { \"bezeichnung\": \"...\", \"menge\": 1, \"einheit\": \"Stk\", \"einzelpreis\": 0, \"mwst_satz\": 19, \"quelle\": \"dokument\", \"quelle_datei\": \"\" } ] }\n\n" +
   "Weitere Regeln:\n" +
   "- bezeichnung: klare, geschäftstaugliche Leistungsbeschreibung — nicht der wörtliche Diktattext.\n" +
   "- menge: numerisch (Punkt als Dezimaltrenner), Standard 1.\n" +
   "- einheit: GENAU eine aus [Stk, Std, Tag, m, m², m³, kg, t, lfm, Psch]. Arbeitszeit = Std, Pauschale/Anfahrt = Psch, Längen = m oder lfm.\n" +
-  "- einzelpreis: Netto pro Einheit, niemals 0 (außer wirklich kostenlos).\n" +
+  "- einzelpreis: Netto pro Einheit aus den Dokumenten, sonst 0.\n" +
   "- mwst_satz: Prozent, Standard 19 (nur 7 bei eindeutig ermäßigten Leistungen).\n" +
   "- Trenne sinnvoll: Material, Arbeitszeit und Anfahrt jeweils als eigene Position.\n" +
   "- Erfinde keine Leistungen, die nicht genannt wurden.\n" +
@@ -96,7 +99,7 @@ export async function POST(req: Request) {
     const userInhalt =
       (kontext
         ? "AUSZÜGE AUS DEN EIGENEN DOKUMENTEN DES BETRIEBS (echte Preise):\n\n" + kontext + "\n\n---\n\n"
-        : "Es liegen keine Preis-Dokumente vor — bitte alle Preise schätzen und mit \"geschaetzt\" markieren.\n\n") +
+        : "Es liegen keine Preis-Dokumente vor — setze bei allen Positionen einzelpreis 0 und quelle \"fehlt\".\n\n") +
       "Auftragswährung: " + waehrung + "\n\nBeschreibung des Auftrags (ggf. diktiert):\n" + text;
 
     const claudeResp = await kiFetch("auftrag-ki-positionen", {
@@ -140,22 +143,8 @@ export async function POST(req: Request) {
     const rohListe: any[] = Array.isArray(parsed?.positionen) ? parsed.positionen : [];
     const positionen = rohListe
       .slice(0, 30)
-      .map((p: any) => {
-        const menge = Number(p?.menge);
-        const preis = Number(p?.einzelpreis);
-        const m = Number(p?.mwst_satz);
-        const quelle = p?.quelle === "dokument" ? "dokument" : "geschaetzt";
-        return {
-          bezeichnung: String(p?.bezeichnung || "").slice(0, 200),
-          menge: isNaN(menge) || menge <= 0 ? 1 : menge,
-          einheit: EINHEITEN.includes(p?.einheit) ? p.einheit : "Stk",
-          einzelpreis: isNaN(preis) || preis < 0 ? 0 : preis,
-          mwst_satz: isNaN(m) || m < 0 || m > 100 ? 19 : m,
-          quelle,
-          quelle_datei: quelle === "dokument" ? String(p?.quelle_datei || "").slice(0, 120) : "",
-        };
-      })
-      .filter((p) => p.bezeichnung);
+      .map((p: any) => kiPositionSaeubern(p, EINHEITEN))
+      .filter((p): p is NonNullable<typeof p> => p !== null);
 
     return NextResponse.json({ positionen, hatDokumente });
   } catch (err: any) {

@@ -71,7 +71,7 @@ type KiVorschlag = {
   einheit: string;
   einzelpreis: number;
   mwst_satz: number;
-  quelle: "dokument" | "geschaetzt";
+  quelle: "dokument" | "fehlt";
   quelle_datei?: string;
 };
 
@@ -1054,8 +1054,8 @@ export default function AuftragDetail() {
 
             <div style={{ color: C.textDim, fontSize: 'clamp(11.5px, 1vw, 16px)', marginBottom: 12, lineHeight: 1.5 }}>
               {hatDok
-                ? "📄 = Preis aus Ihren Dokumenten · ⚠️ = geschätzt. Diese Markierung ist nur für Sie und erscheint nie beim Kunden."
-                : "Keine Preis-Dokumente gefunden — alle Preise wurden geschätzt. Nach dem Übernehmen frei anpassbar."}
+                ? "📄 = Preis aus Ihren Dokumenten · ⚠️ = Preis fehlt — ARGONAUT schätzt keine Preise. Bitte nach dem Übernehmen eintragen."
+                : "Keine Preis-Dokumente gefunden — ARGONAUT schätzt keine Preise. Bitte die Preise nach dem Übernehmen eintragen."}
             </div>
 
             {kiVorschlaege.map((v, idx) => {
@@ -1079,7 +1079,7 @@ export default function AuftragDetail() {
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       <span style={{ fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>{v.bezeichnung}</span>
                       <span
-                        title={ausDok && v.quelle_datei ? "Quelle: " + v.quelle_datei : "Von ARGONAUT geschätzt"}
+                        title={ausDok && v.quelle_datei ? "Quelle: " + v.quelle_datei : "Kein Preis in Ihren Dokumenten gefunden"}
                         style={{
                           background: ausDok ? `${C.green}1f` : `${C.warn}1f`,
                           color: ausDok ? C.green : C.warn,
@@ -1091,7 +1091,7 @@ export default function AuftragDetail() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {ausDok ? "📄 aus Ihren Dokumenten" : "⚠️ geschätzt"}
+                        {ausDok ? "📄 aus Ihren Dokumenten" : "⚠️ Preis fehlt"}
                       </span>
                     </div>
                     <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 4 }}>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cronGuard } from '@/lib/cronGuard';
-import { nachsehen, abholen, fasseZusammen, istAbgelaufen, type BatchErgebnis } from '@/lib/kiBatch';
+import { nachsehen, abholen, fasseZusammen, istAbgelaufen, stapelProtokoll, type BatchErgebnis } from '@/lib/kiBatch';
 import { parseTextVarianten } from '@/lib/contentFliessband';
 import { istBausteinTyp, type BausteinTyp } from '@/lib/inhaltBaustein';
 import { pruefeEntwurf } from '@/lib/inhaltPrompt';
@@ -224,6 +224,15 @@ async function lauf(req: Request) {
     if (!geholt.ok) {
       bericht.push({ stapel: stapel.zweck ?? stapel.route, ergebnis: 'Abholen fehlgeschlagen', meldung: geholt.fehler });
       continue;
+    }
+
+    // Paket 176: die Kosten des Stapels ins KI-Kostenprotokoll (je Modell eine
+    // Zeile, halber Stapel-Preis). Best effort — darf die Abholung nie aufhalten.
+    try {
+      const protokoll = stapelProtokoll(geholt.ergebnisse, stapel.owner_user_id, stapel.route);
+      if (protokoll.length > 0) await admin.from('ki_nutzung').insert(protokoll);
+    } catch (e) {
+      console.error('[ki-batch] Kostenprotokoll fehlgeschlagen', e instanceof Error ? e.message : e);
     }
 
     const zusammen = fasseZusammen(geholt.ergebnisse, stapel.anzahl);
