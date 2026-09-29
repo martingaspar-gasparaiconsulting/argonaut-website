@@ -37,9 +37,10 @@ const MAHNLAUF = {
   ],
 };
 
-test('Ziel des Auslösers: nur „Datum erreicht" läuft im Motor', () => {
+test('Ziel des Auslösers: „Datum erreicht" und (seit Paket 166) „Ereignis"', () => {
   assert.deepEqual(ZIEL_R, { tabelle: 'rechnungen', zielTyp: 'rechnung', datumFeld: 'faelligkeitsdatum' });
-  assert.equal(ausloeserZiel({ art: 'ereignis', ereignis: 'rechnung_angelegt' }), null);
+  assert.deepEqual(ausloeserZiel({ art: 'ereignis', ereignis: 'rechnung_angelegt' }), { tabelle: 'rechnungen', zielTyp: 'rechnung', datumFeld: '' });
+  assert.equal(ausloeserZiel({ art: 'ereignis', ereignis: 'gibtsnicht' }), null);
   assert.equal(ausloeserZiel({ art: 'datum', trigger: 'gibtsnicht', tage: 0 }), null);
   assert.equal(ausloeserZiel(null), null);
 });
@@ -211,6 +212,7 @@ test('Code: Cron nur mit Zeitplan-Geheimnis, streng je Betrieb, stündlich; alte
     const stueck = a.slice(0, 420);
     if (/^'ablaeufe'\)\.select\('\*'\)\.eq\('aktiv', true\)/.test(stueck)) continue;            // Liste aller aktiven Ablaeufe
     if (/^'ablauf_laeufe'\)\.select\('\*'\)\s*\.eq\('status', 'wartet'\)/.test(stueck)) continue; // Warteliste, danach Besitzer-Abgleich
+    if (/^'ablauf_ereignisse'\)\.select\('\*'\)\s*\.is\('verarbeitet_am', null\)/.test(stueck)) continue; // Paket 166: Ereignis-Warteschlange, danach passendeAblaeufe je Betrieb
     if (/^plan\.tabelle\)\.insert\(\{ \.\.\.plan\.daten, owner_user_id: ownerId \}\)/.test(stueck)) continue;
     if (/^'ablauf_protokoll'\)\.insert\(\{\s*owner_user_id: lauf\.owner_user_id/.test(stueck)) continue;
     if (/^'ablauf_laeufe'\)\.insert\(\{\s*owner_user_id: ablauf\.owner_user_id/.test(stueck)) continue;

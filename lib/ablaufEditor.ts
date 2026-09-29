@@ -12,6 +12,7 @@
 
 import { aktionDef, triggerDef, type Bedingung } from './automation';
 import {
+  ereignisDef,
   ablaufAktion, ABLAUF_AKTIONEN, GRENZEN, istGruppe, ausloeserHatVorgang, VORGANG_AKTIONEN,
   type Ablauf, type Ausloeser, type Schritt, type SchrittAktion, type BedingungsGruppe,
 } from './ablauf';
@@ -145,7 +146,7 @@ export function plusErlaubt(schritte: readonly Schritt[], listePfad: string, art
  * Aktionen, die einen Vorgang ändern (Paket 159).
  */
 export function aktionenFuer(a: Ausloeser): { key: string; label: string; imMotor: boolean }[] {
-  const t = a.art === 'datum' ? triggerDef(a.trigger) : undefined;
+  const t = a.art === 'datum' ? triggerDef(a.trigger) : a.art === 'ereignis' ? ereignisDef(a.ereignis) : undefined;
   const mitVorgang = ausloeserHatVorgang(a);
   return ABLAUF_AKTIONEN
     .filter((x) => {
@@ -157,7 +158,8 @@ export function aktionenFuer(a: Ausloeser): { key: string; label: string; imMoto
 }
 
 /** Neuer Auslöser beim Umschalten der Art — mit sinnvollen Startwerten. */
-export function neuerAusloeser(art: 'datum' | 'zeitplan' | 'knopf'): Ausloeser {
+export function neuerAusloeser(art: 'datum' | 'zeitplan' | 'knopf' | 'ereignis'): Ausloeser {
+  if (art === 'ereignis') return { art: 'ereignis', ereignis: 'rechnung_bezahlt', filter: null };
   if (art === 'zeitplan') return { art: 'zeitplan', rhythmus: 'woechentlich', uhrzeit: '07:00', wochentag: 1, tag: 1 };
   if (art === 'knopf') return { art: 'knopf' };
   return { art: 'datum', trigger: 'rechnung_ueberfaellig', tage: 3, filter: null };

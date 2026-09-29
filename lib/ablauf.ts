@@ -67,8 +67,10 @@ export type Ablauf = {
 export const AUSLOESER_ARTEN: { art: Ausloeser['art']; label: string; hinweis: string; imMotor: boolean }[] = [
   { art: 'datum', label: 'Datum erreicht', hinweis: 'Z. B. „Rechnung seit 14 Tagen überfällig" — wie die bisherigen Automationen.', imMotor: true },
   { art: 'zeitplan', label: 'Zeitplan', hinweis: 'Täglich, wöchentlich oder monatlich zu einer Uhrzeit (Berliner Zeit).', imMotor: true },
-  { art: 'ereignis', label: 'Ereignis', hinweis: 'Sofort, wenn in einem Modul etwas passiert.', imMotor: false },
-  { art: 'webhook', label: 'Webhook', hinweis: 'Von außen angestoßen (z. B. n8n oder ein Formular).', imMotor: false },
+  // Paket 166: im Motor — die Datenbank merkt sich das Ereignis, der Motor startet beim nächsten Durchgang (stündlich).
+  { art: 'ereignis', label: 'Ereignis', hinweis: 'Wenn in einem Modul etwas passiert (z. B. Rechnung bezahlt) — der Ablauf startet beim nächsten Durchgang, spätestens nach einer Stunde.', imMotor: true },
+  // „Webhook rein" ist GESTRICHEN (Martins Sicherheits-Regel 28.09.2026): interne Abläufe
+  // werden nie von außen angestoßen. Der Typ bleibt nur für alte Daten; pruefeAblauf lehnt ihn ab.
   { art: 'knopf', label: 'Knopf', hinweis: 'Per Knopfdruck auf der Seite Abläufe (Knöpfe in den Modulen folgen).', imMotor: true },
 ];
 
@@ -76,7 +78,8 @@ export const AUSLOESER_ARTEN: { art: Ausloeser['art']; label: string; hinweis: s
  * Ereignisse für den Auslöser „sofort". werbung: Post an den Kunden aus diesem
  * Ereignis ist Werbung (Einwilligung nötig) — unbekannt gilt als Werbung.
  */
-export const EREIGNISSE: { key: string; label: string; zielTyp: string; tabelle: string; werbung: boolean }[] = [
+export type EreignisDef = { key: string; label: string; zielTyp: string; tabelle: string; werbung: boolean };
+export const EREIGNISSE: EreignisDef[] = [
   { key: 'rechnung_angelegt', label: 'Rechnung angelegt', zielTyp: 'rechnung', tabelle: 'rechnungen', werbung: false },
   { key: 'rechnung_bezahlt', label: 'Rechnung bezahlt', zielTyp: 'rechnung', tabelle: 'rechnungen', werbung: false },
   { key: 'angebot_angelegt', label: 'Angebot angelegt', zielTyp: 'angebot', tabelle: 'angebote', werbung: false },
@@ -87,6 +90,10 @@ export const EREIGNISSE: { key: string; label: string; zielTyp: string; tabelle:
   { key: 'termin_angelegt', label: 'Termin angelegt', zielTyp: 'termin', tabelle: 'termine', werbung: false },
   { key: 'aufgabe_erledigt', label: 'Aufgabe erledigt', zielTyp: 'aufgabe', tabelle: 'aufgaben', werbung: false },
 ];
+
+export function ereignisDef(key: unknown): EreignisDef | undefined {
+  return EREIGNISSE.find((e) => e.key === key);
+}
 
 export type AblaufAktionDef = {
   key: string;
@@ -317,7 +324,8 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
   if (!String(ablauf.name ?? '').trim()) fehler.push('Bitte einen Namen vergeben.');
   const a = ablauf.ausloeser;
   const art = AUSLOESER_ARTEN.find((x) => x.art === a?.art);
-  if (!art) fehler.push('Bitte einen Auslöser wählen.');
+  if (a?.art === 'webhook') fehler.push('Auslöser „von außen" (Webhook) ist gestrichen — interne Abläufe werden nie von außen angestoßen. Bitte einen anderen Auslöser wählen.');
+  else if (!art) fehler.push('Bitte einen Auslöser wählen.');
   else {
     if (!art.imMotor) nochNichtImMotor = true;
     if (a.art === 'datum') {
@@ -365,7 +373,7 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
         if (!def.imMotor) nochNichtImMotor = true;
         // Paket 158: Mahnstufe nur bei Rechnungen — passt die Aktion nicht zum Auslöser, gleich sagen.
         const zielTypen = aktionDef(def.key)?.zielTypen;
-        const zielTyp = a?.art === 'datum' ? triggerDef(a.trigger)?.zielTyp : undefined;
+        const zielTyp = a?.art === 'datum' ? triggerDef(a.trigger)?.zielTyp : a?.art === 'ereignis' ? ereignisDef(a.ereignis)?.zielTyp : undefined;
         if (zielTypen && zielTyp && !zielTypen.includes(zielTyp)) fehler.push(`Schritt ${nr} (${def.label}): passt nicht zu diesem Auslöser.`);
         for (const p of def.pflicht) if (!String(s.config?.[p] ?? '').trim()) fehler.push(`Schritt ${nr} (${def.label}): „${p}" fehlt.`);
         if (def.key === 'freigabe_chef') freigabe = true;

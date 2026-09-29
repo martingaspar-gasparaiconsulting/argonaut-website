@@ -22,7 +22,7 @@ import {
   type Datensatz, type AutomationRegel,
 } from './automation';
 import {
-  pruefeGruppe, fuellePlatzhalter, standardWerte, ausloeserIstWerbung, pruefeAblauf, ablaufAktion,
+  pruefeGruppe, fuellePlatzhalter, standardWerte, ausloeserIstWerbung, pruefeAblauf, ablaufAktion, ereignisDef,
   type Ablauf, type Ausloeser, type SchrittAktion, type Fahrplan,
 } from './ablauf';
 import { werbeStatus, WERBE_STATUS_TEXT } from './segmente';
@@ -61,8 +61,12 @@ export type Ziel = { tabelle: string; zielTyp: string; datumFeld: string };
 /** Ziel eines Laufs OHNE Vorgang (Zeitplan, Knopf auf der Ablauf-Seite) — Paket 159. */
 export const OHNE_VORGANG: Ziel = { tabelle: '', zielTyp: 'ohne', datumFeld: '' };
 
-/** Welche Tabelle ein Auslöser abfragt (heute nur „Datum erreicht"). */
+/** Welche Tabelle ein Auslöser abfragt („Datum erreicht" und — seit Paket 166 — „Ereignis"). */
 export function ausloeserZiel(a: Ausloeser | null | undefined): Ziel | null {
+  if (a?.art === 'ereignis') {
+    const e = ereignisDef(a.ereignis);
+    return e ? { tabelle: e.tabelle, zielTyp: e.zielTyp, datumFeld: '' } : null;
+  }
   if (!a || a.art !== 'datum') return null;
   const t = triggerDef(a.trigger);
   return t ? { tabelle: t.tabelle, zielTyp: t.zielTyp, datumFeld: t.datumFeld } : null;
@@ -252,4 +256,72 @@ export function planText(p: AktionPlan): string {
   if (p.art === 'uebersprungen') return `übersprungen: ${p.meldung}`;
   if (p.art === 'fehler') return `Fehler: ${p.meldung}`;
   return p.meldung;
+}
+
+// ---------------------------------------------------------------------------
+// 6) Auslöser „Ereignis" (Paket 166)
+//
+// Die Datenbank schreibt je Ereignis eine Zeile in ablauf_ereignisse (nur wenn
+// der Betrieb einen eingeschalteten Ablauf dafür hat). Der Motor arbeitet die
+// Warteschlange stündlich ab. Schutzgeländer:
+//   · zu alt (> EREIGNIS_MAX_STUNDEN) -> verworfen, keine Post auf alte Vorgänge
+//   · MASSENANLAGE: viele gleiche Ereignisse eines Betriebs in wenigen Minuten
+//     (Umzug/Import von 500 Kunden) starten KEINEN Ablauf — sonst bekämen
+//     Altkunden Willkommens-Post oder das Team 500 Aufgaben.
+//   · Deckel MAX_JE_ABLAUF je 24 h, EINMALIG je Ablauf und Vorgang (Datenbank).
+// ---------------------------------------------------------------------------
+
+/** Höchstens so viele Ereignisse je Motor-Durchgang. */
+export const MAX_EREIGNISSE = 500;
+/** Ältere Ereignisse starten nichts mehr. */
+export const EREIGNIS_MAX_STUNDEN = 48;
+/** Ab so vielen gleichen Ereignissen eines Betriebs … */
+export const MASSEN_ANZAHL = 20;
+/** … innerhalb dieses Zeitfensters gilt es als Massenanlage (Import). */
+export const MASSEN_FENSTER_MIN = 10;
+
+export type EreignisZeile = {
+  id: string; owner_user_id: string; ereignis: string; tabelle: string; ziel_id: string; erstellt_am: string;
+};
+
+export function ereignisZuAlt(e: Pick<EreignisZeile, 'erstellt_am'>, jetzt: Date): boolean {
+  const t = new Date(e.erstellt_am).getTime();
+  if (!Number.isFinite(t)) return true;
+  return jetzt.getTime() - t > EREIGNIS_MAX_STUNDEN * 3600000;
+}
+
+/**
+ * Kennungen der Ereignisse, die zu einer Massenanlage gehören: je Betrieb und
+ * Ereignis mindestens MASSEN_ANZAHL innerhalb von MASSEN_FENSTER_MIN Minuten.
+ */
+export function massenanlage(ereignisse: EreignisZeile[]): Set<string> {
+  const raus = new Set<string>();
+  const gruppen = new Map<string, EreignisZeile[]>();
+  for (const e of ereignisse) {
+    const k = e.owner_user_id + '|' + e.ereignis;
+    gruppen.set(k, [...(gruppen.get(k) ?? []), e]);
+  }
+  const fenster = MASSEN_FENSTER_MIN * 60000;
+  for (const liste of gruppen.values()) {
+    const s = [...liste].sort((a, b) => new Date(a.erstellt_am).getTime() - new Date(b.erstellt_am).getTime());
+    let anfang = 0;
+    for (let ende = 0; ende < s.length; ende++) {
+      const tEnde = new Date(s[ende].erstellt_am).getTime();
+      while (tEnde - new Date(s[anfang].erstellt_am).getTime() > fenster) anfang++;
+      if (ende - anfang + 1 >= MASSEN_ANZAHL) for (let i = anfang; i <= ende; i++) raus.add(s[i].id);
+    }
+  }
+  return raus;
+}
+
+/** Eingeschaltete Abläufe desselben Betriebs mit genau diesem Ereignis. */
+export function passendeAblaeufe<T extends Ablauf & { owner_user_id: string }>(e: Pick<EreignisZeile, 'owner_user_id' | 'ereignis' | 'tabelle'>, ablaeufe: T[]): T[] {
+  const def = ereignisDef(e.ereignis);
+  if (!def || def.tabelle !== e.tabelle) return [];
+  return ablaeufe.filter((a) => a.owner_user_id === e.owner_user_id && a.ausloeser?.art === 'ereignis' && a.ausloeser.ereignis === e.ereignis);
+}
+
+/** Start-Bedingungen des Ereignis-Auslösers (UND/ODER) für diesen Vorgang. */
+export function ereignisTrifft(a: Ausloeser, satz: Datensatz): boolean {
+  return a.art === 'ereignis' && pruefeGruppe(a.filter ?? null, satz);
 }

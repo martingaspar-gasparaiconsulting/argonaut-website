@@ -73,7 +73,7 @@ test('Ohne Vorgang: nur Aktionen, die nichts Bestehendes ändern; kein Wenn', ()
 test('Zeitplan/Knopf sind einschaltbar; Prüfung von Wochentag/Tag; Knopf im Modul noch nicht', () => {
   assert.equal(AUSLOESER_ARTEN.find((a) => a.art === 'zeitplan').imMotor, true);
   assert.equal(AUSLOESER_ARTEN.find((a) => a.art === 'knopf').imMotor, true);
-  assert.equal(AUSLOESER_ARTEN.find((a) => a.art === 'ereignis').imMotor, false);
+  assert.equal(AUSLOESER_ARTEN.find((a) => a.art === 'ereignis').imMotor, true); // seit Paket 166
   const schritte = [{ id: 'a', typ: 'aktion', aktion: 'aufgabe_anlegen', config: { titel: 'Kasse zählen' } }];
   const woche = { name: 'W', ausloeser: neuerAusloeser('zeitplan'), schritte, aktiv: true };
   assert.equal(laufbereit(woche), true);

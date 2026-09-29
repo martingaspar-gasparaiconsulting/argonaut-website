@@ -14,7 +14,7 @@ import {
   type Bedingung, type Operator, type FeldDef,
 } from '@/lib/automation';
 import {
-  pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion, ausloeserHatVorgang,
+  pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion, ausloeserHatVorgang, EREIGNISSE,
   type Ablauf, type Ausloeser, type Schritt, type BedingungsGruppe, type SchrittAktion,
 } from '@/lib/ablauf';
 import {
@@ -264,10 +264,10 @@ export default function AblaufEditor({ start, busy, onSpeichern, onAbbrechen }: 
         <div style={{ fontSize: 11.5, letterSpacing: 1.2, textTransform: 'uppercase', color: C.cyan, fontWeight: 800, marginBottom: 8 }}>Auslöser</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
           {AUSLOESER_ARTEN.map((a) => {
-            const waehlbar = a.imMotor && (a.art === 'datum' || a.art === 'zeitplan' || a.art === 'knopf');
+            const waehlbar = a.imMotor && (a.art === 'datum' || a.art === 'zeitplan' || a.art === 'knopf' || a.art === 'ereignis');
             return (
               <button key={a.art} type="button" title={a.hinweis} disabled={!waehlbar}
-                onClick={() => waehlbar && e.ausloeser.art !== a.art && setE((x) => ({ ...x, ausloeser: neuerAusloeser(a.art as 'datum' | 'zeitplan' | 'knopf') }))}
+                onClick={() => waehlbar && e.ausloeser.art !== a.art && setE((x) => ({ ...x, ausloeser: neuerAusloeser(a.art as 'datum' | 'zeitplan' | 'knopf' | 'ereignis') }))}
                 style={{ ...knopf(e.ausloeser.art === a.art ? 'gold' : 'rand'), padding: '4px 10px', fontSize: 12.5, opacity: waehlbar ? 1 : 0.45, cursor: waehlbar ? 'pointer' : 'not-allowed' }}>
                 {a.label}{waehlbar ? '' : ' · folgt'}
               </button>
@@ -306,10 +306,24 @@ export default function AblaufEditor({ start, busy, onSpeichern, onAbbrechen }: 
             </div>
           );
         })()}
+        {e.ausloeser.art === 'ereignis' && (() => {
+          const ev = e.ausloeser;
+          return (
+            <div style={{ marginBottom: 6 }}>
+              <label style={beschriftung}>Wenn das passiert</label>
+              <select value={ev.ereignis} onChange={(x) => setE((y) => ({ ...y, ausloeser: { ...ev, ereignis: x.target.value } }))} style={feld}>
+                {EREIGNISSE.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
+              </select>
+              <div style={{ ...klein, marginTop: 6 }}>
+                Startet beim nächsten Durchgang des Motors (spätestens nach einer Stunde). Werden viele Vorgänge auf einmal angelegt (z. B. beim Umzug/Import), startet bewusst kein Ablauf. So liest sich das: {ausloeserText(ev)}.
+              </div>
+            </div>
+          );
+        })()}
         {e.ausloeser.art === 'knopf' && (
           <div style={{ ...klein, marginBottom: 6 }}>Startet mit „▶ Jetzt starten" auf der Seite Abläufe — ohne Vorgang. Knöpfe direkt in den Modulen folgen.</div>
         )}
-        {e.ausloeser.art !== 'datum' && (
+        {e.ausloeser.art !== 'datum' && e.ausloeser.art !== 'ereignis' && (
           <div style={{ ...klein, marginBottom: 6 }}>Ohne Vorgang gehen nur Aktionen, die nichts Bestehendes ändern: Aufgabe anlegen, Mail an eine feste Adresse, Warten, Freigabe, Stopp. So liest sich das: {ausloeserText(e.ausloeser)}.</div>
         )}
         {e.ausloeser.art === 'datum' && (<>

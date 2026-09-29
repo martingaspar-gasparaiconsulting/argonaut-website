@@ -5,6 +5,7 @@ import { ausloeserHatVorgang } from '@/lib/ablauf';
 import {
   ausloeserZiel, nochGueltig, neueStarts, freieStarts, laufbereit, OHNE_VORGANG,
   MAX_ABLAEUFE, MAX_FORTSETZUNGEN, MAX_KANDIDATEN, RUECKBLICK_TAGE, MAX_JE_ABLAUF,
+  MAX_EREIGNISSE, ereignisZuAlt, massenanlage, passendeAblaeufe, ereignisTrifft, type EreignisZeile,
 } from '@/lib/ablaufMotor';
 import { zeitplanSlot, slotKennung } from '@/lib/ablaufZeit';
 import {
@@ -28,6 +29,9 @@ import type { Datensatz } from '@/lib/automation';
 //      nichts, was die alte Regel schon erledigt hat.
 //   3. ZEITPLAN (Paket 159): fälliger Slot in Berliner Zeit, je Slot genau ein
 //      Lauf (feste Kennung aus Ablauf + Slot, derselbe Unique-Index).
+//   4. EREIGNIS (Paket 166): Warteschlange ablauf_ereignisse (füllt die
+//      Datenbank per Trigger). Zu alt / Massenanlage (Import) -> nichts;
+//      sonst je passendem Ablauf ein Lauf (EINMALIG, Deckel je 24 h).
 // Abgearbeitet wird in lib/ablaufAusfuehren.ts (gemeinsam mit dem Knopf).
 //
 // PROBELAUF: ?probe=1 rechnet nur und schreibt NICHTS (keine Läufe, kein Protokoll).
@@ -179,10 +183,60 @@ async function durchgang(req: Request) {
     }
   }
 
+  // ---- 4) Ereignis: Warteschlange abarbeiten (Paket 166) ------------------------
+  let ereignisStarts = 0;
+  {
+    const { data: evRoh, error: evFehler } = await admin.from('ablauf_ereignisse').select('*')
+      .is('verarbeitet_am', null).order('erstellt_am', { ascending: true }).limit(MAX_EREIGNISSE);
+    // Fehlt die Tabelle noch (SQL p166 nicht ausgeführt), geht der Motor ohne diesen Teil weiter.
+    const ereignisse = evFehler ? [] : ((evRoh ?? []) as EreignisZeile[]);
+    const masse = massenanlage(ereignisse);
+    const erledigt = async (e: EreignisZeile, ergebnis: string) => {
+      if (probe) return;
+      await admin.from('ablauf_ereignisse').update({ verarbeitet_am: jetzt.toISOString(), ergebnis: ergebnis.slice(0, 300) })
+        .eq('id', e.id).eq('owner_user_id', e.owner_user_id);
+    };
+    for (const e of ereignisse) {
+      if (ereignisZuAlt(e, jetzt)) { await erledigt(e, 'zu alt'); continue; }
+      if (masse.has(e.id)) { await erledigt(e, 'Massenanlage (z. B. Import) — kein Ablauf gestartet'); continue; }
+      const passend = passendeAblaeufe(e, ablaeufe);
+      if (passend.length === 0) { await erledigt(e, 'kein eingeschalteter Ablauf'); continue; }
+      if (!probe) {
+        // Anspruch anmelden: nur EIN Durchgang bearbeitet ein Ereignis.
+        const { data: meins } = await admin.from('ablauf_ereignisse').update({ verarbeitet_am: jetzt.toISOString(), ergebnis: 'in Arbeit' })
+          .eq('id', e.id).eq('owner_user_id', e.owner_user_id).is('verarbeitet_am', null).select('id');
+        if (!meins || meins.length === 0) continue;
+      }
+      const { data: satzDaten } = await admin.from(e.tabelle).select('*').eq('id', e.ziel_id).eq('owner_user_id', e.owner_user_id).maybeSingle();
+      const satz = satzDaten as Datensatz | null;
+      if (!satz) { await erledigt(e, 'Vorgang gibt es nicht mehr'); continue; }
+      await ergaenzeKontakte(admin, e.owner_user_id, [satz]);
+      const teile: string[] = [];
+      for (const ablauf of passend) {
+        const ziel = ausloeserZiel(ablauf.ausloeser);
+        if (!ziel) continue;
+        if (!ereignisTrifft(ablauf.ausloeser, satz)) { teile.push(`${ablauf.name}: Bedingung nicht erfüllt`); continue; }
+        const { count } = await admin.from('ablauf_laeufe').select('id', { count: 'exact', head: true })
+          .eq('ablauf_id', ablauf.id).eq('owner_user_id', ablauf.owner_user_id).eq('probe', false)
+          .gte('gestartet_am', new Date(jetzt.getTime() - TAG).toISOString());
+        if (freieStarts(count ?? 0) <= 0) { teile.push(`${ablauf.name}: Tagesdeckel erreicht`); continue; }
+        if (probe) { bericht.push({ ablauf: ablauf.name, ereignis: e.ereignis, vorgang: e.ziel_id, wuerde: 'starten' }); continue; }
+        const r = await starteLauf(admin, ablauf, ziel, ziel.zielTyp, e.ziel_id,
+          { tabelle: ziel.tabelle, ereignis: e.ereignis }, satz, `Gestartet: Ereignis ${e.ereignis}`, jetzt);
+        if (r !== null) {
+          ereignisStarts++;
+          teile.push(`${ablauf.name}: gestartet`);
+          await admin.from('ablaeufe').update({ zuletzt_lauf_am: jetzt.toISOString() }).eq('id', ablauf.id).eq('owner_user_id', ablauf.owner_user_id);
+        } else teile.push(`${ablauf.name}: lief schon für diesen Vorgang`);
+      }
+      await erledigt(e, teile.join(' · ') || 'nichts zu tun');
+    }
+  }
+
   return NextResponse.json({
     ok: true, probelauf: probe, zeitpunkt: jetzt.toISOString(),
     ablaeufe_aktiv: ablaeufe.length,
-    ...(probe ? {} : { fortgesetzt, gestartet, zeitplaene }),
+    ...(probe ? {} : { fortgesetzt, gestartet, zeitplaene, ereignis_starts: ereignisStarts }),
     deckel_je_ablauf_24h: MAX_JE_ABLAUF, rueckblick_tage: RUECKBLICK_TAGE,
     bericht,
   });
