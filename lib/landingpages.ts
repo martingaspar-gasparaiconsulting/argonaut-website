@@ -183,8 +183,9 @@ export type VideoTyp = 'youtube' | 'vimeo' | 'datei' | 'unbekannt';
 
 /**
  * Wandelt einen eingegebenen Video-Link in eine einbettbare Form um.
- *   - YouTube (watch / youtu.be / embed / shorts / live)  -> www.youtube.com/embed/<id>
- *   - Vimeo   (vimeo.com/<zahl> / player.vimeo.com/...)    -> player.vimeo.com/video/<id>
+ *   - YouTube (watch / youtu.be / embed / shorts / live)  -> www.youtube-nocookie.com/embed/<id>
+ *   - Vimeo   (vimeo.com/<zahl> / player.vimeo.com/...)    -> player.vimeo.com/video/<id>?dnt=1
+ *   Paket 178: Die Seite laedt den Player erst nach Klick (Zwei-Klick, Datenschutz).
  *   - direkte Videodatei (.mp4/.webm/.ogg)                 -> die URL selbst (typ 'datei')
  *   - sonst                                                 -> typ 'unbekannt', embedUrl null
  * Rein & node-testbar; kein Netzwerk.
@@ -196,10 +197,10 @@ export function videoEinbettung(roh: string | null | undefined): { typ: VideoTyp
   const yt = url.match(
     /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i,
   );
-  if (yt) return { typ: 'youtube', embedUrl: `https://www.youtube.com/embed/${yt[1]}` };
+  if (yt) return { typ: 'youtube', embedUrl: `https://www.youtube-nocookie.com/embed/${yt[1]}` };
 
   const vm = url.match(/vimeo\.com\/(?:video\/)?(\d{6,})/i);
-  if (vm) return { typ: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vm[1]}` };
+  if (vm) return { typ: 'vimeo', embedUrl: `https://player.vimeo.com/video/${vm[1]}?dnt=1` };
 
   if (/^https?:\/\/[^\s]+\.(mp4|webm|ogg)(\?[^\s]*)?$/i.test(url)) {
     return { typ: 'datei', embedUrl: url };

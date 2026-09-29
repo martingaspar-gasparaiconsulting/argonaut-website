@@ -13,7 +13,7 @@
 // Supabase-Aufrufe, keine Hooks.
 // ============================================================
 
-import { impressumText, datenschutzText, agbText, fussHtml, type CiRecht } from './webRecht';
+import { impressumText, datenschutzText, agbText, fussHtml, type CiRecht, type WebDienste } from './webRecht';
 
 import { einstellung as einblendungEinstellung } from './einblendung';
 import { markdownZuHtml } from './markdownEinfach';
@@ -490,11 +490,11 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
       const v = videoQuelle(b.url);
       let media = '';
       if (v.art === 'youtube') {
-        const thumb = 'https://i.ytimg.com/vi/' + v.id + '/hqdefault.jpg';
-        const embed = 'https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1';
-        media = '<button type="button" class="ao-video ao-video-facade" data-embed="' + embed + '" style="background-image:url(' + thumb + ')" aria-label="Video abspielen"><span class="ao-video-play">&#9654;</span></button>';
+        // Paket 178: kein Vorschaubild vom Anbieter (das waere schon eine Uebertragung an
+        // Google) — der Player laedt erst nach Klick (Zwei-Klick).
+        media = videoFacade('https://www.youtube-nocookie.com/embed/' + v.id + '?autoplay=1', 'YouTube');
       } else if (v.art === 'vimeo') {
-        media = '<div class="ao-video"><iframe src="https://player.vimeo.com/video/' + v.id + '" title="' + esc(b.titel || 'Video') + '" loading="lazy" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>';
+        media = videoFacade('https://player.vimeo.com/video/' + v.id + '?autoplay=1&dnt=1', 'Vimeo');
       } else {
         media = '<div class="ao-video ao-video-leer"><span>' + (ed ? 'Video-Link rechts einf&uuml;gen (YouTube/Vimeo)' : 'Video') + '</span></div>';
       }
@@ -625,13 +625,37 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
   }
 }
 
+// Paket 178: Welche Dienste setzt diese Seite ein? Daraus entsteht die
+// passende Datenschutzerklaerung (lib/webRecht.datenschutzText).
+export function webDiensteDerSeite(bloecke: { typ?: string }[]): WebDienste {
+  const hat = (...t: string[]) => bloecke.some((b) => t.includes(String(b?.typ || '')));
+  return {
+    kontakt: hat('kontakt'),
+    newsletter: hat('newsletter', 'einblendung'),
+    termine: hat('termin', 'buchung'),
+    shop: hat('produkte'),
+    chatbot: hat('chatbot'),
+    video: hat('video'),
+    karte: hat('anfahrt'),
+    whatsapp: hat('whatsapp'),
+  };
+}
+
+// Paket 178: Zwei-Klick-Platzhalter fuer fremde Video-Player (YouTube, Vimeo).
+function videoFacade(embed: string, anbieter: string): string {
+  return '<button type="button" class="ao-video ao-video-facade" data-embed="' + esc(embed) + '" aria-label="Video abspielen">'
+    + '<span class="ao-video-play">&#9654;</span>'
+    + '<span class="ao-video-hinweis">Beim Abspielen wird das Video von ' + esc(anbieter) + ' geladen; dabei werden Daten wie Ihre IP-Adresse an den Anbieter &uuml;bertragen.</span>'
+    + '</button>';
+}
+
 // --- Rechts-Abschnitte (verankert, damit der Fuß darauf zeigt) --------------
-export function rechtsSektionen(ci: CiWeb): string {
+export function rechtsSektionen(ci: CiWeb, dienste?: WebDienste): string {
   const block = (id: string, titel: string, text: string) =>
     '<section class="recht" id="' + id + '"><div class="wrap narrow"><h2>' + titel + '</h2><div class="pretext">' + esc(text) + '</div></div></section>';
   return [
     block('impressum', 'Impressum', impressumText(ci)),
-    block('datenschutz', 'Datenschutz', datenschutzText(ci)),
+    block('datenschutz', 'Datenschutz', datenschutzText(ci, dienste)),
     block('agb', 'AGB', agbText(ci)),
     // Paket PR (K04): auf JEDER Seite verankert und im Fuss verlinkt = „deutlich wahrnehmbar".
     // markdownZuHtml maskiert zuerst, dann wird formatiert.
@@ -772,7 +796,8 @@ function seiteCss(ci: CiWeb): string {
     // Video (Link-Einbettung, tempo-sicher: 16/9-Fläche, Player erst nach Klick)
     '.ao-video{position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#0d141c;border:1px solid #e7ebf1}',
     '.ao-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}',
-    '.ao-video-facade{cursor:pointer;background-size:cover;background-position:center}',
+    '.ao-video-facade{cursor:pointer;background-size:cover;background-position:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;color:#fff;font:inherit;width:100%}',
+    '.ao-video-hinweis{position:relative;z-index:1;font-size:12px;line-height:1.5;max-width:420px;text-align:center;opacity:.85}',
     '.ao-video-facade:before{content:"";position:absolute;inset:0;background:rgba(10,15,25,.28);transition:background .15s}',
     '.ao-video-facade:hover:before{background:rgba(10,15,25,.12)}',
     '.ao-video-play{position:relative;z-index:1;width:74px;height:74px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;padding-left:5px}',
@@ -999,7 +1024,7 @@ export function seiteHtml(
     '<nav class="mainnav"><a href="#leistungen">Leistungen</a><a href="#ueber">Über uns</a><a href="#kontakt">Kontakt</a></nav>',
     '</div></header>',
     koerper,
-    rechtsSektionen(ci),
+    rechtsSektionen(ci, webDiensteDerSeite(seite.bloecke || [])),
     hatProdukte ? widerrufSektion(opts.oeffentlichId) : '',
     fussHtml(ci, jahr, { widerruf: hatProdukte, barrierefreiheit: !!z(ci.barrierefreiheit_text) }),
     anfrageSkript(),

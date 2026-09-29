@@ -35,6 +35,8 @@ export default function LandingpageSeite() {
 
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  // Paket 178: fremder Video-Player erst nach Klick (Zwei-Klick, Datenschutz).
+  const [videoFrei, setVideoFrei] = useState(false);
   const [d, setD] = useState<LpDaten | null>(null);
 
   const [name, setName] = useState('');
@@ -136,14 +138,26 @@ export default function LandingpageSeite() {
           <div style={S.videoRahmen}>
             {video.typ === 'datei' ? (
               <video src={video.embedUrl} controls playsInline style={S.videoInner} />
-            ) : (
+            ) : videoFrei ? (
               <iframe
-                src={video.embedUrl}
+                src={video.embedUrl + (video.embedUrl.includes('?') ? '&' : '?') + 'autoplay=1'}
                 title="Video"
                 style={S.videoInner}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setVideoFrei(true)}
+                style={{ ...S.videoInner, background: '#0d141c', color: '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20, fontFamily: 'inherit' }}
+              >
+                <span style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, paddingLeft: 4 }}>&#9654;</span>
+                <span style={{ fontWeight: 700 }}>Video abspielen</span>
+                <span style={{ fontSize: 12, opacity: 0.8, maxWidth: 420, lineHeight: 1.5 }}>
+                  Beim Abspielen wird das Video von {video.typ === 'vimeo' ? 'Vimeo' : 'YouTube'} geladen; dabei werden Daten wie Ihre IP-Adresse an den Anbieter übertragen.
+                </span>
+              </button>
             )}
           </div>
         </div>
