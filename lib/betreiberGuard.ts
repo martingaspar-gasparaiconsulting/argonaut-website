@@ -22,6 +22,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@/lib/supabase-server';
+import { zweiFaktorStand } from '@/lib/zweiFaktorServer';
 
 /** Ergebnis der Prüfung: entweder eine Absage oder die Kennung des Betreibers. */
 export type BetreiberPruefung =
@@ -58,6 +59,12 @@ export async function betreiberPruefung(): Promise<BetreiberPruefung> {
   const betreiber = process.env.ANALYSE_BETREIBER_ID;
   if (!betreiber || user.id !== betreiber) {
     return { absage: NextResponse.json({ ok: false, error: 'Kein Zugriff.' }, { status: 403 }), userId: null };
+  }
+  // Paket 164 (Stufe 1): Hat der Betreiber einen zweiten Faktor, gilt der Weg nur mit bestätigtem Code (aal2).
+  {
+    if ((await zweiFaktorStand(supabase, user, false)).weg !== 'weiter') {
+      return { absage: NextResponse.json({ ok: false, error: 'Bitte zuerst den Code der Zwei-Faktor-Anmeldung eingeben.' }, { status: 403 }), userId: null };
+    }
   }
   return { absage: null, userId: user.id };
 }

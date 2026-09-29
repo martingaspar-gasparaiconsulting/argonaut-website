@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import MeineUnterschrift from './MeineUnterschrift';
+import ZweiFaktorKarte from '../_components/ZweiFaktorKarte';
 import MeineUnterlagen from './MeineUnterlagen';
 
 const supabase = createBrowserClient(
@@ -395,6 +396,8 @@ export default function MeinBereichPage() {
         {loading && <div style={styles.stateBox}>Lädt …</div>}
 
         {!loading && <MeineUnterschrift />}
+        {/* Paket 164: Zwei-Faktor-Anmeldung */}
+        {!loading && <ZweiFaktorKarte zurueck="/dashboard/mein-bereich" />}
 
         {!loading && kontoOhneProfil && (
           <div style={styles.stateBox}>

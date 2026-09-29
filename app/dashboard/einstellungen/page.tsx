@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import EinstellungenClient, { type FirmaProfil } from './EinstellungenClient'
 import ModulFreischaltung from './ModulFreischaltung'
 import PasswortAendern from './PasswortAendern'
+import ZweiFaktorKarte from '../_components/ZweiFaktorKarte'
 import AnfahrtEinstellungen from './AnfahrtEinstellungen'
 
 // ============================================================
@@ -61,6 +62,8 @@ export default async function EinstellungenPage() {
         {/* Paket S0: API-Schlüssel (Zugang von außen) ausgeblendet — die Preisauskunft ist abgeschaltet. */}
         <ModulFreischaltung />
         <PasswortAendern />
+        {/* Paket 164: Zwei-Faktor-Anmeldung */}
+        <ZweiFaktorKarte zurueck="/dashboard/einstellungen" />
       </main>
     </div>
   )

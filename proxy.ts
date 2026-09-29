@@ -7,6 +7,8 @@ import { gebuchteModulKeys, pfadGebucht, modulKeyFuerPfad, type TenantModulRow }
 import { abgeschalteteModuleAmStandort, istModulAmStandortAktiv, type StandortModulRow } from './lib/standortModule'
 import { STANDORT_COOKIE } from './lib/aktiverStandort'
 import { konkreterStandort } from './lib/standortDaten'
+import { PRUEF_PFAD, EINRICHT_PFAD } from './lib/zweiFaktor'
+import { zweiFaktorStand } from './lib/zweiFaktorServer'
 
 // ============================================================================
 // ARGONAUT OS · proxy.ts — Zugriffsschutz fuer /dashboard + Custom-Domains
@@ -123,6 +125,20 @@ export async function proxy(req: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL('/auth/login', req.url))
+  }
+
+  // ▄▄▄ PAKET 164 (Stufe 1): Zwei-Faktor-Anmeldung ▄▄▄
+  // Wer einen zweiten Faktor eingerichtet hat, muss ihn in dieser Sitzung
+  // bestätigt haben (aal2) — sonst geht es zur Code-Eingabe. Wer keinen hat,
+  // merkt in Stufe 1 nichts (pflicht: false). Faktoren aus getUser() (vom
+  // Anmelde-Dienst), aal über getClaims() (geprüft) — nie aus dem Cookie.
+  {
+    const { weg } = await zweiFaktorStand(supabase, user, false)
+    if (weg !== 'weiter') {
+      const ziel = new URL(weg === 'pruefen' ? PRUEF_PFAD : EINRICHT_PFAD, req.url)
+      ziel.searchParams.set('weiter', pfad)
+      return NextResponse.redirect(ziel)
+    }
   }
 
   // --- P49 · BETREIBER-BUCHUNGS-GATE (aeusserste Ebene) -------------------

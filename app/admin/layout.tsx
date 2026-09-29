@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase-server';
+import { zweiFaktorStand } from '../../lib/zweiFaktorServer';
 
 // ============================================================================
 // ARGONAUT OS · app/admin/layout.tsx
@@ -28,6 +29,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   } = await supabase.auth.getUser();
 
   if (!user) redirect('/admin-login');
+
+  // Paket 164 (Stufe 1): mit eingerichtetem zweiten Faktor nur nach Code-Eingabe (aal2).
+  {
+    if ((await zweiFaktorStand(supabase, user, false)).weg === 'pruefen') {
+      redirect('/auth/zwei-faktor?weiter=/admin/command-center');
+    }
+  }
 
   const { data: profil } = await supabase
     .from('profiles')
