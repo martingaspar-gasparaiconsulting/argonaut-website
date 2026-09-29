@@ -64,7 +64,7 @@ type Kopf = {
 
 type Fortschritt = { erledigt: number; offen: number; gesamt: number; prozent: number };
 
-type Reiter = 'checkliste' | 'setter' | 'menge';
+type Reiter = 'checkliste' | 'setter' | 'menge' | 'zugang';
 
 export default function BetriebsAkte() {
   const params = useParams<{ id: string }>();
@@ -241,12 +241,15 @@ export default function BetriebsAkte() {
               {tab('checkliste', 'Checkliste')}
               {tab('setter', 'KI-Berater')}
               {tab('menge', 'Menge & Domains')}
+              {tab('zugang', 'Zugang / Kündigung')}
             </div>
 
             {reiter === 'checkliste' ? (
               <Checkliste zeilen={zeilen} zumSetter={() => setReiter('setter')} />
             ) : reiter === 'menge' ? (
               <MengeUndDomains betrieb={id} />
+            ) : reiter === 'zugang' ? (
+              <ZugangSperre betrieb={id} />
             ) : (
               <>
                 <div style={s.karte}>
@@ -500,6 +503,79 @@ function monatName(iso: string): string {
   if (!m) return String(iso ?? '');
   const namen = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
   return `${namen[Number(m[2]) - 1] ?? m[2]} ${m[1]}`;
+}
+
+
+// Paket 177: Kuendigungs-Sperre je Betrieb (Chef + alle Mitarbeiter).
+function ZugangSperre({ betrieb }: { betrieb: string }) {
+  const [stand, setStand] = useState<{ gesperrt: boolean; konten: number; sperre: { grund?: string; gesperrt_am?: string; aufgehoben_am?: string | null } | null } | null>(null);
+  const [grund, setGrund] = useState('');
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [meldung, setMeldung] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const hole = useCallback(async () => {
+    setFehler(null);
+    try {
+      const r = await fetch(`/api/admin/betrieb-sperre?betrieb=${encodeURIComponent(betrieb)}`);
+      const d = await r.json();
+      if (d?.ok) setStand(d); else setFehler(d?.error || 'Stand nicht lesbar.');
+    } catch { setFehler('Verbindung fehlgeschlagen.'); }
+  }, [betrieb]);
+  useEffect(() => { hole(); }, [hole]);
+
+  async function los(aktion: 'sperren' | 'entsperren') {
+    const frage = aktion === 'sperren'
+      ? `Diesen Betrieb wirklich sperren? Der Chef und alle ${stand?.konten ?? ''} Konten kommen sofort nicht mehr ins System, auch nicht über Schnittstellen. Die Daten bleiben erhalten.`
+      : 'Sperre aufheben? Chef und Mitarbeiter können sich danach wieder anmelden.';
+    if (!window.confirm(frage)) return;
+    setBusy(true); setFehler(null); setMeldung(null);
+    try {
+      const r = await fetch('/api/admin/betrieb-sperre', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ betrieb, aktion, grund }),
+      });
+      const d = await r.json();
+      if (d?.ok) {
+        setMeldung(aktion === 'sperren'
+          ? `✓ Gesperrt — ${d.gebannt} von ${d.konten} Konten auch beim Anmelde-Dienst gesperrt.${d.hinweis ? ' ' + d.hinweis : ''}`
+          : `✓ Sperre aufgehoben — ${d.freigegeben} von ${d.konten} Konten wieder frei.`);
+        setGrund('');
+        hole();
+      } else setFehler(d?.error || 'Das hat nicht geklappt.');
+    } catch { setFehler('Verbindung fehlgeschlagen.'); }
+    setBusy(false);
+  }
+
+  if (!stand) return fehler ? <div style={s.fehlerBox}>{fehler}</div> : <div style={s.hint}>Lädt …</div>;
+  return (
+    <>
+      {fehler && <div style={s.fehlerBox}>{fehler}</div>}
+      {meldung && <div style={s.okBox}>{meldung}</div>}
+      <div style={s.karte}>
+        <div style={s.karteTitel}>Zugang des Betriebs</div>
+        {stand.gesperrt ? (
+          <>
+            <p style={s.hinweis}>
+              <b style={{ color: C.warn }}>Gesperrt</b> seit {stand.sperre?.gesperrt_am ? new Date(stand.sperre.gesperrt_am).toLocaleString('de-DE') : '—'} · Grund: {stand.sperre?.grund || '—'}
+            </p>
+            <button disabled={busy} onClick={() => los('entsperren')} style={s.btnCyan}>Sperre aufheben</button>
+          </>
+        ) : (
+          <>
+            <p style={s.hinweis}>
+              Nach einer Kündigung: sperrt den Chef und alle {stand.konten} Konten dieses Betriebs — Dashboard, Anmeldung und Schnittstellen. Die Daten bleiben vollständig erhalten; die Sperre lässt sich jederzeit aufheben.
+            </p>
+            <label style={s.label}>Grund (Pflicht)</label>
+            <input value={grund} onChange={(e) => setGrund(e.target.value)} placeholder="z. B. Kündigung zum 31.10.2026" style={s.input} />
+            <div style={{ marginTop: 12 }}>
+              <button disabled={busy || grund.trim().length < 5} onClick={() => los('sperren')} style={s.btnGold}>Zugang sperren</button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
+  );
 }
 
 function MengeUndDomains({ betrieb }: { betrieb: string }) {

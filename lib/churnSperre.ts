@@ -55,3 +55,61 @@ export function churnEntscheidung(
   const gesperrt = Array.isArray(zeilen) && zeilen.length > 0
   return { gesperrt, protokoll: null }
 }
+
+// ---------------------------------------------------------------------------
+// Paket 177 (29.09.2026): Sperre je BETRIEB statt je E-Mail
+//
+// Befund: churned_customers wurde nie befuellt (es gibt keinen Weg, der dort
+// eintraegt), und selbst wenn — die Pruefung lief ueber die E-Mail der
+// angemeldeten Person. Mitarbeiter eines gekuendigten Betriebs standen nie
+// in der Liste und arbeiteten weiter.
+//
+// Jetzt: Der Betreiber sperrt im Command Center den BETRIEB (Tabelle
+// betrieb_sperre, SQL p177). Die Datenbank-Funktion betrieb_gesperrt() prueft
+// den Betrieb der angemeldeten Person (Chef oder Mitarbeiter) und — fuer alte
+// Eintraege — weiter churned_customers. Zusaetzlich werden alle Konten des
+// Betriebs beim Anmelde-Dienst gesperrt: dann laufen auch Schnittstellen und
+// die Datenbank-Zugaenge spaetestens mit dem Ablauf der Sitzung aus.
+// ---------------------------------------------------------------------------
+
+/** Ergebnis von rpc('betrieb_gesperrt'). Fehler -> null (dann alte Pruefung / offen). */
+export function sperrAusRpc(daten: unknown, fehler: { message?: string } | null | undefined): boolean | null {
+  if (fehler) return null
+  return daten === true
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Welche Anmelde-Konten gehoeren zum Betrieb? Der Betrieb selbst (Chef) und
+ * jede mitarbeiter.auth_user_id dieses Betriebs (seit p169 nur vom Server
+ * gesetzt, also verlaesslich). NIE der Betreiber — auch wenn er aus Versehen
+ * als Betrieb gewaehlt wurde oder als Mitarbeiter eingetragen ist.
+ */
+export function kontenDesBetriebs(
+  betrieb: unknown,
+  mitarbeiter: { auth_user_id?: unknown; owner_user_id?: unknown }[] | null | undefined,
+  betreiberId: unknown,
+): string[] {
+  const b = String(betrieb ?? '').trim().toLowerCase()
+  const op = String(betreiberId ?? '').trim().toLowerCase()
+  if (!UUID.test(b)) return []
+  const ids = new Set<string>([b])
+  for (const m of mitarbeiter ?? []) {
+    if (String(m?.owner_user_id ?? '').trim().toLowerCase() !== b) continue
+    const a = String(m?.auth_user_id ?? '').trim().toLowerCase()
+    if (UUID.test(a)) ids.add(a)
+  }
+  if (op) ids.delete(op)
+  return [...ids]
+}
+
+/** Darf dieser Betrieb gesperrt werden? Nie der Betreiber selbst, nie ohne Grund. */
+export function sperrenErlaubt(betrieb: unknown, betreiberId: unknown, grund: unknown): { ok: true } | { ok: false; fehler: string } {
+  const b = String(betrieb ?? '').trim().toLowerCase()
+  if (!UUID.test(b)) return { ok: false, fehler: 'Kein gültiger Betrieb gewählt.' }
+  if (b === String(betreiberId ?? '').trim().toLowerCase()) return { ok: false, fehler: 'Das eigene Betreiber-Konto kann nicht gesperrt werden.' }
+  const g = String(grund ?? '').trim()
+  if (g.length < 5) return { ok: false, fehler: 'Bitte einen Grund angeben (z. B. „Kündigung zum 31.10.2026").' }
+  return { ok: true }
+}

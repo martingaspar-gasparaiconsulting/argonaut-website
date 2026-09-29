@@ -15,7 +15,8 @@ import UnterschriftLoader from './_components/UnterschriftLoader'
 import NutzungMelder from './_components/NutzungMelder'
 import FilialUmschalter from './_components/FilialUmschalter'
 import { AnsichtUmschalter } from './_components/Ansicht'
-import { churnEntscheidung, CHURN_ZIEL } from '@/lib/churnSperre'
+import { CHURN_ZIEL } from '@/lib/churnSperre'
+import { betriebSperrePruefen } from '@/lib/betriebSperreServer'
 
 // ============================================================
 // ARGONAUT OS · ZENTRALES DASHBOARD-LAYOUT
@@ -60,11 +61,8 @@ export default async function DashboardLayout({
   // Die Datenbank-Regel churned_eigene_email_lesen liefert hoechstens die
   // EIGENE Zeile. Bei einem Abfragefehler wird NICHT gesperrt (siehe
   // lib/churnSperre.ts). redirect() darf nie in einem try/catch stehen.
-  const { data: churnZeilen, error: churnFehler } = await supabase
-    .from('churned_customers')
-    .select('id')
-    .limit(1)
-  const churn = churnEntscheidung(churnZeilen, churnFehler)
+  // Paket 177: je BETRIEB (auch Mitarbeiter), ueber betrieb_gesperrt().
+  const churn = await betriebSperrePruefen(supabase)
   if (churn.protokoll) console.error(churn.protokoll)
   if (churn.gesperrt) redirect(CHURN_ZIEL)
 

@@ -3,7 +3,8 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { weiterleitungsAdresse } from '@/lib/weiterleitung'
-import { churnEntscheidung, CHURN_ZIEL } from '@/lib/churnSperre'
+import { CHURN_ZIEL } from '@/lib/churnSperre'
+import { betriebSperrePruefen } from '@/lib/betriebSperreServer'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -44,15 +45,10 @@ export async function GET(request: NextRequest) {
         // eigener .eq('email', ...) waere strenger als die Regel und wuerde bei
         // "Max@Firma.de" gegen "max@firma.de" daneben greifen.
         // WER DIESE REGEL AENDERT ODER ENTFERNT, HEBELT DIE SPERRE AUS.
-        const { data: churned, error: churnFehler } = await supabase
-          .from('churned_customers')
-          .select('id')
-          .limit(1)
-
-        // Seit 17.09.2026 dieselbe Regel wie in app/dashboard/layout.tsx
-        // (lib/churnSperre.ts). Fehler werden nicht verschluckt, sperren aber
-        // nicht - eine Stoerung soll nie alle Kunden aussperren.
-        const churn = churnEntscheidung(churned, churnFehler)
+        // Seit 17.09.2026 dieselbe Regel wie in app/dashboard/layout.tsx.
+        // Paket 177: je BETRIEB (auch Mitarbeiter), ueber betrieb_gesperrt();
+        // ohne die Funktion wie bisher churned_customers. Fehler sperren nicht.
+        const churn = await betriebSperrePruefen(supabase)
         if (churn.protokoll) console.error(churn.protokoll)
         if (churn.gesperrt) {
           return NextResponse.redirect(`${origin}${CHURN_ZIEL}`)
