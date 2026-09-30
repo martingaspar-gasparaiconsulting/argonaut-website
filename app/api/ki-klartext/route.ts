@@ -5,13 +5,14 @@
 //   klartext -> ein bis zwei Sätze "Was heißt das für mich?"
 //   aktion   -> ein kurzer, konkreter Handlungs-Vorschlag (Imperativ)
 // Gleiches Muster wie /api/dashboard-chat: direkter fetch, kein SDK,
-// model claude-haiku-4-5, Auth-Check, "die KI" = ARGONAUT (nie "Claude").
+// model Modell zentral (lib/kiModelle: ki.klartext), Auth-Check, "die KI" = ARGONAUT (nie "Claude").
 // Body:   { kontext: string, modul?: string }
 // Antwort:{ klartext: string, aktion: string }
 // ============================================================
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -55,7 +56,7 @@ Regeln:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('ki.klartext'),
         max_tokens: 300,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userInhalt }],

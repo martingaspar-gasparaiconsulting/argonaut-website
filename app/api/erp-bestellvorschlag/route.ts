@@ -1,5 +1,6 @@
 import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E9 KI-Bestellvorschlag (API-Route)
 // Nimmt Artikel unter Mindestbestand entgegen, lässt die ARGONAUT-KI
@@ -78,7 +79,7 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Array, ohne Erklärtext, ohne Markdown. 
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
+        model: kiModell('erp.bestellvorschlag'),
         max_tokens: 1500,
         messages: [{ role: "user", content: prompt }],
       }),

@@ -23,6 +23,7 @@
 // ============================================================================
 
 import { istIsoDatum, tageBis, datumDe } from './nachweisMotor';
+import { modellFuer as kiModell } from './kiModelle';
 
 export { datumDe };
 
@@ -222,7 +223,7 @@ export type FotoVorschlag = {
   hinweise: string[];
 };
 
-export const FOTO_KI_MODELL = 'claude-haiku-4-5';
+export const FOTO_KI_MODELL = kiModell('bau.foto');
 
 export function fotoKiSystem(): string {
   return [

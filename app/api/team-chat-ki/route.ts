@@ -1,6 +1,7 @@
 import { kiFetch } from '@/lib/ki'
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ---------------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 13 · TC3 — Team-Chat KI-Antwort (@ARGONAUT)
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: kiModell('chat.team'),
         max_tokens: 1024,
         system: systemPrompt,
         messages: [{ role: 'user', content: userInhalt }],

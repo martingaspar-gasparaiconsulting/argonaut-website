@@ -1,6 +1,6 @@
 // app/api/marketing-stratege/route.ts
 // ARGONAUT OS · MODUL 3 MARKETING · M7 KI-Kampagnen-Stratege
-// Ziel -> RAG (Voyage + match_document_chunks) -> Claude (claude-sonnet-5)
+// Ziel -> RAG (Voyage + match_document_chunks) -> Claude (Modell zentral (lib/kiModelle: marketing.stratege))
 // -> kompletter Kampagnenplan als JSON (Kampagne, Botschaften, Zeitplan, Inhalte).
 // Vorschlags-Prinzip: KI plant, Nutzer legt per Klick an.
 // RAG-Muster 1:1 aus mitarbeiter-chat/route.ts.
@@ -8,6 +8,7 @@
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -117,7 +118,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
+        model: kiModell('marketing.stratege'),
         max_tokens: 3500,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

@@ -9,7 +9,7 @@
 // bewertet niemanden. Die Stellenanzeige wird nach dem Entwurf noch einmal
 // gegen die AGG-Muster geprüft (lib/personalDokumente.ts, getestet).
 //
-// Modell: claude-haiku-4-5, über kiFetch (Firmen-Topf, Bremse, Protokoll).
+// Modell: Modell zentral (lib/kiModelle: personal.texte), über kiFetch (Firmen-Topf, Bremse, Protokoll).
 // Nur eingeloggt.
 // ============================================================================
 import { NextResponse } from 'next/server';
@@ -19,11 +19,12 @@ import {
   pruefeZeugnis, zeugnisPrompt, stellenPrompt, aggPruefung, saeubere,
   type ZeugnisEingabe, type StellenEingabe,
 } from '@/lib/personalDokumente';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODELL = 'claude-haiku-4-5';
+const MODELL = kiModell('personal.texte');
 
 function fehler(meldung: string, status = 400) {
   return NextResponse.json({ ok: false, error: meldung }, { status });

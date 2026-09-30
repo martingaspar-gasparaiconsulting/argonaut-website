@@ -30,6 +30,7 @@
 // ============================================================================
 
 import { markdownZuHtml, esc, woerter } from './markdownEinfach';
+import { modellFuer as kiModell } from './kiModelle';
 
 // ---------------------------------------------------------------------------
 // Die vier Arten
@@ -405,12 +406,17 @@ export function pdfName(titel: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Gliederung: Haiku (kurz, strukturiert). Lange Texte: Sonnet 5 — Martins
- * Anspruch an den SEO-Texter ist „präzise, sehr gute Texte". Ein Kapitel mit
- * rund 2.500 Ausgabe-Tokens kostet mit Sonnet 5 etwa 0,03 USD.
+ * Paket 193: Modell zentral aus lib/kiModelle (Martin 30.09.: Premium-Anspruch).
+ *   Gliederung, Ratgeber (SEO)        -> professionell
+ *   E-Book-Kapitel, Presse, Strategie -> premium
+ * Ein Kapitel mit rund 2.500 Ausgabe-Tokens kostet mit der Premium-Stufe etwa 0,05 USD.
  */
-export function modellFuer(schritt: 'gliederung' | 'kapitel' | 'einzel'): string {
-  return schritt === 'gliederung' ? 'claude-haiku-4-5' : 'claude-sonnet-5';
+export function modellFuer(schritt: 'gliederung' | 'kapitel' | 'einzel', art?: TextArt): string {
+  if (schritt === 'gliederung') return kiModell('textmotor.gliederung');
+  if (schritt === 'kapitel') return kiModell('textmotor.ebook');
+  if (art === 'presse') return kiModell('textmotor.presse');
+  if (art === 'strategie') return kiModell('textmotor.strategie');
+  return kiModell('textmotor.ratgeber');
 }
 
 export function maxTokensFuer(schritt: 'gliederung' | 'kapitel' | 'einzel', art?: TextArt): number {

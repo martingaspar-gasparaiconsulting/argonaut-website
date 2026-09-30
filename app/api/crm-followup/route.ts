@@ -1,13 +1,14 @@
 // app/api/crm-followup/route.ts
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C10 KI-Follow-up-Texter
 // Kontakt + Timeline + Firma -> RAG (Voyage + match_document_chunks)
-// -> Claude (claude-haiku-4-5) -> Follow-up-Mail (Betreff + Text) als JSON.
+// -> Claude (Modell zentral (lib/kiModelle: kunde.followup)) -> Follow-up-Mail (Betreff + Text) als JSON.
 // Vorschlags-Prinzip: KI entwirft, Nutzer sendet manuell (kein Auto-Versand).
 // RAG-Muster 1:1 aus marketing-content/route.ts.
 // -----------------------------------------------------------------------------
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -199,7 +200,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('kunde.followup'),
         max_tokens: 1200,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

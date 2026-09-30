@@ -26,6 +26,7 @@
 // Tages-Anweisung in der eigenen Sprache.
 // ============================================================================
 
+import { modellFuer as kiModell } from './kiModelle';
 export type Sprache = {
   code: string;
   /** Name auf Deutsch (für den Chef). */
@@ -87,7 +88,7 @@ export function sprachName(code: unknown): string {
 export const MAX_TEXT = 4000;
 export const MAX_TEXTE = 20;
 export const MAX_GESAMT = 12000;
-export const UEBERSETZ_MODELL = 'claude-haiku-4-5';
+export const UEBERSETZ_MODELL = kiModell('uebersetzung');
 
 export type Modus = 'chat' | 'anweisung';
 

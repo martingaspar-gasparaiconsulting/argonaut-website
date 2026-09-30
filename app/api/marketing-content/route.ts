@@ -1,12 +1,13 @@
 // app/api/marketing-content/route.ts
 // ARGONAUT OS · MODUL 3 MARKETING · M5 KI-Content-Studio
-// Briefing -> RAG (Voyage + match_document_chunks) -> Claude (claude-sonnet-5)
+// Briefing -> RAG (Voyage + match_document_chunks) -> Claude (Modell zentral (lib/kiModelle: marketing.content))
 // -> Text-Varianten als JSON. Vorschlags-Prinzip: KI schlaegt vor, Nutzer gibt frei.
 // RAG-Muster 1:1 aus mitarbeiter-chat/route.ts uebernommen.
 // -----------------------------------------------------------------------------
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -123,7 +124,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
+        model: kiModell('marketing.content'),
         max_tokens: 2000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

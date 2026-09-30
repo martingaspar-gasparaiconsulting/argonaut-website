@@ -17,6 +17,7 @@ import {
   aufraeumerErlaubt, aufraeumerPrompt, extrahiereJsonArray, antwortZuZeilen, AUFRAEUMER_MAX_ZEICHEN,
 } from '@/lib/importAufraeumer';
 import { importErlaubt, leseRechtStand } from '@/lib/importRechte';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
 
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: kiModell('import.aufraeumen'),
         max_tokens: 8192,
         system: aufraeumerPrompt(ziel),
         messages: [{ role: 'user', content: `Hier ist der Text:\n\n${rohtext}` }],

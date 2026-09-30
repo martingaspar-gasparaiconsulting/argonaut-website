@@ -143,11 +143,13 @@ test('PDF-Dateiname ohne Umlaute und Sonderzeichen', () => {
   assert.equal(pdfName(''), 'Dokument.pdf');
 });
 
-test('Modellwahl: Gliederung Haiku, lange Texte Sonnet 5 — nie Opus', () => {
-  assert.equal(modellFuer('gliederung'), 'claude-haiku-4-5');
-  assert.equal(modellFuer('kapitel'), 'claude-sonnet-5');
-  assert.equal(modellFuer('einzel'), 'claude-sonnet-5');
-  for (const s of ['gliederung', 'kapitel', 'einzel']) assert.doesNotMatch(modellFuer(s), /opus/);
+test('Modellwahl (Paket 193, bewusst geaendert): Gliederung + Ratgeber professionell, E-Book/Presse/Strategie premium', () => {
+  assert.equal(modellFuer('gliederung'), 'claude-sonnet-5-5');
+  assert.equal(modellFuer('kapitel'), 'claude-opus-5-5');
+  assert.equal(modellFuer('einzel', 'presse'), 'claude-opus-5-5');
+  assert.equal(modellFuer('einzel', 'strategie'), 'claude-opus-5-5');
+  assert.equal(modellFuer('einzel', 'ratgeber'), 'claude-sonnet-5-5');
+  assert.equal(modellFuer('einzel'), 'claude-sonnet-5-5');
   assert.equal(maxTokensFuer('einzel', 'presse'), 2000);
 });
 

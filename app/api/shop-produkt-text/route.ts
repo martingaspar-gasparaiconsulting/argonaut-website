@@ -1,12 +1,13 @@
 import { kiFetch } from '@/lib/ki';
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================
 // ARGONAUT OS · Webshop · app/api/shop-produkt-text/route.ts
 // Schreibt aus den ECHTEN Artikeldaten (Name/Kategorie/Preis/Einheit) einen
 // kurzen, verkaufsfördernden Produkttext für den Shop. Nur eingeloggt, über
-// kiFetch (Kosten protokolliert), Modell claude-haiku-4-5. Erfindet keine Fakten.
+// kiFetch (Kosten protokolliert), Modell Modell zentral (lib/kiModelle: shop.produkttext) Erfindet keine Fakten.
 // Emoji-Schalter je Branche: seriös (ohne) oder lebendig (mit Emojis).
 // Body: { bezeichnung, kategorie?, verkaufspreis?, einheit?, emoji?, branche? }
 // Antwort: { text } | { error }
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: kiModell('shop.produkttext'),
         max_tokens: 500,
         system,
         messages: [{ role: 'user', content: [{ type: 'text', text: `Schreibe die Produktbeschreibung aus diesen Angaben:\n${daten}` }] }],

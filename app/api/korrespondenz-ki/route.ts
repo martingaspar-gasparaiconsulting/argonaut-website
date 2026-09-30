@@ -1,5 +1,6 @@
 import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 12 · K4 KI-Brief-Assistent (API-Route)
 // Formuliert aus Stichworten einen Geschäftsbrief-ENTWURF (kein Versand).
@@ -84,7 +85,7 @@ Anforderungen:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
+        model: kiModell('kunde.brief'),
         max_tokens: 1400,
         messages: [{ role: "user", content: prompt }],
       }),

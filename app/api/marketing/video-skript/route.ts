@@ -17,6 +17,7 @@ import {
   type CIAngaben,
   type VariantenGruppe,
 } from '@/lib/videoSkript';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/video-skript/route.ts
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
         const kiRes = await kiFetch('marketing-video-skript-varianten', {
           method: 'POST', headers: kopf,
           body: JSON.stringify({
-            model: 'claude-haiku-4-5', max_tokens: maxTok, system: sys,
+            model: kiModell('marketing.videoskript'), max_tokens: maxTok, system: sys,
             messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }],
           }),
         });
@@ -121,7 +122,7 @@ export async function POST(req: Request) {
     const kiRes = await kiFetch('marketing-video-skript', {
       method: 'POST', headers: kopf,
       body: JSON.stringify({
-        model: 'claude-haiku-4-5', max_tokens: 2600, system: sys,
+        model: kiModell('marketing.videoskript'), max_tokens: 2600, system: sys,
         messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }],
       }),
     });

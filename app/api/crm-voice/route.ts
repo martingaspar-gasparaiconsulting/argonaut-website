@@ -1,12 +1,13 @@
 // app/api/crm-voice/route.ts
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C9 Voice-Memo -> KI-Notiz
-// Roh-Transkript -> Claude (claude-haiku-4-5) -> saubere Aktivität als JSON
+// Roh-Transkript -> Claude (Modell zentral (lib/kiModelle: crm.sprachnotiz)) -> saubere Aktivität als JSON
 // + erkannte Wiedervorlage (relative Angaben in konkretes Datum umgerechnet).
 // Vorschlags-Prinzip: KI schlägt vor, Nutzer übernimmt.
 // -----------------------------------------------------------------------------
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('crm.sprachnotiz'),
         max_tokens: 900,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

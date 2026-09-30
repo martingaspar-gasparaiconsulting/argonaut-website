@@ -6,12 +6,13 @@
 //   { lieferanten: [ { name, ansprechpartner, email, telefon,
 //                      adresse, website, kundennummer } ] }
 // Gleiches Muster wie /api/preis-import: direkter fetch, kein SDK,
-// model claude-sonnet-5, Auth-Check, "die KI" = ARGONAUT (nie "Claude").
+// model Modell zentral (lib/kiModelle: import.lieferanten), Auth-Check, "die KI" = ARGONAUT (nie "Claude").
 // Schreibt NICHTS in die DB - das macht die Vorschau im Client (L-2).
 // ============================================================
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -83,7 +84,7 @@ Regeln:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
+        model: kiModell('import.lieferanten'),
         max_tokens: 4096,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: `Hier ist die Liste:\n\n${rohtext}` }],

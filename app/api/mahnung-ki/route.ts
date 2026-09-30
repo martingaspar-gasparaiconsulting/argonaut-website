@@ -12,6 +12,7 @@ import { kiFetch } from '@/lib/ki'
 
 export const runtime = "nodejs";
 import { zahlAusFeld } from '@/lib/zahlen';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 type MahnInput = {
   stufe?: number; // 1 = Zahlungserinnerung, 2 = 1. Mahnung, 3 = 2. Mahnung
@@ -160,7 +161,7 @@ Anforderungen:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('kunde.mahnung'),
         max_tokens: 1400,
         messages: [{ role: "user", content: prompt }],
       }),

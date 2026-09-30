@@ -6,6 +6,7 @@ import { lagebericht, lageAmpel, type LageInput } from '@/lib/marketingLageberic
 import { funnelJeVariante, abSieger } from '@/lib/lpAnalytics';
 import { leadsJeBundesland } from '@/lib/plzBundesland';
 import { kiFetch } from '@/lib/ki';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/lagebericht/route.ts
@@ -163,7 +164,7 @@ export async function GET() {
       const kiRes = await kiFetch('marketing-lagebericht', {
         method: 'POST',
         headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400, system: sys, messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }] }),
+        body: JSON.stringify({ model: kiModell('marketing.lagebericht'), max_tokens: 400, system: sys, messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }] }),
       });
       if (kiRes.ok) {
         const d = await kiRes.json();

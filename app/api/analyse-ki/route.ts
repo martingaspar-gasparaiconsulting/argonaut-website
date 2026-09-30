@@ -2,13 +2,14 @@ import { kiFetch } from '@/lib/ki';
 import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================
 // ARGONAUT OS · Website-Analyse · app/api/analyse-ki/route.ts
 // „Das KI-Auge" fürs Analyse-Dashboard. Liest die echten Kennzahlen aus
 // web_ereignisse (über die security-definer-Funktionen, Service-Role), fasst
 // sie zusammen und lässt die KI eine Lagebewertung + genau 3 konkrete
-// Handlungsempfehlungen erstellen. Nur eingeloggt. Modell claude-haiku-4-5,
+// Handlungsempfehlungen erstellen. Nur eingeloggt. Modell Modell zentral (lib/kiModelle: analyse.website),
 // Kosten über kiFetch protokolliert. Body: { tage?: number, seite?: string }
 // Antwort: { bewertung, empfehlungen[] } | { error }
 // ============================================================
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: kiModell('analyse.website'),
         max_tokens: 900,
         system: SYSTEM,
         messages: [{ role: 'user', content: [{ type: 'text', text: `Hier sind die echten Website-Zahlen:\n\n${zusammenfassung}\n\nBewerte die Lage und gib genau 3 konkrete Empfehlungen. Antworte NUR als JSON.` }] }],

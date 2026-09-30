@@ -17,12 +17,13 @@ import {
   leseProfil, tedAbfrage, TED_FELDER, TED_FELDER_EXTRA, leseTedFund, sortiereFunde,
   systemPrompt, leseAnalyse, MAX_TEXT, type Fund,
 } from '@/lib/ausschreibung';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const TED_URL = 'https://api.ted.europa.eu/v3/notices/search';
-const MODELL = 'claude-haiku-4-5';
+const MODELL = kiModell('ausschreibung.radar');
 
 function fehler(meldung: string, status = 400) {
   return NextResponse.json({ ok: false, error: meldung }, { status });

@@ -1,11 +1,12 @@
 // app/api/crm-visitenkarte/route.ts
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C12 Visitenkarte -> KI-Kontakt
-// Bild (Base64) -> Claude Vision (claude-sonnet-5) -> Kontaktfelder als JSON.
+// Bild (Base64) -> Claude Vision (Modell zentral (lib/kiModelle: visitenkarte.lesen)) -> Kontaktfelder als JSON.
 // Vorschlags-Prinzip: KI liest aus, Nutzer bestätigt & legt an.
 // -----------------------------------------------------------------------------
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
+        model: kiModell('visitenkarte.lesen'),
         max_tokens: 700,
         system: SYSTEM_PROMPT,
         messages: [

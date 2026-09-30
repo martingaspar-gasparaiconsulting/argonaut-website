@@ -1,6 +1,7 @@
 import { kiFetch } from '@/lib/ki';
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================
 // ARGONAUT OS · Beleg-Inbox · app/api/beleg-ocr/route.ts
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: kiModell('beleg.lesen'),
         max_tokens: 500,
         system: SYSTEM,
         messages: [{ role: 'user', content: [medienBlock, { type: 'text', text: 'Lies diesen Beleg aus und gib nur das JSON zurück.' }] }],

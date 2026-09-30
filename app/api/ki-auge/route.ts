@@ -1,6 +1,7 @@
 import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 import { RECHTS_VORBEHALT, brauchtVorbehalt } from '@/lib/augeVorbehalt'
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 // app/api/ki-auge/route.ts
 // ---------------------------------------------------------------------
 // ARGONAUT OS · KI-AUGE · eigene Route (unabhängig von /api/ki-klartext)
@@ -9,7 +10,7 @@ import { RECHTS_VORBEHALT, brauchtVorbehalt } from '@/lib/augeVorbehalt'
 //
 // Muster identisch zu den übrigen KI-Routen im System:
 //  - direkter fetch an Anthropic (kein SDK)
-//  - Modell claude-haiku-4-5, runtime nodejs
+//  - Modell Modell zentral (lib/kiModelle: ki.auge), runtime nodejs
 //  - robuste JSON-Extraktion (Text vor/nach dem JSON wird toleriert)
 // ---------------------------------------------------------------------
 
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('ki.auge'),
         max_tokens: 600,
         system,
         messages: [{ role: "user", content: userInhalt }],

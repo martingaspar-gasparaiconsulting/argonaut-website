@@ -3,6 +3,7 @@ import { betreiberPruefung } from '@/lib/betreiberGuard';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================================
 // ARGONAUT OS · Command Center · app/api/beleg-upload/route.ts  (Block B2)
@@ -10,7 +11,7 @@ import { NextResponse } from 'next/server';
 // (privat/geschäftlich, Kategorie, absetzbar %, sofort vs. AfA) → Zeile in
 // 'belege' mit ki_vorschlag (jsonb), bestaetigt=false. NUR Martin (Betreiber).
 // Ohne Vorsteuer (USt-befreit): mwst_satz=0, betrag_netto = betrag_brutto.
-// Modell claude-haiku-4-5; bei schwacher Erkennung automatisch claude-sonnet-5.
+// Modell zentral (lib/kiModelle: beleg.lesen); bei schwacher Erkennung automatisch beleg.nachpruefen.
 // KI schlägt VOR — Martin bestätigt/korrigiert später (B3). Keine Steuerberatung.
 //
 // POST multipart/form-data:
@@ -160,10 +161,10 @@ export async function POST(req: Request) {
       ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
       : { type: 'image', source: { type: 'base64', media_type: datei.type, data: base64 } };
 
-    let modell = 'claude-haiku-4-5';
+    let modell = kiModell('beleg.lesen');
     let v = await klassifiziere(modell, apiKey, medienBlock, artHinweis);
     if (schwach(v)) {
-      modell = 'claude-sonnet-5';
+      modell = kiModell('beleg.nachpruefen');
       const v2 = await klassifiziere(modell, apiKey, medienBlock, artHinweis);
       if (v2) v = v2;
     }

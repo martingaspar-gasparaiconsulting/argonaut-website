@@ -14,6 +14,7 @@
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -122,7 +123,7 @@ ${kontext}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('chat.cockpit'),
         max_tokens: 1200,
         system: SYSTEM_PROMPT,
         messages,

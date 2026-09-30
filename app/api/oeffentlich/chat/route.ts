@@ -42,6 +42,7 @@ import {
 } from '@/lib/setter';
 import { baueLead, buchungsLink, abschlussText } from '@/lib/setterHandeln';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -257,7 +258,7 @@ Regeln:
     const kiRes = await kiFetch('oeffentlich-chat', {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 500, system, messages }),
+      body: JSON.stringify({ model: kiModell('chat.webseite'), max_tokens: 500, system, messages }),
     });
 
     if (!kiRes.ok) {

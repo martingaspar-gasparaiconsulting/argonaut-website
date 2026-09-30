@@ -1,6 +1,7 @@
 import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server'
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export async function POST(req: NextRequest) {
   // Paket S0: nur mit Login — interne Arbeit wird nie von außen angestoßen.
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: kiModell('chat.allgemein'),
         max_tokens: 1000,
         system: systemPrompt || 'Du bist der ARGONAUT KI-Assistent. Antworte auf Deutsch, freundlich und pr\u00e4gnant.',
         messages,

@@ -8,7 +8,7 @@
 // einer fremden Website ist nicht eingeloggt und hat keine userId. Für ihn galt
 // keine einzige Grenze.
 //
-// Gerechnet mit den echten Werten (claude-haiku-4-5, max_tokens 500) kostet ein
+// Gerechnet mit den echten Werten (Stufe schnell = Haiku 4.5, lib/kiModelle; max_tokens 500) kostet ein
 // Gespräch rund 1,9 Cent. 20.000 Gespräche im Monat sind also über 300 € —
 // bei 99 € Einnahme.
 //

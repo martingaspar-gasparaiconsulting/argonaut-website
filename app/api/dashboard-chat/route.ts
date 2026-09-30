@@ -18,6 +18,7 @@ import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { NAV_LINKS } from "@/lib/rechte";
 import { chatSystemText, sichererPfad, letzteFrage, type ChatRolle } from "@/lib/chatWissen";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -160,7 +161,7 @@ Geld-Zahlen (Rechnungen, Umsatz) und Abwesenheiten von Kollegen nennen Sie einem
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('chat.dashboard'),
         max_tokens: 700,
         system: SYSTEM_PROMPT,
         messages,

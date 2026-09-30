@@ -1,6 +1,7 @@
 import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================
 // ARGONAUT OS · MODUL PROJEKTE · P9 — KI-Projekt-Setup
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: kiModell('projekt.setup'),
         max_tokens: 1500,
         system: SYSTEM_PROMPT,
         messages: [

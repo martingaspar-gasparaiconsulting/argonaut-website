@@ -15,6 +15,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 import { websiteBrancheBySlug } from '../../../vorschau/_lib/branchen-web';
 import { baukastenFor } from '../../../vorschau/_lib/branchen-bausteine';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -75,7 +76,7 @@ Regeln:
     const kiRes = await kiFetch('branchen-chat', {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400, system, messages }),
+      body: JSON.stringify({ model: kiModell('chat.branche'), max_tokens: 400, system, messages }),
     });
 
     if (!kiRes.ok) {

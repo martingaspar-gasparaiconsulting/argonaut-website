@@ -12,7 +12,7 @@
 // (getestet): Fristen nur mit Wortlaut und nie vor dem Besprechungstag,
 // fremde Namen und fremde Beträge werden gemeldet.
 //
-// Modell: claude-haiku-4-5 über kiFetch (Firmen-Topf, Bremse, Protokoll).
+// Modell: Modell zentral (lib/kiModelle: gespraech.protokoll) über kiFetch (Firmen-Topf, Bremse, Protokoll).
 // Nur eingeloggt.
 // ============================================================================
 import { NextResponse } from 'next/server';
@@ -23,11 +23,12 @@ import {
   artFuer, systemPrompt, nutzerPrompt, leseProtokoll, nachfassDatum,
   aufgabenFuerCockpit, protokollMarkdown, nachfassMail, MAX_ROH,
 } from '@/lib/gespraechsProtokoll';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODELL = 'claude-haiku-4-5';
+const MODELL = kiModell('gespraech.protokoll');
 
 function fehler(meldung: string, status = 400) {
   return NextResponse.json({ ok: false, error: meldung }, { status });

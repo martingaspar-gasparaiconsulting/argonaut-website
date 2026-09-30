@@ -1,6 +1,7 @@
 import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================
 // ARGONAUT OS · MODUL PROJEKTE · P11 — KI-Statusbericht als PDF
@@ -143,7 +144,7 @@ ${auslastungText}`;
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: kiModell('projekt.statusbericht'),
         max_tokens: 1800,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userInhalt }],

@@ -2,6 +2,7 @@ import { kiFetch } from '@/lib/ki';
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
 import { baueVorlage } from '@/lib/webVorlagen';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================
 // ARGONAUT OS · W4 · app/api/webseite-ki/route.ts
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: kiModell('webseite.komplett'),
         max_tokens: 2500,
         system: SYSTEM,
         messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }],

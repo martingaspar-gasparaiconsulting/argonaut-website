@@ -13,7 +13,7 @@
 // nichts. Aufgabe und Vorgang entstehen erst, wenn der Mensch auf den Knopf
 // drueckt — ueber /api/cockpit-action (bestehend) und die Tabelle post_vorgang.
 //
-// Modell: claude-haiku-4-5 (Alltagsaufgabe, guenstig). Jeder Aufruf laeuft
+// Modell: Modell zentral (lib/kiModelle: sachbearbeiter.postfach) (Alltagsaufgabe, guenstig). Jeder Aufruf laeuft
 // durch kiFetch — also mit Firmen-Topf, Minuten-Bremse, Demo-Deckel und
 // Kosten-Protokoll. Nur eingeloggt.
 //
@@ -27,11 +27,12 @@ import {
   systemPost, nutzerTextMail, leseErgebnis, aufgabeAus, vorgangZeile,
   systemBewertung, nutzerTextBewertung, pruefeBewertungsAntwort,
 } from '@/lib/sachbearbeiter';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODELL = 'claude-haiku-4-5';
+const MODELL = kiModell('sachbearbeiter.postfach');
 
 /** Erlaubte Dateiarten fuer einen Brief. */
 const BILDARTEN = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];

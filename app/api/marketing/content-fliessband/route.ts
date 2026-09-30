@@ -17,6 +17,7 @@ import {
   type CIAngaben,
   type TextVariantenGruppe,
 } from '@/lib/contentFliessband';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/content-fliessband/route.ts
@@ -95,7 +96,7 @@ export async function POST(req: Request) {
         frage: baueVariantenNutzerPrompt(thema, id, anzahl, ci),
         ziel: { kanal: id, anzahl, thema },
       })),
-      'claude-haiku-4-5',
+      kiModell('marketing.contentfliessband'),
       maxTok,
     );
 
@@ -146,7 +147,7 @@ export async function POST(req: Request) {
         const kiRes = await kiFetch('marketing-content-fliessband-varianten', {
           method: 'POST', headers: kopf,
           body: JSON.stringify({
-            model: 'claude-haiku-4-5', max_tokens: maxTok, system: sys,
+            model: kiModell('marketing.contentfliessband'), max_tokens: maxTok, system: sys,
             messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }],
           }),
         });
@@ -178,7 +179,7 @@ export async function POST(req: Request) {
     const kiRes = await kiFetch('marketing-content-fliessband', {
       method: 'POST', headers: kopf,
       body: JSON.stringify({
-        model: 'claude-haiku-4-5', max_tokens: 2200, system: sys,
+        model: kiModell('marketing.contentfliessband'), max_tokens: 2200, system: sys,
         messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }],
       }),
     });

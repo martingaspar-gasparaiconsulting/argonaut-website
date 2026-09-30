@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { seoPruefungSeite } from '@/lib/seoCheck';
 import { kiFetch } from '@/lib/ki';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/seo/route.ts
@@ -75,7 +76,7 @@ export async function GET() {
       const kiRes = await kiFetch('marketing-seo-keywords', {
         method: 'POST',
         headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400, system: sys, messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }] }),
+        body: JSON.stringify({ model: kiModell('marketing.seo'), max_tokens: 400, system: sys, messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }] }),
       });
       if (kiRes.ok) {
         const d = await kiRes.json();

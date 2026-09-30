@@ -22,6 +22,7 @@
 
 import type { BausteinTyp, OffenerBaustein } from './inhaltBaustein';
 import { schaetzeUsd } from './kiPreise';
+import { modellFuer as kiModell } from './kiModelle';
 
 // ---------------------------------------------------------------------------
 // Modell und Kosten
@@ -33,7 +34,7 @@ import { schaetzeUsd } from './kiPreise';
  * fuer laengere Buchkapitel lohnt sich ein groesseres Modell, und der Name
  * soll nicht in einem Push festbetoniert sein.
  */
-export const MODELL_VORGABE = 'claude-haiku-4-5';
+export const MODELL_VORGABE = kiModell('argonaut.inhalte');
 
 export function modellWahl(ausUmgebung?: string | null): string {
   const m = String(ausUmgebung ?? '').trim();

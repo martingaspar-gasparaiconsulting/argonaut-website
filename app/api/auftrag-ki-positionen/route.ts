@@ -2,6 +2,7 @@ import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { kiPositionSaeubern } from "@/lib/kiPreisRegel";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -110,7 +111,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
+        model: kiModell('auftrag.positionen'),
         max_tokens: 1800,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userInhalt }],

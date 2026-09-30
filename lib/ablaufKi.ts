@@ -10,6 +10,7 @@
 // ============================================================================
 
 import { kiFetch } from './ki';
+import { modellFuer as kiModell } from './kiModelle';
 
 export const KI_SYSTEM = [
   'Du schreibst Textentwürfe für einen deutschen Betrieb.',
@@ -26,7 +27,7 @@ export async function kiEntwurf(ownerId: string, auftrag: string): Promise<{ ok:
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: kiModell('ablauf.baustein'),
         max_tokens: 1200,
         system: KI_SYSTEM,
         messages: [{ role: 'user', content: auftrag.slice(0, 4000) }],

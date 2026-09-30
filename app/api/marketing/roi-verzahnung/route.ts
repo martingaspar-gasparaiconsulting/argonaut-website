@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { verzahneKampagnen } from '@/lib/marketingRoi';
 import { kiFetch } from '@/lib/ki';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/roi-verzahnung/route.ts
@@ -79,7 +80,7 @@ export async function GET() {
       const kiRes = await kiFetch('marketing-roi-verzahnung', {
         method: 'POST',
         headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5', max_tokens: 400, system: sys, messages: [{ role: 'user', content: [{ type: 'text', text: 'Zahlen:\n' + fakten }] }] }),
+        body: JSON.stringify({ model: kiModell('marketing.roi'), max_tokens: 400, system: sys, messages: [{ role: 'user', content: [{ type: 'text', text: 'Zahlen:\n' + fakten }] }] }),
       });
       if (kiRes.ok) {
         const d = await kiRes.json();

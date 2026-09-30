@@ -17,11 +17,12 @@ import { NextResponse } from 'next/server';
 import { kiFetch } from '@/lib/ki';
 import { createClient } from '@/lib/supabase-server';
 import { systemPrompt, nutzerPrompt, lesePositionen, type KatalogZeile, type DokAuszug } from '@/lib/angebotSprache';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MODELL = 'claude-sonnet-5';
+const MODELL = kiModell('angebot.sprache');
 const BILDARTEN = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_BASE64 = 4_500_000;
 

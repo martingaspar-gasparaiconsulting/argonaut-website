@@ -1,5 +1,6 @@
 import { kiFetch } from '@/lib/ki'
 import { createClient } from '@/lib/supabase-server'
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 11 · T4 KI-Antwortentwurf (API-Route)
 // Erzeugt einen höflichen Antwort-ENTWURF auf ein Kundenservice-Ticket.
@@ -109,7 +110,7 @@ Anforderungen an die Antwort:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('kunde.ticketantwort'),
         max_tokens: 1200,
         messages: [{ role: "user", content: prompt }],
       }),

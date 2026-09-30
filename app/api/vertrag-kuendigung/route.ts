@@ -1,5 +1,6 @@
 import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 10 · V4 KI-Kündigungsschreiben (API-Route)
 // Erzeugt einen fristgerechten Kündigungsschreiben-ENTWURF (kein Versand).
@@ -73,7 +74,7 @@ Anforderungen:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-5",
+        model: kiModell('kunde.kuendigung'),
         max_tokens: 1200,
         messages: [{ role: "user", content: prompt }],
       }),

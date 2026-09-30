@@ -1,12 +1,13 @@
 import { kiFetch } from '@/lib/ki';
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================
 // ARGONAUT OS · Website-Bauer · app/api/webseite-text-ki/route.ts
 // Überarbeitet EINEN Text-Abschnitt des Website-Bauers per KI (verbessern /
 // kürzen / umschreiben / ausführlicher). Nur eingeloggt. Läuft über kiFetch
-// (Kosten protokolliert), Modell claude-haiku-4-5. Erfindet keine Fakten.
+// (Kosten protokolliert), Modell Modell zentral (lib/kiModelle: webseite.text) Erfindet keine Fakten.
 // Body: { text: string, modus?: 'verbessern'|'kuerzen'|'umschreiben'|'laenger' }
 // Antwort: { text } | { error }
 // ============================================================
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: kiModell('webseite.text'),
         max_tokens: 1500,
         system: SYSTEM,
         messages: [{ role: 'user', content: [{ type: 'text', text: nutzer }] }],

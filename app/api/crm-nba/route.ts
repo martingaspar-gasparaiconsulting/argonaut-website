@@ -1,12 +1,13 @@
 // app/api/crm-nba/route.ts
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C11 KI-Next-Best-Action (Wochenfokus)
-// Vorgefilterte Kandidaten (Server, RLS) -> Claude (claude-haiku-4-5)
+// Vorgefilterte Kandidaten (Server, RLS) -> Claude (Modell zentral (lib/kiModelle: crm.wochenfokus))
 // -> priorisierte Wochenliste als JSON (wer, warum jetzt, empfohlene Aktion).
 // Kein RAG nötig - arbeitet auf den CRM-Daten des Nutzers.
 // -----------------------------------------------------------------------------
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -176,7 +177,7 @@ export async function POST(_req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('crm.wochenfokus'),
         max_tokens: 2000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

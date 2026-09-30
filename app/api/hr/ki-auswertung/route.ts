@@ -8,6 +8,7 @@
 import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { kiFetch } from '@/lib/ki'
 import { NextRequest, NextResponse } from 'next/server';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
 
@@ -96,7 +97,7 @@ Gib eine kurze, sachliche Einschätzung auf Deutsch:
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: kiModell('hr.auswertung'),
         max_tokens: 600,
         system,
         messages: [{ role: 'user', content: userText }],

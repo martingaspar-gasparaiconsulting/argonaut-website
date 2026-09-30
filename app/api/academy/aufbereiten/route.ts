@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@/lib/supabase-server';
 import { kiFetch } from '@/lib/ki';
 import { pruefeText, zaehleWoerter } from '@/lib/academyText';
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 // ============================================================================
 // ARGONAUT OS · /api/academy/aufbereiten
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: kiModell('academy.aufbereiten'),
         max_tokens: 8000,
         system: SYSTEM,
         messages: [{

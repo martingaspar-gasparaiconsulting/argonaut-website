@@ -1,13 +1,14 @@
 // app/api/crm-briefing/route.ts
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C8 KI-Kontakt-Briefing
 // Kontakt + Timeline + Tags + Firma -> RAG (Voyage + match_document_chunks)
-// -> Claude (claude-haiku-4-5) -> Kurz-Dossier als JSON.
+// -> Claude (Modell zentral (lib/kiModelle: crm.briefing)) -> Kurz-Dossier als JSON.
 // Vorschlags-Prinzip: KI briefed, Nutzer entscheidet.
 // RAG-Muster 1:1 aus marketing-stratege/route.ts.
 // -----------------------------------------------------------------------------
 import { kiFetch } from '@/lib/ki'
 import { createClient } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -236,7 +237,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('crm.briefing'),
         max_tokens: 1800,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],

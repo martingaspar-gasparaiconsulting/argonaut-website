@@ -125,7 +125,7 @@ export async function POST(req: Request) {
       if (art === 'ebook') return fehler('Das E-Book entsteht über Gliederung und Kapitel.');
       const heute = new Date().toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric' });
       const p = promptEinzel(art, eingabe, firma, heute);
-      const r = await frage(`text-motor-${art}`, modellFuer('einzel'), maxTokensFuer('einzel', art), p.system, p.nutzer);
+      const r = await frage(`text-motor-${art}`, modellFuer('einzel', art), maxTokensFuer('einzel', art), p.system, p.nutzer);
       if (!r.ok) return kiFehler(r.status);
       const ergebnis = leseEinzeltext(r.text);
       if (!ergebnis) return fehler('Der Text war nicht lesbar. Bitte noch einmal erzeugen.', 502);

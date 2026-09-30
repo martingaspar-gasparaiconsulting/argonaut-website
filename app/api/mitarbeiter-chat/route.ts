@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { DOCUMENT_TEMPLATES, getTemplate } from "@/lib/document-templates";
 import { pflichtfelderFehlen } from "@/lib/document-render";
 import { mischeTreffer, kontextAus, belegeAus, REGELN_BELEGE, MAX_TREFFER, type Treffer } from "@/lib/firmenWissen";
+import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = "nodejs";
 
@@ -138,7 +139,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: kiModell('chat.mitarbeiter'),
         max_tokens: 1500,
         system: SYSTEM_PROMPT,
         tools: [TOOL],
