@@ -12,6 +12,7 @@
 // erledigt die Route; sie schreibt jede neue Zeile ins Register.
 // ============================================================================
 
+import { centRunden } from './zahlen';
 const HINWEIS = 'Beispiel-Beleg der Uebungswelt — jederzeit ueber den Schalter im Onboarding entfernbar.';
 
 export type SeedZeile = Record<string, unknown>;
@@ -31,7 +32,7 @@ const POSITIONEN = [
 ];
 
 function r2(n: number): number {
-  return Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100;
+  return centRunden(Number(n) || 0); // Paket 191
 }
 
 function kundeName(k: KontaktRef): string {

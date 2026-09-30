@@ -10,7 +10,7 @@
 // (teilbezahlt / bezahlt) und bezahlten Betrag — wie auf der Rechnungsseite.
 // ============================================================================
 
-import { leseZahl } from './zahlen';
+import { leseZahl, centRunden } from './zahlen';
 
 /** Buchungsdatum aus Kontoauszug/CSV als JJJJ-MM-TT (DD.MM.JJJJ, DD.MM.JJ, ISO). */
 export function buchungsDatumIso(roh: string | null | undefined, ersatz: string): string {
@@ -29,7 +29,7 @@ export function buchungsDatumIso(roh: string | null | undefined, ersatz: string)
 
 /** Offener Rest einer Rechnung, nie negativ, auf Cent gerundet. */
 export function offenerRest(brutto: number | null | undefined, bezahlt: number | null | undefined): number {
-  return Math.max(0, Math.round(((Number(brutto) || 0) - (Number(bezahlt) || 0)) * 100) / 100);
+  return Math.max(0, centRunden((Number(brutto) || 0) - (Number(bezahlt) || 0))); // Paket 191
 }
 
 /** Eingabe „Betrag" prüfen: deutsch gelesen, > 0, höchstens das Doppelte des Rests (Tippfehler-Schutz). */
@@ -38,5 +38,5 @@ export function pruefeZahlbetrag(eingabe: string, rest: number): { betrag: numbe
   if (n === null || !Number.isFinite(n)) return { betrag: null, fehler: 'Betrag ist nicht lesbar.' };
   if (n <= 0) return { betrag: null, fehler: 'Der Betrag muss größer als 0 sein.' };
   if (rest > 0 && n > rest * 2) return { betrag: null, fehler: 'Der Betrag ist mehr als doppelt so hoch wie der offene Rest — bitte prüfen.' };
-  return { betrag: Math.round(n * 100) / 100, fehler: null };
+  return { betrag: centRunden(n), fehler: null };
 }

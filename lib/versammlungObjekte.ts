@@ -15,7 +15,7 @@
 // Recherchiert 25.09.2026 — Anwalt-Checkliste R24.
 // ============================================================================
 
-import { leseZahl } from './zahlen';
+import { leseZahl, centRunden } from './zahlen';
 
 // ---------------------------------------------------------------------------
 // Helfer
@@ -64,7 +64,7 @@ export function datumDe(iso: string | null | undefined): string {
   const [j, m, t] = iso.slice(0, 10).split('-');
   return `${t}.${m}.${j}`;
 }
-export function cent(n: number): number { return Math.round(n * 100) / 100; }
+export function cent(n: number): number { return centRunden(n); } // Paket 191
 export function euroText(n: number | null | undefined): string {
   return n == null || !Number.isFinite(n) ? '—' : n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 }

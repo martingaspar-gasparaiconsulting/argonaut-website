@@ -1,6 +1,6 @@
 import { nurAngemeldet } from '@/lib/nurAngemeldet';
 import { NextRequest, NextResponse } from 'next/server';
-import { steuerGruppen, weichtAb, satzText, type SteuerPosten } from '../../dashboard/_components/steuerLogik';
+import { steuerGruppen, weichtAb, satzText, rundungWieGespeichert, type SteuerPosten } from '../../dashboard/_components/steuerLogik';
 import { girocodeVonDaten } from '../../../lib/girocode';
 import { createClient } from '@/lib/supabase-server';
 import { betriebLeser } from '@/lib/abrechnungServer';
@@ -149,7 +149,17 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
     netto: positionNetto(p),
     satz: Number(p?.mwst_satz) || 0,
   }));
-  const s = steuerGruppen(posten);
+  // Paket 191: ein gespeicherter Beleg wird mit DER Rundung wiedergegeben,
+  // mit der seine Summen entstanden sind — alte Rechnungen bleiben centgenau
+  // wie verschickt (GoBD), neue rechnen mit der reparierten Cent-Rundung.
+  const rcFuerRundung = !klein && !!rechnung?.reverse_charge;
+  const { rundung } = rundungWieGespeichert(
+    () => posten,
+    rcFuerRundung
+      ? { netto: rechnung?.netto_summe }
+      : { netto: rechnung?.netto_summe, steuer: rechnung?.mwst_summe, brutto: rechnung?.brutto_summe },
+  );
+  const s = steuerGruppen(posten, rundung);
   const hatGruppen = !klein && s.gruppen.length > 0;
 
   let summenHtml: string;

@@ -14,7 +14,7 @@ import {
   AUFSCHLAG_UNTERNEHMEN,
   PAUSCHALE_B2B,
 } from "@/lib/verzugszins";
-import { zahlText } from '@/lib/zahlen';
+import { zahlText, centRunden } from '@/lib/zahlen';
 import { abrechnungPruefen, istMitarbeiterKennung, MAHNUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 
 // ============================================================
@@ -253,7 +253,7 @@ export default function MahnungErstellen() {
   const offenerRest = useMemo(() => {
     const brutto = Number(rechnung?.brutto_summe) || 0;
     const bezahlt = Number(rechnung?.bezahlter_betrag) || 0;
-    return Math.round((brutto - bezahlt + Number.EPSILON) * 100) / 100;
+    return centRunden(brutto - bezahlt); // Paket 191
   }, [rechnung]);
 
   const tageUeberfaellig = useMemo(() => {

@@ -33,10 +33,20 @@
 //  3. `cent()` ist jetzt `centRunden` aus lib/zahlen.ts. Verhalten
 //     identisch (war hier schon symmetrisch); eine Fassung weniger im Haus.
 //
-// Node-getestet: tests/geldSchichtP27.test.mjs
+// ▄▄▄ PAKET 191 (30.09.2026) — CENT-RUNDUNG ▄▄▄
+//  centRunden rundet jetzt ohne Gleitkomma-Fehler (19 % von 42,50 € = 8,08 €,
+//  nicht mehr 8,07 €). steuerGruppen nimmt optional eine Rundung entgegen;
+//  rundungWieGespeichert waehlt fuer das NEU-Rendern eines gespeicherten
+//  Belegs (PDF, ZUGFeRD) die Rundung, mit der seine Summen entstanden sind —
+//  ein alter Beleg sieht nach dem Update genau so aus wie vorher (GoBD).
+//
+// Node-getestet: tests/geldSchichtP27.test.mjs, tests/centRundungP191.test.mjs
 // ============================================================
 
-import { leseZahl, centRunden } from '@/lib/zahlen';
+import { leseZahl, centRunden, centRundenBis191 } from '@/lib/zahlen';
+
+/** Eine Rundungsregel auf Cent. Standard: centRunden. */
+export type Rundung = (n: number) => number;
 
 /** Eine Position, so wie sie aus `rechnung_positionen` kommt. */
 export interface SteuerPosten {
@@ -102,7 +112,8 @@ function zahlOderNull(v: unknown): number | null {
  * Ein nicht lesbarer Betrag oder Steuersatz wird gezaehlt und im Klartext
  * genannt. Die Summen bleiben dabei, was sie waren — siehe Kopf.
  */
-export function steuerGruppen(posten: readonly SteuerPosten[]): SteuerSumme {
+export function steuerGruppen(posten: readonly SteuerPosten[], rundung: Rundung = centRunden): SteuerSumme {
+  const cent = rundung;
   const nachSatz = new Map<number, { satz: number; netto: number }>();
   const hinweise: string[] = [];
   let unlesbar = 0;
@@ -161,6 +172,43 @@ export function weichtAb(gespeichert: unknown, berechnet: number): boolean {
   if (g === null) return true;
   if (g === 0 && berechnet === 0) return false;
   return Math.abs(cent(g) - cent(berechnet)) > 0.005;
+}
+
+/** Gespeicherte Summen eines Belegs. Nicht gesetzte Felder werden nicht verglichen. */
+export interface GespeicherteSummen {
+  netto?: unknown;
+  steuer?: unknown;
+  brutto?: unknown;
+}
+
+/**
+ * Paket 191 — welche Rundung hat die gespeicherten Summen erzeugt?
+ *
+ * `postenMit` baut die Posten fuer eine gegebene Rundung (falls die Zeilen
+ * selbst gerundet werden). Ergebnis:
+ *  - stimmt die NEUE Rundung mit den gespeicherten Summen (oder ist nichts
+ *    gespeichert)  -> neue Rundung
+ *  - stimmt nur die ALTE (bis Paket 190)                 -> alte Rundung,
+ *    damit der Beleg unveraendert wiedergegeben wird (GoBD)
+ *  - stimmt keine                                        -> neue Rundung; die
+ *    Abweichungs-Warnung des Aufrufers greift wie bisher.
+ */
+export function rundungWieGespeichert(
+  postenMit: (rundung: Rundung) => readonly SteuerPosten[],
+  gespeichert: GespeicherteSummen | null | undefined,
+): { rundung: Rundung; alteRundung: boolean } {
+  const neu = { rundung: centRunden as Rundung, alteRundung: false };
+  if (!gespeichert) return neu;
+  const felder = (['netto', 'steuer', 'brutto'] as const).filter((f) => gespeichert[f] !== undefined && gespeichert[f] !== null);
+  if (felder.length === 0) return neu;
+
+  const passt = (r: Rundung): boolean => {
+    const s = steuerGruppen(postenMit(r), r);
+    return felder.every((f) => !weichtAb(gespeichert[f], s[f]));
+  };
+  if (passt(centRunden)) return neu;
+  if (passt(centRundenBis191)) return { rundung: centRundenBis191, alteRundung: true };
+  return neu;
 }
 
 /** Steuersatz fuer die Anzeige: "7" statt "7,00", aber "10,7" bleibt "10,7". */

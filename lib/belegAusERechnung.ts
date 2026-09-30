@@ -7,6 +7,7 @@
 // Eingangsbeleg. Reine Logik, ohne Supabase.
 // ============================================================================
 
+import { centRunden } from './zahlen';
 export type ERechnungKurz = {
   rechnungsnummer?: string | null; rechnungsdatum?: string | null;
   verkaeufer?: { name?: string | null } | null;
@@ -15,7 +16,7 @@ export type ERechnungKurz = {
   kleinunternehmer?: boolean | null;
 };
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
+const r2 = (n: number) => centRunden(n); // Paket 191
 
 /** Überwiegender Steuersatz (nach Netto gewichtet); 0 bei Kleinunternehmer. */
 export function hauptSteuersatz(e: ERechnungKurz): number {

@@ -15,7 +15,7 @@
 // pure, node-testbare Funktionen (Muster wie lib/marketingCockpit.ts).
 // ============================================================================
 
-import { leseZahlOder } from './zahlen';
+import { leseZahlOder, centRunden } from './zahlen';
 export type KampagneRoh = {
   id?: unknown;
   name?: unknown;
@@ -42,7 +42,7 @@ function num(v: unknown): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 function runde2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191: fehlerfreie Cent-Rundung
 }
 
 /** Umsatz einer Kampagne aus ihrer Rechnung: bevorzugt tatsaechlich bezahlt. */

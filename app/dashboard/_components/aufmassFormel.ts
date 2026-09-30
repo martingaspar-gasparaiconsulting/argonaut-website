@@ -110,9 +110,16 @@ export interface FormelErgebnis {
  * vorzeichenbehafteten Wert und schiebt den halben Schritt immer nach oben.
  */
 export function runde3(n: number, stellen = 3): number {
+  // Paket 191: fehlerfreie Rundung wie lib/zahlen.rundeStellen — als Kopie,
+  // weil diese Datei ohne Importe bleibt (tests/centRundungP191 prueft Gleichheit).
   if (!Number.isFinite(n)) return 0;
-  const f = Math.pow(10, stellen);
-  const v = Math.round((Math.abs(n) + Number.EPSILON) * f) / f;
+  const st = Math.max(0, Math.min(10, Math.floor(stellen)));
+  const schieben = (x: number, k: number): number => {
+    const [m, e] = String(x).split('e');
+    return Number(m + 'e' + ((e ? Number(e) : 0) + k));
+  };
+  const v = schieben(Math.round(schieben(Number(Math.abs(n).toPrecision(15)), st)), -st);
+  if (v === 0) return 0;
   return n < 0 ? -v : v;
 }
 

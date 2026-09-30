@@ -3,6 +3,7 @@
 // Markt-Verkäufen (Ernte) und bezahlten Event-Anmeldungen (Veranstaltungen).
 // KEINE Supabase-Aufrufe, KEINE React-Hooks. Node-getestet.
 
+import { centRunden } from './zahlen';
 export type QuelleTyp = 'markt' | 'event';
 
 export interface RohBuchung {
@@ -20,7 +21,7 @@ export interface ZahlungPayload {
 }
 
 function r2(n: number): number {
-  return Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100;
+  return centRunden(Number(n) || 0); // Paket 191
 }
 
 /** Eindeutiger Idempotenz-Schlüssel je Quell-Datensatz (landet in zahlungen.referenz). */

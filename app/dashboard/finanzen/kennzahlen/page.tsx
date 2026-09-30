@@ -7,7 +7,7 @@ import FinanzTabs from "../_components/FinanzTabs";
 import UstErsatzSatz from "../_components/UstErsatzSatz";
 import { teileZahlung, summiereZahlungen } from "@/lib/zahlungAufteilung";
 import KiKlartext from "../../_components/KiKlartext";
-import { leseZahlOder, zahlText } from '@/lib/zahlen';
+import { leseZahlOder, zahlText, centRunden } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-6 — KENNZAHLEN
@@ -54,7 +54,7 @@ function pct(n: number | null | undefined): string {
   return `${n.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 }
 function r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191: fehlerfreie Cent-Rundung
 }
 function jahrVon(d: string): number | null {
   if (!d) return null;

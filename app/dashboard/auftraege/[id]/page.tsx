@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
-import { leseZahlOder } from '@/lib/zahlen';
+import { leseZahlOder, centRunden } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · Modul 5 · Detailseite A3+A4+A6+A7+A8+A9
@@ -81,7 +81,7 @@ function ladeStr(n: number | null | undefined): string {
   return String(n).replace(".", ",");
 }
 function r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191: fehlerfreie Cent-Rundung
 }
 function geld(n: number | null | undefined, waehrung = "EUR"): string {
   const wert = typeof n === "number" ? n : 0;

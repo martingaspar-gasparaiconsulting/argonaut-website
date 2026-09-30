@@ -15,7 +15,7 @@
 // bestehende rechnung-pdf-Route ohnehin schon bekommt.
 // ============================================================
 
-import { steuerGruppen, type SteuerPosten } from '../app/dashboard/_components/steuerLogik';
+import { steuerGruppen, rundungWieGespeichert, type SteuerPosten, type Rundung } from '../app/dashboard/_components/steuerLogik';
 import { leseZahlOder, centRunden } from './zahlen';
 
 // ─── Typen (bewusst tolerant — Daten kommen aus verschiedenen Quellen) ───
@@ -118,9 +118,9 @@ function nPct(v: any): string {
  * Rueckfall, wenn ein Aufrufer `gesamt_netto` weglaesst. Diese Funktion
  * wendet jetzt genau dieselbe Regel an wie das Formular.
  */
-export function zeilenNetto(p: any): number {
-  if (p?.gesamt_netto != null) return centRunden(leseZahlOder(p.gesamt_netto, 0));
-  return centRunden(leseZahlOder(p?.menge, 0) * leseZahlOder(p?.einzelpreis, 0));
+export function zeilenNetto(p: any, rundung: Rundung = centRunden): number {
+  if (p?.gesamt_netto != null) return rundung(leseZahlOder(p.gesamt_netto, 0));
+  return rundung(leseZahlOder(p?.menge, 0) * leseZahlOder(p?.einzelpreis, 0));
 }
 
 /**
@@ -260,11 +260,20 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   // ── Steuer identisch zum PDF berechnen ──
   // BR-CO-10: dieselbe, EINMAL gerundete Zahl geht in die Zeile UND in die
   // Steuergruppe. Sonst rundet die Zeile anders als der Kopf (siehe zeilenNetto).
-  const posten: SteuerPosten[] = (positionen || []).map((p: any) => ({
-    netto: zeilenNetto(p),
+  // Paket 191: gespeicherte Rechnung -> dieselbe Rundung wie beim Entstehen
+  // (GoBD); ohne gespeicherte Summen oder bei neuen Belegen: centRunden.
+  const postenMit = (r: Rundung): SteuerPosten[] => (positionen || []).map((p: any) => ({
+    netto: zeilenNetto(p, r),
     satz: leseZahlOder(p?.mwst_satz, 0),
   }));
-  const s = steuerGruppen(posten);
+  const { rundung } = rundungWieGespeichert(
+    postenMit,
+    (klein || reverseCharge)
+      ? { netto: rechnung?.netto_summe }
+      : { netto: rechnung?.netto_summe, steuer: rechnung?.mwst_summe, brutto: rechnung?.brutto_summe },
+  );
+  const posten = postenMit(rundung);
+  const s = steuerGruppen(posten, rundung);
 
   // Bei Kleinunternehmer: alles Satz 0, Steuerbefreiungsgrund Pflicht
   const ohneSteuer = klein || reverseCharge;
@@ -312,7 +321,7 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   const lineItems = (positionen || []).map((p: any, i: number) => {
     const menge = leseZahlOder(p?.menge, 0);
     const einzel = leseZahlOder(p?.einzelpreis, 0);
-    const netto = zeilenNetto(p);
+    const netto = zeilenNetto(p, rundung);
     const satz = ohneSteuer ? 0 : leseZahlOder(p?.mwst_satz, 0);
     const cat = taxCat;
     // Einheit: ZUGFeRD nutzt UN/ECE-Codes. "C62" = Stück (Default), "HUR" = Stunde.

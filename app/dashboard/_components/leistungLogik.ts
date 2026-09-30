@@ -62,10 +62,18 @@ export interface PositionBasis {
 const STD_AW_MIN_DEFAULT = 6; // Fallback: 1 AW = 6 Minuten (branchenüblich ~ 5–6)
 
 /** Kaufmännisch auf zwei Nachkommastellen, symmetrisch um die Null. */
-function runde(n: number): number {
+function runde(n: number, stellen = 2): number {
+  // Paket 191: fehlerfreie Cent-Rundung wie lib/zahlen.rundeStellen — als
+  // Kopie, weil diese Datei ohne externe Abhaengigkeiten bleibt.
   if (!Number.isFinite(n)) return 0;
-  const vz = n < 0 ? -1 : 1;
-  return (vz * Math.round((Math.abs(n) + Number.EPSILON) * 100)) / 100;
+  const st = Math.max(0, Math.min(10, Math.floor(stellen)));
+  const schieben = (x: number, k: number): number => {
+    const [m, e] = String(x).split('e');
+    return Number(m + 'e' + ((e ? Number(e) : 0) + k));
+  };
+  const v = schieben(Math.round(schieben(Number(Math.abs(n).toPrecision(15)), st)), -st);
+  if (v === 0) return 0;
+  return n < 0 ? -v : v;
 }
 
 /**

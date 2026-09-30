@@ -49,7 +49,7 @@
 // Node-getestet: tests/geldSchichtP27.test.mjs
 // ============================================================================
 
-import { leseZahl, centRunden } from '@/lib/zahlen';
+import { leseZahl, centRunden, rundeStellen } from '@/lib/zahlen';
 
 // ----------------------------------------------------------------------------
 // 1. TYPEN
@@ -147,9 +147,8 @@ export function cent(betrag: number): number {
  * Ebenfalls symmetrisch um Null, aus demselben Grund wie cent().
  */
 export function preisGenau(wert: number): number {
-  if (!Number.isFinite(wert)) return 0;
-  const v = Math.round((Math.abs(wert) + Number.EPSILON) * 1e4) / 1e4;
-  return wert < 0 ? -v : v;
+  // Paket 191: fehlerfreie Rundung aus lib/zahlen.ts (vier Stellen).
+  return rundeStellen(wert, 4);
 }
 
 /**

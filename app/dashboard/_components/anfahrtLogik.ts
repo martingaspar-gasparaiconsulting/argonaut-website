@@ -33,7 +33,7 @@
 // einen Gedankenstrich statt eines Betrages. Ausserdem rundete ein negativer
 // Wert anders als derselbe Betrag positiv. Jetzt leseZahlOder + centRunden.
 // Bei Zahlen aendert sich NICHTS — nur Text wird jetzt gelesen.
-import { leseZahlOder, centRunden } from '@/lib/zahlen';
+import { leseZahlOder, centRunden, rundeStellen } from '@/lib/zahlen';
 
 import type { GeoPunkt, PruefErgebnis } from './empfaengerLogik';
 
@@ -123,7 +123,7 @@ function runde(km: number, art: Rundung): number {
   switch (art) {
     case 'auf': return Math.ceil(km);
     case 'kaufmaennisch': return Math.round(km);
-    case 'keine': return Math.round((km + Number.EPSILON) * 100) / 100;
+    case 'keine': return rundeStellen(km, 2); // Paket 191
   }
 }
 
@@ -163,8 +163,8 @@ export function bereiteDistanzAuf(
   if (konfig.hin_und_rueck) km = km * 2;
 
   return {
-    kmEinfach: Math.round((kmEinfach + Number.EPSILON) * 100) / 100,
-    kmRoh: Math.round((km + Number.EPSILON) * 100) / 100,
+    kmEinfach: rundeStellen(kmEinfach, 2),
+    kmRoh: rundeStellen(km, 2),
     kmAbgerechnet: runde(km, konfig.rundung_km),
     geschaetzt: quelle === 'luftlinie',
     quelle,

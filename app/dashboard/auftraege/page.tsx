@@ -1,5 +1,6 @@
 "use client";
 
+import { centRunden } from "@/lib/zahlen";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
@@ -106,7 +107,7 @@ function geld(n: number | null | undefined, waehrung = "EUR"): string {
   }).format(wert);
 }
 function r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191: fehlerfreie Cent-Rundung
 }
 
 export default function AuftraegeCockpit() {

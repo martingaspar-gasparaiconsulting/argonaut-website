@@ -31,7 +31,7 @@
 // ============================================================================
 
 /** Ab dieser Menge in der Vorstufe gilt eine Quote als belastbar. */
-import { leseZahlOder } from './zahlen';
+import { leseZahlOder, centRunden, rundeStellen } from './zahlen';
 export const BELASTBAR_AB = 10;
 
 /** Nicht-negative Zahl aus Zahl/String (Komma/Punkt), sonst 0. Null ist gueltig. */
@@ -42,10 +42,10 @@ export function zahl(v: unknown): number {
 }
 
 function runde1(n: number): number {
-  return Math.round((n + Number.EPSILON) * 10) / 10;
+  return rundeStellen(n, 1); // Paket 191
 }
 function runde2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191
 }
 
 /** Eine Wochenzeile, wie sie in public.vertrieb_woche steht. */

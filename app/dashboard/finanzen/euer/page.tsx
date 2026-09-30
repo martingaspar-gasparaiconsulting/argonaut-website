@@ -6,7 +6,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import FinanzTabs from "../_components/FinanzTabs";
 import UstErsatzSatz from "../_components/UstErsatzSatz";
 import { summiereZahlungen, type ErsatzSatz } from "@/lib/zahlungAufteilung";
-import { zahlText } from '@/lib/zahlen';
+import { zahlText, centRunden } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-3 — EÜR-REPORT
@@ -46,7 +46,7 @@ function eur(n: number | null | undefined): string {
   }
 }
 function r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191: fehlerfreie Cent-Rundung
 }
 function iso(d: Date): string {
   const y = d.getFullYear();

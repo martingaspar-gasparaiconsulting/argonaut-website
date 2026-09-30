@@ -9,6 +9,7 @@
 // Pfad: app/dashboard/sepa-einzug/page.tsx
 // ============================================================
 
+import { centRunden } from '@/lib/zahlen';
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { baueSepaXml, ibanGueltig, type SepaLastschrift } from '@/lib/sepa';
@@ -50,7 +51,7 @@ function kontaktName(k: Record<string, unknown>): string {
 
 /** G7: offener Rest einer Rechnung (brutto minus bereits bezahlt), nie negativ. */
 function offenerRest(r: { brutto_summe: number | null; bezahlter_betrag?: number | null }): number {
-  return Math.max(0, Math.round(((Number(r.brutto_summe) || 0) - (Number(r.bezahlter_betrag) || 0)) * 100) / 100);
+  return Math.max(0, centRunden((Number(r.brutto_summe) || 0) - (Number(r.bezahlter_betrag) || 0))); // Paket 191
 }
 
 export default function SepaEinzugPage() {

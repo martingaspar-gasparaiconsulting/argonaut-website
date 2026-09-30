@@ -182,7 +182,9 @@ test('WARUM DER CENT-FEHLER SELTEN ZUSCHLAEGT — und warum er trotzdem weg muss
   // verfehlt wird: 99,995 minus 100 ist in JavaScript nicht -0,005,
   // sondern -0,004999999999995. Dann rundet JEDE Fassung auf -0,00.
   assert.notEqual(99.995 - 100, -0.005);
-  assert.equal(centRunden(99.995 - 100), -0);
+  // Paket 191: ohne Vorzeichen-Null. Die Ausloeschung bei der Subtraktion
+  // bleibt eine Grenze jeder Gleitkomma-Rundung (dokumentiert in lib/zahlen.ts).
+  assert.equal(centRunden(99.995 - 100), 0);
 
   // Kommt der Wert dagegen direkt so aus der Datenbank, schlaegt er zu.
   assert.equal(centRunden(-0.005), -0.01);

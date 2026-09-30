@@ -25,7 +25,7 @@ import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import AngebotSprache from '../_components/AngebotSprache';
 import { fehlendePreise, type FormPos } from '@/lib/angebotSprache';
-import { leseZahlOder } from '@/lib/zahlen';
+import { leseZahlOder, centRunden, inCent, rundeStellen } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -65,10 +65,10 @@ const LEER_POS: Pos = { bezeichnung: '', menge: '1', einheit: 'Stk', einzelpreis
 function rechne(pos: Pos[]) {
   let nettoC = 0; const perSatz: Record<number, number> = {};
   for (const p of pos) {
-    const c = Math.round(num(p.menge) * num(p.einzelpreis) * 100);
+    const c = inCent(num(p.menge) * num(p.einzelpreis)); // Paket 191
     nettoC += c; const s = num(p.mwst_satz); perSatz[s] = (perSatz[s] || 0) + c;
   }
-  let mwstC = 0; for (const s of Object.keys(perSatz)) mwstC += Math.round(perSatz[Number(s)] * Number(s) / 100);
+  let mwstC = 0; for (const s of Object.keys(perSatz)) mwstC += rundeStellen(perSatz[Number(s)] * Number(s) / 100, 0);
   return { netto: nettoC / 100, mwst: mwstC / 100, brutto: (nettoC + mwstC) / 100 };
 }
 
@@ -164,7 +164,7 @@ export default function AngebotePage() {
       const posRows = posClean.map((p, i) => ({
         owner_user_id: besitzer ?? uid, angebot_id: ang.id, position: i + 1,
         bezeichnung: p.bezeichnung.trim() || '(ohne Bezeichnung)', menge: num(p.menge), einheit: p.einheit.trim() || 'Stk',
-        einzelpreis: num(p.einzelpreis), mwst_satz: num(p.mwst_satz), gesamt_netto: Math.round(num(p.menge) * num(p.einzelpreis) * 100) / 100,
+        einzelpreis: num(p.einzelpreis), mwst_satz: num(p.mwst_satz), gesamt_netto: centRunden(num(p.menge) * num(p.einzelpreis)),
       }));
       const { error: pErr } = await supabase.from('angebot_positionen').insert(posRows);
       if (pErr) { await supabase.from('angebote').delete().eq('id', ang.id); setFehler('Positionen konnten nicht gespeichert werden.'); return; }

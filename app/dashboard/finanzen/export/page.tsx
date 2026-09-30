@@ -1,5 +1,6 @@
 "use client";
 
+import { centRunden } from '@/lib/zahlen';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
@@ -88,7 +89,7 @@ function geldCsv(n: number): string {
 // und Geschaeftspartner gingen ungefiltert in eine Datei, die der Steuerberater
 // in Excel oeffnet. Jetzt aus lib/csvSchreiben, wie alle anderen Exporte auch.
 function r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191: fehlerfreie Cent-Rundung
 }
 
 export default function ExportSeite() {

@@ -17,7 +17,7 @@ import {
 import FinanzTabs from "../_components/FinanzTabs";
 import UstErsatzSatz from "../_components/UstErsatzSatz";
 import { teileZahlung, summiereZahlungen } from "@/lib/zahlungAufteilung";
-import { zahlText } from '@/lib/zahlen';
+import { zahlText, centRunden } from '@/lib/zahlen';
 
 // ============================================================
 // ARGONAUT OS · BLOCK D (Finanzen) · D-4 — BWA-REPORT
@@ -59,7 +59,7 @@ function eur(n: number | null | undefined): string {
   }
 }
 function r2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191: fehlerfreie Cent-Rundung
 }
 // Jahr/Monat direkt aus dem ISO-Datum (ohne Zeitzonen-Verschiebung)
 function jahrMonat(d: string): { jahr: number; monat: number } | null {

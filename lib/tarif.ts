@@ -14,9 +14,11 @@
 // Wer also einen Preis aendert, aendert ZWEI Stellen. Der Test erinnert daran.
 //
 // Preisstand: 26.07.2026 (von Martin freigegeben). Alle Beträge NETTO, zzgl.
-// 19 % MwSt. Keine Imports, keine Hooks — von Client- UND Server-Code nutzbar.
+// 19 % MwSt. Einziger Import: lib/zahlen (selbst ohne Imports, Paket 191),
+// keine Hooks — von Client- UND Server-Code nutzbar.
 // ============================================================================
 
+import { centRunden } from './zahlen';
 export type StufeKey = 'solo' | 'mini' | 'klein' | 'mittel' | 'gross' | 'enterprise';
 export type SitzTyp = 'voll' | 'standard' | 'self_service';
 
@@ -86,7 +88,7 @@ export const LAUFZEIT_STANDARD: LaufzeitMonate = 12;
 
 /** Kaufmaennisch auf 2 Nachkommastellen runden. */
 function rund(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191: fehlerfreie Cent-Rundung
 }
 
 /**

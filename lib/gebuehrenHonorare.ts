@@ -25,7 +25,7 @@
 // Datum IMMER als 'YYYY-MM-DD'-Text; Uhrzeit als 'HH:MM'.
 // ============================================================================
 
-import { leseZahl } from './zahlen';
+import { leseZahl, inCent, rundeStellen } from './zahlen';
 import { feiertageImJahr } from './feiertage';
 
 // ---------------------------------------------------------------------------
@@ -33,7 +33,10 @@ import { feiertageImJahr } from './feiertage';
 // ---------------------------------------------------------------------------
 function zwei(n: number): string { return String(n).padStart(2, '0'); }
 
-export function cent(euro: number): number { return Math.round((euro + (euro >= 0 ? 1 : -1) * Number.EPSILON) * 100); }
+/** Euro -> ganze Cent. Paket 191: fehlerfrei (4,395 € = 440 Cent). § 2 Abs. 2 RVG: 0,5 Cent wird aufgerundet. */
+export function cent(euro: number): number { return inCent(euro); }
+/** Auf ganze Cent runden (Werte schon in Cent), halber Cent weg von der Null — ohne Gleitkomma-Fehler. */
+function ganz(c: number): number { return rundeStellen(c, 0); }
 export function euro(c: number): number { return c / 100; }
 export function euroText(betrag: number | null | undefined): string {
   if (betrag == null || !Number.isFinite(betrag)) return '—';
@@ -201,7 +204,7 @@ export function rvgBerechnung(e: RvgEingabe): RvgErgebnis {
     let satz = s;
     let zusatz = '';
     if (erhoehung > 0 && ERHOEHBAR.has(p.nr)) { satz = satzRunden(s + erhoehung); zusatz = ` (erhöht um ${String(erhoehung).replace('.', ',')} nach Nr. 1008, ${ag} Auftraggeber)`; erhoeht = true; }
-    const betrag = Math.max(RVG_MINDEST_CENT, Math.round(voll * satz));
+    const betrag = Math.max(RVG_MINDEST_CENT, ganz(voll * satz));
     const liste = gruppen.get(vorlage.angelegenheit) ?? [];
     liste.push({ nr: p.nr, label: (p.label || vorlage.label) + zusatz, satz, betragCent: betrag });
     gruppen.set(vorlage.angelegenheit, liste);
@@ -213,7 +216,7 @@ export function rvgBerechnung(e: RvgEingabe): RvgErgebnis {
     const verf = gruppen.get('instanz1')?.find((z) => z.nr === '3100');
     if (gesch && verf) {
       const anrSatz = Math.min(0.75, satzRunden(gesch.satz / 2));
-      const abzug = Math.min(verf.betragCent, Math.round(voll * anrSatz));
+      const abzug = Math.min(verf.betragCent, ganz(voll * anrSatz));
       gruppen.get('instanz1')!.push({ nr: 'Vorbem. 3 Abs. 4', label: `Anrechnung der Geschäftsgebühr (${String(anrSatz).replace('.', ',')})`, satz: -anrSatz, betragCent: -abzug });
     } else {
       hinweise.push('Anrechnung gewählt, aber nicht beide Gebühren (2300 und 3100) vorhanden — keine Anrechnung.');
@@ -227,13 +230,13 @@ export function rvgBerechnung(e: RvgEingabe): RvgErgebnis {
     zeilen.push(...g);
     if (e.auslagenpauschale !== false) {
       const summe = g.reduce((s, z) => s + z.betragCent, 0);
-      const pausch = Math.min(2_000, Math.round(summe * 0.2));
+      const pausch = Math.min(2_000, ganz(summe * 0.2));
       if (pausch > 0) zeilen.push({ nr: '7002', label: `Pauschale Post/Telekommunikation — ${RVG_ANGELEGENHEITEN[key]}`, satz: 0, betragCent: pausch });
     }
   }
   const netto = zeilen.reduce((s, z) => s + z.betragCent, 0);
   const ust = zahl(e.ustSatz ?? 19) ?? 19;
-  const ustCent = ust > 0 ? Math.round(netto * ust / 100) : 0;
+  const ustCent = ust > 0 ? ganz(netto * ust / 100) : 0;
   if (ust > 0) zeilen.push({ nr: '7008', label: `Umsatzsteuer ${String(ust).replace('.', ',')} %`, satz: 0, betragCent: ustCent });
   hinweise.push(`Tabelle Anlage 2 RVG, Stand ${RVG_STAND}. Rechenhilfe — keine Rechnung. Honorarvereinbarungen gehen vor.`);
   return { ok: true, fehler: null, vollGebuehrCent: voll, zeilen, nettoCent: netto, ustCent, bruttoCent: netto + ustCent, hinweise };
@@ -292,10 +295,10 @@ export function stbvvBerechnung(e: StbvvEingabe): StbvvErgebnis {
   const gew = e.zehntel === undefined || e.zehntel === '' ? mittel : zahl(e.zehntel);
   if (gew == null || gew < von || gew > bis) return leer(`Gewählte Zehntel müssen zwischen ${String(von).replace('.', ',')} und ${String(bis).replace('.', ',')} liegen.`);
   if (gew > mittel) hinweise.push('Über der Mittelgebühr: Umfang, Schwierigkeit oder Bedeutung festhalten (§ 11 StBVV).');
-  const gebuehr = Math.round(voll * gew / 10);
-  const pausch = e.auslagenpauschale === false ? 0 : Math.min(2_000, Math.round(gebuehr * 0.2));
+  const gebuehr = ganz(voll * gew / 10);
+  const pausch = e.auslagenpauschale === false ? 0 : Math.min(2_000, ganz(gebuehr * 0.2));
   const ust = zahl(e.ustSatz ?? 19) ?? 19;
-  const ustCent = Math.round((gebuehr + pausch) * ust / 100);
+  const ustCent = ganz((gebuehr + pausch) * ust / 100);
   hinweise.push('StBVV Tabelle A. Rechenhilfe — keine Rechnung. Pauschale nach § 16 StBVV (20 %, höchstens 20 €).');
   return { ok: true, fehler: null, wert, vollCent: voll, mittel, zehntel: gew, gebuehrCent: gebuehr, pauschaleCent: pausch, ustCent, bruttoCent: gebuehr + pausch + ustCent, hinweise };
 }
@@ -364,17 +367,17 @@ export function gotBerechnung(e: GotEingabe): GotErgebnis {
       return leer(`${p.bezeichnung}: Faktor ${String(f).replace('.', ',')} liegt außerhalb ${min}- bis ${max}-fach. Nur mit vorheriger Vereinbarung in Textform (§ 5 GOT).`);
     }
     if (f < min || f > max) warnungen.push(`${p.bezeichnung}: Faktor ${String(f).replace('.', ',')} außerhalb des Rahmens — Vereinbarung in Textform zur Akte.`);
-    zeilen.push({ nr: p.nr?.trim() || '', bezeichnung: p.bezeichnung.trim(), einfachCent: cent(einf), faktor: f, anzahl: n, betragCent: Math.round(cent(einf) * f) * n });
+    zeilen.push({ nr: p.nr?.trim() || '', bezeichnung: p.bezeichnung.trim(), einfachCent: cent(einf), faktor: f, anzahl: n, betragCent: ganz(cent(einf) * f) * n });
   }
   if (e.notdienst) zeilen.push({ nr: '§ 4', bezeichnung: 'Notdienstgebühr', einfachCent: GOT_NOTDIENST_GEBUEHR_CENT, faktor: 1, anzahl: 1, betragCent: GOT_NOTDIENST_GEBUEHR_CENT });
   const km = zahl(e.doppelKm);
   if (km != null && km > 0) {
-    const weg = Math.max(GOT_WEGEGELD_MINDEST_CENT, Math.round(km * GOT_WEGEGELD_JE_DOPPELKM_CENT));
+    const weg = Math.max(GOT_WEGEGELD_MINDEST_CENT, ganz(km * GOT_WEGEGELD_JE_DOPPELKM_CENT));
     zeilen.push({ nr: '§ 10', bezeichnung: `Wegegeld (${String(km).replace('.', ',')} Doppel-km)`, einfachCent: GOT_WEGEGELD_JE_DOPPELKM_CENT, faktor: 1, anzahl: 1, betragCent: weg });
   }
   const netto = zeilen.reduce((s, z) => s + z.betragCent, 0);
   const ust = zahl(e.ustSatz ?? 19) ?? 19;
-  const ustCent = Math.round(netto * ust / 100);
+  const ustCent = ganz(netto * ust / 100);
   return { ok: true, fehler: null, zeilen, nettoCent: netto, ustCent, bruttoCent: netto + ustCent, warnungen };
 }
 
@@ -404,12 +407,12 @@ export function dozentenHonorar(e: HonorarEingabe): HonorarErgebnis {
   const km = zahl(e.fahrtKm) ?? 0; const kmSatz = zahl(e.kmSatz) ?? 0.30;
   const aus = zahl(e.auslagen) ?? 0;
   if (km < 0 || aus < 0 || kmSatz < 0) return leer('Fahrt und Auslagen dürfen nicht negativ sein.');
-  const honorar = Math.round(ue * cent(satz));
-  const fahrt = Math.round(km * cent(kmSatz));
+  const honorar = ganz(ue * cent(satz));
+  const fahrt = ganz(km * cent(kmSatz));
   const auslagen = cent(aus);
   const netto = honorar + fahrt + auslagen;
   const ust = zahl(e.ustSatz ?? 0) ?? 0;
-  const ustCent = Math.round(netto * ust / 100);
+  const ustCent = ganz(netto * ust / 100);
   return { ok: true, fehler: null, honorarCent: honorar, fahrtCent: fahrt, auslagenCent: auslagen, nettoCent: netto, ustCent, bruttoCent: netto + ustCent };
 }
 

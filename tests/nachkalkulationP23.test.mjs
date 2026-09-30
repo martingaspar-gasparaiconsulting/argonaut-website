@@ -77,7 +77,10 @@ test('Die Marge wird auch negativ sauber ausgewiesen', () => {
   assert.equal(k.marge, -20);
 });
 
-test('GRENZE von centRunden, hier festgehalten statt uebersehen', () => {
+test('GRENZE von centRunden — seit Paket 191 behoben', () => {
+  // Paket 191 (30.09.2026): centRunden glaettet auf 15 gueltige Stellen und
+  // rundet -2.3449999999999998 jetzt richtig auf -2,35.
+  //
   // -23,45 / 1.000 x 100 ergibt in Gleitkomma NICHT -2,345, sondern
   // -2.3449999999999998. centRunden hebt mit Number.EPSILON genau EINE
   // Einheit an; dieser Wert liegt eine weitere darunter und kippt deshalb
@@ -91,7 +94,7 @@ test('GRENZE von centRunden, hier festgehalten statt uebersehen', () => {
     [{ projekt_id: '1', betrag: 1023.45 }],
   )[0];
   assert.equal(k.deckungsbeitrag, -23.45, 'der BETRAG stimmt auf den Cent');
-  assert.equal(k.marge, -2.34, 'die PROZENTZAHL kippt an der Grenze — bekannt und festgehalten');
+  assert.equal(k.marge, -2.35, 'die PROZENTZAHL rundet seit Paket 191 richtig (vorher -2,34)');
 });
 
 // ── 3) Die Ampel bleibt, wie sie ist ───────────────────────────────────────

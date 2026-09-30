@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { betreiberGuard } from '../../../../lib/betreiberGuard'
 import { baueSepaXml, type SepaLastschrift, type SepaSeq } from '../../../../lib/sepa'
 import { MWST } from '../../../../lib/tarif'
+import { centRunden } from '../../../../lib/zahlen'
 
 // ============================================================================
 // ARGONAUT OS · app/api/admin/abo-einzug/route.ts  (Teil 2b · Betreiber-Einzug)
@@ -37,7 +38,7 @@ async function adminGuard(): Promise<NextResponse | null> {
 }
 
 function brutto(netto: number): number {
-  return Math.round(netto * (1 + MWST) * 100) / 100
+  return centRunden(netto * (1 + MWST)) // Paket 191
 }
 function heute(): string { return new Date().toISOString().slice(0, 10) }
 function plusTage(iso: string, t: number): string { const d = new Date(iso); d.setDate(d.getDate() + t); return d.toISOString().slice(0, 10) }
@@ -150,7 +151,7 @@ export async function POST(req: Request) {
       xml,
       dateiname: `ARGONAUT-SEPA-Einzug-${monat}.xml`,
       anzahl: posten.length,
-      summe: Math.round(summe * 100) / 100,
+      summe: centRunden(summe),
       ausfuehrung,
     })
   }

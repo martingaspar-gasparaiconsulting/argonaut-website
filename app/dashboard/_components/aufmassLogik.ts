@@ -27,6 +27,7 @@
 
 import { steuerGruppen, cent, satzText, type SteuerGruppe, type SteuerPosten } from './steuerLogik';
 import { nachMinuten, minutenZuStunden, istMengenLeistung, type KatalogEintrag } from './leistungLogik';
+import { rundeStellen } from '@/lib/zahlen';
 
 // --- Einheiten (Vorschlagsliste, KEINE Beschränkung) -------------------------
 // Die Spalte `aufmass_positionen.einheit` ist freier Text ohne CHECK. Diese Liste
@@ -194,9 +195,8 @@ export function rechneMenge(eingabe: string | null | undefined): MengeErgebnis {
 }
 
 function runde3(n: number): number {
-  if (!Number.isFinite(n)) return 0;
-  const vz = n < 0 ? -1 : 1;
-  return (vz * Math.round((Math.abs(n) + Number.EPSILON) * 1000)) / 1000;
+  // Paket 191: fehlerfreie Rundung aus lib/zahlen.ts.
+  return rundeStellen(n, 3);
 }
 
 // --- Betrag je Position -----------------------------------------------------

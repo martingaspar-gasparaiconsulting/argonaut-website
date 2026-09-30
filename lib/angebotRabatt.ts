@@ -14,7 +14,7 @@
 // "7.5" Prozent Rabatt wurden 75 Prozent. Jetzt liest lib/zahlen.ts, und das
 // Runden ist symmetrisch um Null (Gutschriften).
 
-import { leseZahlOder, centRunden } from './zahlen';
+import { leseZahlOder, centRunden, inCent, rundeStellen } from './zahlen';
 
 /** Ab welchem Gesamtrabatt (%) ein Angebot eine Freigabe braucht. */
 export const RABATT_FREIGABE_AB = 20;
@@ -85,8 +85,9 @@ export function rechneAngebot(
     const posR = positionsRabatt(z(p.rabatt), staffelRabatt(menge, staffeln));
     const eff = effektiverRabatt(posR, g);
 
-    const origC = Math.round(menge * einzel * 100);
-    const netC = Math.round(menge * einzel * (1 - eff / 100) * 100);
+    // Paket 191: ganze Cent ohne Gleitkomma-Fehler (0,5 × 8,79 = 4,40 €, nicht 4,39 €)
+    const origC = inCent(menge * einzel);
+    const netC = inCent(menge * einzel * (1 - eff / 100));
     zwischenC += origC;
     nettoC += netC;
     perSatz[satz] = (perSatz[satz] || 0) + netC;
@@ -94,7 +95,7 @@ export function rechneAngebot(
   }
 
   let mwstC = 0;
-  for (const s of Object.keys(perSatz)) mwstC += Math.round(perSatz[Number(s)] * Number(s) / 100);
+  for (const s of Object.keys(perSatz)) mwstC += rundeStellen(perSatz[Number(s)] * Number(s) / 100, 0);
 
   return {
     netto: nettoC / 100,
@@ -115,7 +116,7 @@ export function effektiverRabattPosition(pos: RabattPos, gesamtProzent: number, 
 
 /** Netto einer Position nach (bereits effektivem) Rabatt — identische Rundung wie rechneAngebot. */
 export function positionsNetto(menge: number | string, einzelpreis: number | string, effektivProzent: number): number {
-  return Math.round(z(menge) * z(einzelpreis) * (1 - clampP(effektivProzent) / 100) * 100) / 100;
+  return inCent(z(menge) * z(einzelpreis) * (1 - clampP(effektivProzent) / 100)) / 100;
 }
 
 /** Braucht dieses Angebot eine Freigabe? */

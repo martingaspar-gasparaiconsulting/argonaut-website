@@ -15,7 +15,7 @@
 //   · Ads-Effizienz (Ausgaben/Umsatz/ROAS/CPL — eine €-Achse, kein Dual-Axis)
 // ============================================================================
 
-import { leseZahlOder } from './zahlen';
+import { leseZahlOder, centRunden } from './zahlen';
 export type LeadRoh = {
   status?: unknown;
   quelle?: unknown;
@@ -44,7 +44,7 @@ function zeitMs(v: unknown): number {
 }
 
 function runde2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191
 }
 
 // --- Lead-Status: Phasen in sinnvoller Trichter-Reihenfolge -----------------

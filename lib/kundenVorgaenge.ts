@@ -15,7 +15,7 @@
 // Rechtlich stand 25.09.2026 recherchiert — Anwalt-Checkliste R23.
 // ============================================================================
 
-import { leseZahl } from './zahlen';
+import { leseZahl, centRunden } from './zahlen';
 import { istFeiertag } from './feiertage';
 
 // ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ export function fristEndeWerktag(iso: string, bundesland?: string | null): strin
   return d;
 }
 
-export function cent(n: number): number { return Math.round(n * 100) / 100; }
+export function cent(n: number): number { return centRunden(n); } // Paket 191
 
 function betrag(x: unknown): number | null {
   const n = leseZahl(x);
@@ -538,7 +538,7 @@ export function stundenInServicezeit(vonIso: string, bisIso: string, zeit: Servi
     const s = Math.max(a, fStart), e = Math.min(b, fEnde);
     if (e > s) summe += (e - s) / 3_600_000;
   }
-  return Math.round(summe * 100) / 100;
+  return centRunden(summe);
 }
 
 export type TicketLite = { id: string; ticket_nummer?: string | null; betreff?: string | null; status: string; prioritaet: string; kunde_name?: string | null; created_at: string; geloest_am?: string | null };
@@ -602,8 +602,8 @@ export function ticketSla(t: TicketLite, verlauf: VerlaufLite[], vertrag: SlaVer
   if (o.warteAbziehen !== false) {
     for (const p of wartePhasen(t, verlauf, bis)) warten += stundenInServicezeit(p.von, p.bis, zeit, o.bundesland);
   }
-  warten = Math.round(warten * 100) / 100;
-  const netto = Math.max(0, Math.round((brutto - warten) * 100) / 100);
+  warten = centRunden(warten);
+  const netto = Math.max(0, centRunden(brutto - warten));
   const vZiel = vertrag?.wiederherstell_std != null && Number(vertrag.wiederherstell_std) > 0 ? Number(vertrag.wiederherstell_std) : null;
   const loesungZiel = vZiel ?? SLA_STANDARD_STUNDEN[t.prioritaet] ?? SLA_STANDARD_STUNDEN.mittel;
   const rZiel = vertrag?.reaktion_std != null && Number(vertrag.reaktion_std) > 0 ? Number(vertrag.reaktion_std) : null;

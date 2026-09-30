@@ -1,4 +1,4 @@
-import { leseZahl } from './zahlen';
+import { leseZahl, centRunden } from './zahlen';
 // ============================================================================
 // ARGONAUT OS · lib/terminWert.ts — Was darf eine Anfrage kosten?
 // (Marketing · Termin-Wert-Rechner)
@@ -33,7 +33,7 @@ export function zahl(v: unknown): number {
 }
 
 function runde2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
+  return centRunden(n); // Paket 191: fehlerfreie Cent-Rundung
 }
 
 /**

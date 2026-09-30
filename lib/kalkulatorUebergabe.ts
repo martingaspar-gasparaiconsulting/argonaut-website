@@ -19,6 +19,7 @@
 // Keine Imports, keine Hooks — node-testbar.
 // ============================================================================
 
+import { centRunden, inCent, rundeStellen } from './zahlen';
 export type AngebotsPosition = {
   bezeichnung: string;
   menge: number;
@@ -32,7 +33,7 @@ export type Summen = { netto: number; mwst: number; brutto: number };
 
 /** Netto einer einzelnen Position — kaufmaennisch auf Cent. */
 export function positionsNetto(menge: number, einzelpreis: number): number {
-  return Math.round((Number(menge) || 0) * (Number(einzelpreis) || 0) * 100) / 100;
+  return centRunden((Number(menge) || 0) * (Number(einzelpreis) || 0)); // Paket 191
 }
 
 /**
@@ -46,7 +47,7 @@ export function angebotsSummen(positionen: Array<{ menge: number; einzelpreis: n
   const jeSatz: Record<number, number> = {};
 
   for (const p of positionen) {
-    const c = Math.round((Number(p.menge) || 0) * (Number(p.einzelpreis) || 0) * 100);
+    const c = inCent((Number(p.menge) || 0) * (Number(p.einzelpreis) || 0)); // Paket 191
     nettoC += c;
     const s = Number(p.mwst_satz) || 0;
     jeSatz[s] = (jeSatz[s] || 0) + c;
@@ -54,7 +55,7 @@ export function angebotsSummen(positionen: Array<{ menge: number; einzelpreis: n
 
   let mwstC = 0;
   for (const s of Object.keys(jeSatz)) {
-    mwstC += Math.round((jeSatz[Number(s)] ?? 0) * Number(s) / 100);
+    mwstC += rundeStellen((jeSatz[Number(s)] ?? 0) * Number(s) / 100, 0);
   }
 
   return { netto: nettoC / 100, mwst: mwstC / 100, brutto: (nettoC + mwstC) / 100 };
@@ -80,7 +81,7 @@ export type UebergabeQuelle = {
  *  Angebot dieselbe Rechnung nachvollziehen kann. */
 export function alsAngebotsposition(q: UebergabeQuelle): AngebotsPosition {
   const menge = Math.max(0, Number(q.menge) || 0);
-  const preis = Math.round((Number(q.preisJeEinheit) || 0) * 100) / 100;
+  const preis = centRunden(Number(q.preisJeEinheit) || 0);
   const bezeichnung = String(q.name || 'Leistung').trim() || 'Leistung';
   return {
     bezeichnung: q.hinweis ? `${bezeichnung} — ${q.hinweis}` : bezeichnung,
@@ -128,7 +129,7 @@ export function kuerzelAus(bezeichnung: string): string {
  */
 export function alsKatalogEintrag(q: UebergabeQuelle & { kategorie?: string }): KatalogEintrag {
   const einheit = String(q.einheit || 'Stk').trim() || 'Stk';
-  const preis = Math.round((Number(q.preisJeEinheit) || 0) * 100) / 100;
+  const preis = centRunden(Number(q.preisJeEinheit) || 0);
   const istStunde = ['h', 'std', 'stunde', 'stunden'].includes(einheit.toLowerCase());
   const bezeichnung = String(q.name || 'Leistung').trim() || 'Leistung';
 

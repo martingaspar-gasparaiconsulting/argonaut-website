@@ -444,7 +444,12 @@ test('unter 1 EUR faengt centRunden den Grenzfall ab', () => {
   assert.equal(steuerAus(1.5, 19), 0.29);
 });
 
-test('BEFUND: ueber 1 EUR faengt centRunden ihn NICHT ab', () => {
+test('BEHOBEN in Paket 191 (vorher BEFUND: ueber 1 EUR faengt centRunden ihn NICHT ab)', () => {
+  // Paket 191 (30.09.2026): centRunden rundet jetzt ohne Gleitkomma-Fehler.
+  // Wie unten angekuendigt ist dieser Test bewusst umgefallen und zeigt jetzt
+  // die RICHTIGEN Werte. Alte, gespeicherte Belege gibt rechnung-pdf/zugferd
+  // weiter mit der alten Rundung wieder (steuerLogik.rundungWieGespeichert).
+  //
   // Diese Tests halten fest, was lib/zahlen.ts HEUTE tut — nicht, was
   // richtig waere. centRunden addiert Number.EPSILON (2,22e-16) als
   // ABSOLUTEN Wert. Bei 8,075 ist der Abstand zweier Gleitkommazahlen
@@ -459,9 +464,9 @@ test('BEFUND: ueber 1 EUR faengt centRunden ihn NICHT ab', () => {
   // verschiebt Betraege auf jedem Beleg und gehoert in ein eigenes Paket
   // mit Ansage. Faellt einer dieser Tests eines Tages um, ist das der
   // Beweis, dass jemand die Rundung angefasst hat — dann bewusst.
-  assert.equal(steuerAus(42.5, 19), 8.07);   // 8,075 -> richtig waere 8,08
-  assert.equal(steuerAus(97.5, 19), 18.52);  // 18,525 -> richtig waere 18,53
-  assert.equal(steuerAus(182.5, 19), 34.67); // 34,675 -> richtig waere 34,68
+  assert.equal(steuerAus(42.5, 19), 8.08);   // 8,075 (bis Paket 190: 8,07)
+  assert.equal(steuerAus(97.5, 19), 18.53);  // 18,525 (bis Paket 190: 18,52)
+  assert.equal(steuerAus(182.5, 19), 34.68); // 34,675 (bis Paket 190: 34,67)
 });
 
 test('die EINGABE wird vor der Steuer auf Cent gerundet', () => {

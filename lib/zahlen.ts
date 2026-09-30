@@ -193,8 +193,82 @@ export function leseZahlMitTrenner(wert: unknown, dezimal: ',' | '.'): number | 
   return negativ ? -n : n;
 }
 
-/** Auf Cent runden — symmetrisch um Null, damit -0,005 nicht nach oben kippt. */
+// ============================================================================
+// RUNDEN (Paket 191, 30.09.2026) — Cent-Rundung ohne Gleitkomma-Fehler
+//
+// ▄▄▄ WAS VORHER FALSCH WAR ▄▄▄
+// centRunden rechnete Math.round((|n| + Number.EPSILON) * 100) / 100.
+// Number.EPSILON (2,2e-16) ist nur bei Werten um 1 gross genug, um den
+// Binaerfehler auszugleichen. Ab etwa 2 Euro verpufft der Zuschlag:
+//   0,5 Stk × 8,79 € = 4,395  ->  als Gleitkomma 4,39499999…  ->  4,39 statt 4,40
+//   19 % von 42,50 €  = 8,075  ->  8,07499999…                ->  8,07 statt 8,08
+// GEMESSEN (30.09.2026): von allen halben Cent-Betraegen 0,005 … 9.999,995
+// (1 Mio. Faelle) rundete die alte Fassung 65.613 falsch; bei Menge in halben
+// Stueck × Preis (2 Mio. Faelle) 54.905; bei der Umsatzsteuer 19 %/7 % auf
+// halbe Cent (40.000 Faelle) 604 — immer einen Cent zu wenig.
+//
+// ▄▄▄ WIE ES JETZT RECHNET ▄▄▄
+// 1. Den Betrag auf 15 gueltige Stellen glaetten (toPrecision). Das entfernt
+//    das Gleitkomma-Rauschen am Ende (4,3949999999999996 -> 4,395), laesst
+//    aber jeden echten Geldbetrag unberuehrt — 15 Stellen reichen fuer
+//    Cent-Genauigkeit bis 9.999.999.999.999,99 €.
+// 2. Das Komma per Zehnerpotenz im TEXT verschieben ("4.395e2" = 439,5
+//    exakt), erst dann Math.round. So entsteht kein neuer Binaerfehler.
+// 3. Symmetrisch um Null: -4,395 wird -4,40 (Gutschrift rundet wie Rechnung).
+//
+// GRENZE (bleibt, gilt fuer jede Gleitkomma-Rundung): Ausloeschung bei der
+// Subtraktion fast gleicher Zahlen. 99,995 - 100 ergibt -0,004999999999995 —
+// der Fehler steckt dann schon in den gueltigen Stellen und wird 0,00 statt
+// -0,01. Betraege, die als Cent gespeichert sind, trifft das nicht.
+//
+// ▄▄▄ BESTEHENDE BELEGE (GoBD) ▄▄▄
+// Gespeicherte Rechnungen behalten ihre Summen. Wo ein Beleg neu gerendert
+// wird (PDF, ZUGFeRD), prueft steuerLogik.rundungWieGespeichert, ob die
+// gespeicherten Summen mit der alten Rundung entstanden sind, und rechnet
+// dann genau so weiter. Dafuer bleibt centRundenBis191 eingefroren erhalten.
+// ============================================================================
+
+/** Verschiebt das Komma um `stellen` Zehnerstellen — im Text, ohne Binaerfehler. */
+function kommaSchieben(n: number, stellen: number): number {
+  const [mantisse, exponent] = String(n).split('e');
+  return Number(mantisse + 'e' + ((exponent ? Number(exponent) : 0) + stellen));
+}
+
+/**
+ * Kaufmaennisch auf `stellen` Nachkommastellen runden (halbe Stelle weg von
+ * der Null), ohne Gleitkomma-Fehler. Nicht endliche Werte ergeben 0.
+ * Grundlage fuer centRunden und fuer alle Runder mit anderer Stellenzahl
+ * (Menge 3 Stellen, Einzelpreis 4 Stellen, GAEB).
+ */
+export function rundeStellen(n: number, stellen: number): number {
+  if (!Number.isFinite(n)) return 0;
+  const st = Math.max(0, Math.min(10, Math.floor(Number.isFinite(stellen) ? stellen : 0)));
+  const geglaettet = Number(Math.abs(n).toPrecision(15));
+  const v = kommaSchieben(Math.round(kommaSchieben(geglaettet, st)), -st);
+  if (v === 0) return 0; // kein "-0"
+  return n < 0 ? -v : v;
+}
+
+/** Auf Cent runden — symmetrisch um Null, ohne Gleitkomma-Fehler (Paket 191). */
 export function centRunden(n: number): number {
+  return rundeStellen(n, 2);
+}
+
+/**
+ * Betrag in GANZEN Cent (Ganzzahl), fuer Rechnungen in Cent-Schritten:
+ * inCent(4.395) = 440. Ersetzt Math.round(betrag * 100), das bei 4,395
+ * 439 liefert.
+ */
+export function inCent(n: number): number {
+  return Math.round(centRunden(n) * 100);
+}
+
+/**
+ * EINGEFROREN — die Cent-Rundung bis einschliesslich Paket 190.
+ * NUR verwenden, um einen bereits gespeicherten Beleg genau so
+ * wiederzugeben, wie er entstanden ist (GoBD). Fuer alles Neue: centRunden.
+ */
+export function centRundenBis191(n: number): number {
   if (!Number.isFinite(n)) return 0;
   const v = Math.round((Math.abs(n) + Number.EPSILON) * 100) / 100;
   return n < 0 ? -v : v;

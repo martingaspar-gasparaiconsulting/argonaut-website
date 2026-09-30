@@ -56,7 +56,7 @@ import MaterialEntnahme from '../_components/MaterialEntnahme';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
-import { leseZahl, zahlFeld } from '@/lib/zahlen';
+import { leseZahl, zahlFeld, centRunden } from '@/lib/zahlen';
 
 const MODUL = 'werkstatt_auftraege';
 
@@ -691,7 +691,7 @@ export default function WerkstattPage() {
       zugesagt_am: aktAuftrag.zugesagt_am,
       // Grober Brutto-Wert für die Kundeninfo. Die verbindliche Steuer rechnet
       // die Rechnung selbst — je Steuersatz auf die Gruppensumme (steuerLogik).
-      summe_brutto: summe.gesamtBetrag != null ? Math.round(summe.gesamtBetrag * 1.19 * 100) / 100 : null,
+      summe_brutto: summe.gesamtBetrag != null ? centRunden(summe.gesamtBetrag * 1.19) : null,
     });
   }, [aktAuftrag, fahrzeuge, summe.gesamtBetrag]);
 

@@ -58,7 +58,7 @@
 // ausdrücklich zurück, damit die Oberfläche sie benennen kann.
 // ============================================================================
 
-import { centRunden, leseZahl } from './zahlen';
+import { centRunden, leseZahl, rundeStellen } from './zahlen';
 
 export interface GaebPosition {
   /** Ordnungszahl (OZ / RNoPart), z. B. "01.0010". */
@@ -102,11 +102,9 @@ export const PREIS_STELLEN = 2;
  * (nicht auf dem vorzeichenbehafteten Wert) trifft es beide Richtungen gleich.
  */
 export function rundeAuf(n: number, stellen: number): number {
-  if (!Number.isFinite(n)) return 0;
-  const f = Math.pow(10, Math.max(0, Math.floor(stellen)));
-  const v = Math.round((Math.abs(n) + Number.EPSILON) * f) / f;
-  if (v === 0) return 0;           // kein "-0"
-  return n < 0 ? -v : v;
+  // Paket 191: der EPSILON-Zuschlag half nur bei Werten um 1 (2,675 ja,
+  // 4,395 nicht). Jetzt die gemeinsame, fehlerfreie Rundung aus lib/zahlen.ts.
+  return rundeStellen(n, stellen);
 }
 
 /**

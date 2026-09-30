@@ -6,6 +6,7 @@ import { sendeMail, mailLayout } from '@/lib/mail'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { aboRechnungHtml, aboRechnungPdf } from '@/lib/aboRechnungPdf'
 import { istMitarbeiterKennung } from '@/lib/nurGeschaeftsleitung'
+import { centRunden } from '@/lib/zahlen'
 
 // ============================================================================
 // ARGONAUT OS · /api/kunde-abo  (Onboarding C · Schritt 5 · Teil 1)
@@ -159,9 +160,9 @@ export async function POST(req: Request) {
     const admin = createAdminClient()
     const posInvoice = preis.positionen.map((p) => ({ label: p.label, betrag: p.betrag }))
     if (onboarding > 0) posInvoice.push({ label: `Einrichtung / Onboarding ${stufeObj.name} (einmalig)`, betrag: onboarding })
-    const nettoGes = Math.round((preis.netto + onboarding) * 100) / 100
-    const mwstGes = Math.round(nettoGes * MWST * 100) / 100
-    const bruttoGes = Math.round((nettoGes + mwstGes) * 100) / 100
+    const nettoGes = centRunden(preis.netto + onboarding) // Paket 191
+    const mwstGes = centRunden(nettoGes * MWST)
+    const bruttoGes = centRunden(nettoGes + mwstGes)
     const kundenEmail = ((profil?.email as string | undefined) || user.email || '').trim() || null
 
     const { data: rech, error: reErr } = await admin.from('kunden_abo_rechnungen').insert({

@@ -187,8 +187,18 @@ export interface UmrechnungsOptionen {
  */
 export function runde(wert: number, stellen = 3): number {
   if (!Number.isFinite(wert)) return wert;
-  const f = Math.pow(10, stellen);
-  const v = Math.round((Math.abs(wert) + Number.EPSILON) * f) / f;
+  // Paket 191: Der EPSILON-Zuschlag glich den Binaerfehler nur bei Werten um 1
+  // aus (0,5 × 8,79 = 4,395 wurde 4,39). Jetzt wie lib/zahlen.rundeStellen:
+  // auf 15 gueltige Stellen glaetten, Komma im Text verschieben, dann runden.
+  // Bewusst als Kopie — diese Datei bleibt ohne externe Abhaengigkeiten;
+  // tests/centRundungP191 prueft, dass beide gleich rechnen.
+  const st = Math.max(0, Math.min(10, Math.floor(stellen)));
+  const schieben = (n: number, k: number): number => {
+    const [m, e] = String(n).split('e');
+    return Number(m + 'e' + ((e ? Number(e) : 0) + k));
+  };
+  const v = schieben(Math.round(schieben(Number(Math.abs(wert).toPrecision(15)), st)), -st);
+  if (v === 0) return 0;
   return wert < 0 ? -v : v;
 }
 
