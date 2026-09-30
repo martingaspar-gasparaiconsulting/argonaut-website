@@ -7,6 +7,7 @@ import LogoutButton from '../LogoutButton';
 import { BESTELLSTRECKE_LIVE } from '@/lib/flags';
 import BestellstreckeFreischalten from './BestellstreckeFreischalten';
 import CtaModusSchalter from './CtaModusSchalter';
+import MusterbetriebXxl from './MusterbetriebXxl';
 
 // ============================================================================
 // ARGONAUT OS · app/admin/command-center/page.tsx — Betreiber-Cockpit
@@ -193,6 +194,9 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
 
         {/* Control-Room-Umschalter: öffentliche Knöpfe Termin ↔ Bestellen */}
         <CtaModusSchalter initial={ctaModus} />
+
+        {/* Paket 179: Musterbetrieb XXL fuer den Testtag (nur geschaeftliche Ansicht) */}
+        {ansicht === 'geschaeftlich' && <MusterbetriebXxl />}
 
         {/* Bestellstrecke — Freischalt-Kachel (nur solange dunkel) */}
         {!BESTELLSTRECKE_LIVE && <BestellstreckeFreischalten />}
