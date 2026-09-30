@@ -18,7 +18,7 @@ export const STANDARD_AUTOMATION = 'automatisierungen';
 // Zusatzmodule je Website-Kategorie (über den Kern hinaus). Schlüssel = exakt
 // die 19 Kategorie-Namen aus branchen-web KATEGORIE_ORDER.
 export const KATEGORIE_MODULE: Record<string, string[]> = {
-  'Handwerk & Bau': ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle', 'zuschnitt', 'einkauf'],
+  'Handwerk & Bau': ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'kalkulator', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle', 'zuschnitt', 'einkauf'],
   'Industrie & Produktion': ['fertigung', 'bde', 'erp', 'lager-scanner', 'chargen', 'projekte', 'pruefprotokolle', 'zuschnitt', 'einkauf', 'wartung'],
   'Handel & E-Commerce': ['shop', 'kasse', 'erp', 'lager-scanner', 'varianten', 'bewertungen', 'verleih', 'pruefprotokolle', 'tour', 'gutscheine', 'einkauf'],
   'Fahrzeuge & Mobilität': ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp', 'verleih', 'gutachten', 'reservierung', 'erinnerungen', 'einkauf'],

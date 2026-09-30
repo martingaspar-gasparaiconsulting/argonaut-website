@@ -18,6 +18,7 @@
 import { useMemo, useState } from 'react';
 import { websiteKategorien, type WebBranche } from '../../vorschau/_lib/branchen-web';
 import { kategorieModule, kategorieZusatz } from '../../../lib/branchenkatalog';
+import { KERN_MODULE } from '../../../lib/pakete';
 import { ALLE_MODULE } from '../../../lib/rechte';
 
 const CYAN = '#00e5ff';
@@ -128,7 +129,7 @@ export default function AdminBranchen() {
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
               {selZusatz.map((k) => <span key={k} style={{ fontFamily: mono, fontSize: 10.5, color: '#E8EDF4', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 14, padding: '3px 8px' }}>{modLabel(k)}</span>)}
-              <span style={{ fontFamily: mono, fontSize: 10.5, color: `${GOLD}cc` }}>+ 12 Kernbausteine</span>
+              <span style={{ fontFamily: mono, fontSize: 10.5, color: `${GOLD}cc` }}>+ {KERN_MODULE.length} Kernbausteine</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flex: '1 1 230px' }}>
@@ -176,7 +177,7 @@ export default function AdminBranchen() {
                   {/* Modul-Set der Kategorie (einmal) */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '6px 0 14px' }}>
                     <span style={{ fontFamily: mono, fontSize: 10.5, color: `${GOLD}cc`, marginRight: 4 }}>PAKET:</span>
-                    <span style={{ fontFamily: mono, fontSize: 10.5, color: `${GOLD}cc` }}>12 Kern</span>
+                    <span style={{ fontFamily: mono, fontSize: 10.5, color: `${GOLD}cc` }}>{KERN_MODULE.length} Kern</span>
                     {zusatz.map((m) => <span key={m} style={{ fontFamily: mono, fontSize: 10.5, color: '#E8EDF4', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 14, padding: '2px 7px' }}>{modLabel(m)}</span>)}
                   </div>
 

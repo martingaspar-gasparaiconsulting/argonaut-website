@@ -2,7 +2,7 @@
 // ARGONAUT OS · lib/pakete.ts — Paket-Katalog (DEINE Steuer-Datei)
 //
 // Hier definierst DU, was ein Kunde bekommt. Zwei Ebenen:
-//   1. KERN_MODULE  — die "12 Kernbausteine", die JEDER Kunde bekommt.
+//   1. KERN_MODULE  — die Kernbausteine (Grundausstattung), die JEDER Kunde bekommt.
 //   2. BRANCHEN_PAKETE — je Branche die Zusatzmodule obendrauf.
 // Extras (à la carte) klickst du im Freischalter einfach zusätzlich an.
 //
@@ -18,7 +18,7 @@
 // ============================================================================
 
 /**
- * Die 12 Kernbausteine (jeder Kunde). Davon sind 3 Infrastruktur (immer sichtbar,
+ * Die Kernbausteine (jeder Kunde) — seit Paket 194 die komplette Grundausstattung. Davon sind 3 Infrastruktur (immer sichtbar,
  * ohne Schlüssel): Übersicht · Mein Bereich/Zeiterfassung · Einstellungen/Rechte.
  * Die restlichen 9 mit Schlüssel werden beim "Kern setzen" scharfgeschaltet:
  */
@@ -44,6 +44,51 @@ export const KERN_MODULE: string[] = [
   'objekte',      // 🏛 Objekt-/Asset-Register (universelles Objekt-Register)
   'aufwand',      // ⏱ Aufwand-Cockpit (offener Aufwand über Projekte + Objekte)
   'import',       // 📥 Import-Center (Sammelstelle für alle CSV-Importe)
+  // --- Paket 194 (30.09.2026): Grundausstattung für JEDEN Betrieb ---------
+  // Martin 30.09.: „Wirklich alles, was ein Betrieb braucht — vom
+  // Ein-Mann-Betrieb bis 200 Mitarbeiter." Kein Modul hat einen Aufpreis; ein
+  // Modul, das nur hinter einem Betreiber-Schalter liegt, wirkt für den Kunden
+  // wie ein fehlendes. Deshalb gehört alles Branchen-Neutrale in den Kern.
+  // Branchen-Pakete zeigen nur noch, was WIRKLICH branchenspezifisch ist.
+  // Kunden & Vertrieb
+  'leads',          // 🎯 Anfragen
+  'kundenakte',     // 🧭 Kunden-Akte
+  'online-buchung', // 🌐 Online-Buchung
+  'erinnerungen',   // 🔔 Erinnerungen / Wiedervorlagen
+  'korrespondenz',  // ✉️ Korrespondenz
+  'vertraege',      // 📑 Verträge
+  // Einsatz & Projekte
+  'einsaetze',      // 🗺 Dispo-Board (Einsatzplanung)
+  'projekte',       // 📁 Projekte
+  'service',        // 🎫 Service & Tickets
+  // Lager & Einkauf (ERP)
+  'erp',            // 📦 ERP / Lager / Inventar / Fuhrpark
+  'einkauf',        // 📥 Einkauf
+  'lager-scanner',  // 📷 Lager-Scanner
+  // Geld & Steuer
+  'mahnwesen',      // ⚠️ Mahnwesen
+  'zahlungen',      // 💸 Zahlungen
+  'datev',          // 📊 DATEV & E-Rechnung
+  'euer',           // 📗 EÜR
+  'anlagen',        // 🏗️ Anlagen & AfA
+  'reisekosten',    // 🧳 Reisekosten
+  'controlling',    // 📈 Controlling / Nachkalkulation
+  // Team
+  'personal',       // 👥 Personal
+  'schichtplan',    // 🗓 Schichtplan
+  'zeit-nachweis',  // 🕐 Arbeitszeit-Nachweis
+  'team-chat',      // 🗨️ Team-Chat
+  'signaturen',     // ✍️ Signaturen
+  'academy',        // 🎓 Academy
+  // Sichtbarkeit
+  'marketing',      // 📣 Marketing & Newsletter
+  'bewertungen',    // ⭐ Bewertungen
+  // Recht & Überblick
+  'nachweise',      // 🗂 Nachweise & Fristen
+  'compliance',     // ⚖️ Compliance
+  'dsgvo',          // 🛡️ DSGVO-Center
+  'analytics',      // 📊 Analytics
+  'aktivitaet',     // 🕒 Aktivität
 ];
 
 export type BranchenPaket = {
@@ -56,7 +101,7 @@ export type BranchenPaket = {
 
 // --- Die Branchen-Pakete. Frei anpassbar — hier bestimmst du das Angebot. ---
 export const BRANCHEN_PAKETE: BranchenPaket[] = [
-  { key: 'handwerk', name: 'Handwerk / Bau', icon: '🏗', module: ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle', 'zuschnitt', 'einkauf'] },
+  { key: 'handwerk', name: 'Handwerk / Bau', icon: '🏗', module: ['bau-lv', 'aufmass', 'bautagebuch', 'objektzeiten', 'leistungskatalog', 'kalkulator', 'projekte', 'wartung', 'service', 'erp', 'verleih', 'pruefprotokolle', 'zuschnitt', 'einkauf'] },
   { key: 'kfz', name: 'KFZ-Betrieb', icon: '🚗', module: ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp', 'verleih', 'gutachten', 'reservierung', 'erinnerungen'] },
   { key: 'gastro', name: 'Gastro & Hotel', icon: '🍽', module: ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'etiketten', 'housekeeping', 'belegung', 'reservierung', 'gutscheine', 'erinnerungen', 'einkauf'] },
   { key: 'handel', name: 'Handel / Shop', icon: '🛒', module: ['shop', 'kasse', 'erp', 'lager-scanner', 'varianten', 'bewertungen', 'verleih', 'pruefprotokolle', 'tour', 'gutscheine', 'einkauf'] },
