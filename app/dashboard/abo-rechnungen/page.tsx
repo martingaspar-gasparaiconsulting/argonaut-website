@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
+import { anlegenFuerBetrieb, betriebsKennung, istZugriffsFehler } from '@/lib/betriebBesitzer';
 import Leerzustand from '../_components/Leerzustand';
 import { leseZahlOder } from '@/lib/zahlen';
 
@@ -42,6 +42,8 @@ function kontaktName(k: Record<string, unknown>): string {
   return s(k.anzeigename) || [s(k.vorname), s(k.nachname)].filter(Boolean).join(' ') || s(k.name) || s(k.firmenname) || s(k.firma) || s(k.email) || 'Kontakt';
 }
 const LEER_POS: PosRow = { bezeichnung: '', menge: '1', einheit: 'Pauschal', einzelpreis: '', mwst_satz: '19' };
+
+const OHNE_ABRECHNEN = 'Wiederkehrende Rechnungen anlegen und ändern darf nur, wer „Darf abrechnen“ hat – bitte die Geschäftsleitung fragen.';
 
 export default function AboRechnungenPage() {
   const [uid, setUid] = useState<string | null>(null);
@@ -143,6 +145,8 @@ export default function AboRechnungenPage() {
       }
       setOk(editId ? 'Vorlage aktualisiert.' : 'Vorlage angelegt.'); reset(); await laden_();
     } catch (e: unknown) {
+      // 185a: Abo-Rechnungen schreiben nur Geschaeftsleitung und Mitarbeiter mit „Darf abrechnen"
+      if (istZugriffsFehler(e as { message?: string; code?: string })) { setFehler(OHNE_ABRECHNEN); return; }
       setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setBusy(false); }
   }
