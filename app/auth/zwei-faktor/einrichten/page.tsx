@@ -14,6 +14,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase';
 import { codeFormat, sichererWeiter, PRUEF_PFAD } from '@/lib/zweiFaktor';
+import { datumDe } from '@/lib/zweiFaktorPflicht';
 import * as S from '../_teile/stil';
 
 type Stand = 'laedt' | 'aus' | 'qr' | 'codes' | 'an';
@@ -33,6 +34,8 @@ export default function ZweiFaktorEinrichten() {
   const [meldung, setMeldung] = useState<string | null>(null);
   // Stufe 2: bei Pflicht kein „Später" und kein „Entfernen" (durchgesetzt wird im Pfoertner).
   const [pflicht, setPflicht] = useState(false);
+  // Paket 190: Pflicht-Tag des Betriebs (auch während der Übergangsfrist).
+  const [pflichtAb, setPflichtAb] = useState<string | null>(null);
 
   const laden = useCallback(async () => {
     const supabase = createClient();
@@ -46,8 +49,9 @@ export default function ZweiFaktorEinrichten() {
     setStand(aktiv ? 'an' : 'aus');
     try {
       const r = await fetch('/api/zwei-faktor/stand');
-      const j = await r.json() as { pflicht?: boolean };
+      const j = await r.json() as { pflicht?: boolean; pflichtAb?: string | null };
       setPflicht(j.pflicht === true);
+      setPflichtAb(j.pflichtAb ?? null);
     } catch { /* ohne Angabe: Knöpfe wie bisher */ }
   }, []);
 
@@ -124,7 +128,10 @@ export default function ZweiFaktorEinrichten() {
           <button type="button" onClick={starten} disabled={busy} style={{ ...S.knopf, opacity: busy ? 0.6 : 1 }}>{busy ? 'Startet …' : 'Einrichten starten'}</button>
           {pflicht
             ? <p style={{ ...S.klein, marginTop: 12 }}>Für diesen Zugang ist die Zwei-Faktor-Anmeldung vorgeschrieben — danach geht es direkt weiter.</p>
-            : <button type="button" onClick={() => { window.location.href = weiter; }} style={S.knopfRand}>Später</button>}
+            : <>
+                {pflichtAb && <p style={{ ...S.klein, marginTop: 12 }}>Im Betrieb vorgeschrieben ab {datumDe(pflichtAb)} — bis dahin geht es auch noch ohne.</p>}
+                <button type="button" onClick={() => { window.location.href = weiter; }} style={S.knopfRand}>Später</button>
+              </>}
         </>)}
 
         {stand === 'qr' && (

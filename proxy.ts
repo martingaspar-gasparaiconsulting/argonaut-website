@@ -7,8 +7,9 @@ import { gebuchteModulKeys, pfadGebucht, modulKeyFuerPfad, type TenantModulRow }
 import { abgeschalteteModuleAmStandort, istModulAmStandortAktiv, type StandortModulRow } from './lib/standortModule'
 import { STANDORT_COOKIE } from './lib/aktiverStandort'
 import { konkreterStandort } from './lib/standortDaten'
-import { PRUEF_PFAD, EINRICHT_PFAD, pflichtAn } from './lib/zweiFaktor'
-import { zweiFaktorStand } from './lib/zweiFaktorServer'
+import { PRUEF_PFAD, EINRICHT_PFAD, pflichtAn, hatVerifiziertenFaktor } from './lib/zweiFaktor'
+import { zweiFaktorStand, betriebPflichtAb } from './lib/zweiFaktorServer'
+import { pflichtWirkt } from './lib/zweiFaktorPflicht'
 
 // ============================================================================
 // ARGONAUT OS · proxy.ts — Zugriffsschutz fuer /dashboard + Custom-Domains
@@ -133,8 +134,18 @@ export async function proxy(req: NextRequest) {
   // merkt nichts — AUSSER die Pflicht ist an (Stufe 2, Schalter ZWEI_FAKTOR_PFLICHT=an
   // in Vercel): dann geht es ohne Faktor zur Einrichtungs-Seite. Faktoren aus getUser() (vom
   // Anmelde-Dienst), aal über getClaims() (geprüft) — nie aus dem Cookie.
+  //
+  // ▄▄▄ PAKET 190: Pflicht je Betrieb ▄▄▄
+  // Zusätzlich zur Umgebungs-Pflicht: hat der Inhaber für SEINEN Betrieb die
+  // Pflicht eingeschaltet und ist die Übergangsfrist (7 Tage) vorbei, gilt sie
+  // für Chef und Mitarbeiter. Nachgefragt wird nur bei Zugängen OHNE Faktor
+  // (wer einen hat, muss ihn ohnehin eingeben). Fehler -> keine Pflicht.
   {
-    const { weg } = await zweiFaktorStand(supabase, user, pflichtAn(process.env))
+    let pflicht = pflichtAn(process.env)
+    if (!pflicht && !hatVerifiziertenFaktor(user)) {
+      pflicht = pflichtWirkt(await betriebPflichtAb(supabase), new Date())
+    }
+    const { weg } = await zweiFaktorStand(supabase, user, pflicht)
     if (weg !== 'weiter') {
       const ziel = new URL(weg === 'pruefen' ? PRUEF_PFAD : EINRICHT_PFAD, req.url)
       ziel.searchParams.set('weiter', pfad)

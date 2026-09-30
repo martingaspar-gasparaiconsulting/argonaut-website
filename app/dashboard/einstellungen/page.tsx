@@ -5,6 +5,7 @@ import ModulFreischaltung from './ModulFreischaltung'
 import PasswortAendern from './PasswortAendern'
 import ZweiFaktorKarte from '../_components/ZweiFaktorKarte'
 import ZweiFaktorTeamKarte from '../_components/ZweiFaktorTeamKarte'
+import ZweiFaktorPflichtKarte from '../_components/ZweiFaktorPflichtKarte'
 import AnfahrtEinstellungen from './AnfahrtEinstellungen'
 
 // ============================================================
@@ -65,6 +66,8 @@ export default async function EinstellungenPage() {
         <PasswortAendern />
         {/* Paket 164: Zwei-Faktor-Anmeldung */}
         <ZweiFaktorKarte zurueck="/dashboard/einstellungen" />
+        {/* Paket 190: Zwei-Faktor-Pflicht je Betrieb */}
+        <ZweiFaktorPflichtKarte />
         <ZweiFaktorTeamKarte />
       </main>
     </div>

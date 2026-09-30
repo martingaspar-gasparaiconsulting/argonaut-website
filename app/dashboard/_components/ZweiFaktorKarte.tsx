@@ -10,14 +10,21 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
 import { EINRICHT_PFAD } from '@/lib/zweiFaktor';
+import { datumDe } from '@/lib/zweiFaktorPflicht';
 
 export default function ZweiFaktorKarte({ zurueck }: { zurueck: string }) {
   const [an, setAn] = useState<boolean | null>(null);
+  // Paket 190: Pflicht des Betriebs (Tag), damit ohne Faktor der Termin sichtbar ist.
+  const [pflichtAb, setPflichtAb] = useState<string | null>(null);
 
   useEffect(() => {
     createClient().auth.mfa.listFactors()
       .then(({ data }) => setAn(!!(data?.totp ?? []).some((f) => f.status === 'verified')))
       .catch(() => setAn(null));
+    fetch('/api/zwei-faktor/stand')
+      .then((r) => r.json() as Promise<{ pflichtAb?: string | null }>)
+      .then((j) => setPflichtAb(j.pflichtAb ?? null))
+      .catch(() => setPflichtAb(null));
   }, []);
 
   return (
@@ -30,6 +37,11 @@ export default function ZweiFaktorKarte({ zurueck }: { zurueck: string }) {
               : an ? 'Eingeschaltet — bei jeder Anmeldung zusätzlich der Code aus der App.'
               : 'Noch nicht eingerichtet. Ein gestohlenes Passwort reicht dann nicht mehr für den Zugang.'}
           </div>
+          {an === false && pflichtAb && (
+            <div style={{ color: '#E0A24C', fontSize: 13.5, marginTop: 6, fontWeight: 700 }}>
+              Im Betrieb vorgeschrieben ab {datumDe(pflichtAb)} — ab dann geht es ohne Einrichtung nicht mehr ins Dashboard.
+            </div>
+          )}
         </div>
         <a href={`${EINRICHT_PFAD}?weiter=${encodeURIComponent(zurueck)}`}
           style={{ padding: '9px 14px', borderRadius: 9, fontSize: 13.5, fontWeight: 800, textDecoration: 'none', background: an ? 'transparent' : '#C9A84C', color: an ? '#E8EDF4' : '#0A1628', border: an ? '1px solid rgba(143,163,190,0.3)' : 'none' }}>

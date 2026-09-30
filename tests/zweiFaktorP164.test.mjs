@@ -81,8 +81,10 @@ test('Server-Stand: aal nur über getClaims; Fehler = Code verlangen; ohne Fakto
 
 test('Code-Wächter: Pfoertner, Admin, Betreiber-Wege; kein getSession; Stufe 1 ohne Pflicht', () => {
   const proxy = lies('proxy.ts');
-  // Stufe 2 (bewusste Aenderung): Pflicht kommt nur aus dem Schalter ZWEI_FAKTOR_PFLICHT.
-  assert.match(proxy, /const \{ weg \} = await zweiFaktorStand\(supabase, user, pflichtAn\(process\.env\)\)/);
+  // Stufe 2 (bewusste Aenderung): Pflicht aus dem Schalter ZWEI_FAKTOR_PFLICHT.
+  // Paket 190 (bewusste Aenderung): zusaetzlich die Pflicht des eigenen Betriebs.
+  assert.match(proxy, /let pflicht = pflichtAn\(process\.env\)/);
+  assert.match(proxy, /const \{ weg \} = await zweiFaktorStand\(supabase, user, pflicht\)/);
   assert.ok(proxy.indexOf('zweiFaktorStand(') > proxy.indexOf("return NextResponse.redirect(new URL('/auth/login', req.url))"), 'erst Anmeldung, dann Zwei-Faktor');
   assert.ok(proxy.indexOf('zweiFaktorStand(') < proxy.indexOf('BETREIBER-BUCHUNGS-GATE'), 'vor allen anderen Weichen');
   assert.match(proxy, /if \(weg !== 'weiter'\) \{\n      const ziel = new URL\(weg === 'pruefen' \? PRUEF_PFAD : EINRICHT_PFAD, req\.url\)/);

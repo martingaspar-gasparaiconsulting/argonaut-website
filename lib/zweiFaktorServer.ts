@@ -35,3 +35,21 @@ export async function zweiFaktorStand(
   const aal = hatFaktor ? await bestaetigteStufe(supabase) : 'aal1';
   return { weg: zweiFaktorWeg({ aktuell: aal, hatFaktor, pflicht }), hatFaktor, aal };
 }
+
+// ── Paket 190: Pflicht je Betrieb ───────────────────────────────────────────
+// Fragt die Datenbank-Funktion zwei_faktor_pflicht_ab() (Betrieb = Chef bzw.
+// mein_chef_id). Liefert den Pflicht-Tag oder null. STÖRUNG SPERRT NIE: jeder
+// Fehler (auch „Funktion gibt es noch nicht", falls das SQL noch fehlt) ergibt
+// null = keine Betriebs-Pflicht. Die Umgebungs-Pflicht (ZWEI_FAKTOR_PFLICHT)
+// bleibt davon unberührt.
+type MitRpc = { rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> };
+
+export async function betriebPflichtAb(supabase: MitRpc): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.rpc('zwei_faktor_pflicht_ab');
+    if (error || data === null || data === undefined || data === '') return null;
+    return String(data);
+  } catch {
+    return null;
+  }
+}
