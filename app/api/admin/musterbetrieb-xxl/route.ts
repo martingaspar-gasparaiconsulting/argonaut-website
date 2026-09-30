@@ -4,15 +4,17 @@ import { betreiberGuard } from '../../../../lib/betreiberGuard';
 import { DEMO_TOKEN } from '../../../../lib/beispielKern';
 import { ZUGANG_TABELLEN, REGISTER_TABELLE } from '../../../../lib/uebungswelt';
 import {
-  XXL_EMAIL, XXL_KENNZEICHEN, XXL_PROFIL, XXL_SEEDER, alleModuleXxl, xxlPasswort, istXxlKonto,
-  loeschPlan, zeilenSichern, neuerKontext, kontextErgaenzen, gruppenZaehlung, type XxlGruppe,
+  XXL_EMAIL, XXL_KENNZEICHEN, XXL_PROFIL, alleModuleXxl, xxlPasswort, istXxlKonto,
+  zeilenSichern, neuerKontext, kontextErgaenzen, gruppenZaehlung, type XxlGruppe,
 } from '../../../../lib/musterbetriebXxl';
+import { XXL_ALLE_SEEDER, loeschPlanAlle } from '../../../../lib/musterbetriebXxlBranchen';
 
 // ============================================================================
 // ARGONAUT OS · app/api/admin/musterbetrieb-xxl/route.ts — Paket 179
 //
 // Ein Knopf im Command Center: legt EIN Konto „Musterbetrieb XXL" an, schaltet
-// alle Module frei und füllt jedes Modul mit Beispieldaten (lib/musterbetriebXxl).
+// alle Module frei und füllt jedes Modul mit Beispieldaten (lib/musterbetriebXxl,
+// Push 2: Branchen-Module aus lib/musterbetriebXxlBranchen).
 // Löschen entfernt exakt, was im Register steht, danach das Konto selbst.
 //
 // Schutz:
@@ -100,7 +102,7 @@ async function anlegen(admin: Admin) {
   const ctx = neuerKontext(uid, heute);
   const angelegt: Array<{ gruppe: XxlGruppe; anzahl: number }> = [];
   const jeTabelle: Record<string, number> = {};
-  for (const s of XXL_SEEDER) {
+  for (const s of XXL_ALLE_SEEDER) {
     let zeilen;
     try { zeilen = zeilenSichern(s.baue(ctx), uid); } catch (e) {
       hinweise.push(`${s.key}: ${e instanceof Error ? e.message : 'Bau fehlgeschlagen'}`);
@@ -147,7 +149,7 @@ async function loeschen(admin: Admin) {
   let entfernt = 0;
 
   const { data: reg } = await admin.from(REGISTER_TABELLE).select('tabelle, datensatz_id').eq('owner_user_id', uid);
-  for (const schritt of loeschPlan((reg as Array<{ tabelle: string; datensatz_id: string }> | null) || [])) {
+  for (const schritt of loeschPlanAlle((reg as Array<{ tabelle: string; datensatz_id: string }> | null) || [])) {
     for (let i = 0; i < schritt.ids.length; i += 200) {
       const teil = schritt.ids.slice(i, i + 200);
       const { error } = await admin.from(schritt.tabelle).delete().in('id', teil).eq('owner_user_id', uid);

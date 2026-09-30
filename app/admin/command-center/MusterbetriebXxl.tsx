@@ -18,7 +18,7 @@ const C = {
 
 const GRUPPEN: Record<string, string> = {
   basis: 'Kunden, Angebote, Rechnungen, Anschlüsse', personal: 'Personal & Zeit', auftraege: 'Aufträge, Einsätze, Termine, Aufgaben',
-  finanzen: 'Finanzen', crm: 'CRM, Marketing, Leads', lager: 'Lager, Einkauf, Fuhrpark', bau: 'Bau',
+  finanzen: 'Finanzen', crm: 'CRM, Marketing, Leads', lager: 'Lager, Einkauf, Fuhrpark', bau: 'Bau', branchen: 'Branchen-Module (Werkstatt, Gastro, Hotel, Immobilien, Bildung …)',
 };
 
 type Status = { vorhanden: boolean; gueltig?: boolean; email: string; datensaetze?: number };
@@ -72,7 +72,7 @@ export default function MusterbetriebXxl() {
         Musterbetrieb XXL
       </div>
       <p style={{ color: C.dim, fontSize: 14, margin: '6px 0 14px', lineHeight: 1.55 }}>
-        Ein Testkonto mit allen Modulen und Beispieldaten in jedem Modul (Personal, Aufträge, Termine, Finanzen, CRM, Lager, Bau …).
+        Ein Testkonto mit allen Modulen und Beispieldaten in jedem Modul (Personal, Aufträge, Termine, Finanzen, CRM, Lager, Bau und die Branchen-Module).
         Alle Personen und Adressen sind erfunden, es geht keine Mail raus. Löschen entfernt genau das, was hier angelegt wurde.
       </p>
 

@@ -147,7 +147,7 @@ export type XxlKontext = {
   zeilen: Record<string, SeedZeile[]>;
 };
 
-export type XxlGruppe = 'basis' | 'personal' | 'auftraege' | 'finanzen' | 'crm' | 'lager' | 'bau';
+export type XxlGruppe = 'basis' | 'personal' | 'auftraege' | 'finanzen' | 'crm' | 'lager' | 'bau' | 'branchen';
 
 export type XxlSeeder = {
   key: string;
@@ -798,7 +798,10 @@ export const XXL_LOESCH_ORDER: string[] = [
 ];
 
 /** Register-Einträge je Tabelle in Lösch-Reihenfolge (unbekannte Tabellen hinten). */
-export function loeschPlan(register: Array<{ tabelle: string; datensatz_id: string }>): Array<{ tabelle: string; ids: string[] }> {
+export function loeschPlan(
+  register: Array<{ tabelle: string; datensatz_id: string }>,
+  ordnung: string[] = XXL_LOESCH_ORDER,
+): Array<{ tabelle: string; ids: string[] }> {
   const pro = new Map<string, string[]>();
   for (const r of register) {
     if (!r?.tabelle || !r?.datensatz_id) continue;
@@ -806,7 +809,7 @@ export function loeschPlan(register: Array<{ tabelle: string; datensatz_id: stri
     arr.push(r.datensatz_id);
     pro.set(r.tabelle, arr);
   }
-  const reihenfolge = [...new Set([...XXL_LOESCH_ORDER, ...pro.keys()])];
+  const reihenfolge = [...new Set([...ordnung, ...pro.keys()])];
   return reihenfolge.filter((t) => pro.has(t)).map((t) => ({ tabelle: t, ids: pro.get(t) as string[] }));
 }
 
@@ -856,7 +859,7 @@ export function kontextErgaenzen(ctx: XxlKontext, tabelle: string, ids: string[]
 
 /** Zählung je Gruppe für den Bericht. */
 export function gruppenZaehlung(angelegt: Array<{ gruppe: XxlGruppe; anzahl: number }>): Record<XxlGruppe, number> {
-  const z: Record<XxlGruppe, number> = { basis: 0, personal: 0, auftraege: 0, finanzen: 0, crm: 0, lager: 0, bau: 0 };
+  const z: Record<XxlGruppe, number> = { basis: 0, personal: 0, auftraege: 0, finanzen: 0, crm: 0, lager: 0, bau: 0, branchen: 0 };
   for (const a of angelegt) z[a.gruppe] += a.anzahl;
   return z;
 }
