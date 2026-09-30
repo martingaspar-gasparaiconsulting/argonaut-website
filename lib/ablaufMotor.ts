@@ -23,8 +23,12 @@ import {
 } from './automation';
 import {
   pruefeGruppe, fuellePlatzhalter, standardWerte, ausloeserIstWerbung, pruefeAblauf, ablaufAktion, ereignisDef, knopfModul,
+  glockePersonen, glockeAbteilung, GLOCKE_MAX_PERSONEN,
   type Ablauf, type Ausloeser, type SchrittAktion, type Fahrplan,
 } from './ablauf';
+
+/** Paket 192: Empfänger einer Glocke aus einem Ablauf. */
+export type GlockeAn = 'chef' | 'team' | 'personen' | 'abteilung';
 import { werbeStatus, WERBE_STATUS_TEXT } from './segmente';
 import { berlinZeitpunkt } from './ablaufZeit';
 import { pruefeWebhookUrl } from './ablaufWebhookPruefung';
@@ -173,7 +177,7 @@ export type AktionPlan =
   | { art: 'aendern'; tabelle: string; id: string; daten: Record<string, unknown>; meldung: string }
   | { art: 'mail'; an: string; betreff: string; text: string; meldung: string; werbung: boolean }
   // Paket 167
-  | { art: 'glocke'; an: 'chef' | 'team'; titel: string; text: string; link: string; meldung: string }
+  | { art: 'glocke'; an: GlockeAn; personen: string[]; abteilung: string | null; titel: string; text: string; link: string; meldung: string }
   | { art: 'pdf'; vorlage: 'schreiben' | 'vorgangsblatt'; titel: string; text: string; zeilen: [string, string][]; meldung: string }
   | { art: 'ki'; titel: string; auftrag: string; meldung: string }
   | { art: 'webhook'; url: string; felder: string; werte: Record<string, string>; meldung: string }
@@ -259,11 +263,17 @@ export function aktionPlanen(
       return { art: 'aendern', tabelle: ziel.tabelle, id: zielId, daten: { [spalte]: ((alt ? alt + '\n' : '') + zeile).slice(0, 8000) }, meldung: 'Notiz angehängt' };
     }
     case 'glocke': {
-      const an = cfg.an === 'team' ? 'team' : 'chef';
+      // Paket 192: auch an ausgewählte Personen oder eine Abteilung.
+      const an: GlockeAn = cfg.an === 'team' || cfg.an === 'personen' || cfg.an === 'abteilung' ? cfg.an : 'chef';
       const inhalt = text('text').slice(0, 500);
       if (!inhalt.trim()) return { art: 'uebersprungen', meldung: 'Meldung ist leer' };
       const titel = (text('titel') || `Ablauf: ${ablauf.name}`).slice(0, 160);
-      return { art: 'glocke', an, titel, text: inhalt, link: '/dashboard/ablaeufe', meldung: `Glocke an ${an === 'team' ? 'das Team' : 'die Geschäftsleitung'}: „${titel}"` };
+      const personen = an === 'personen' ? glockePersonen(cfg.personen).slice(0, GLOCKE_MAX_PERSONEN) : [];
+      const abteilung = an === 'abteilung' ? glockeAbteilung(cfg.abteilung) : null;
+      if (an === 'personen' && personen.length === 0) return { art: 'fehler', meldung: 'Glocke: keine Person gewählt' };
+      if (an === 'abteilung' && !abteilung) return { art: 'fehler', meldung: 'Glocke: keine Abteilung gewählt' };
+      const wen = an === 'team' ? 'das Team' : an === 'personen' ? `${personen.length} ausgewählte Person${personen.length === 1 ? '' : 'en'}` : an === 'abteilung' ? `die Abteilung „${abteilung}"` : 'die Geschäftsleitung';
+      return { art: 'glocke', an, personen, abteilung, titel, text: inhalt, link: '/dashboard/ablaeufe', meldung: `Glocke an ${wen}: „${titel}"` };
     }
     case 'termin_anlegen': {
       const titel = text('titel').slice(0, 300) || `Ablauf: ${ablauf.name}`;

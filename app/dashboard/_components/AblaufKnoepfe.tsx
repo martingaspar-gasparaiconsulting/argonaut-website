@@ -7,7 +7,8 @@
 // Zeigt auf einer Kunden-, Anfrage-, Auftrags- oder Projektseite die
 // eingeschalteten Knopf-Abläufe der Geschäftsleitung. Ein Klick startet den
 // Ablauf mit diesem Vorgang (serverseitig geprüft, einmal je Vorgang).
-// Ohne passende Abläufe (und für Mitarbeiter) erscheint nichts.
+// Paket 192: Mitarbeiter sehen nur Knöpfe mit dem Haken „Auch Mitarbeiter"
+// und nur mit Schreibrecht fürs Modul (Server entscheidet). Sonst nichts.
 // ============================================================================
 
 import { useEffect, useState, type CSSProperties } from 'react';
@@ -41,7 +42,7 @@ export default function AblaufKnoepfe({ modul, vorgangId }: { modul: string; vor
       const r = await fetch('/api/ablaeufe/start', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: k.id, vorgangId }) });
       const j = await r.json() as { ok?: boolean; status?: string; error?: string };
       setMeldung(r.ok && j.ok
-        ? { ok: true, text: `„${k.name}" gestartet — Stand: ${j.status === 'fertig' ? 'fertig' : j.status === 'wartet' ? 'wartet' : j.status === 'freigabe' ? 'wartet auf Ihre Freigabe' : j.status ?? ''}. Protokoll auf der Seite Abläufe.` }
+        ? { ok: true, text: `„${k.name}" gestartet — Stand: ${j.status === 'fertig' ? 'fertig' : j.status === 'wartet' ? 'wartet' : j.status === 'freigabe' ? 'wartet auf Freigabe der Geschäftsleitung' : j.status ?? ''}. Protokoll auf der Seite Abläufe.` }
         : { ok: false, text: j.error ?? 'Start fehlgeschlagen.' });
     } catch { setMeldung({ ok: false, text: 'Start fehlgeschlagen.' }); }
     setBusy(null);

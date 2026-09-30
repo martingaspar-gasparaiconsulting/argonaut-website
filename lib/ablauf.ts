@@ -42,8 +42,8 @@ export type Ausloeser =
   | { art: 'ereignis'; ereignis: string; filter?: BedingungsGruppe | null }
   /** Von außen (n8n, Formular, anderes Programm) — mit geheimem Schlüssel. */
   | { art: 'webhook' }
-  /** Per Knopf in einem Modul. */
-  | { art: 'knopf'; modul?: string };
+  /** Per Knopf in einem Modul. Paket 192: mitarbeiter = auch Mitarbeiter mit Schreibrecht dürfen drücken. */
+  | { art: 'knopf'; modul?: string; mitarbeiter?: boolean };
 
 export type SchrittAktion = { id: string; typ: 'aktion'; aktion: string; config: Record<string, unknown> };
 export type SchrittWarten = { id: string; typ: 'warten'; tage?: number; stunden?: number };
@@ -101,16 +101,34 @@ export function ereignisDef(key: unknown): EreignisDef | undefined {
  * Kunden aus diesem Knopf gilt als Werbung (nur mit Einwilligung).
  * Rechnung und Angebot bewusst NICHT (Kern-Geld-Seiten, nur gemeinsam).
  */
-export type KnopfModulDef = { modul: string; label: string; einzahl: string; tabelle: string; zielTyp: string; werbung: boolean };
+export type KnopfModulDef = { modul: string; label: string; einzahl: string; tabelle: string; zielTyp: string; werbung: boolean; recht: string };
+/** recht (Paket 192): Modul-Schlüssel in mitarbeiter_rechte (module / schreib_module). */
 export const KNOPF_MODULE: KnopfModulDef[] = [
-  { modul: 'kontakte', label: 'Kunden', einzahl: 'Kunde', tabelle: 'kontakte', zielTyp: 'kontakt', werbung: true },
-  { modul: 'leads', label: 'Anfragen', einzahl: 'Anfrage', tabelle: 'leads', zielTyp: 'lead', werbung: false },
-  { modul: 'auftraege', label: 'Aufträge', einzahl: 'Auftrag', tabelle: 'auftraege', zielTyp: 'auftrag', werbung: false },
-  { modul: 'projekte', label: 'Projekte', einzahl: 'Projekt', tabelle: 'projekte', zielTyp: 'projekt', werbung: false },
+  { modul: 'kontakte', label: 'Kunden', einzahl: 'Kunde', tabelle: 'kontakte', zielTyp: 'kontakt', werbung: true, recht: 'crm' },
+  { modul: 'leads', label: 'Anfragen', einzahl: 'Anfrage', tabelle: 'leads', zielTyp: 'lead', werbung: false, recht: 'leads' },
+  { modul: 'auftraege', label: 'Aufträge', einzahl: 'Auftrag', tabelle: 'auftraege', zielTyp: 'auftrag', werbung: false, recht: 'auftraege' },
+  { modul: 'projekte', label: 'Projekte', einzahl: 'Projekt', tabelle: 'projekte', zielTyp: 'projekt', werbung: false, recht: 'projekte' },
 ];
 
 export function knopfModul(modul: unknown): KnopfModulDef | undefined {
   return KNOPF_MODULE.find((k) => k.modul === modul);
+}
+
+/** Paket 192: Empfänger der Glocke. */
+export const GLOCKE_AN = ['chef', 'team', 'personen', 'abteilung'];
+export const GLOCKE_MAX_PERSONEN = 50;
+
+/** Mitarbeiter-Kennungen aus der Einstellung „personen" (Komma-Liste oder Liste), nur gültige, ohne Doppelte. */
+export function glockePersonen(roh: unknown): string[] {
+  const teile = Array.isArray(roh) ? roh.map(String) : String(roh ?? '').split(',');
+  const ids = teile.map((x) => x.trim().toLowerCase()).filter((x) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(x));
+  return [...new Set(ids)];
+}
+
+/** Abteilungsname aus der Einstellung (getrimmt, höchstens 80 Zeichen; leer = null). */
+export function glockeAbteilung(roh: unknown): string | null {
+  const s = String(roh ?? '').trim();
+  return s ? s.slice(0, 80) : null;
 }
 
 export type AblaufAktionDef = {
@@ -141,9 +159,12 @@ export const ABLAUF_AKTIONEN: AblaufAktionDef[] = [
   // Seit Paket 157 im Motor: der Lauf hält an (Status „freigabe"), bis der Chef auf der Seite zustimmt.
   { key: 'freigabe_chef', label: 'Freigabe durch den Chef', hinweis: 'Hält an, bis die Geschäftsleitung zustimmt.', pflicht: [], imMotor: true },
   // Paket 167: die neuen Bausteine — jetzt im Motor.
-  { key: 'glocke', label: 'Meldung in der Glocke', hinweis: 'Benachrichtigt die Geschäftsleitung oder das Team (Glocke oben rechts).', pflicht: ['text'], imMotor: true,
+  { key: 'glocke', label: 'Meldung in der Glocke', hinweis: 'Benachrichtigt die Geschäftsleitung, das Team, ausgewählte Personen oder eine Abteilung (Glocke oben rechts).', pflicht: ['text'], imMotor: true,
     felder: [
-      { key: 'an', label: 'An', typ: 'auswahl', optionen: ['chef', 'team'], standard: 'chef', pflicht: true },
+      // Paket 192: auch an ausgewählte Personen oder eine Abteilung (Felder personen/abteilung, eigene Auswahl im Editor).
+      { key: 'an', label: 'An', typ: 'auswahl', optionen: ['chef', 'team', 'personen', 'abteilung'], standard: 'chef', pflicht: true },
+      { key: 'personen', label: 'Personen', typ: 'text' },
+      { key: 'abteilung', label: 'Abteilung', typ: 'text' },
       { key: 'titel', label: 'Überschrift', typ: 'text', standard: 'Ablauf: {{ablauf}}' },
       { key: 'text', label: 'Meldung', typ: 'mehrzeilig', pflicht: true, standard: '{{name}} {{nummer}}' },
     ] },
@@ -396,6 +417,9 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
     }
     // Paket 168: Knopf direkt im Modul (mit Vorgang) — nur für die Module der Liste.
     if (a.art === 'knopf' && a.modul && !knopfModul(a.modul)) fehler.push('Knopf: Dieses Modul hat (noch) keinen Ablauf-Knopf.');
+    // Paket 192: Mitarbeiter-Knopf nur auf einer Modulseite (mit Vorgang).
+    if (a.art === 'knopf' && a.mitarbeiter === true && !a.modul) fehler.push('Knopf: Mitarbeiter dürfen nur Knöpfe auf einer Modulseite starten, nicht auf der Seite Abläufe.');
+    if (a.art === 'knopf' && a.mitarbeiter === true && a.modul) hinweise.push('Auch Mitarbeiter mit Schreibrecht für dieses Modul können den Knopf drücken. Mails gehen im Namen des Betriebs; die Geschäftsleitung sieht jeden Lauf im Protokoll.');
     if ((a.art === 'datum' || a.art === 'ereignis') && zaehleBedingungen(a.filter) > GRENZEN.bedingungen) fehler.push(`Höchstens ${GRENZEN.bedingungen} Bedingungen.`);
   }
   if (!Array.isArray(ablauf.schritte) || ablauf.schritte.length === 0) fehler.push('Mindestens ein Schritt.');
@@ -450,8 +474,19 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
         // ---- Paket 167: die neuen Bausteine ----
         const c = (s.config ?? {}) as Record<string, unknown>;
         if (def.key === 'glocke') {
-          if (!['chef', 'team'].includes(String(c.an ?? 'chef'))) fehler.push(`Schritt ${nr} (${def.label}): Empfänger bitte „chef" oder „team".`);
-          if (c.an === 'team') hinweise.push(`Schritt ${nr}: Die Meldung sehen alle Mitarbeiter mit Zugang — bitte keine Beträge oder vertraulichen Angaben in den Text.`);
+          const an = String(c.an ?? 'chef');
+          if (!GLOCKE_AN.includes(an)) fehler.push(`Schritt ${nr} (${def.label}): Empfänger bitte Geschäftsleitung, Team, Personen oder Abteilung.`);
+          if (an === 'team') hinweise.push(`Schritt ${nr}: Die Meldung sehen alle Mitarbeiter mit Zugang — bitte keine Beträge oder vertraulichen Angaben in den Text.`);
+          if (an === 'personen') {
+            const p = glockePersonen(c.personen);
+            if (p.length === 0) fehler.push(`Schritt ${nr} (${def.label}): Bitte mindestens eine Person wählen.`);
+            if (p.length > GLOCKE_MAX_PERSONEN) fehler.push(`Schritt ${nr} (${def.label}): Höchstens ${GLOCKE_MAX_PERSONEN} Personen.`);
+          }
+          if (an === 'abteilung') {
+            const ab = glockeAbteilung(c.abteilung);
+            if (!ab) fehler.push(`Schritt ${nr} (${def.label}): Bitte eine Abteilung wählen.`);
+            else hinweise.push(`Schritt ${nr}: Die Meldung sehen alle Mitarbeiter der Abteilung „${ab}" mit Zugang.`);
+          }
         }
         if (def.key === 'termin_anlegen') {
           const t = Number(c.in_tagen ?? 0);

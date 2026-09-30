@@ -233,5 +233,6 @@ export function enthaeltAktion(schritte: readonly Schritt[], aktion: string): bo
 export const AUSWAHL_TEXT: Record<string, string> = {
   kunde: 'an den Kunden', feste_adresse: 'an eine feste Adresse',
   chef: 'an die Geschäftsleitung', team: 'an das ganze Team',
+  personen: 'an ausgewählte Personen', abteilung: 'an eine Abteilung',
   schreiben: 'Schreiben (Titel + Text)', vorgangsblatt: 'Vorgangsblatt (Angaben des Vorgangs)',
 };

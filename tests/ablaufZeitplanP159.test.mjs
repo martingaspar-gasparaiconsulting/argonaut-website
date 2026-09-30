@@ -116,7 +116,7 @@ test('Code: gemeinsamer Ausführer streng je Betrieb; Zeitplan im Motor; Knopf n
   assert.match(cron, /slotKennung\(ablauf\.id, slot\)/);
   assert.match(cron, /if \(!mitVorgang\) \{/);
   const start = lies('app/api/ablaeufe/start/route.ts');
-  assert.match(start, /ablauf\.owner_user_id !== user\.id/);
+  assert.match(start, /darfKnopfStarten\(ablauf, wer, /); // Paket 192: Regel statt reinem Besitzer-Vergleich
   assert.match(start, /freieStarts\(count \?\? 0\) <= 0/);
   assert.match(start, /if \(!laufbereit\(ablauf\)\)/);
   const probe = lies('app/api/ablaeufe/probe/route.ts');

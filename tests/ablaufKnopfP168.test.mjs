@@ -64,14 +64,18 @@ test('Werbung: Mail aus dem Kunden-Knopf nur mit Einwilligung, aus dem Auftrag n
 test('Code-Wächter: Start lädt den Vorgang selbst, nur Chef, einmal je Vorgang; Knöpfe nur für den Chef; Rechnung/Angebot unberührt', () => {
   const s = lies('app/api/ablaeufe/start/route.ts');
   assert.match(s, /auth\.getUser\(\)/);
-  assert.match(s, /ablauf\.owner_user_id !== user\.id/);
-  assert.match(s, /\.from\(ziel\.tabelle\)\.select\('\*'\)\.eq\('id', vorgangId\)\.eq\('owner_user_id', user\.id\)/, 'Vorgang serverseitig, nur des Betriebs');
+  // Paket 192 (bewusste Aenderung, Martin 29.09.): auch Mitarbeiter mit Schreibrecht, wenn der Ablauf es erlaubt.
+  assert.match(s, /darfKnopfStarten\(ablauf, wer, /);
+  assert.match(s, /if \(!recht\.ja\) return NextResponse\.json\(\{ ok: false, error: recht\.grund \}, \{ status: 403 \}\)/);
+  assert.match(s, /\.from\('ablaeufe'\)\.select\('\*'\)\.eq\('id', body\.id\)\.eq\('owner_user_id', betrieb\)/);
+  assert.match(s, /\.from\(ziel\.tabelle\)\.select\('\*'\)\.eq\('id', vorgangId\)\.eq\('owner_user_id', betrieb\)/, 'Vorgang serverseitig, nur des Betriebs');
   assert.match(s, /lief für diesen Vorgang schon/);
   assert.match(s, /freieStarts\(count \?\? 0\) <= 0/, 'Deckel');
-  assert.ok(!/createAdminClient|SERVICE_ROLE/.test(s), 'mit Anmeldung (RLS)');
+  assert.match(s, /const db = recht\.alsMitarbeiter \? admin : supabase;/, 'Chef weiter mit Anmeldung (RLS), Service-Schluessel nur fuer Mitarbeiter');
   const k = lies('app/api/ablaeufe/knoepfe/route.ts');
   assert.match(k, /auth\.getUser\(\)/);
-  assert.match(k, /\.eq\('owner_user_id', user\.id\)\.eq\('aktiv', true\)/, 'nur eigene, eingeschaltete');
+  assert.match(k, /\.eq\('owner_user_id', betrieb\)\.eq\('aktiv', true\)/, 'nur des eigenen Betriebs, eingeschaltete');
+  assert.match(k, /darfKnopfStarten\(a, wer, heute\)\.ja/, 'dieselbe Regel wie beim Start');
   assert.match(k, /laufbereit\(a\)/);
   assert.ok(!/schritte:/.test(k.slice(k.indexOf('.map(('))), 'keine Schritte nach außen');
   for (const [datei, modul] of [['app/dashboard/crm/[id]/page.tsx', 'kontakte'], ['app/dashboard/auftraege/[id]/page.tsx', 'auftraege'], ['app/dashboard/projekte/[id]/page.tsx', 'projekte'], ['app/dashboard/leads/[id]/page.tsx', 'leads']]) {

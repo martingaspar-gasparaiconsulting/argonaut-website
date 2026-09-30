@@ -8,13 +8,15 @@
 // die Prüfung in lib/ablauf.ts (pruefeAblauf). Gespeichert wird von der Seite.
 // ============================================================================
 
-import { useState, useMemo, type CSSProperties, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, type CSSProperties, type ReactNode } from 'react';
+import { createClient } from '@/lib/supabase';
 import {
   TRIGGER, OPERATOR_LABEL, triggerDef,
   type Bedingung, type Operator, type FeldDef,
 } from '@/lib/automation';
 import {
   pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion, ausloeserHatVorgang, EREIGNISSE, aktionFelder, KNOPF_MODULE,
+  glockePersonen,
   type Ablauf, type Ausloeser, type Schritt, type BedingungsGruppe, type SchrittAktion,
 } from '@/lib/ablauf';
 import {
@@ -138,6 +140,75 @@ function Plus({ schritte, listePfad, ausloeser, onWahl }: {
 }
 
 // ---------------------------------------------------------------------------
+// Paket 192: Glocke an ausgewählte Personen oder eine Abteilung
+// Mitarbeiter mit Zugang (nicht ausgetreten) aus dem eigenen Betrieb (RLS).
+// ---------------------------------------------------------------------------
+type MaZeile = { id: string; name: string; abteilung: string };
+
+function useMitarbeiterMitZugang(): MaZeile[] | null {
+  const [liste, setListe] = useState<MaZeile[] | null>(null);
+  useEffect(() => {
+    let aus = false;
+    const heute = new Date().toISOString().slice(0, 10);
+    createClient().from('mitarbeiter').select('id, vorname, nachname, abteilung, austrittsdatum, auth_user_id')
+      .not('auth_user_id', 'is', null).order('nachname').limit(1000)
+      .then(({ data }) => {
+        if (aus) return;
+        const z = ((data ?? []) as { id: string; vorname: string | null; nachname: string | null; abteilung: string | null; austrittsdatum: string | null }[])
+          .filter((m) => !m.austrittsdatum || m.austrittsdatum >= heute)
+          .map((m) => ({ id: m.id, name: [m.vorname, m.nachname].filter(Boolean).join(' ') || 'Mitarbeiter', abteilung: (m.abteilung ?? '').trim() }));
+        setListe(z);
+      });
+    return () => { aus = true; };
+  }, []);
+  return liste;
+}
+
+function GlockeEmpfaenger({ s, onChange }: { s: SchrittAktion; onChange: (s: SchrittAktion) => void }) {
+  const liste = useMitarbeiterMitZugang();
+  const an = String(s.config.an ?? 'chef');
+  if (an !== 'personen' && an !== 'abteilung') return null;
+  if (liste === null) return <div style={klein}>Mitarbeiter werden geladen …</div>;
+  if (liste.length === 0) return <div style={{ ...klein, color: C.warn }}>Noch keine Mitarbeiter mit Zugang.</div>;
+  if (an === 'personen') {
+    const gewaehlt = new Set(glockePersonen(s.config.personen));
+    const umschalten = (id: string) => {
+      const neu = new Set(gewaehlt);
+      if (neu.has(id)) neu.delete(id); else neu.add(id);
+      onChange({ ...s, config: { ...s.config, personen: [...neu].join(',') } });
+    };
+    return (
+      <div>
+        <label style={beschriftung}>Personen * ({gewaehlt.size} gewählt)</label>
+        <div style={{ maxHeight: 180, overflowY: 'auto', border: `1px solid ${C.border}`, borderRadius: 9, padding: '6px 9px' }}>
+          {liste.map((m) => (
+            <label key={m.id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13.5, padding: '3px 0', cursor: 'pointer' }}>
+              <input type="checkbox" checked={gewaehlt.has(m.id)} onChange={() => umschalten(m.id)} />
+              <span>{m.name}{m.abteilung ? <span style={{ color: C.textDim }}> · {m.abteilung}</span> : null}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  const abteilungen = [...new Set(liste.map((m) => m.abteilung).filter(Boolean))].sort((x, y) => x.localeCompare(y, 'de'));
+  const wert = String(s.config.abteilung ?? '');
+  return (
+    <div>
+      <label style={beschriftung}>Abteilung *</label>
+      {abteilungen.length === 0
+        ? <div style={{ ...klein, color: C.warn }}>Bei keinem Mitarbeiter ist eine Abteilung eingetragen (Personal → Mitarbeiter → Abteilung).</div>
+        : (
+          <select value={wert} onChange={(e) => onChange({ ...s, config: { ...s.config, abteilung: e.target.value } })} style={feld}>
+            <option value="">Bitte wählen</option>
+            {abteilungen.map((a) => <option key={a} value={a}>{a} ({liste.filter((m) => m.abteilung === a).length})</option>)}
+          </select>
+        )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Einstellungen einer Aktion
 // ---------------------------------------------------------------------------
 function AktionFelder({ s, onChange }: { s: SchrittAktion; onChange: (s: SchrittAktion) => void }) {
@@ -151,6 +222,8 @@ function AktionFelder({ s, onChange }: { s: SchrittAktion; onChange: (s: Schritt
       {s.aktion === 'webhook_senden' && <div style={klein}>Nur https, nur fremde Programme (z. B. n8n). Gesendet werden Ablauf, Vorgangs-Kennung, Nummer, Name und Betrag — weitere Felder nur, wenn Sie sie unten nennen. Bank-, Steuer-, Gesundheits- und Zugangsdaten gehen nie raus. Nur an Empfänger mit AVV.</div>}
       {felder.map((fd) => {
         if (fd.key === 'adresse' && s.config.an !== 'feste_adresse') return null;
+        // Paket 192: Personen/Abteilung der Glocke haben eine eigene Auswahl (unten).
+        if (s.aktion === 'glocke' && (fd.key === 'personen' || fd.key === 'abteilung')) return null;
         const wert = String(s.config[fd.key] ?? '');
         return (
           <div key={fd.key}>
@@ -167,6 +240,7 @@ function AktionFelder({ s, onChange }: { s: SchrittAktion; onChange: (s: Schritt
           </div>
         );
       })}
+      {s.aktion === 'glocke' && <GlockeEmpfaenger s={s} onChange={onChange} />}
       <div style={klein}>Platzhalter: {'{{name}}'}, {'{{nummer}}'}, {'{{betrag}}'}, {'{{datum}}'}, {'{{tage}}'}, {'{{heute}}'}, {'{{kunde.email}}'}</div>
     </div>
   );
@@ -328,15 +402,24 @@ export default function AblaufEditor({ start, busy, onSpeichern, onAbbrechen }: 
         {e.ausloeser.art === 'knopf' && (
           <div style={{ marginBottom: 8 }}>
             <label style={beschriftung}>Wo erscheint der Knopf?</label>
-            <select value={e.ausloeser.modul ?? ''} onChange={(ev) => setE((x) => ({ ...x, ausloeser: ev.target.value ? { art: 'knopf', modul: ev.target.value } : { art: 'knopf' } }))} style={{ ...feld, maxWidth: 360 }}>
+            <select value={e.ausloeser.modul ?? ''} onChange={(ev) => setE((x) => ({ ...x, ausloeser: ev.target.value ? { art: 'knopf', modul: ev.target.value, ...(x.ausloeser.art === 'knopf' && x.ausloeser.mitarbeiter ? { mitarbeiter: true } : {}) } : { art: 'knopf' } }))} style={{ ...feld, maxWidth: 360 }}>
               <option value="">Auf der Seite Abläufe (ohne Vorgang)</option>
               {KNOPF_MODULE.map((k) => <option key={k.modul} value={k.modul}>Auf jeder Seite: {k.einzahl}</option>)}
             </select>
             <div style={{ ...klein, marginTop: 5 }}>
               {e.ausloeser.modul
-                ? 'Der Knopf erscheint oben auf der Detailseite (nur für die Geschäftsleitung). Der Vorgang der Seite ist dann {{name}}, {{nummer}} … — je Vorgang läuft der Ablauf einmal.'
+                ? `Der Knopf erscheint oben auf der Detailseite (${e.ausloeser.mitarbeiter ? 'für die Geschäftsleitung und Mitarbeiter mit Schreibrecht' : 'nur für die Geschäftsleitung'}). Der Vorgang der Seite ist dann {{name}}, {{nummer}} … — je Vorgang läuft der Ablauf einmal.`
                 : 'Startet mit „▶ Jetzt starten" auf der Seite Abläufe — ohne Vorgang.'}
             </div>
+            {e.ausloeser.modul && (
+              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, marginTop: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={e.ausloeser.mitarbeiter === true}
+                  onChange={(ev) => setE((x) => (x.ausloeser.art === 'knopf' && x.ausloeser.modul
+                    ? { ...x, ausloeser: ev.target.checked ? { art: 'knopf', modul: x.ausloeser.modul, mitarbeiter: true } : { art: 'knopf', modul: x.ausloeser.modul } }
+                    : x))} style={{ marginTop: 3 }} />
+                <span>Auch Mitarbeiter mit Schreibrecht für {KNOPF_MODULE.find((k) => e.ausloeser.art === 'knopf' && k.modul === e.ausloeser.modul)?.label ?? 'dieses Modul'} dürfen den Knopf drücken</span>
+              </label>
+            )}
           </div>
         )}
         {e.ausloeser.art !== 'datum' && e.ausloeser.art !== 'ereignis' && !(e.ausloeser.art === 'knopf' && e.ausloeser.modul) && (

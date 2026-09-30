@@ -10,7 +10,7 @@
 
 import { sendeMail, kundenMailLayout, absenderBranding } from './mail';
 import { fahrplan, type Ablauf, type Schritt } from './ablauf';
-import { aktionPlanen, zustandNach, type AktionPlan, type Ziel } from './ablaufMotor';
+import { aktionPlanen, zustandNach, type AktionPlan, type Ziel, type GlockeAn } from './ablaufMotor';
 import type { Datensatz } from './automation';
 import { randomUUID } from 'node:crypto';
 import { ablaufPdfHtml, ablaufPdfPfad } from './ablaufPdf';
@@ -66,7 +66,7 @@ async function fuehreAus(db: Db, plan: AktionPlan, ownerId: string, u: Umfeld): 
     if (!data || data.length === 0) return { ergebnis: 'fehler', meldung: 'Vorgang nicht gefunden' };
     return { ergebnis: 'ok', meldung: plan.meldung };
   }
-  if (plan.art === 'glocke') return glocke(db, ownerId, plan.an, plan.titel, plan.text, plan.link, `${u.lauf.id}:${u.pfad}`, plan.meldung);
+  if (plan.art === 'glocke') return glocke(db, ownerId, { an: plan.an, personen: plan.personen, abteilung: plan.abteilung }, plan.titel, plan.text, plan.link, `${u.lauf.id}:${u.pfad}`, plan.meldung);
   if (plan.art === 'pdf') return pdfErstellen(db, ownerId, plan, u);
   if (plan.art === 'ki') return kiSchritt(db, ownerId, plan, u);
   if (plan.art === 'webhook') return webhook(plan, u);
@@ -108,21 +108,37 @@ export async function mailSenden(db: Db, ownerId: string, plan: Extract<AktionPl
 // Paket 167: Glocke, PDF, KI-Entwurf, Webhook
 // ---------------------------------------------------------------------------
 
-/** Empfänger der Glocke: Geschäftsleitung = der Betrieb; Team = alle Mitarbeiter mit Zugang (nicht ausgetreten). */
-async function glockenEmpfaenger(db: Db, ownerId: string, an: 'chef' | 'team', jetzt: Date): Promise<string[]> {
-  if (an === 'chef') return [ownerId];
+/**
+ * Empfänger der Glocke: Geschäftsleitung = der Betrieb; Team = alle Mitarbeiter mit Zugang (nicht ausgetreten).
+ * Paket 192: Personen = nur die gewählten Mitarbeiter DIESES Betriebs; Abteilung = alle
+ * Mitarbeiter mit Zugang, deren Abteilung (ohne Groß/Klein, getrimmt) passt.
+ * Immer auf owner_user_id gefiltert — eine fremde Kennung in der Einstellung erreicht niemanden.
+ */
+export type GlockeZiel = { an: GlockeAn; personen?: string[]; abteilung?: string | null };
+
+export async function glockenEmpfaenger(db: Db, ownerId: string, ziel: GlockeZiel, jetzt: Date): Promise<string[]> {
+  if (ziel.an === 'chef') return [ownerId];
   const heute = jetzt.toISOString().slice(0, 10);
-  const { data } = await db.from('mitarbeiter').select('auth_user_id, austrittsdatum')
-    .eq('owner_user_id', ownerId).not('auth_user_id', 'is', null).limit(200);
-  const ids = ((data ?? []) as { auth_user_id: string | null; austrittsdatum: string | null }[])
+  const { data } = await db.from('mitarbeiter').select('id, auth_user_id, austrittsdatum, abteilung')
+    .eq('owner_user_id', ownerId).not('auth_user_id', 'is', null).limit(1000);
+  const personen = new Set((ziel.personen ?? []).map((x) => x.toLowerCase()));
+  const abteilung = (ziel.abteilung ?? '').trim().toLowerCase();
+  const ids = ((data ?? []) as { id: string; auth_user_id: string | null; austrittsdatum: string | null; abteilung: string | null }[])
     .filter((m) => m.auth_user_id && (!m.austrittsdatum || m.austrittsdatum >= heute))
-    .map((m) => m.auth_user_id as string);
-  return [ownerId, ...new Set(ids.filter((x) => x !== ownerId))];
+    .filter((m) => ziel.an === 'team'
+      || (ziel.an === 'personen' && personen.has(String(m.id).toLowerCase()))
+      || (ziel.an === 'abteilung' && !!abteilung && String(m.abteilung ?? '').trim().toLowerCase() === abteilung))
+    .map((m) => m.auth_user_id as string)
+    .filter((x) => x !== ownerId);
+  const uniq = [...new Set(ids)];
+  // Team: die Geschäftsleitung sieht die Meldung mit. Personen/Abteilung: nur die Gewählten.
+  return ziel.an === 'team' ? [ownerId, ...uniq] : uniq;
 }
 
-async function glocke(db: Db, ownerId: string, an: 'chef' | 'team', titel: string, text: string, link: string, ref: string, meldung: string): Promise<Ergebnis> {
+async function glocke(db: Db, ownerId: string, ziel: GlockeZiel, titel: string, text: string, link: string, ref: string, meldung: string): Promise<Ergebnis> {
   if (!db.rpc) return { ergebnis: 'fehler', meldung: 'Glocke nicht erreichbar' };
-  const empfaenger = await glockenEmpfaenger(db, ownerId, an, new Date());
+  const empfaenger = await glockenEmpfaenger(db, ownerId, ziel, new Date());
+  if (empfaenger.length === 0) return { ergebnis: 'uebersprungen', meldung: `${meldung} — niemand mit Zugang gefunden` };
   let fehler = '';
   for (const uid of empfaenger) {
     const { error } = await db.rpc('benachrichtigung_erstellen', {
@@ -175,7 +191,7 @@ async function kiSchritt(db: Db, ownerId: string, plan: Extract<AktionPlan, { ar
   if (!r.ok) return { ergebnis: 'fehler', meldung: r.meldung };
   const f = await ergebnisAblegen(db, ownerId, u, { art: 'entwurf', titel: plan.titel, inhalt: r.text });
   if (f) return { ergebnis: 'fehler', meldung: f };
-  await glocke(db, ownerId, 'chef', 'Entwurf liegt bereit', plan.titel, '/dashboard/ablaeufe', `${u.lauf.id}:${u.pfad}:entwurf`, '');
+  await glocke(db, ownerId, { an: 'chef' }, 'Entwurf liegt bereit', plan.titel, '/dashboard/ablaeufe', `${u.lauf.id}:${u.pfad}:entwurf`, '');
   return { ergebnis: 'ok', meldung: `${plan.meldung} — unter „Ergebnisse"` };
 }
 
