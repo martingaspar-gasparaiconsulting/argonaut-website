@@ -90,7 +90,8 @@ test('Seiten: Archiv ohne Link/Unterschrift/Rechnung, getrennte Liste; Rechnung 
   assert.ok(a.includes("{a.status !== ARCHIV && <button style={styles.mini} onClick={() => kopieren(a)}>"));
   assert.ok(a.includes("q.eq('status', ARCHIV) : q.neq('status', ARCHIV)"));
   assert.ok(lies('app/api/rechnung-aus-angebot/route.ts').includes('if (ang.status !== "angenommen")'));
-  assert.ok(lies('app/api/oeffentlich/angebot/route.ts').includes(".in('status', ['entwurf', 'gesendet'])"));
+  // Paket 182 (bewusst strenger): Zusage nur noch aus „gesendet" — Archiv und Entwurf nie.
+  assert.ok(lies('app/api/oeffentlich/angebot/route.ts').includes(".eq('id', a.id).eq('status', 'gesendet')"));
   assert.ok(lies('app/api/rechnung-aus-shop/route.ts').includes('if (b.status === "abgeschlossen")'));
   const i = lies('app/dashboard/import/page.tsx');
   assert.ok(i.includes('kindZeilen(neuPos[p.von + j]'));

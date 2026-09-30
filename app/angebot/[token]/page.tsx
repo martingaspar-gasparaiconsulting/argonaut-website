@@ -15,7 +15,7 @@ const C = {
 };
 
 type Pos = { bezeichnung: string; menge: number; einheit: string; einzelpreis: number; netto: number; satz: number };
-type Angebot = { nummer: string; titel: string; kunde: string; status: string; gueltigBis: string | null; netto: number; mwst: number; brutto: number };
+type Angebot = { nummer: string; titel: string; kunde: string; status: string; gueltigBis: string | null; netto: number; mwst: number; brutto: number; erklaerung?: string };
 
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function datum(iso: string | null): string {
@@ -34,6 +34,8 @@ export default function AngebotSeite() {
   const [positionen, setPositionen] = useState<Pos[]>([]);
   const [senden, setSenden] = useState(false);
   const [ergebnis, setErgebnis] = useState<'angenommen' | 'abgelehnt' | null>(null);
+  // Paket 182: Annahme nur mit Namen (Nachweis: Name, Zeitpunkt, Wortlaut).
+  const [name, setName] = useState('');
 
   async function laden_() {
     try {
@@ -55,7 +57,7 @@ export default function AngebotSeite() {
     try {
       const res = await fetch('/api/oeffentlich/angebot', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, entscheidung }),
+        body: JSON.stringify({ token, entscheidung, name }),
       });
       const j = await res.json();
       if (!res.ok) { setFehler(j?.error || 'Aktion fehlgeschlagen.'); return; }
@@ -134,15 +136,20 @@ export default function AngebotSeite() {
                 <>
                   <p style={{ ...styles.sub, textAlign: 'center', marginTop: 0 }}>Möchten Sie dieses Angebot annehmen?</p>
                   {fehler && <div style={styles.err}>{fehler}</div>}
+                  <label style={{ display: 'block', marginTop: 14, fontSize: 14, color: C.textDim }}>
+                    Ihr vollständiger Name (für die Annahme)
+                    <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={120}
+                      placeholder="Vorname Nachname" style={styles.input} />
+                  </label>
                   <div style={styles.btnRow}>
-                    <button style={{ ...styles.primaer, opacity: senden ? 0.6 : 1 }} disabled={senden} onClick={() => entscheiden('annehmen')}>
+                    <button style={{ ...styles.primaer, opacity: senden || name.trim().length < 3 ? 0.6 : 1 }} disabled={senden || name.trim().length < 3} onClick={() => entscheiden('annehmen')}>
                       ✅ Angebot annehmen
                     </button>
                     <button style={{ ...styles.ghost, opacity: senden ? 0.6 : 1 }} disabled={senden} onClick={() => entscheiden('ablehnen')}>
                       Ablehnen
                     </button>
                   </div>
-                  <p style={{ ...styles.hint }}>Mit „Angebot annehmen" erklären Sie verbindlich Ihr Einverständnis mit den oben genannten Leistungen und Preisen.</p>
+                  <p style={{ ...styles.hint }}>{angebot.erklaerung ?? 'Mit „Angebot annehmen" erklären Sie verbindlich Ihr Einverständnis mit den oben genannten Leistungen und Preisen.'} Gespeichert werden Ihr Name und der Zeitpunkt.</p>
                 </>
               )}
             </div>
@@ -172,6 +179,7 @@ const styles: Record<string, CSSProperties> = {
   btnRow: { display: 'flex', gap: 12, marginTop: 14, flexWrap: 'wrap', justifyContent: 'center' },
   primaer: { background: C.green, color: '#04240f', border: 'none', borderRadius: 12, padding: '14px 22px', fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   ghost: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 22px', fontSize: 16, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' },
+  input: { display: 'block', width: '100%', boxSizing: 'border-box', marginTop: 6, padding: '12px 14px', borderRadius: 10, border: `1px solid ${C.border}`, background: 'rgba(10,22,40,0.7)', color: C.text, fontSize: 16, fontFamily: 'inherit' },
   hint: { color: C.textDim, fontSize: 12.5, textAlign: 'center', marginTop: 12, lineHeight: 1.5 },
   err: { color: C.danger, background: 'rgba(224,102,102,0.1)', border: '1px solid rgba(224,102,102,0.3)', borderRadius: 10, padding: '10px 14px', marginTop: 12, fontSize: 14, textAlign: 'center' },
   footer: { marginTop: 6, textAlign: 'center', color: C.textDim, fontSize: 12, opacity: 0.7 },

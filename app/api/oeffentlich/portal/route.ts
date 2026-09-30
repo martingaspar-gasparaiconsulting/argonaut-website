@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
     const { data: aRaw } = await db.from('angebote')
       .select('titel, brutto_summe, gueltig_bis, status, token, kontakt_id')
       .eq('owner_user_id', ownerId).eq('kontakt_id', kontaktId)
-      .in('status', ['entwurf', 'gesendet'])
+      .eq('status', 'gesendet') // Paket 182: Entwürfe nie im Portal
       .order('erstellt_am', { ascending: false })
       .limit(50);
     const angebote = (aRaw || []).map((a) => ({

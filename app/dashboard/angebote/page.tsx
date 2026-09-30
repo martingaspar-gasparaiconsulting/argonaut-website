@@ -184,6 +184,14 @@ export default function AngebotePage() {
     } finally { setBusy(null); }
   }
   async function kopieren(a: Angebot) {
+    // Paket 182: Der Zusage-Link funktioniert erst ab „gesendet". Wer den Link
+    // eines Entwurfs kopiert, verschickt ihn — also vorher (mit Rückfrage) umstellen.
+    if (a.status === 'entwurf') {
+      if (typeof window !== 'undefined' && !window.confirm('Der Zusage-Link funktioniert erst, wenn das Angebot als „gesendet" markiert ist. Jetzt als gesendet markieren und Link kopieren?')) return;
+      const { error } = await supabase.from('angebote').update({ status: 'gesendet', aktualisiert_am: new Date().toISOString() }).eq('id', a.id).eq('status', 'entwurf');
+      if (error) { setFehler('Angebot konnte nicht als gesendet markiert werden — Link nicht kopiert.'); return; }
+      setListe((l) => l.map((x) => (x.id === a.id ? { ...x, status: 'gesendet' } : x)));
+    }
     const url = `${basisUrl}/angebot/${a.token}`;
     try { await navigator.clipboard.writeText(url); setOk('Zusage-Link kopiert — an den Kunden schicken.'); }
     catch { setOk(url); }

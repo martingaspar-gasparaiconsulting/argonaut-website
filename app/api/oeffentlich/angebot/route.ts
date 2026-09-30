@@ -9,10 +9,17 @@
 //  · Ein bereits angenommenes/abgelehntes Angebot kann NICHT erneut entschieden
 //    werden. Ein abgelaufenes (gueltig_bis < heute) kann nicht angenommen werden.
 //  · Nach aussen gehen nur Anzeige-Felder, keine internen IDs des Betriebs.
+//
+// PAKET 182 (30.09.2026): Ein Angebot ist per Link erst ab „gesendet"
+// sichtbar und entscheidbar (vorher war ein Entwurf annehmbar). Annehmen
+// nur mit Namen; gespeichert werden Name, Zeitpunkt und der Wortlaut der
+// Erklärung. Der Betrieb bekommt eine Meldung in der Glocke.
+// Regeln: lib/angebotZusage.ts.
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { perLinkSichtbar, entscheidbar, zusageName, abgelaufen as istAbgelaufenAm, ZUSAGE_ERKLAERUNG } from '@/lib/angebotZusage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,8 +36,7 @@ async function betriebName(db: ReturnType<typeof admin>, ownerId: string): Promi
   return (data?.firma_name as string) || 'Ihr Betrieb';
 }
 function abgelaufen(gueltigBis: string | null): boolean {
-  if (!gueltigBis) return false;
-  return new Date(gueltigBis + 'T23:59:59') < new Date();
+  return istAbgelaufenAm(gueltigBis, new Date());
 }
 
 export async function GET(req: NextRequest) {
@@ -43,6 +49,8 @@ export async function GET(req: NextRequest) {
       .select('id, owner_user_id, angebotsnummer, titel, kunde_name, status, gueltig_bis, netto_summe, mwst_summe, brutto_summe, angenommen_am, abgelehnt_am')
       .eq('token', token).maybeSingle();
     if (!a) return NextResponse.json({ error: 'Dieser Angebots-Link ist ungültig.' }, { status: 404 });
+    // Paket 182: Entwurf (oder Archiv) verrät über den Link nichts.
+    if (!perLinkSichtbar(a.status)) return NextResponse.json({ error: 'Dieses Angebot ist noch nicht freigegeben.' }, { status: 404 });
 
     const { data: pos } = await db.from('angebot_positionen')
       .select('position, bezeichnung, menge, einheit, einzelpreis, mwst_satz, gesamt_netto')
@@ -57,6 +65,7 @@ export async function GET(req: NextRequest) {
         status: istAbgelaufen ? 'abgelaufen' : a.status,
         gueltigBis: a.gueltig_bis, netto: Number(a.netto_summe) || 0,
         mwst: Number(a.mwst_summe) || 0, brutto: Number(a.brutto_summe) || 0,
+        erklaerung: ZUSAGE_ERKLAERUNG,
       },
       positionen: (pos || []).map((p) => ({
         bezeichnung: p.bezeichnung, menge: Number(p.menge) || 0, einheit: p.einheit,
@@ -78,26 +87,39 @@ export async function POST(req: NextRequest) {
     if (entscheidung !== 'annehmen' && entscheidung !== 'ablehnen') {
       return NextResponse.json({ error: 'Ungültige Auswahl.' }, { status: 400 });
     }
+    const name = zusageName(body?.name);
+    if (entscheidung === 'annehmen' && !name) {
+      return NextResponse.json({ error: 'Bitte Ihren vollständigen Namen eintragen.' }, { status: 400 });
+    }
     const db = admin();
     const { data: a } = await db.from('angebote')
-      .select('id, status, gueltig_bis').eq('token', token).maybeSingle();
+      .select('id, owner_user_id, angebotsnummer, titel, status, gueltig_bis').eq('token', token).maybeSingle();
     if (!a) return NextResponse.json({ error: 'Dieser Angebots-Link ist ungültig.' }, { status: 404 });
 
-    if (a.status === 'angenommen' || a.status === 'abgelehnt') {
-      return NextResponse.json({ error: 'Dieses Angebot wurde bereits entschieden.', status: a.status }, { status: 409 });
-    }
-    if (entscheidung === 'annehmen' && abgelaufen(a.gueltig_bis as string | null)) {
-      return NextResponse.json({ error: 'Das Angebot ist leider abgelaufen. Bitte fragen Sie ein neues an.' }, { status: 409 });
-    }
+    const d = entscheidbar(a, entscheidung, new Date());
+    if (!d.ja) return NextResponse.json({ error: d.grund, status: a.status }, { status: d.code });
 
     const jetzt = new Date().toISOString();
+    const nachweis = { entschieden_name: name, entschieden_erklaerung: entscheidung === 'annehmen' ? ZUSAGE_ERKLAERUNG : null };
     const neu = entscheidung === 'annehmen'
-      ? { status: 'angenommen', angenommen_am: jetzt, aktualisiert_am: jetzt }
-      : { status: 'abgelehnt', abgelehnt_am: jetzt, aktualisiert_am: jetzt };
-    // Doppel-Schutz auf DB-Ebene: nur aendern, solange noch offen.
-    const { error } = await db.from('angebote').update(neu)
-      .eq('id', a.id).in('status', ['entwurf', 'gesendet']);
+      ? { status: 'angenommen', angenommen_am: jetzt, aktualisiert_am: jetzt, ...nachweis }
+      : { status: 'abgelehnt', abgelehnt_am: jetzt, aktualisiert_am: jetzt, ...nachweis };
+    // Doppel-Schutz auf DB-Ebene: nur aendern, solange „gesendet" (Paket 182: nie aus dem Entwurf).
+    const { data: geaendert, error } = await db.from('angebote').update(neu)
+      .eq('id', a.id).eq('status', 'gesendet').select('id');
     if (error) throw error;
+    if (!geaendert || geaendert.length === 0) return NextResponse.json({ error: 'Dieses Angebot wurde bereits entschieden.' }, { status: 409 });
+
+    // Meldung an den Betrieb (Glocke). Fehler hier hält die Zusage nicht auf.
+    try {
+      const nr = a.angebotsnummer ? `${a.angebotsnummer} ` : '';
+      await db.rpc('benachrichtigung_erstellen', {
+        p_owner: a.owner_user_id, p_typ: 'angebot_entscheidung',
+        p_titel: entscheidung === 'annehmen' ? `Angebot ${nr}angenommen` : `Angebot ${nr}abgelehnt`,
+        p_nachricht: `${a.titel || 'Angebot'}${name ? ` — ${name}` : ''}`,
+        p_link: '/dashboard/angebote', p_ref_tabelle: 'angebote', p_ref_id: a.id, p_dedup_stunden: 24,
+      });
+    } catch { /* Glocke ist Zugabe */ }
     return NextResponse.json({ ok: true, status: neu.status });
   } catch (e: unknown) {
     console.error('Angebot POST:', e instanceof Error ? e.message : 'unbekannt');
