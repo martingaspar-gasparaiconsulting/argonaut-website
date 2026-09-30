@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import { verpflegung, fahrtkosten, round2, type Fahrzeug } from '@/lib/reisekosten';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
@@ -51,6 +52,8 @@ function dtag(iso: string | null) { if (!iso) return '—'; const p = iso.slice(
 
 export default function ReisekostenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [reisen, setReisen] = useState<Reise[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -78,7 +81,9 @@ export default function ReisekostenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_();
+      setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
+      await laden_();
     })();
   }, [laden_]);
 
@@ -101,7 +106,7 @@ export default function ReisekostenPage() {
     if (!form.abreise || !form.rueckkehr) { setFehler('Bitte Abreise und Rückkehr angeben.'); return; }
     const { vp, fahrt, uebernachtung, sonstige, gesamt } = rechnung;
     const payload = {
-      owner_user_id: uid, reisender: form.reisender.trim() || null, anlass: form.anlass.trim() || null, ziel: form.ziel.trim() || null,
+      reisender: form.reisender.trim() || null, anlass: form.anlass.trim() || null, ziel: form.ziel.trim() || null,
       abreise: new Date(form.abreise).toISOString(), rueckkehr: new Date(form.rueckkehr).toISOString(),
       km: num(form.km) || null, fahrzeug: form.fahrzeug, km_satz: form.fahrzeug === 'motorrad' ? 0.20 : 0.30, fahrt_betrag: fahrt,
       fruehstueck_anz: intv(form.fruehstueck), mittag_anz: intv(form.mittag), abend_anz: intv(form.abend),
@@ -113,7 +118,7 @@ export default function ReisekostenPage() {
         const { error } = await supabase.from('reisekosten').update(payload).eq('id', editId); if (error) throw error;
         try { await speichereWerte(MODUL, editId, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
-        const { data: neu, error } = await supabase.from('reisekosten').insert(payload).select('id').single(); if (error) throw error;
+        const { ergebnis: { data: neu, error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('reisekosten').insert(d).select('id').single()); if (error) throw error;
         try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
       setNmExtra({}); setOk('Reise gespeichert.'); reset(); await laden_();

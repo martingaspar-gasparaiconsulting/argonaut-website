@@ -26,6 +26,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import {
   provisionBetrag, summen, erwartetGeld, modellVon, statusVon,
   baueGutschrift, laufKennung, pruefeZuordnung, perioden, fehlendePerioden,
@@ -70,6 +71,8 @@ function dtag(iso: string | null | undefined) {
 
 export default function PartnerProvisionen() {
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [profil, setProfil] = useState<Profil | null>(null);
   const [partner, setPartner] = useState<PartnerDb[]>([]);
   const [zuordnungen, setZuordnungen] = useState<ZuordnungDb[]>([]);
@@ -95,6 +98,7 @@ export default function PartnerProvisionen() {
     const { data: u } = await supabase.auth.getUser();
     if (!u?.user) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
     setUid(u.user.id);
+    { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, u.user.id)); }
     try {
       const [{ data: p }, { data: zz }, { data: pr }] = await Promise.all([
         supabase.from('provision_partner').select('*').order('name'),
@@ -174,8 +178,7 @@ export default function PartnerProvisionen() {
 
     setBusy(true);
     const betrag = provisionBetrag(form.basis_netto, form.satz_prozent);
-    const { error } = await supabase.from('provision_zuordnung').insert({
-      owner_user_id: uid,
+    const { ergebnis: { error } } = await anlegenFuerBetrieb({
       partner_id: form.partner_id,
       kontakt_id: form.kontakt_id || null,
       kunde_name: form.kunde_name.trim() || null,
@@ -187,7 +190,7 @@ export default function PartnerProvisionen() {
       faellig_am: form.faellig_am || null,
       status: 'offen',
       notiz: form.notiz.trim() || null,
-    });
+    }, besitzer, uid, (d) => supabase.from('provision_zuordnung').insert(d));
     setBusy(false);
     if (error) {
       setFehler(error.message.includes('provision_zuordnung_periode_einmalig')
@@ -208,14 +211,14 @@ export default function PartnerProvisionen() {
     if (satz <= 0 || basis <= 0) { setFehler('Für diesen Deal fehlt ein Netto-Wert oder ein Provisionssatz.'); return; }
 
     setBusy(true);
-    const { error } = await supabase.from('provision_zuordnung').insert({
-      owner_user_id: uid, partner_id: form.partner_id,
+    const { ergebnis: { error } } = await anlegenFuerBetrieb({
+      partner_id: form.partner_id,
       kontakt_id: d.kontakt_id || null,
       kunde_name: (d.firma || d.titel || 'Vermittlung').trim(),
       quelle: 'crm_deal', deal_id: d.id,
       basis_netto: basis, satz_prozent: satz, betrag: provisionBetrag(basis, satz),
       faellig_am: heuteISO(), status: 'offen',
-    });
+    }, besitzer, uid, (d) => supabase.from('provision_zuordnung').insert(d));
     setBusy(false);
     if (error) { setFehler(error.message); return; }
     setMeldung(`Provision aus „${d.firma || d.titel}“ übernommen.`);
@@ -263,7 +266,7 @@ export default function PartnerProvisionen() {
         .map((z) => z.periode);
       for (const periode of fehlendePerioden(alle, vorhanden)) {
         neueZeilen.push({
-          owner_user_id: uid, partner_id: p.id,
+          partner_id: p.id,
           kontakt_id: k.kontakt_id, kunde_name: k.kunde_name,
           quelle: 'manuell', basis_netto: k.basis, satz_prozent: k.satz,
           betrag: provisionBetrag(k.basis, k.satz), periode, status: 'offen',
@@ -276,7 +279,7 @@ export default function PartnerProvisionen() {
     if (neueZeilen.length > 200) { setFehler(`${neueZeilen.length} Zeilen wären zu viel auf einmal — bitte die Laufzeit prüfen.`); return; }
 
     setBusy(true);
-    const { error } = await supabase.from('provision_zuordnung').insert(neueZeilen);
+    const { ergebnis: { error } } = await anlegenFuerBetrieb(neueZeilen, besitzer, uid, (d) => supabase.from('provision_zuordnung').insert(d));
     setBusy(false);
     if (error) { setFehler(error.message); return; }
     setMeldung(`${neueZeilen.length} fehlende Perioden nachgetragen.`);

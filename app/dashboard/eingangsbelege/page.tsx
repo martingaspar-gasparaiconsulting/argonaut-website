@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import { datevVorschlag, datevHinweise, datevKontenListe, type DatevVorschlag } from '@/lib/datevKonten';
 import Hinweise from '../_components/Hinweise';
 import Leerzustand from '../_components/Leerzustand';
@@ -54,6 +55,8 @@ function d(iso: string | null) { if (!iso) return '—'; const p = iso.slice(0, 
 
 export default function EingangsbelegePage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [belege, setBelege] = useState<Beleg[]>([]);
   const [laden, setLaden] = useState(true);
   const [ocrLaden, setOcrLaden] = useState(false);
@@ -85,7 +88,9 @@ export default function EingangsbelegePage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_();
+      setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
+      await laden_();
     })();
   }, [laden_]);
 
@@ -137,7 +142,7 @@ export default function EingangsbelegePage() {
     if (!uid) return;
     setFehler(null); setOk(null);
     const payload = {
-      owner_user_id: uid, lieferant: form.lieferant.trim() || null, belegnummer: form.belegnummer.trim() || null,
+      lieferant: form.lieferant.trim() || null, belegnummer: form.belegnummer.trim() || null,
       belegdatum: form.belegdatum || null, netto: num(form.netto), ust_satz: num(form.ust_satz), ust_betrag: num(form.ust_betrag),
       brutto: num(form.brutto), kategorie: form.kategorie.trim() || null, notiz: form.notiz.trim() || null,
       datev_konto: form.datev_konto.trim() || null, datev_rahmen: form.datev_rahmen || null,
@@ -148,7 +153,7 @@ export default function EingangsbelegePage() {
     };
     try {
       if (editId) { const { error } = await supabase.from('eingangsbelege').update(payload).eq('id', editId); if (error) throw error; }
-      else { const { error } = await supabase.from('eingangsbelege').insert({ ...payload, standort_id: konkreterStandort(leseStandortCookie()) }); if (error) throw error; }
+      else { const { ergebnis: { error } } = await anlegenFuerBetrieb({ ...payload, standort_id: konkreterStandort(leseStandortCookie()) }, besitzer, uid, (d) => supabase.from('eingangsbelege').insert(d)); if (error) throw error; }
       setOk('Beleg gespeichert.'); reset(); await laden_();
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
   }

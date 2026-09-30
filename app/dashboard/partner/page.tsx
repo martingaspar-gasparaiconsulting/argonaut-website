@@ -23,6 +23,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import { NurVoll } from '../_components/Ansicht';
 import PartnerProvisionen from './_Provisionen';
 import {
@@ -64,6 +65,8 @@ function dtag(iso: string | null | undefined) {
 
 export default function PartnerSeite() {
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [partner, setPartner] = useState<PartnerZeileDb[]>([]);
   const [zuordnungen, setZuordnungen] = useState<Zuordnung[]>([]);
   const [laden, setLaden] = useState(true);
@@ -81,6 +84,7 @@ export default function PartnerSeite() {
     const { data: u } = await supabase.auth.getUser();
     if (!u?.user) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
     setUid(u.user.id);
+    { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, u.user.id)); }
     try {
       const [{ data: p, error: pe }, { data: zz }] = await Promise.all([
         supabase.from('provision_partner').select('*').order('name'),
@@ -120,8 +124,7 @@ export default function PartnerSeite() {
     if (f.length > 0) return;
 
     setBusy(true);
-    const { error } = await supabase.from('provision_partner').insert({
-      owner_user_id: uid,
+    const { ergebnis: { error } } = await anlegenFuerBetrieb({
       name: neu.name.trim(),
       firma: neu.firma.trim() || null,
       email: neu.email.trim() || null,
@@ -135,7 +138,7 @@ export default function PartnerSeite() {
       kontoinhaber: neu.kontoinhaber.trim() || null,
       notiz: neu.notiz.trim() || null,
       status: 'aktiv',
-    });
+    }, besitzer, uid, (d) => supabase.from('provision_partner').insert(d));
     setBusy(false);
     if (error) { setFehler(error.message); return; }
     setNeu({ ...LEER });

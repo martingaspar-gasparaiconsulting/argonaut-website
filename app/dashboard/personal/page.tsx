@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties, ChangeEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import PersonalAuge from "./PersonalAuge";
@@ -194,11 +195,14 @@ export default function PersonalPage() {
   const [bundesland, setBundesland] = useState('BW');
   const [blSaving, setBlSaving] = useState(false);
 
+  // 181: Das Bundesland (Feiertage) gilt fuer den BETRIEB — beim Mitarbeiter mit
+  // Personal-Recht ist das die Einstellung des Chefs, nicht eine eigene.
   const ladeBundesland = useCallback(async () => {
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData?.user?.id;
     if (!uid) return;
-    const { data } = await supabase.from('hr_einstellungen').select('bundesland').eq('owner_user_id', uid).maybeSingle();
+    const { data: chef } = await supabase.rpc('mein_chef_id');
+    const { data } = await supabase.from('hr_einstellungen').select('bundesland').eq('owner_user_id', betriebsKennung(chef, uid)).maybeSingle();
     if (data?.bundesland) setBundesland(data.bundesland);
   }, []);
   useEffect(() => { ladeBundesland(); }, [ladeBundesland]);
@@ -216,7 +220,8 @@ export default function PersonalPage() {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData?.user?.id;
       if (!uid) return;
-      await supabase.from('hr_einstellungen').upsert({ owner_user_id: uid, bundesland: neu }, { onConflict: 'owner_user_id' });
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      await anlegenFuerBetrieb({ bundesland: neu }, betriebsKennung(chef, uid), uid, (d) => supabase.from('hr_einstellungen').upsert(d, { onConflict: 'owner_user_id' }));
     } finally { setBlSaving(false); }
   }
 

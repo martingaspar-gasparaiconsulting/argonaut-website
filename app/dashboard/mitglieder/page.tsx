@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import { baueSepaXml, ibanGueltig, istSepaBetragFehler, type SepaLastschrift } from '@/lib/sepa';
 import { leseBetrag, centRunden } from '@/lib/zahlen';
 import { bankarbeitstagHinweis } from '@/lib/bankarbeitstag';
@@ -58,6 +59,8 @@ function heutePlus(tage: number) { return new Date(Date.now() + tage * 86400000)
 
 export default function MitgliederPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [firma, setFirma] = useState('');
   const [cred, setCred] = useState({ glaeubiger: '', inhaber: '', iban: '', bic: '' });
   const [credBusy, setCredBusy] = useState(false);
@@ -81,6 +84,7 @@ export default function MitgliederPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
       const { data: p } = await supabase.from('profiles')
         .select('firma_name, sepa_glaeubiger_id, sepa_kontoinhaber, sepa_iban, sepa_bic').eq('id', id).maybeSingle();
       setFirma((p?.firma_name as string) || '');
@@ -150,7 +154,7 @@ export default function MitgliederPage() {
     setSpeichert(true); setFehler(null);
     try {
       const payload = {
-        owner_user_id: uid, name: form.name.trim(), email: form.email.trim() || null, telefon: form.telefon.trim() || null,
+        name: form.name.trim(), email: form.email.trim() || null, telefon: form.telefon.trim() || null,
         betrag: betragWert, intervall: form.intervall, status: form.status,
         beginn_am: form.beginn_am || null, iban: form.iban.replace(/\s+/g, '').toUpperCase() || null, bic: form.bic.replace(/\s+/g, '').toUpperCase() || null,
         mandatsreferenz: form.mandatsreferenz.trim() || null, mandat_datum: form.mandat_datum || null, notiz: form.notiz.trim() || null,
@@ -160,7 +164,7 @@ export default function MitgliederPage() {
         if (error) throw error;
         try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
-        const { data: neu, error } = await supabase.from('mitglieder').insert(payload).select('id').single();
+        const { ergebnis: { data: neu, error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('mitglieder').insert(d).select('id').single());
         if (error) throw error;
         try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }

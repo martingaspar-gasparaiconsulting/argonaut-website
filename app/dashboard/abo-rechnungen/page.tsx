@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import Leerzustand from '../_components/Leerzustand';
 import { leseZahlOder } from '@/lib/zahlen';
 
@@ -44,6 +45,8 @@ const LEER_POS: PosRow = { bezeichnung: '', menge: '1', einheit: 'Pauschal', ein
 
 export default function AboRechnungenPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [abos, setAbos] = useState<Abo[]>([]);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
   const [laden, setLaden] = useState(true);
@@ -75,7 +78,9 @@ export default function AboRechnungenPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await laden_();
+      setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
+      await laden_();
     })();
   }, [laden_]);
 
@@ -125,7 +130,7 @@ export default function AboRechnungenPage() {
     setBusy(true); setFehler(null); setOk(null);
     try {
       const payload = {
-        owner_user_id: uid, kontakt_id: form.kontakt_id || null, empfaenger_name: form.empfaenger_name.trim() || null,
+        kontakt_id: form.kontakt_id || null, empfaenger_name: form.empfaenger_name.trim() || null,
         titel: form.titel.trim(), positionen, intervall: form.intervall, naechste_faellig: form.naechste_faellig,
         notiz: form.notiz.trim() || null, updated_at: new Date().toISOString(),
       };
@@ -133,7 +138,7 @@ export default function AboRechnungenPage() {
         const { error } = await supabase.from('abo_rechnungen').update(payload).eq('id', editId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('abo_rechnungen').insert(payload);
+        const { ergebnis: { error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('abo_rechnungen').insert(d));
         if (error) throw error;
       }
       setOk(editId ? 'Vorlage aktualisiert.' : 'Vorlage angelegt.'); reset(); await laden_();

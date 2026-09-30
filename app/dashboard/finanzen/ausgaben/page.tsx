@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import FinanzTabs from "../_components/FinanzTabs";
 import { leseZahlOder, zahlFeld, zahlText } from '@/lib/zahlen';
 
@@ -215,7 +216,6 @@ export default function AusgabenCockpit() {
       }
 
       const datensatz: any = {
-        owner_user_id: user.id,
         bezeichnung: bezeichnung.trim(),
         kategorie,
         betrag_brutto: parseZahl(betrag),
@@ -232,7 +232,9 @@ export default function AusgabenCockpit() {
         const { error } = await supabase.from("ausgaben").update(datensatz).eq("id", editId);
         if (error) throw new Error(error.message);
       } else {
-        const { error } = await supabase.from("ausgaben").insert(datensatz);
+        // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        const { ergebnis: { error } } = await anlegenFuerBetrieb(datensatz, betriebsKennung(chef, user.id), user.id, (d) => supabase.from("ausgaben").insert(d));
         if (error) throw new Error(error.message);
       }
 

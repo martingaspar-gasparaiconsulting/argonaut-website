@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import Leerzustand from '../_components/Leerzustand';
 
 const supabase = createBrowserClient(
@@ -38,6 +39,8 @@ function kontaktName(k: Kontakt): string {
 
 export default function PortalVerwaltung() {
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
   const [zugaenge, setZugaenge] = useState<Record<string, Zugang>>({});
   const [suche, setSuche] = useState('');
@@ -68,6 +71,7 @@ export default function PortalVerwaltung() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
       await alles();
       setLaden(false);
     })();
@@ -86,9 +90,9 @@ export default function PortalVerwaltung() {
     if (!uid) return;
     setBusyId(k.id); setFehler(null); setOk(null);
     try {
-      const { data, error } = await supabase.from('portal_zugaenge')
-        .insert({ owner_user_id: uid, kontakt_id: k.id })
-        .select('id, kontakt_id, token, aktiv').single();
+      const { ergebnis: { data, error } } = await anlegenFuerBetrieb({ kontakt_id: k.id }, besitzer, uid, (d) => supabase.from('portal_zugaenge')
+        .insert(d)
+        .select('id, kontakt_id, token, aktiv').single());
       if (error) {
         // Vielleicht existiert schon einer (unique je Kontakt) -> neu laden.
         await alles();

@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import { leseZahl, leseZahlOder, zahlAusFeld, zahlFeld } from '@/lib/zahlen';
 import Leerzustand from '../_components/Leerzustand';
 import { NurVoll } from '../_components/Ansicht';
@@ -45,6 +46,8 @@ export default function NachkalkulationSeite() {
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [projektListe, setProjektListe] = useState<{ id: string; name: string }[]>([]);
   const [kf, setKf] = useState({ projekt_id: '', art: 'material', bezeichnung: '', betrag: '' });
   const [ok, setOk] = useState<string | null>(null);
@@ -96,6 +99,7 @@ export default function NachkalkulationSeite() {
       const { data } = await supabase.auth.getUser();
       if (!data?.user?.id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(data.user.id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, data.user.id)); }
       await laden_();
     })();
   }, [laden_]);
@@ -107,13 +111,12 @@ export default function NachkalkulationSeite() {
     if (!Number.isFinite(betrag) || betrag <= 0) { setFehler('Bitte einen Betrag größer 0 eingeben.'); return; }
     setBusy(true); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('projekt_kosten').insert({
-        owner_user_id: uid,
+      const { ergebnis: { error } } = await anlegenFuerBetrieb({
         projekt_id: kf.projekt_id,
         art: kf.art,
         bezeichnung: kf.bezeichnung.trim() || null,
         betrag,
-      });
+      }, besitzer, uid, (d) => supabase.from('projekt_kosten').insert(d));
       if (error) { setFehler('Kosten konnten nicht gespeichert werden: ' + error.message); return; }
       setKf({ projekt_id: kf.projekt_id, art: 'material', bezeichnung: '', betrag: '' });
       setOk('Kostenposten erfasst.');

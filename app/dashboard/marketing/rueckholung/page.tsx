@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import {
   MIN_RUHE_TAGE, MAX_SCHRITTE, SPERRE_TAGE,
   fehltZumStarten, beschreibe, letzterKaufJeKontakt, istRuhend, nochGesperrt, VORLAGE,
@@ -82,10 +83,13 @@ export default function RueckholungSeite() {
     setLaedt(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLaedt(false); setMeldung('Nicht angemeldet.'); return; }
+    // 181: Strecke, Kunden und Rechnungen des BETRIEBS (beim Mitarbeiter die des Chefs)
+    const { data: chef } = await supabase.rpc('mein_chef_id');
+    const betrieb = betriebsKennung(chef, user.id) ?? user.id;
 
     const { data: sRoh } = await supabase
       .from('rueckhol_strecke').select('id, name, aktiv, ruhe_tage')
-      .eq('owner_user_id', user.id).order('erstellt_am', { ascending: true }).limit(1);
+      .eq('owner_user_id', betrieb).order('erstellt_am', { ascending: true }).limit(1);
 
     const s = ((sRoh ?? []) as StreckeZeile[])[0] ?? null;
     setStrecke(s);
@@ -106,9 +110,9 @@ export default function RueckholungSeite() {
     }
 
     const [{ data: kRoh }, { data: rRoh }] = await Promise.all([
-      supabase.from('kontakte').select(KONTAKT_SPALTEN).eq('owner_user_id', user.id).limit(2000),
+      supabase.from('kontakte').select(KONTAKT_SPALTEN).eq('owner_user_id', betrieb).limit(2000),
       supabase.from('rechnungen').select('kontakt_id, bezahlt_am, faelligkeitsdatum')
-        .eq('owner_user_id', user.id).not('kontakt_id', 'is', null).limit(5000),
+        .eq('owner_user_id', betrieb).not('kontakt_id', 'is', null).limit(5000),
     ]);
 
     setKontakte((kRoh ?? []) as Kontakt[]);
@@ -186,9 +190,11 @@ export default function RueckholungSeite() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Nicht angemeldet.');
+      // 181: Neues gehoert dem BETRIEB; beim Aendern bleibt der Besitzer.
+      const { data: chef } = await supabase.rpc('mein_chef_id');
+      let besitzer = betriebsKennung(chef, user.id) ?? user.id;
 
       const werte = {
-        owner_user_id: user.id,
         name: name.trim(),
         ruhe_tage: Number(ruheTageFeld) || MIN_RUHE_TAGE,
         aktiv: scharf,
@@ -200,8 +206,9 @@ export default function RueckholungSeite() {
         const { error } = await supabase.from('rueckhol_strecke').update(werte).eq('id', streckeId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('rueckhol_strecke').insert(werte).select('id').single();
+        const { ergebnis: { data, error }, rueckfall } = await anlegenFuerBetrieb(werte, besitzer, user.id, (d) => supabase.from('rueckhol_strecke').insert(d).select('id').single());
         if (error) throw error;
+        if (rueckfall) besitzer = user.id;
         streckeId = (data as { id: string }).id;
       }
 
@@ -209,7 +216,6 @@ export default function RueckholungSeite() {
       // Löschen-und-neu-Anlegen — daran hängen die Versand-Sperren.
       for (const s of schritte) {
         const zeile = {
-          owner_user_id: user.id,
           strecke_id: streckeId,
           schritt: s.schritt,
           nach_tagen: Number(s.nach_tagen) || 0,
@@ -217,9 +223,9 @@ export default function RueckholungSeite() {
           text: String(s.text ?? ''),
           aktiv: s.aktiv !== false,
         };
-        const { error } = await supabase
+        const { ergebnis: { error } } = await anlegenFuerBetrieb(zeile, besitzer, user.id, (d) => supabase
           .from('rueckhol_schritt')
-          .upsert(zeile, { onConflict: 'strecke_id,schritt' });
+          .upsert(d, { onConflict: 'strecke_id,schritt' }));
         if (error) throw error;
       }
 

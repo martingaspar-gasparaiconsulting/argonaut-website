@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import {
   FOERDER_PROGRAMME, FOERDER_STAND, ART_LABEL, KATEGORIE_LABEL, BUNDESLAENDER,
   type FoerderProgramm, type FoerderKategorie, type Foerderart, type FoerderPhase,
@@ -68,6 +69,8 @@ const ARTEN = Object.keys(ART_LABEL) as Foerderart[];
 
 export default function FoerdermittelPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [vorhaben, setVorhaben] = useState<Record<string, Vorhaben>>({});
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -100,6 +103,7 @@ export default function FoerdermittelPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
       await laden_();
       setLaden(false);
     })();
@@ -129,9 +133,9 @@ export default function FoerdermittelPage() {
     if (!uid) return;
     setBusy(p.key); setFehler(null); setOk(null);
     try {
-      const { data, error } = await supabase.from('foerder_vorhaben')
-        .insert({ owner_user_id: uid, programm_key: p.key, programm_name: p.name, status: 'interessiert' })
-        .select('id, programm_key, programm_name, status, frist, notiz, bewilligt_betrag, verwendet_betrag, nachweis_frist, nachweis_status').single();
+      const { ergebnis: { data, error } } = await anlegenFuerBetrieb({ programm_key: p.key, programm_name: p.name, status: 'interessiert' }, besitzer, uid, (d) => supabase.from('foerder_vorhaben')
+        .insert(d)
+        .select('id, programm_key, programm_name, status, frist, notiz, bewilligt_betrag, verwendet_betrag, nachweis_frist, nachweis_status').single());
       if (error) { await laden_(); setFehler('Steht bereits auf Ihrer Merkliste.'); return; }
       try { await speichereWerte(MODUL, (data as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       setVorhaben((m) => ({ ...m, [p.key]: data as Vorhaben }));

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import KiAuge from "../_components/KiAuge";
 import { augeErnte } from "@/lib/auge";
@@ -62,6 +63,8 @@ export default function ErnteSeite() {
   const [verkaeufe, setVerkaeufe] = useState<Verkauf[]>([]);
   const [schlaege, setSchlaege] = useState<SchlagKurz[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [laden, setLaden] = useState(true);
   const [hinweis, setHinweis] = useState<string | null>(null);
 
@@ -88,6 +91,7 @@ export default function ErnteSeite() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       setUserId(userData.user?.id ?? null);
+      if (userData.user?.id) { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, userData.user.id)); }
       await ladeAlles();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,9 +129,7 @@ export default function ErnteSeite() {
       const roh = verkaeufe.map((v) => ({ id: v.id, betrag: verkaufsWerte(v.menge, v.einzelpreis, v.mwst_satz).brutto, datum: v.datum }));
       const payloads = offeneBuchungen(roh, "markt", refs, heute(), "Bar (Markt)");
       if (payloads.length === 0) { setFinanzMeldung("Alle Marktverkäufe sind bereits in den Finanzen gebucht."); setBusy(false); return; }
-      const uidLocal = uid;
-      const zeilen = payloads.map((p) => ({ ...p, owner_user_id: uidLocal }));
-      const { error } = await supabase.from("zahlungen").insert(zeilen);
+      const { ergebnis: { error } } = await anlegenFuerBetrieb(payloads.map((z) => ({ ...z })), besitzer ?? uid, uid, (d) => supabase.from("zahlungen").insert(d));
       if (error) { setFehler("Buchen fehlgeschlagen: " + error.message); setBusy(false); return; }
       setFinanzMeldung(`${payloads.length} Verkauf${payloads.length === 1 ? "" : "e"} in die Finanzen gebucht — sichtbar in EÜR & Finanz-Cockpit.`);
     } catch (e: any) {
@@ -161,8 +163,7 @@ export default function ErnteSeite() {
         if (error) { setFehler("Lager-Update fehlgeschlagen: " + error.message); setBusy(false); return; }
       } else {
         const stamm = artikelStammAusErnte(e.kultur, e.einheit);
-        const ins = { ...stamm, aktueller_bestand: menge, owner_user_id: uid };
-        const { error } = await supabase.from("artikel").insert(ins);
+        const { ergebnis: { error } } = await anlegenFuerBetrieb({ ...stamm, aktueller_bestand: menge }, besitzer ?? uid, uid, (d) => supabase.from("artikel").insert(d));
         if (error) { setFehler("Artikel anlegen fehlgeschlagen: " + error.message); setBusy(false); return; }
       }
       const { error: uErr } = await supabase.from("ernte_ernte").update({ lager_gebucht: true }).eq("id", e.id);
@@ -199,8 +200,7 @@ export default function ErnteSeite() {
       error = (await supabase.from("ernte_ernte").update(payload).eq("id", eEdit)).error;
       if (!error) { try { await speichereWerte(MODUL, eEdit, userId, nmExtra); } catch {} }
     } else {
-      const ins = userId ? { ...payload, owner_user_id: userId } : payload;
-      const { data: neu, error: insErr } = await supabase.from("ernte_ernte").insert(ins).select("id").single();
+      const { ergebnis: { data: neu, error: insErr } } = await anlegenFuerBetrieb(payload, besitzer, userId, (d) => supabase.from("ernte_ernte").insert(d).select("id").single());
       error = insErr;
       if (!insErr && neu) { try { await speichereWerte(MODUL, (neu as { id: string }).id, userId, nmExtra); } catch {} }
     }
@@ -232,7 +232,7 @@ export default function ErnteSeite() {
     const payload = { bezeichnung: pForm.bezeichnung.trim(), kategorie: pForm.kategorie || "Sonstiges", einheit: pForm.einheit.trim() || "Stück", preis: zahl(pForm.preis), mwst_satz: zahl(pForm.mwst_satz) ?? 7, bio: pForm.bio, herkunft: pForm.herkunft, verfuegbar: pForm.verfuegbar, notiz: pForm.notiz.trim() || null };
     let error = null as { message: string } | null;
     if (pEdit) error = (await supabase.from("markt_produkt").update(payload).eq("id", pEdit)).error;
-    else { const ins = userId ? { ...payload, owner_user_id: userId } : payload; error = (await supabase.from("markt_produkt").insert(ins)).error; }
+    else { error = (await anlegenFuerBetrieb(payload, besitzer, userId, (d) => supabase.from("markt_produkt").insert(d))).ergebnis.error; }
     setBusy(false);
     if (error) { setFehler("Speichern fehlgeschlagen: " + error.message); return; }
     setPModal(false); await ladeAlles();
@@ -259,8 +259,7 @@ export default function ErnteSeite() {
     if (!vk.menge.trim()) { setHinweis("Bitte die Menge angeben."); return; }
     const p = produktById[vk.produkt_id];
     const base = { produkt_id: vk.produkt_id, bezeichnung: p?.bezeichnung ?? null, datum: vk.datum || null, ort: vk.ort.trim() || null, menge: zahl(vk.menge), einzelpreis: zahl(vk.einzelpreis), mwst_satz: zahl(vk.mwst_satz) ?? 7 };
-    const ins = userId ? { ...base, owner_user_id: userId } : base;
-    const { error } = await supabase.from("markt_verkauf").insert(ins);
+    const { ergebnis: { error } } = await anlegenFuerBetrieb(base, besitzer, userId, (d) => supabase.from("markt_verkauf").insert(d));
     if (error) { window.alert("Fehler: " + error.message); return; }
     setVk({ datum: vk.datum, ort: vk.ort, produkt_id: "", menge: "", einzelpreis: "", mwst_satz: "7" });
     await ladeAlles();
@@ -302,10 +301,10 @@ export default function ErnteSeite() {
         preis: zahl(val("preis")), mwst_satz: zahl(val("mwst_satz")) ?? 7,
         bio: val("bio").toLowerCase() === "ja" || val("bio") === "1", herkunft: val("herkunft") || "eigen", verfuegbar: true,
       };
-      rows.push(userId ? { ...base, owner_user_id: userId } : base);
+      rows.push(base);
     }
     if (rows.length === 0) { setHinweis("Keine gültigen Zeilen gefunden."); return; }
-    const { error } = await supabase.from("markt_produkt").insert(rows);
+    const { ergebnis: { error } } = await anlegenFuerBetrieb(rows, besitzer, userId, (d) => supabase.from("markt_produkt").insert(d));
     if (error) { window.alert("Import fehlgeschlagen: " + error.message); return; }
     setHinweis(`${rows.length} Produkt(e) importiert.`); await ladeAlles();
   }

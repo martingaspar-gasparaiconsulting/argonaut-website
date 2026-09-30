@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import VertraegeAuge from "./VertraegeAuge";
 import { signaturStarten } from "@/lib/signaturStart";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
@@ -166,6 +167,8 @@ export default function VertraegeCockpit() {
   const [vertraege, setVertraege] = useState<Vertrag[]>([]);
   const [laden, setLaden] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [suche, setSuche] = useState("");
   const [katFilter, setKatFilter] = useState("");
   const [nurKritisch, setNurKritisch] = useState(false);
@@ -230,6 +233,7 @@ export default function VertraegeCockpit() {
     (async () => {
       const { data: userData } = await supabase.auth.getUser();
       setUserId(userData.user?.id ?? null);
+      if (userData.user?.id) { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, userData.user.id)); }
       await lade();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -360,8 +364,7 @@ export default function VertraegeCockpit() {
         try { await speichereWerte(MODUL, bearbeiteId, userId, nmExtra); } catch { /* eigene Felder optional */ }
       }
     } else {
-      const insertObj = userId ? { ...payload, owner_user_id: userId } : payload;
-      const res = await supabase.from("vertraege").insert(insertObj).select('id').single();
+      const { ergebnis: res } = await anlegenFuerBetrieb(payload, besitzer, userId, (d) => supabase.from("vertraege").insert(d).select('id').single());
       error = res.error;
       if (!res.error && res.data) {
         try { await speichereWerte(MODUL, (res.data as { id: string }).id, userId, nmExtra); } catch { /* eigene Felder optional */ }

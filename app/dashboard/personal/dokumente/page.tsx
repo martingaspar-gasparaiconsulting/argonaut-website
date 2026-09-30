@@ -16,6 +16,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties, type ReactNode } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import { heuteIso } from '@/lib/nachweisMotor';
 import {
   NACHWEIS_PUNKTE, FRIST_TEXT, NOTEN, nachweisStand, warnungen, beschaeftigungsbestaetigung,
@@ -43,6 +44,8 @@ const nameVon = (m: MA) => `${m.vorname ?? ''} ${m.nachname ?? ''}`.trim() || 'O
 export default function PersonalDokumentePage() {
   const [tab, setTab] = useState<Tab>('vertraege');
   const [uid, setUid] = useState<string | null>(null);
+  // 181: Vertraege gehoeren dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [firma, setFirma] = useState('');
   const [ma, setMa] = useState<MA[]>([]);
   const [vertraege, setVertraege] = useState<Record<string, VertragZeile>>({});
@@ -57,6 +60,7 @@ export default function PersonalDokumentePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setFehler('Bitte neu einloggen.'); return; }
       setUid(user.id);
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, user.id)); }
       const { data: p } = await supabase.from('profiles').select('firma_name').eq('id', user.id).maybeSingle();
       setFirma((p as { firma_name?: string } | null)?.firma_name ?? '');
       const { data: m, error: e1 } = await supabase.from('mitarbeiter')
@@ -101,7 +105,7 @@ export default function PersonalDokumentePage() {
         <>
           {tab === 'vertraege' && (tabelleFehlt
             ? <div style={S.fehler}>Die Tabelle personal_vertrag fehlt noch. Bitte zuerst das SQL aus Paket PF in Supabase ausführen.</div>
-            : <Vertraege ma={ma} vertraege={vertraege} uid={uid} firma={firma} heute={heute} onGespeichert={load} />)}
+            : <Vertraege ma={ma} vertraege={vertraege} uid={uid} besitzer={besitzer} firma={firma} heute={heute} onGespeichert={load} />)}
           {tab === 'zeugnis' && <Zeugnis ma={ma} vertraege={vertraege} firma={firma} />}
           {tab === 'stelle' && <Stelle firma={firma} />}
         </>
@@ -113,8 +117,8 @@ export default function PersonalDokumentePage() {
 // ------------------------------------------------------------
 // 1. Verträge & Fristen
 // ------------------------------------------------------------
-function Vertraege({ ma, vertraege, uid, firma, heute, onGespeichert }: {
-  ma: MA[]; vertraege: Record<string, VertragZeile>; uid: string | null; firma: string; heute: string; onGespeichert: () => void;
+function Vertraege({ ma, vertraege, uid, besitzer, firma, heute, onGespeichert }: {
+  ma: MA[]; vertraege: Record<string, VertragZeile>; uid: string | null; besitzer: string | null; firma: string; heute: string; onGespeichert: () => void;
 }) {
   const [offen, setOffen] = useState<string | null>(null);
   const [alle, setAlle] = useState(false);
@@ -145,7 +149,7 @@ function Vertraege({ ma, vertraege, uid, firma, heute, onGespeichert }: {
               </div>
               <button style={S.knopf2} onClick={() => setOffen(offen === m.id ? null : m.id)}>{offen === m.id ? 'Schließen' : 'Bearbeiten'}</button>
             </div>
-            {offen === m.id && <VertragForm m={m} v={v} uid={uid} firma={firma} heute={heute} onGespeichert={() => { onGespeichert(); }} />}
+            {offen === m.id && <VertragForm m={m} v={v} uid={uid} besitzer={besitzer} firma={firma} heute={heute} onGespeichert={() => { onGespeichert(); }} />}
           </div>
         );
       })}
@@ -153,8 +157,8 @@ function Vertraege({ ma, vertraege, uid, firma, heute, onGespeichert }: {
   );
 }
 
-function VertragForm({ m, v, uid, firma, heute, onGespeichert }: {
-  m: MA; v: VertragZeile; uid: string | null; firma: string; heute: string; onGespeichert: () => void;
+function VertragForm({ m, v, uid, besitzer, firma, heute, onGespeichert }: {
+  m: MA; v: VertragZeile; uid: string | null; besitzer: string | null; firma: string; heute: string; onGespeichert: () => void;
 }) {
   const [f, setF] = useState({
     beginn: v.beginn || m.eintrittsdatum || '',
@@ -199,7 +203,7 @@ function VertragForm({ m, v, uid, firma, heute, onGespeichert }: {
     setSpeichert(true); setMeldung(null);
     const alleErteilt = relevant.every((p) => f.punkte.has(p.key));
     const zeile = {
-      owner_user_id: uid, mitarbeiter_id: m.id,
+      mitarbeiter_id: m.id,
       beginn: f.beginn || null, probezeit_monate: pz, befristet: f.befristet,
       befristet_bis: f.befristet ? (f.befristet_bis || null) : null,
       sachgrund: f.befristet ? (f.sachgrund.trim() || null) : null,
@@ -211,7 +215,7 @@ function VertragForm({ m, v, uid, firma, heute, onGespeichert }: {
       notiz: f.notiz.trim() || null,
       aktualisiert_am: new Date().toISOString(),
     };
-    const { error } = await supabase.from('personal_vertrag').upsert(zeile, { onConflict: 'owner_user_id,mitarbeiter_id' });
+    const { ergebnis: { error } } = await anlegenFuerBetrieb(zeile, besitzer, uid, (d) => supabase.from('personal_vertrag').upsert(d, { onConflict: 'owner_user_id,mitarbeiter_id' }));
     setSpeichert(false);
     if (error) { setMeldung(`Speichern fehlgeschlagen: ${error.message}`); return; }
     setMeldung('Gespeichert.');
