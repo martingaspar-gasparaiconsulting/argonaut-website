@@ -47,7 +47,7 @@ export default function HeroCta({ branche }: { branche: string }) {
     return (
       <>
         <a href="#demo" style={primaerStyle} aria-label={`Termin für ${branche} vereinbaren`}>📅 Termin vereinbaren →</a>
-        <a href="/testen" style={sekundaerStyle} aria-label={`ARGONAUT für ${branche} 7 Tage kostenlos testen`}>7 Tage kostenlos testen →</a>
+        <a href={`/testen?branche=${encodeURIComponent(branche)}`} style={sekundaerStyle} aria-label={`ARGONAUT für ${branche} 7 Tage kostenlos testen – Zugang anfordern`}>7 Tage kostenlos testen · Zugang anfordern →</a>
       </>
     )
   }

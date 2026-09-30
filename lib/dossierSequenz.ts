@@ -29,10 +29,10 @@ function abmelde(url: string): string {
 export const TEST_STEPS: SeqStep[] = [
   {
     tag: 0,
-    betreff: 'Ihr ARGONAUT-Test läuft — so holen Sie das meiste heraus',
+    betreff: 'Ihr ARGONAUT-Test — so holen Sie das meiste heraus',
     html: (v) => mailLayout('Willkommen', `
       <p>${anrede(v.name)}</p>
-      <p>Ihr 7-Tage-Test ist startklar — voller Zugang, ohne Zahlungsmittel, und er endet nach 7 Tagen von selbst.</p>
+      <p>danke für Ihre Anfrage zum 7-Tage-Test. Wir richten Ihren Zugang persönlich für Ihre Branche ein und schicken Ihnen die Zugangsdaten in einer eigenen E-Mail — voller Zugang, ohne Zahlungsmittel, und der Test endet nach 7 Tagen von selbst.</p>
       <p><b>Mein Tipp für den Anfang:</b> Legen Sie einen echten Kunden und einen echten Vorgang an (Angebot oder Termin). Dann sehen Sie sofort, wie alles zusammenläuft — ein System statt zwölf.</p>
       <p>Ihr branchenspezifisches Dossier haben Sie ja schon; darin steht, was ARGONAUT genau für Ihren Betrieb übernimmt.</p>
       <p>Fragen? Antworten Sie einfach auf diese Mail.</p>

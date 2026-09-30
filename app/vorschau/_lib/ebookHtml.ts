@@ -199,7 +199,7 @@ ${kapitelHtml}
   <h2>ARGONAUT <span class="g">kennenlernen</span>.</h2>
   <div class="wege">
     <div class="weg"><div class="wt">📅 Termin vereinbaren</div><p>Fragen, oder es am eigenen Betrieb sehen? Wir zeigen es Ihnen persönlich — kostenlos und unverbindlich.</p><a class="cta cta-gold" href="${BASIS_URL}/branchen/${esc(slug)}#demo">Erstgespräch buchen →</a></div>
-    <div class="weg"><div class="wt">🧪 7 Tage kostenlos testen</div><p>Lieber gleich ausprobieren? Voller Zugang, kein Zahlungsmittel — der Test endet nach 7 Tagen von selbst.</p><a class="cta cta-line" href="${BASIS_URL}/testen">Kostenlos starten →</a></div>
+    <div class="weg"><div class="wt">🧪 7 Tage kostenlos testen</div><p>Lieber gleich ausprobieren? Fordern Sie Ihren Zugang an — wir richten ihn persönlich für Ihre Branche ein. Kein Zahlungsmittel, der Test endet nach 7 Tagen von selbst.</p><a class="cta cta-line" href="${BASIS_URL}/testen">Testzugang anfordern →</a></div>
   </div>
   <p class="assure">Ein System statt zwölf · DSGVO-konform auf EU-Servern · Einrichtung in wenigen Tagen</p>
 </div>

@@ -11,7 +11,7 @@
 // späterer, eigener Schritt; hier sammeln wir erst die Interessenten.
 // ============================================================================
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Navbar from '../vorschau/_components/Navbar'
 import Footer from '../vorschau/_components/Footer'
@@ -28,10 +28,13 @@ const inputStyle: React.CSSProperties = {
 }
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '.82rem', color: '#8fa9b6', margin: '0 0 6px' }
 
+// Paket 195 (30.09.2026, Martin): Der Besucher soll klar erkennen, dass er einen
+// Testzugang ANFRAGT und Martin ihn persoenlich freischaltet — es entsteht beim
+// Absenden kein Konto. Die 7 Tage laufen ab der Freischaltung.
 const VORTEILE = [
-  ['🆓', '7 Tage komplett kostenlos', 'Voller Zugang zu ARGONAUT — ohne Kosten, ohne Risiko.'],
-  ['💳', 'Kein Zahlungsmittel nötig', 'Keine Kreditkarte, keine Bankdaten. Wir buchen nichts ab.'],
-  ['⏳', 'Läuft automatisch aus', 'Nach 7 Tagen endet der Test von selbst. Gefällt es, schalten wir gemeinsam frei.'],
+  ['📝', '1. Anfrage stellen', 'Sie tragen sich kurz ein. Wir richten Ihren Zugang persönlich für Ihre Branche ein.'],
+  ['🔑', '2. Zugang per E-Mail', 'Sie erhalten Ihre Zugangsdaten per E-Mail. Die 7 Tage beginnen mit der Freischaltung.'],
+  ['⏳', '3. Kostenlos, endet von selbst', 'Kein Zahlungsmittel, kein Abo. Nach 7 Tagen endet der Test automatisch.'],
 ]
 
 export default function TestenPage() {
@@ -41,6 +44,15 @@ export default function TestenPage() {
   // Paket 173 (Befund H8): die Tipp-Serie nur mit eigenem Haekchen, vorher lief sie ungefragt an.
   const [dossierSerie, setDossierSerie] = useState(false)
   const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }))
+
+  // Branche aus dem Link der Branchenseite vorbelegen (/testen?branche=…),
+  // damit der Zugang gleich mit dem richtigen Branchen-Paket eingerichtet wird.
+  useEffect(() => {
+    try {
+      const b = new URLSearchParams(window.location.search).get('branche')
+      if (b) setF((p) => (p.branche ? p : { ...p, branche: b.slice(0, 80) }))
+    } catch { /* ohne Vorbelegung weiter */ }
+  }, [])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -75,12 +87,12 @@ export default function TestenPage() {
       {/* Hero */}
       <section style={{ padding: '150px 0 30px', textAlign: 'center', background: 'radial-gradient(900px 500px at 50% -10%, rgba(201,168,76,0.14), transparent 60%)' }}>
         <div style={{ maxWidth: '760px', margin: '0 auto', padding: '0 24px' }}>
-          <div style={{ color: GOLD, letterSpacing: '.22em', textTransform: 'uppercase', fontSize: '.78rem', marginBottom: '1.2rem' }}>🔱 Kostenlos testen</div>
+          <div style={{ color: GOLD, letterSpacing: '.22em', textTransform: 'uppercase', fontSize: '.78rem', marginBottom: '1.2rem' }}>🔱 Kostenlos testen · Zugang anfordern</div>
           <h1 style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: 'clamp(2.2rem, 5.6vw, 3.6rem)', lineHeight: 1.08, margin: '0 0 1rem' }}>
             7 Tage <span style={{ color: GOLD }}>kostenlos</span> testen.
           </h1>
           <p style={{ fontSize: 'clamp(1.05rem, 2vw, 1.25rem)', color: '#b9cdd6', maxWidth: '52ch', margin: '0 auto', lineHeight: 1.6 }}>
-            Lernen Sie ARGONAUT in Ruhe kennen — voller Zugang, kein Zahlungsmittel, kein Automatik-Abo. Nach 7 Tagen läuft der Test von selbst aus.
+            Stellen Sie jetzt Ihre Anfrage: Wir richten Ihren Zugang persönlich für Ihre Branche ein und schicken Ihnen die Zugangsdaten per E-Mail. Voller Zugang, kein Zahlungsmittel, kein Automatik-Abo. Die 7 Tage beginnen mit der Freischaltung.
           </p>
         </div>
       </section>
@@ -106,14 +118,14 @@ export default function TestenPage() {
               <div style={{ fontSize: '2rem', marginBottom: '.6rem' }} aria-hidden="true">🔱</div>
               <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: '1.5rem', color: '#EAF1F6', margin: '0 0 8px' }}>Fast geschafft!</p>
               <p style={{ color: '#b9cdd6', margin: '0 auto', maxWidth: '46ch', lineHeight: 1.6 }}>
-                Danke, {f.name.split(' ')[0] || 'und willkommen'}. Wir richten Ihren 7-Tage-Testzugang ein und melden uns gleich per E-Mail mit den Zugangsdaten. Eine Bestätigung ist schon unterwegs.
+                Danke, {f.name.split(' ')[0] || 'und willkommen'}. Ihre Anfrage ist bei uns. Wir richten Ihren 7-Tage-Testzugang persönlich ein und schicken Ihnen die Zugangsdaten per E-Mail. Eine Eingangsbestätigung ist schon unterwegs.
               </p>
               <Link href="/branchen" style={{ display: 'inline-block', marginTop: '20px', color: TEAL, textDecoration: 'none' }}>← Zurück zu den Branchen</Link>
             </div>
           ) : (
             <form onSubmit={submit} style={{ background: 'linear-gradient(160deg, rgba(18,32,54,0.9), rgba(10,22,40,0.9))', border: '1px solid rgba(201,168,76,0.22)', borderRadius: '18px', padding: '26px' }}>
               <p style={{ fontWeight: 700, color: '#EAF1F6', fontSize: '1.15rem', margin: '0 0 4px' }}>Testzugang anfordern</p>
-              <p style={{ fontSize: '.85rem', color: '#8fa9b6', margin: '0 0 18px' }}>Kurz eintragen — wir schicken Ihnen die Zugangsdaten per E-Mail.</p>
+              <p style={{ fontSize: '.85rem', color: '#8fa9b6', margin: '0 0 18px' }}>Kurz eintragen — wir richten Ihren Zugang persönlich ein und schicken Ihnen die Zugangsdaten per E-Mail.</p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                 <div>
@@ -164,10 +176,10 @@ export default function TestenPage() {
               {error && <p style={{ color: '#f0a3a3', fontSize: '.85rem', margin: '14px 0 0' }}>{error}</p>}
 
               <button type="submit" disabled={status === 'sending'} style={{ width: '100%', marginTop: '18px', background: GOLD, color: NAVY, fontWeight: 700, fontSize: '1rem', padding: '16px', borderRadius: '10px', border: 'none', cursor: status === 'sending' ? 'default' : 'pointer', opacity: status === 'sending' ? 0.7 : 1 }}>
-                {status === 'sending' ? 'Wird gesendet …' : '7 Tage kostenlos starten →'}
+                {status === 'sending' ? 'Wird gesendet …' : 'Testzugang anfordern →'}
               </button>
               <p style={{ fontSize: '.78rem', color: '#7f97a4', textAlign: 'center', margin: '12px 0 0' }}>
-                Kostenlos & unverbindlich · kein Zahlungsmittel · endet automatisch nach 7 Tagen
+                Kostenlos & unverbindlich · kein Zahlungsmittel · 7 Tage ab Freischaltung, endet automatisch
               </p>
             </form>
           )}
