@@ -31,7 +31,7 @@ import {
 import {
   EIGEN, NICHT, MOTOR_TABELLEN, GRUND, eindeutigeKoepfe, katalogFuerZiel, vorschlagMapping, bereinigeMapping,
   spaltenBilanz, eigeneSpalten, eigeneWerteDerZeile, eigeneFelderZuordnen, erkennungsFelder, baueBestandIndex,
-  findeImBestand, istBankSpalte, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
+  findeImBestand, istBankSpalte, enthaeltIban, spalteLeer, leseDatev, datevAblehnung, datevZaehlen, dateiArt,
   sperrGrund, baueKundenIndex, verknuepfeKunde, fuerDatenbank, erkennungsSpalten, kindZeilen, type KundeRoh,
   verweisAusMitarbeitern, verweisAusLieferanten, istPersonalnummerLabel, type MitarbeiterRoh, type LieferantRoh,
   verweisAusPatienten, verweisAusTieren, type PatientRoh, type TierRoh,
@@ -792,7 +792,7 @@ export default function ImportCenterPage() {
       if (!zielJetzt) throw new Error('Unbekanntes Import-Ziel.');
 
       if (gemerkt?.mapping) {
-        setMapping(bereinigeMapping(neu.kopf, gemerkt.mapping, zielJetzt));
+        setMapping(bereinigeMapping(neu.kopf, gemerkt.mapping, zielJetzt, neu.zeilen));
         setHinweis(`${zahlDe(neu.zeilen.length)} Zeilen gelesen · gespeicherte Zuordnung von „${gemerkt.vorlage_name || gemerkt.dateiname || 'früherem Import'}" übernommen.`);
       } else {
         const geraten = vorschlagMapping(neu.kopf, neu.zeilen, zielJetzt, {
@@ -2251,12 +2251,14 @@ export default function ImportCenterPage() {
                   {datei.kopf.map((spalte, i) => {
                     const leer = spalteLeer(datei.zeilen, i);
                     // Leere Spalten nur auf Wunsch zeigen — bei DATEV sind es Hunderte.
-                    const sperre = sperrGrund(spalte, ziel);
+                    const werte = datei.zeilen.map((z) => z[i] ?? '');
+                    const sperre = sperrGrund(spalte, ziel, werte);
                     if (leer && !spaltenOffen && !sperre) return null;
-                    const beispiele = istBankSpalte(spalte) ? [] : datei.zeilen.slice(0, 3).map((z) => (z[i] ?? '').trim()).filter(Boolean);
+                    // 184: Bankdaten auch am Inhalt erkennen — dann keine Beispiele zeigen
+                    const bank = istBankSpalte(spalte) || enthaeltIban(werte);
+                    const beispiele = bank ? [] : datei.zeilen.slice(0, 3).map((z) => (z[i] ?? '').trim()).filter(Boolean);
                     const gewaehlt = mapping[spalte] ?? '';
                     const feldDef = ziel.felder.find((f) => f.key === gewaehlt);
-                    const bank = istBankSpalte(spalte);
                     return (
                       <tr key={spalte + i}>
                         <td style={styles.td}><b>{spalte}</b></td>

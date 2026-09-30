@@ -17,6 +17,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { pfadImOrdner } from '@/lib/speicherPfad';
+import { betriebsOrdner } from '@/lib/speicherPfadServer';
 import {
   fortschrittAus, angezeigterFortschritt, monteurStatus, monteurSatz, tagInBerlin, fristAbgelaufen,
   pfadGehoertZu, istUuid, DOK_BUCKET, FREIGABE_LABEL, freigabeStatusFuer,
@@ -91,7 +93,9 @@ export async function GET(req: NextRequest) {
           .order('erstellt_am', { ascending: false }).limit(200);
         fotoRows = (f ?? []) as typeof fotoRows;
       }
-      const fotoPfade = fotoRows.map((f) => f.pfad).filter((p) => typeof p === 'string' && p.length > 0);
+      // 184: nur Fotos im Ordner des Betriebs (der Pfad steht in einer beschreibbaren Zeile)
+      const ordner = fotoRows.length ? await betriebsOrdner(db as never, ownerId) : [];
+      const fotoPfade = fotoRows.map((f) => f.pfad).filter((p) => pfadImOrdner(p, ordner));
       const urls = new Map<string, string>();
       if (fotoPfade.length) {
         const { data: signed } = await db.storage.from('baustellen-fotos').createSignedUrls(fotoPfade, LINK_SEKUNDEN);

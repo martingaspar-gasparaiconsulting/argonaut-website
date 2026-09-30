@@ -5,6 +5,8 @@ import {
   pruefeDatei, pfadFuer, standardStreckeFuer, fehltZumStart, DATEI_MAX_BYTES,
 } from '@/lib/freebie';
 import { impressumVollstaendig } from '@/lib/landingpages';
+import { pfadImOrdner } from '@/lib/speicherPfad';
+import { betriebsOrdner } from '@/lib/speicherPfadServer';
 import { limitBytes, passtNochRein, formatBytes } from '@/lib/speicher';
 
 // ============================================================================
@@ -151,7 +153,7 @@ export async function POST(req: Request) {
     if (aktion === 'datei-fertig') {
       const pfad = String(body?.pfad ?? '').trim();
       // Der Pfad kommt vom Browser — er MUSS im eigenen Ordner liegen.
-      if (!pfad.startsWith(`${user.id}/`)) {
+      if (!pfadImOrdner(pfad, [user.id])) {
         return NextResponse.json({ ok: false, error: 'Pfad gehört nicht zu diesem Konto.' }, { status: 403 });
       }
       const groesse = Number(body?.groesse ?? 0);
@@ -215,11 +217,12 @@ export async function DELETE(req: Request) {
 
     // Ueber den Sitzungs-Client lesen: RLS entscheidet, ob es ueberhaupt zu
     // diesem Betrieb gehoert. Erst danach faellt die Datei.
-    const { data: f } = await supabase.from('freebie').select('id, datei_pfad').eq('id', id).maybeSingle();
+    const { data: f } = await supabase.from('freebie').select('id, datei_pfad, owner_user_id').eq('id', id).maybeSingle();
     if (!f) return NextResponse.json({ ok: false, error: 'Nicht gefunden.' }, { status: 404 });
 
     const pfad = (f as { datei_pfad: string | null }).datei_pfad;
-    if (pfad) {
+    // 184: Nur eine Datei im Ordner des eigenen Betriebs wird geloescht.
+    if (pfad && pfadImOrdner(pfad, await betriebsOrdner(admin() as never, (f as { owner_user_id?: string }).owner_user_id))) {
       try { await admin().storage.from(BUCKET).remove([pfad]); } catch { /* Datei weg, Zeile faellt trotzdem */ }
     }
     // Strecke und Empfaenger haengen per ON DELETE CASCADE daran.

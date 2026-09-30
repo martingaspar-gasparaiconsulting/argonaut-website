@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase-server';
 import { pruefeVideo, pfadFuer, MAX_BYTES } from '@/lib/socialVideo';
+import { pfadImOrdner } from '@/lib/speicherPfad';
+import { betriebsOrdner } from '@/lib/speicherPfadServer';
 import { limitBytes, passtNochRein, formatBytes } from '@/lib/speicher';
 
 // ============================================================================
@@ -112,13 +114,17 @@ export async function DELETE(req: Request) {
     // ueberhaupt zu diesem Betrieb gehoert. Erst danach faellt die Datei.
     const { data: video } = await supabase
       .from('social_video')
-      .select('id, pfad')
+      .select('id, pfad, owner_user_id')
       .eq('id', id)
       .maybeSingle();
     if (!video) return NextResponse.json({ ok: false, error: 'Video nicht gefunden.' }, { status: 404 });
 
     const db = admin();
-    await db.storage.from(BUCKET).remove([String((video as { pfad: string }).pfad)]);
+    // 184: Nur eine Datei im Ordner des eigenen Betriebs wird geloescht.
+    const v = video as { pfad: string; owner_user_id: string };
+    if (pfadImOrdner(v.pfad, await betriebsOrdner(db as never, v.owner_user_id))) {
+      await db.storage.from(BUCKET).remove([String(v.pfad)]);
+    }
     await supabase.from('social_video').delete().eq('id', id);
 
     return NextResponse.json({ ok: true });

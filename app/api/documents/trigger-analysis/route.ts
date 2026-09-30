@@ -18,6 +18,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
+import { pfadImOrdner } from '@/lib/speicherPfad';
 import { extractText, getDocumentProxy } from 'unpdf';
 import mammoth from 'mammoth';
 import ExcelJS from 'exceljs';
@@ -87,6 +88,8 @@ export async function POST(req: Request) {
   const { data: doc } = await supabase.from('documents').select('id,user_id,file_name,file_type,file_size,storage_path').eq('id', id).maybeSingle();
   const d = doc as { user_id?: string; file_name?: string; file_type?: string; file_size?: number; storage_path?: string } | null;
   if (!d || d.user_id !== user.id || !d.storage_path) return antwort(false, { error: 'Dokument nicht gefunden.' }, 404);
+  // 184: Die Datei muss im eigenen Ordner liegen (Pfad steht in einer beschreibbaren Zeile).
+  if (!pfadImOrdner(d.storage_path, [user.id])) return antwort(false, { error: 'Dokument nicht gefunden.' }, 404);
 
   const fehlschlag = async (meldung: string, status = 422) => {
     try { await supabase.from('documents').update({ status: 'fehler' }).eq('id', id); } catch { /* Status best effort */ }

@@ -55,12 +55,19 @@ function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE',
 // "1.234,56 EUR" still 1,23 EUR und aus jeder unlesbaren Eingabe eine 0.
 // Jetzt liest lib/zahlen.ts — und ein unlesbarer Beitrag wird ABGELEHNT,
 // nicht stillschweigend zu null Euro gemacht.
+// 184: Bankdaten (IBAN, BIC, Mandat) laedt nur, wer sie braucht — die
+// Geschaeftsleitung oder ein Mitarbeiter mit Schreibrecht fuer Mitglieder.
+// Die Liste fuer alle anderen (z. B. Tresenkraft) kommt ohne Bankdaten.
+const SPALTEN_OHNE_BANK = 'id, name, email, telefon, betrag, intervall, status, beginn_am, kuendigung_zum, notiz, erst_einzug, letzte_einziehung';
+const SPALTEN_BANK = 'id, iban, bic, mandatsreferenz, mandat_datum';
 function heutePlus(tage: number) { return new Date(Date.now() + tage * 86400000).toISOString().slice(0, 10); }
 
 export default function MitgliederPage() {
   const [uid, setUid] = useState<string | null>(null);
   // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
   const [besitzer, setBesitzer] = useState<string | null>(null);
+  // 184: darf Bankdaten sehen/aendern (null = wird noch geprueft)
+  const [darfBank, setDarfBank] = useState<boolean | null>(null);
   const [firma, setFirma] = useState('');
   const [cred, setCred] = useState({ glaeubiger: '', inhaber: '', iban: '', bic: '' });
   const [credBusy, setCredBusy] = useState(false);
@@ -84,7 +91,10 @@ export default function MitgliederPage() {
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setUid(id);
-      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id)); }
+      { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id));
+        let bank = !(typeof chef === 'string' && chef);
+        if (!bank) { const { data: darf } = await supabase.rpc('darf_ich_modul_aendern', { p_modul: 'mitglieder' }); bank = darf === true; }
+        setDarfBank(bank); }
       const { data: p } = await supabase.from('profiles')
         .select('firma_name, sepa_glaeubiger_id, sepa_kontoinhaber, sepa_iban, sepa_bic').eq('id', id).maybeSingle();
       setFirma((p?.firma_name as string) || '');
@@ -97,19 +107,25 @@ export default function MitgliederPage() {
   }, []);
 
   const laden_ = useCallback(async () => {
-    if (!uid) return;
+    if (!uid || darfBank === null) return;
     setLaden(true); setFehler(null);
     try {
-      const { data, error } = await supabase.from('mitglieder').select('*').order('name', { ascending: true });
+      const { data, error } = await supabase.from('mitglieder').select(SPALTEN_OHNE_BANK).order('name', { ascending: true });
       if (error) throw error;
-      const rows = (data as Mitglied[]) ?? [];
+      const leer = { iban: null, bic: null, mandatsreferenz: null, mandat_datum: null };
+      let rows = ((data ?? []) as unknown as Omit<Mitglied, 'iban' | 'bic' | 'mandatsreferenz' | 'mandat_datum'>[]).map((m) => ({ ...leer, ...m })) as Mitglied[];
+      if (darfBank) {
+        const { data: bank } = await supabase.from('mitglieder').select(SPALTEN_BANK);
+        const jeId = new Map(((bank ?? []) as unknown as (typeof leer & { id: string })[]).map((b) => [b.id, b]));
+        rows = rows.map((m) => ({ ...m, ...(jeId.get(m.id) ?? {}) }));
+      }
       setListe(rows);
       setFelder(await ladeFelder(MODUL));
       setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
     } catch (e: unknown) {
       setFehler('Mitglieder konnten nicht geladen werden: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setLaden(false); }
-  }, [uid]);
+  }, [uid, darfBank]);
   useEffect(() => { void laden_(); }, [laden_]);
 
   async function credSpeichern() {
@@ -156,8 +172,12 @@ export default function MitgliederPage() {
       const payload = {
         name: form.name.trim(), email: form.email.trim() || null, telefon: form.telefon.trim() || null,
         betrag: betragWert, intervall: form.intervall, status: form.status,
-        beginn_am: form.beginn_am || null, iban: form.iban.replace(/\s+/g, '').toUpperCase() || null, bic: form.bic.replace(/\s+/g, '').toUpperCase() || null,
-        mandatsreferenz: form.mandatsreferenz.trim() || null, mandat_datum: form.mandat_datum || null, notiz: form.notiz.trim() || null,
+        beginn_am: form.beginn_am || null, notiz: form.notiz.trim() || null,
+        // 184: Bankdaten nur, wer sie sehen darf — sonst wuerde Speichern sie leeren
+        ...(darfBank ? {
+          iban: form.iban.replace(/\s+/g, '').toUpperCase() || null, bic: form.bic.replace(/\s+/g, '').toUpperCase() || null,
+          mandatsreferenz: form.mandatsreferenz.trim() || null, mandat_datum: form.mandat_datum || null,
+        } : {}),
       };
       if (form.id) {
         const { error } = await supabase.from('mitglieder').update(payload).eq('id', form.id);
@@ -273,7 +293,7 @@ export default function MitgliederPage() {
       {ok && <div style={styles.ok}>{ok}</div>}
 
       {/* Gläubigerdaten */}
-      <div style={styles.card}>
+      {darfBank && <div style={styles.card}>
         <h2 style={styles.cardTitel}>🏦 Ihre SEPA-Gläubigerdaten</h2>
         <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 17px)', margin: '0 0 12px' }}>
           Einmal hinterlegen — kommt in jede Lastschrift-Datei. Die Gläubiger-ID bekommen Sie bei der Deutschen Bundesbank (kostenlos).
@@ -287,7 +307,7 @@ export default function MitgliederPage() {
         <div style={{ marginTop: 12 }}>
           <button onClick={credSpeichern} disabled={credBusy} style={{ ...styles.ghostBtn, opacity: credBusy ? 0.6 : 1 }}>{credBusy ? 'Speichert …' : 'Gläubigerdaten speichern'}</button>
         </div>
-      </div>
+      </div>}
 
       {/* SEPA erzeugen */}
       <div style={{ ...styles.card, marginTop: 16 }}>
@@ -335,7 +355,7 @@ export default function MitgliederPage() {
                     <tr key={m.id}>
                       <td style={styles.td}><div style={{ fontWeight: 600 }}>{m.name}</div>{m.email && <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{m.email}</div>}<EigeneFelderAnzeige felder={felder} werte={werteMap[m.id]} /></td>
                       <td style={styles.td}>{m.betrag != null ? `${eur(m.betrag)} / ${intv}` : '—'}</td>
-                      <td style={styles.td}>{bereit ? <span style={{ color: C.green }}>✓ Mandat</span> : <span style={{ color: C.warn }}>fehlt</span>}</td>
+                      <td style={styles.td}>{!darfBank ? <span style={{ color: C.textDim }}>—</span> : bereit ? <span style={{ color: C.green }}>✓ Mandat</span> : <span style={{ color: C.warn }}>fehlt</span>}</td>
                       <td style={styles.td}><span style={{ color: si.f }}>{si.l}</span>{laeuftAus(m, heuteTag) && m.kuendigung_zum && <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>zahlt bis {new Date(m.kuendigung_zum.slice(0, 10) + 'T12:00:00').toLocaleDateString('de-DE')}</div>}</td>
                       <td style={{ ...styles.td, textAlign: 'right' }}><button onClick={() => bearbeiten(m)} style={styles.miniBtnGhost}>Bearbeiten</button></td>
                     </tr>
@@ -363,10 +383,11 @@ export default function MitgliederPage() {
               <div><label style={styles.lbl}>Status</label><select style={styles.input} value={form.status} onChange={(e) => setF('status', e.target.value)}>{STATUS.map((s) => <option key={s.w} value={s.w}>{s.l}</option>)}</select></div>
               <div><label style={styles.lbl}>Beginn</label><input type="date" style={styles.input} value={form.beginn_am} onChange={(e) => setF('beginn_am', e.target.value)} /></div>
               <div style={{ gridColumn: '1 / -1', borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4, color: C.gold, fontWeight: 700, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>SEPA-Mandat</div>
-              <div><label style={styles.lbl}>IBAN</label><input style={styles.input} value={form.iban} onChange={(e) => setF('iban', e.target.value)} placeholder="DE.." /></div>
+              {!darfBank && <div style={{ gridColumn: '1 / -1', color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 17px)' }}>Bankdaten sieht und ändert nur, wer für Mitglieder Schreibrecht hat.</div>}
+              {darfBank && <><div><label style={styles.lbl}>IBAN</label><input style={styles.input} value={form.iban} onChange={(e) => setF('iban', e.target.value)} placeholder="DE.." /></div>
               <NurVoll><div><label style={styles.lbl}>BIC (optional)</label><input style={styles.input} value={form.bic} onChange={(e) => setF('bic', e.target.value)} /></div></NurVoll>
               <NurVoll><div><label style={styles.lbl}>Mandatsreferenz</label><input style={styles.input} value={form.mandatsreferenz} onChange={(e) => setF('mandatsreferenz', e.target.value)} placeholder="eindeutig, z. B. M-2025-001" /></div></NurVoll>
-              <NurVoll><div><label style={styles.lbl}>Mandat unterschrieben am</label><input type="date" style={styles.input} value={form.mandat_datum} onChange={(e) => setF('mandat_datum', e.target.value)} /></div></NurVoll>
+              <NurVoll><div><label style={styles.lbl}>Mandat unterschrieben am</label><input type="date" style={styles.input} value={form.mandat_datum} onChange={(e) => setF('mandat_datum', e.target.value)} /></div></NurVoll></>}
               <NurVoll><div style={{ gridColumn: '1 / -1' }}><label style={styles.lbl}>Notiz</label><textarea style={{ ...styles.input, minHeight: 44, resize: 'vertical' }} value={form.notiz} onChange={(e) => setF('notiz', e.target.value)} /></div></NurVoll>
               <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.input} labStyle={styles.lbl} /></NurVoll>
             </div>

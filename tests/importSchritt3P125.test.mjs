@@ -235,7 +235,7 @@ test('Import-Seite: Kunden laden und verknuepfen, Pflicht-Kunde, Faelligkeit, ge
   assert.ok(s.includes('naechsteFaelligkeitString('), 'Wartung: naechste Faelligkeit wie im Modul');
   assert.ok(s.includes('const mitKatalog = (!z.nurMitKatalog'), 'neue Ziele erst mit Katalog');
   assert.ok(s.includes('let satz0 = fuerDatenbank(satzRoh);'), 'Hilfsfelder nie in die Datenbank');
-  assert.ok(s.includes('sperrGrund(spalte, ziel)'), 'Bank und Einwilligung gesperrt');
+  assert.ok(s.includes('sperrGrund(spalte, ziel, werte)'), 'Bank und Einwilligung gesperrt (184: auch am Inhalt)');
 });
 
 test('Kunden-Akte zeigt Kundennummer, Mobil, Website, USt-IdNr., Anrede — nur wenn die Spalte da ist', () => {

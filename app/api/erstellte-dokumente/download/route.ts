@@ -8,6 +8,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { pfadImOrdner } from "@/lib/speicherPfad";
+import { betriebsOrdner } from "@/lib/speicherPfadServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +51,7 @@ export async function GET(req: Request) {
     // RLS sorgt dafuer, dass nur EIGENE Dokumente sichtbar sind
     const { data: doc, error } = await supabase
       .from("erstellte_dokumente")
-      .select("storage_path, name, typ")
+      .select("user_id, storage_path, name, typ")
       .eq("id", id)
       .single();
     if (error || !doc) {
@@ -58,6 +60,11 @@ export async function GET(req: Request) {
 
     // 2) Signed URL mit Admin-Client erzeugen (Bucket ist privat, Storage-RLS umgehen)
     const admin = createAdminClient();
+    // 184: Der Pfad muss im Ordner des Betriebs liegen, dem das Dokument gehoert.
+    const ordner = await betriebsOrdner(admin as never, (doc as { user_id?: string }).user_id);
+    if (!pfadImOrdner(doc.storage_path, ordner)) {
+      return NextResponse.json({ ok: false, error: "Dokument nicht gefunden." }, { status: 404 });
+    }
     const dateiname = downloadName(doc.name, doc.typ, doc.storage_path);
     const { data: signed, error: signErr } = await admin.storage
       .from(BUCKET)

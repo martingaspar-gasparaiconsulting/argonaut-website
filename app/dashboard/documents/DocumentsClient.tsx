@@ -141,6 +141,7 @@ function statusBadge(status: string) {
 
 // ===== Hauptkomponente =====
 import ErstellteDokumente from './ErstellteDokumente'
+import { sichererDateiname } from '@/lib/speicherPfad'
 
 // Der Modul-Schluessel fuer die eigenen Felder — wie ueberall der Tabellenname.
 const MODUL = 'documents'
@@ -182,7 +183,8 @@ export default function DocumentsClient({ userId, paket, initialDocuments, initi
     if (storageFull) { setUploadError('Speicherlimit erreicht. Bitte Paket upgraden.'); return }
 
     setUploading(true)
-    const path = `${userId}/${Date.now()}_${file.name}`
+    // 184: nie den rohen Dateinamen in den Speicher-Pfad (Leer-/Sonderzeichen, ../)
+    const path = `${userId}/${Date.now()}_${sichererDateiname(file.name)}`
 
     const { error: storageError } = await supabase.storage
       .from('customer-documents')

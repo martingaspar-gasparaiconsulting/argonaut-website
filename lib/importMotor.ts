@@ -258,7 +258,7 @@ export function katalogFuerZiel(zielKey: string, dbSpalten: readonly KatalogSpal
 
 const BANK = /\b(iban|bic|swift|blz|bankleitzahl|bank[a-z]*|kontonummer|konto nr|kontonr|kontoinhaber|sepa|mandat[a-z]*|mandatsreferenz|kreditkarte|kartennummer|creditcard|credit card|account number|routing)\b/;
 
-const EINWILLIGUNG = /\b(einwilligung[a-z]*|opt in|optin|double opt in|newsletter|werbung|marketing (erlaubt|einwilligung)|accepts email marketing|accepts sms marketing|email marketing|consent|dsgvo zustimmung)\b/;
+const EINWILLIGUNG = /\b(einwilligung[a-z]*|mailing[a-z]*|werbe[a-z]*|opt in|optin|double opt in|newsletter|werbung|marketing (erlaubt|einwilligung)|accepts email marketing|accepts sms marketing|email marketing|consent|dsgvo zustimmung)\b/;
 
 /**
  * Werbe-Einwilligung (Newsletter, „Accepts Email Marketing", Opt-in)? Die
@@ -273,14 +273,45 @@ export function istEinwilligungSpalte(spalte: string): boolean {
  * Gesperrt aus Rechtsgruenden (Bank, Werbe-Einwilligung) oder weil das Ziel
  * es verbietet (Mitarbeiter: Lohn, SV-/Steuernummer, Zugaenge) — mit Grund.
  */
-export function sperrGrund(spalte: string, ziel?: Pick<ImportZiel, 'sperren' | 'bankGrund'> | null): string | null {
+export function sperrGrund(spalte: string, ziel?: Pick<ImportZiel, 'sperren' | 'bankGrund'> | null, werte?: readonly unknown[] | null): string | null {
   if (istBankSpalte(spalte)) return ziel?.bankGrund ?? GRUND.bank;
+  // 184: nicht nur am Namen — steht in der Spalte eine IBAN („Konto", „Bank 2"), bleibt sie draussen
+  if (werte && enthaeltIban(werte)) return ziel?.bankGrund ?? GRUND.bank;
   if (istEinwilligungSpalte(spalte)) return GRUND.einwilligung;
   const n = normal(spalte);
   for (const s of ziel?.sperren ?? []) {
     if (new RegExp(`\\b(?:${s.muster})`).test(n)) return s.grund;
   }
   return null;
+}
+
+/** Ist der Text eine gueltige IBAN (Laenderkennung, Pruefziffer mod 97)? Leerzeichen erlaubt. */
+export function istIban(wert: unknown): boolean {
+  const s = String(wert ?? '').replace(/[\s-]/g, '').toUpperCase();
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(s)) return false;
+  const umgestellt = s.slice(4) + s.slice(0, 4);
+  let rest = 0;
+  for (const z of umgestellt) {
+    const n = z >= 'A' && z <= 'Z' ? String(z.charCodeAt(0) - 55) : z;
+    for (const d of n) rest = (rest * 10 + Number(d)) % 97;
+  }
+  return rest === 1;
+}
+
+/** Steht in diesen Werten irgendwo eine IBAN (auch mitten im Text)? */
+export function enthaeltIban(werte: readonly unknown[]): boolean {
+  for (const w of werte) {
+    const t = String(w ?? '').toUpperCase();
+    if (!t.trim()) continue;
+    if (istIban(t)) return true;
+    for (const kandidat of t.match(/[A-Z]{2}\d{2}(?:[ -]?[A-Z0-9]){11,30}/g) ?? []) if (istIban(kandidat)) return true;
+  }
+  return false;
+}
+
+/** Werte einer Spalte (fuer die Inhalts-Pruefung). */
+export function spaltenWerte(zeilen: readonly (readonly string[])[] | null | undefined, index: number): string[] {
+  return (zeilen ?? []).map((z) => String(z[index] ?? ''));
 }
 
 /** Ist das eine Spalte mit Bankverbindung, Mandat oder Kartendaten? */
@@ -339,7 +370,7 @@ export function vorschlagMapping(
   const geraten = errateMappingFuer([...kopf], ziel, zusatzAliase(ziel.key, opt));
   const raus: Mapping = {};
   kopf.forEach((spalte, i) => {
-    if (sperrGrund(spalte, ziel)) { raus[spalte] = NICHT; return; }
+    if (sperrGrund(spalte, ziel, spaltenWerte(zeilen, i))) { raus[spalte] = NICHT; return; }
     const feld = geraten[spalte];
     if (feld) { raus[spalte] = feld; return; }
     raus[spalte] = spalteLeer(zeilen, i) ? NICHT : EIGEN;
@@ -352,17 +383,17 @@ export function vorschlagMapping(
  * gemerkt) hat, auf das aktuelle Ziel bringen: Felder, die es nicht (mehr)
  * gibt, werden zu Eigenen Feldern; Bankspalten sind immer gesperrt.
  */
-export function bereinigeMapping(kopf: readonly string[], mapping: Mapping, ziel: ImportZiel): Mapping {
+export function bereinigeMapping(kopf: readonly string[], mapping: Mapping, ziel: ImportZiel, zeilen?: readonly string[][]): Mapping {
   const keys = new Set(ziel.felder.map((f) => f.key));
   const raus: Mapping = {};
   const vergeben = new Set<string>();
-  for (const spalte of kopf) {
+  kopf.forEach((spalte, i) => {
     const wert = mapping[spalte] ?? NICHT;
-    if (sperrGrund(spalte, ziel)) { raus[spalte] = NICHT; continue; }
-    if (wert === EIGEN || wert === NICHT) { raus[spalte] = wert; continue; }
-    if (!keys.has(wert) || vergeben.has(wert)) { raus[spalte] = EIGEN; continue; }
+    if (sperrGrund(spalte, ziel, spaltenWerte(zeilen, i))) { raus[spalte] = NICHT; return; }
+    if (wert === EIGEN || wert === NICHT) { raus[spalte] = wert; return; }
+    if (!keys.has(wert) || vergeben.has(wert)) { raus[spalte] = EIGEN; return; }
     raus[spalte] = wert; vergeben.add(wert);
-  }
+  });
   return raus;
 }
 
@@ -396,7 +427,7 @@ export function spaltenBilanz(
 ): SpaltenBilanz {
   const eintraege: SpaltenEintrag[] = kopf.map((spalte, i) => {
     const wert = mapping[spalte];
-    const sperre = sperrGrund(spalte, ziel);
+    const sperre = sperrGrund(spalte, ziel, spaltenWerte(zeilen, i));
     if (sperre) return { spalte, art: 'nicht', grund: sperre };
     if (wert === EIGEN) return { spalte, art: 'eigen', ziel: spalte };
     if (wert && wert !== NICHT) {
@@ -436,7 +467,7 @@ export function eigenTyp(werte: readonly string[]): 'text' | 'zahl' | 'datum' {
 export function eigeneSpalten(kopf: readonly string[], zeilen: readonly string[][], mapping: Mapping, ziel?: Pick<ImportZiel, 'sperren'> | null): EigeneSpalte[] {
   const raus: EigeneSpalte[] = [];
   kopf.forEach((spalte, index) => {
-    if (mapping[spalte] !== EIGEN || sperrGrund(spalte, ziel)) return;
+    if (mapping[spalte] !== EIGEN || sperrGrund(spalte, ziel, spaltenWerte(zeilen, index))) return;
     raus.push({ spalte, index, typ: eigenTyp(zeilen.map((z) => z[index] ?? '')) });
   });
   return raus;

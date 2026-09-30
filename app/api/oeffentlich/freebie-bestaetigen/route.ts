@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendeMail, kundenMailLayout } from '@/lib/mail';
 import { escapeHtml, sichereFarbe } from '@/lib/newsletter';
+import { pfadImOrdner } from '@/lib/speicherPfad';
+import { betriebsOrdner } from '@/lib/speicherPfadServer';
 import {
   anrede, setzePlatzhalter, faelligAm, abmeldenUrl, seitenUrl,
   bestaetigungVerfallen, STATUS_AKTIV, STATUS_ABGEMELDET,
@@ -76,8 +78,9 @@ export async function GET(req: Request) {
 
     const { data: fRoh } = await db
       .from('freebie')
-      .select('id, titel, datei_pfad, datei_name, oeffentlich_key')
+      .select('id, owner_user_id, titel, datei_pfad, datei_name, oeffentlich_key')
       .eq('id', l.freebie_id)
+      .eq('owner_user_id', l.owner_user_id)
       .maybeSingle();
     const f = (fRoh as FreebieRow | null) ?? null;
     const key = f?.oeffentlich_key ?? null;
@@ -117,7 +120,8 @@ export async function GET(req: Request) {
     const titel = setzePlatzhalter(f.titel, { firma });
 
     let dateiUrl = '';
-    if (f.datei_pfad) {
+    // 184: Nur eine Datei im Ordner des Betriebs, dem der Ratgeber gehoert.
+    if (f.datei_pfad && pfadImOrdner(f.datei_pfad, await betriebsOrdner(db as never, l.owner_user_id))) {
       const { data: signiert } = await db.storage.from(BUCKET)
         .createSignedUrl(f.datei_pfad, LINK_SEKUNDEN, { download: f.datei_name || 'ratgeber.pdf' });
       dateiUrl = signiert?.signedUrl || '';

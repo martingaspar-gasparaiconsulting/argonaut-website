@@ -172,7 +172,7 @@ test('Projekte: Status und Prioritaet auf die Listen, alter Wert in der Beschrei
 test('Import-Seite: zusammengesetzte Erkennung, Sperren je Ziel, „nur Chef"', () => {
   const s = lies('app/dashboard/import/page.tsx');
   assert.ok(s.includes('erkennungsSpalten(erkennung).join'));
-  assert.ok(s.includes('sperrGrund(spalte, ziel)'));
+  assert.ok(s.includes('sperrGrund(spalte, ziel, werte)'));
   assert.ok(s.includes('eigeneSpalten(datei.kopf, datei.zeilen, mapping, ziel)'));
   assert.ok(s.includes('const bereitKatalog = mitKatalog && !(z.nurChef && binMitarbeiter);'), 'Paket 137: umbenannt, Freigabe kommt dazu');
   assert.deepEqual(fuerDatenbank({ a: 1, __x: 2 }), { a: 1 });

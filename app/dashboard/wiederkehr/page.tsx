@@ -90,7 +90,7 @@ export default function WiederkehrCockpit() {
       const [w, a, m, v] = await Promise.all([
         supabase.from('wartungsvertraege').select('*').eq('archiviert', false),
         supabase.from('abo_rechnungen').select('*'),
-        supabase.from('mitglieder').select('*'),
+        supabase.from('mitglieder').select('id, name, betrag, intervall, status'), // 184: keine Bankdaten laden
         supabase.from('vertraege').select('*'),
       ]);
       const alle: WiederkehrEintrag[] = [

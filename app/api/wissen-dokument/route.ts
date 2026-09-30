@@ -12,6 +12,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
+import { pfadImOrdner } from '@/lib/speicherPfad';
+import { betriebsOrdner } from '@/lib/speicherPfadServer';
 
 export const runtime = 'nodejs';
 
@@ -27,13 +29,16 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 
   // Schritt 1: darf DIESER Nutzer das Dokument sehen? (RLS entscheidet)
-  const { data: doc } = await supabase.from('documents').select('id, storage_path, file_name').eq('id', id).maybeSingle();
-  const d = doc as { storage_path?: string; file_name?: string } | null;
+  const { data: doc } = await supabase.from('documents').select('id, user_id, storage_path, file_name').eq('id', id).maybeSingle();
+  const d = doc as { user_id?: string; storage_path?: string; file_name?: string } | null;
   if (!d?.storage_path) return NextResponse.json({ ok: false, error: 'Dokument nicht gefunden oder nicht freigegeben.' }, { status: 404 });
 
   // Schritt 2: kurzlebiger Link
   try {
     const admin = createAdminClient();
+    // 184: Der Pfad muss im Ordner des Betriebs liegen, dem das Dokument gehoert.
+    const ordner = await betriebsOrdner(admin as never, d.user_id);
+    if (!pfadImOrdner(d.storage_path, ordner)) return NextResponse.json({ ok: false, error: 'Dokument nicht gefunden oder nicht freigegeben.' }, { status: 404 });
     const { data, error } = await admin.storage.from(BUCKET).createSignedUrl(d.storage_path, GUELTIG_SEKUNDEN);
     if (error || !data?.signedUrl) throw error ?? new Error('kein Link');
     return NextResponse.redirect(data.signedUrl, 302);

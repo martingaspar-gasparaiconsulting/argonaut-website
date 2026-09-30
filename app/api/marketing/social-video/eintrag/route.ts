@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
+import { pfadImOrdner } from '@/lib/speicherPfad';
 
 // ============================================================================
 // ARGONAUT OS · /api/marketing/social-video/eintrag   (C5)
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'Angaben unvollständig.' }, { status: 400 });
     }
     // Der Pfad MUSS im eigenen Ordner liegen — er kommt vom Browser.
-    if (!pfad.startsWith(`${user.id}/`)) {
+    if (!pfadImOrdner(pfad, [user.id])) {
       return NextResponse.json({ ok: false, error: 'Pfad gehört nicht zu diesem Konto.' }, { status: 403 });
     }
 
