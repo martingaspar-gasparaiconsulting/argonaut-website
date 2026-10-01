@@ -17,6 +17,7 @@ import { signaturStarten } from '@/lib/signaturStart';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { istMitarbeiterKennung, SEPA_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 const MODUL = 'kunden_mandate';
 
 const supabase = createBrowserClient(
@@ -56,6 +57,8 @@ function offenerRest(r: { brutto_summe: number | null; bezahlter_betrag?: number
 
 export default function SepaEinzugPage() {
   const [uid, setUid] = useState<string | null>(null);
+  // Paket 187c: Mandate gehören dem Betrieb (beim Mitarbeiter der Chef)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   // „Darf abrechnen" (27.09.26): SEPA bleibt Chefsache — Bankdaten des Betriebs.
   const [istMa, setIstMa] = useState(false);
   const [firma, setFirma] = useState('');
@@ -131,6 +134,7 @@ export default function SepaEinzugPage() {
       setUid(id);
       const { data: chefId } = await supabase.rpc('mein_chef_id');
       setIstMa(istMitarbeiterKennung(chefId));
+      setBesitzer(betriebsKennung(chefId, id));
       const { data: p } = await supabase.from('profiles')
         .select('firma_name, sepa_glaeubiger_id, sepa_kontoinhaber, sepa_iban, sepa_bic').eq('id', id).maybeSingle();
       setFirma((p?.firma_name as string) || '');
@@ -177,13 +181,14 @@ export default function SepaEinzugPage() {
     setMbusy(true); setFehler(null); setOk(null);
     try {
       const payload = {
-        owner_user_id: uid, kontakt_id: mform.kontakt_id,
+        kontakt_id: mform.kontakt_id,
         kontoinhaber: (mform.kontoinhaber || '').trim() || null, iban,
         bic: (mform.bic || '').replace(/\s+/g, '').toUpperCase() || null,
         mandatsreferenz: (mform.mandatsreferenz || '').trim(), mandat_datum: mform.mandat_datum,
         aktiv: mform.aktiv !== false, updated_at: new Date().toISOString(),
       };
-      const { data: neu, error } = await supabase.from('kunden_mandate').upsert(payload, { onConflict: 'owner_user_id,kontakt_id' }).select('id').single();
+      const { ergebnis: { data: neu, error } } = await anlegenFuerBetrieb(payload, besitzer, uid,
+        (d) => supabase.from('kunden_mandate').upsert(d, { onConflict: 'owner_user_id,kontakt_id' }).select('id').single());
       if (error) throw error;
       try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* Zugabe */ }
       setNmExtra({});

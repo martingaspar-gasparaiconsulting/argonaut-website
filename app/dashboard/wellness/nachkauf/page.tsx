@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 import {
   REICHWEITE_VORSCHLAEGE, NACHKAUF_VORLAUF_TAGE, WIDERSPRUCH_HINWEIS,
   nachkaufListe, nachkaufText, aufgebrauchtAm, heuteBerlin, datumDe,
@@ -44,6 +45,8 @@ export default function NachkaufSeite() {
   const heute = heuteBerlin();
   const [tab, setTab] = useState<'faellig' | 'verkauf' | 'produkte'>('faellig');
   const [uid, setUid] = useState<string | null>(null);
+  // Paket 187c: Erinnerungen gehören dem Betrieb (wie unter „Erinnerungen“)
+  const [besitzer, setBesitzer] = useState<string | null>(null);
   const [firma, setFirma] = useState('');
   const [kunden, setKunden] = useState<Kunde[]>([]);
   const [produkte, setProdukte] = useState<Produkt[]>([]);
@@ -75,6 +78,7 @@ export default function NachkaufSeite() {
       try {
         let chef: string | null = null;
         try { const r = await supabase.rpc('mein_chef_id'); chef = (r.data as string | null) ?? null; } catch { /* Chef */ }
+        setBesitzer(betriebsKennung(chef, id));
         const { data: p } = await supabase.from('profiles').select('firma_name').eq('id', chef || id || '').maybeSingle();
         setFirma(String((p as { firma_name?: string } | null)?.firma_name ?? ''));
       } catch { /* optional */ }
@@ -96,10 +100,10 @@ export default function NachkaufSeite() {
     try {
       const t = nachkaufText({ produkt: z.verkauf.produkt, verkauftAm: z.verkauf.verkauft_am, firma });
       const tag = z.erinnernAb > heute ? z.erinnernAb : heute;
-      const { data: e, error } = await supabase.from('erinnerung').insert({
-        owner_user_id: uid, titel: t.titel, bezug_typ: 'frei', kanal: 'email', kunde_name: name(z.verkauf.kunde_id),
+      const { ergebnis: { data: e, error } } = await anlegenFuerBetrieb({
+        titel: t.titel, bezug_typ: 'frei', kanal: 'email', kunde_name: name(z.verkauf.kunde_id),
         email: z.verkauf.email, faellig_am: `${tag}T09:00`, status: 'offen', notiz: t.text,
-      }).select('id').single();
+      }, besitzer, uid, (d) => supabase.from('erinnerung').insert(d).select('id').single());
       if (error) throw error;
       const { error: e2 } = await supabase.from('nachkauf_verkauf').update({ erinnert_am: heute, erinnerung_id: (e as { id: string }).id }).eq('id', z.verkauf.id);
       if (e2) throw e2;

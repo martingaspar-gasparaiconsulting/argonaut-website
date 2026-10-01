@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
 
 // ============================================================
 // ARGONAUT OS · BLOCK 12 · KORRESPONDENZ — K2 Cockpit
@@ -186,8 +187,10 @@ export default function KorrespondenzPage() {
 
     const nummer = await naechsteNummer();
 
+    // Paket 187c: Brief gehört dem Betrieb (beim Mitarbeiter der Chef), sonst sieht der Chef ihn nie.
+    let chef: unknown = null;
+    try { chef = (await supabase.rpc('mein_chef_id')).data; } catch { chef = null; }
     const insertObj = {
-      owner_user_id: userData.user.id,
       brief_nummer: nummer,
       brief_art: form.brief_art,
       status: 'entwurf',
@@ -196,11 +199,10 @@ export default function KorrespondenzPage() {
       empfaenger_anschrift: form.empfaenger_anschrift.trim() || null,
     };
 
-    const { data, error } = await supabase
-      .from('korrespondenz')
-      .insert(insertObj)
-      .select('id')
-      .single();
+    const { ergebnis: { data, error } } = await anlegenFuerBetrieb(
+      insertObj, betriebsKennung(chef, userData.user.id), userData.user.id,
+      (d) => supabase.from('korrespondenz').insert(d).select('id').single(),
+    );
 
     setSpeichern(false);
     if (error) {

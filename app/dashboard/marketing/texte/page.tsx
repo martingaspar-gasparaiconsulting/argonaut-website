@@ -48,6 +48,9 @@ async function post(url: string, body: unknown) {
 export default function TextWerkstatt() {
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null); // B1b Gruppe 4: Texte gehoeren dem Betrieb
+  // Paket 187c: Webseiten baut nur der Chef (web_seiten erlaubt nur die eigene Kennung) —
+  // ein Mitarbeiter legte bisher eine Ratgeber-Seite an, die nie auf der Webseite des Betriebs erschien.
+  const [istMitarbeiter, setIstMitarbeiter] = useState(false);
   const [art, setArt] = useState<TextArt>('ebook');
   const [form, setForm] = useState<Form>({ ...LEER });
   const [laeuft, setLaeuft] = useState<string | null>(null);
@@ -87,6 +90,7 @@ export default function TextWerkstatt() {
       setUid(data?.user?.id ?? null);
       const { data: chefId } = await supabase.rpc('mein_chef_id');
       setBesitzer(typeof chefId === 'string' && chefId ? chefId : (data?.user?.id ?? null));
+      setIstMitarbeiter(typeof chefId === 'string' && !!chefId);
       await ladeListe();
     })();
   }, [ladeListe]);
@@ -186,6 +190,7 @@ export default function TextWerkstatt() {
 
   async function alsWebseite() {
     if (!uid || !einzel) return;
+    if (istMitarbeiter) { setFehler('Webseiten legt die Geschäftsleitung an.'); return; }
     if (!geprueft) { setFehler('Bitte zuerst bestätigen, dass Sie den Text geprüft haben.'); return; }
     setLaeuft('Seite wird angelegt …'); setFehler(null);
     let slug = webSlug || ratgeberSlug(einzel.titel);
@@ -400,8 +405,8 @@ export default function TextWerkstatt() {
             <button style={s.mini} disabled={!!laeuft} onClick={() => void pdf()}>📄 PDF</button>
             <button style={s.mini} onClick={() => { try { void navigator.clipboard.writeText(gesamtText); setMeldung('Text kopiert.'); } catch { /* egal */ } }}>📋 Kopieren</button>
             {art === 'ebook' && <a href="/dashboard/marketing/freebies" style={s.mini}>🎁 Zum Freebie-Baukasten</a>}
-            {art === 'ratgeber' && <button style={s.mini} disabled={!!laeuft || !geprueft} onClick={() => void alsWebseite()}>{webSlug ? '🌐 Seite aktualisieren' : '🌐 Als Ratgeber-Seite anlegen'}</button>}
-            {art === 'ratgeber' && webSlug && (
+            {art === 'ratgeber' && !istMitarbeiter && <button style={s.mini} disabled={!!laeuft || !geprueft} onClick={() => void alsWebseite()}>{webSlug ? '🌐 Seite aktualisieren' : '🌐 Als Ratgeber-Seite anlegen'}</button>}
+            {art === 'ratgeber' && webSlug && !istMitarbeiter && (
               <>
                 <button style={s.mini} disabled={!!laeuft || !geprueft} onClick={() => void veroeffentlichen(true)}>🚀 Veröffentlichen</button>
                 <button style={s.mini} disabled={!!laeuft} onClick={() => void veroeffentlichen(false)}>Offline nehmen</button>

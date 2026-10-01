@@ -170,7 +170,9 @@ export default function PlaeneSeite() {
         if (ueb.pins.length) {
           const { error: e2 } = await supabase.from('bau_plan_pin').insert(ueb.pins.map((p) => ({
             plan_id: id, nummer: p.nummer, x: p.x, y: p.y, titel: p.titel || 'ohne Titel', art: p.art, status: p.status,
-            gewerk: p.gewerk, frist: p.frist, zustaendig: p.zustaendig, beschreibung: p.beschreibung, owner_user_id: uid, erstellt_von: uid,
+            gewerk: p.gewerk, frist: p.frist, zustaendig: p.zustaendig, beschreibung: p.beschreibung, erstellt_von: uid,
+            // Paket 187c: wie beim Plan selbst — beim Mitarbeiter setzt die Datenbank den Betrieb
+            ...(istMitarbeiter ? {} : { owner_user_id: uid }),
           })));
           meldung += e2 ? ' Die offenen Pins konnten NICHT übernommen werden — sie hängen weiter an der alten Version.' : ` ${ueb.hinweis}`;
         }
