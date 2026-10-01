@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { zaehleKontakte } from '@/lib/whatsapp';
+import { kontaktStatusText } from '@/lib/whatsappBestaetigung';
 
 // ============================================================
 // ARGONAUT OS · MARKETING · WhatsApp-Empfänger (Paket 2)
@@ -16,6 +17,7 @@ const C = {
 type Kontakt = {
   id: string; telefon: string; name: string | null; status: string;
   quelle: string | null; einwilligung_am: string | null; created_at: string;
+  wartet?: boolean; bestaetigt_am?: string | null;
 };
 
 export default function WhatsappEmpfaengerSeite() {
@@ -33,6 +35,8 @@ export default function WhatsappEmpfaengerSeite() {
 
   const [nTelefon, setNTelefon] = useState('');
   const [nName, setNName] = useState('');
+  const [nBestaetigt, setNBestaetigt] = useState(false);
+  const [nNachweis, setNNachweis] = useState('');
   const [addBusy, setAddBusy] = useState(false);
   const [addMeldung, setAddMeldung] = useState<string | null>(null);
 
@@ -72,15 +76,16 @@ export default function WhatsappEmpfaengerSeite() {
 
   async function hinzufuegen() {
     if (!nTelefon.trim()) { setAddMeldung('Bitte eine Handynummer eingeben.'); return; }
+    if (!nBestaetigt || nNachweis.trim().length < 5) { setAddMeldung('Bitte bestätigen und angeben, wo die Einwilligung vorliegt.'); return; }
     setAddBusy(true); setAddMeldung(null);
     try {
       const res = await fetch('/api/marketing/whatsapp-kontakte', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ telefon: nTelefon.trim(), name: nName.trim() }),
+        body: JSON.stringify({ telefon: nTelefon.trim(), name: nName.trim(), einwilligungBestaetigt: nBestaetigt, einwilligungNachweis: nNachweis.trim() }),
       });
       const j = await res.json();
       if (!res.ok || !j?.ok) { setAddMeldung(j?.error || 'Hinzufügen fehlgeschlagen.'); }
-      else { setNTelefon(''); setNName(''); laden(); }
+      else { setNTelefon(''); setNName(''); setNBestaetigt(false); setNNachweis(''); laden(); }
     } catch { setAddMeldung('Hinzufügen fehlgeschlagen.'); }
     finally { setAddBusy(false); }
   }
@@ -113,7 +118,7 @@ export default function WhatsappEmpfaengerSeite() {
         <div style={{ background: C.navy2, borderRadius: 14, padding: '18px 22px', border: `1px solid ${C.gold}`, marginBottom: 16 }}>
           <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: C.gold, fontSize: 'clamp(16px, 1.4vw, 22px)', marginBottom: 8 }}>So geht&apos;s</div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: 0, fontSize: 'clamp(14px, 1.2vw, 19px)', lineHeight: 1.6 }}>
-            Formular aktivieren → Link teilen (z. B. auf Website, Kassenbon, Flyer). Wer sich einträgt, gibt die <strong style={{ color: '#fff' }}>Einwilligung</strong> für WhatsApp-Nachrichten — nachweisbar mit Zeitpunkt gespeichert. Der eigentliche Versand kommt, sobald Ihr WhatsApp-Zugang verbunden ist.
+            Formular aktivieren → Link teilen (z. B. auf Website, Kassenbon, Flyer). Wer sich einträgt, bestätigt die Anmeldung anschließend <strong style={{ color: '#fff' }}>selbst per WhatsApp</strong> (eine kurze Nachricht mit Code an Ihre Nummer). Erst dann ist die Nummer aktiv — so kann niemand fremde Nummern eintragen. Einwilligung und Nachweis werden mit Zeitpunkt gespeichert; „STOP“ meldet jederzeit ab. Voraussetzung: WhatsApp-Nummer und Nachrichten-Eingang sind eingerichtet.
           </p>
         </div>
 
@@ -172,6 +177,16 @@ export default function WhatsappEmpfaengerSeite() {
               <label style={lbl}>Name (optional)</label>
               <input value={nName} onChange={(e) => setNName(e.target.value)} placeholder="Name" style={input} />
             </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 10 }}>
+            <div style={{ flex: '2 1 280px' }}>
+              <label style={lbl}>Wo liegt die Einwilligung vor? *</label>
+              <input value={nNachweis} onChange={(e) => setNNachweis(e.target.value)} placeholder="z. B. Auftragsformular vom 12.09.2026" style={input} />
+            </div>
+            <label style={{ flex: '1 1 260px', display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', color: '#fff', fontSize: 'clamp(13px, 1.1vw, 17px)', paddingBottom: 10 }}>
+              <input type="checkbox" checked={nBestaetigt} onChange={(e) => setNBestaetigt(e.target.checked)} style={{ width: 18, height: 18, accentColor: C.green, marginTop: 2 }} />
+              <span>Die Einwilligung dieser Person in WhatsApp-Werbung liegt uns nachweisbar vor.</span>
+            </label>
             <button onClick={hinzufuegen} disabled={addBusy} style={{ ...btnGold, opacity: addBusy ? 0.7 : 1, cursor: addBusy ? 'wait' : 'pointer' }}>{addBusy ? '…' : 'Hinzufügen'}</button>
           </div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '8px 0 0', fontSize: 'clamp(11px, 1vw, 14px)' }}>Nur Nummern hinzufügen, für die eine Einwilligung vorliegt — die Verantwortung liegt beim Betrieb.</p>
@@ -195,8 +210,8 @@ export default function WhatsappEmpfaengerSeite() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#fff', fontSize: 'clamp(15px, 1.25vw, 19px)' }}>{k.telefon}</span>
                     {k.name && <span style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim }}>{k.name}</span>}
-                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(11px, 1vw, 14px)', color: k.status === 'aktiv' ? C.green : C.textDim, border: `1px solid ${k.status === 'aktiv' ? C.green : C.textDim}`, borderRadius: 10, padding: '1px 8px' }}>{k.status === 'aktiv' ? 'Aktiv' : 'Abgemeldet'}</span>
-                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(11px, 1vw, 14px)', color: C.textDim }}>{k.quelle === 'manuell' ? 'manuell' : 'Formular'}</span>
+                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(11px, 1vw, 14px)', color: k.status === 'aktiv' ? C.green : k.wartet ? C.warn : C.textDim, border: `1px solid ${k.status === 'aktiv' ? C.green : k.wartet ? C.warn : C.textDim}`, borderRadius: 10, padding: '1px 8px' }}>{kontaktStatusText(k)}</span>
+                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(11px, 1vw, 14px)', color: C.textDim }}>{k.quelle === 'manuell' ? 'manuell' : k.quelle === 'eingehend' ? 'hat geschrieben' : 'Formular'}{k.bestaetigt_am ? ' · per WhatsApp bestätigt' : ''}</span>
                   </div>
                 </div>
                 <button onClick={() => loeschen(k)} style={btn(C.danger)}>Löschen</button>

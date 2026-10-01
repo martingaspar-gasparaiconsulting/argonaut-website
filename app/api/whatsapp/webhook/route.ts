@@ -20,6 +20,11 @@
 //   3. Doppelte werden über die Meta-Kennung abgefangen. Mehrfachzustellung
 //      ist bei Webhooks der Normalfall, nicht die Ausnahme.
 //
+// Paket 183: Hier wird eine Anmeldung erst wirksam. „ANMELDEN <CODE>" von
+// genau der Nummer, die im Formular stand, macht den Kontakt aktiv (Nachweis:
+// Zeitpunkt + Meta-Kennung). „STOP" meldet ab. Beides NUR nach gültiger
+// Signatur — die Absendernummer stammt dann nachweislich von Meta.
+//
 // Prüfbar OHNE Meta: ein nachgestellter Aufruf mit selbst gerechneter Signatur
 // genügt (siehe tests/whatsappEingang.test.mjs für die Signaturbildung).
 // ============================================================================
@@ -28,7 +33,8 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { entschluessele } from '@/lib/crypto';
 import { signaturGueltig, pruefeEinrichtung, leseEingang } from '@/lib/whatsappEingang';
-import { telefonNormalisieren } from '@/lib/whatsapp';
+import { telefonNormalisieren, einwilligungsText } from '@/lib/whatsapp';
+import { eingangAuswerten, bestaetigungPasst, bestaetigterEinwilligungsText } from '@/lib/whatsappBestaetigung';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -142,11 +148,14 @@ export async function POST(req: Request) {
       let kontaktId: string | null = null;
       const { data: vorhanden } = await db
         .from('whatsapp_kontakt')
-        .select('id, name')
+        .select('id, name, status, bestaetigungs_code, bestaetigung_angefragt_am')
         .eq('owner_user_id', ownerId)
         .eq('telefon', telefon)
         .maybeSingle();
-      const k = vorhanden as { id?: string; name?: string | null } | null;
+      const k = vorhanden as {
+        id?: string; name?: string | null; status?: string | null;
+        bestaetigungs_code?: string | null; bestaetigung_angefragt_am?: string | null;
+      } | null;
 
       if (k?.id) {
         kontaktId = k.id;
@@ -183,6 +192,41 @@ export async function POST(req: Request) {
       });
       if (error && error.code !== '23505') {
         console.error('whatsapp/webhook Speichern:', error.message);
+      }
+      // Doppelt zugestellt (23505) -> schon verarbeitet, nichts erneut ändern.
+      if (error || !kontaktId) continue;
+
+      // Paket 183: Bestätigung oder Abmeldung?
+      const absicht = n.art === 'text' ? eingangAuswerten(n.text) : null;
+      if (!absicht) continue;
+      const zeit = new Date().toISOString();
+      if (absicht.art === 'stop') {
+        const { error: e2 } = await db
+          .from('whatsapp_kontakt')
+          .update({ status: 'abgemeldet', abgemeldet_am: zeit, bestaetigungs_code: null })
+          .eq('id', kontaktId)
+          .eq('owner_user_id', ownerId);
+        if (e2) console.error('whatsapp/webhook Abmelden:', e2.message);
+        continue;
+      }
+      if (absicht.art === 'bestaetigung' && bestaetigungPasst(k, absicht.code)) {
+        const { data: prof } = await db.from('profiles').select('firma_name').eq('id', ownerId).maybeSingle();
+        const firma = ((prof as { firma_name?: string | null } | null)?.firma_name || '').trim();
+        const { error: e3 } = await db
+          .from('whatsapp_kontakt')
+          .update({
+            status: 'aktiv',
+            einwilligung_am: n.zeitpunktIso,
+            einwilligung_text: bestaetigterEinwilligungsText(einwilligungsText(firma), n.providerId),
+            bestaetigt_am: zeit,
+            bestaetigung_nachweis: n.providerId,
+            bestaetigungs_code: null,
+            abgemeldet_am: null,
+          })
+          .eq('id', kontaktId)
+          .eq('owner_user_id', ownerId)
+          .neq('status', 'aktiv');
+        if (e3) console.error('whatsapp/webhook Bestaetigen:', e3.message);
       }
     }
   } catch (e) {

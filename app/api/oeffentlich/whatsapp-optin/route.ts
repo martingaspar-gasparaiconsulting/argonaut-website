@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-import { telefonNormalisieren, istTelefonPlausibel, einwilligungsText } from '@/lib/whatsapp';
+import { telefonNormalisieren, istTelefonPlausibel } from '@/lib/whatsapp';
+import { baueBestaetigungsCode, anmeldeNachricht, waMeLink, BESTAETIGUNG_GUELTIG_TAGE } from '@/lib/whatsappBestaetigung';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 // ============================================================================
-// ARGONAUT OS · app/api/oeffentlich/whatsapp-optin/route.ts  (WhatsApp P2)
+// ARGONAUT OS · app/api/oeffentlich/whatsapp-optin/route.ts  (WhatsApp P2 · Paket 183)
 //
 // ÖFFENTLICH (kein Login). WhatsApp-Anmeldeformular eines Betriebs.
 //   GET  ?slug=..  -> { betrieb, titel, text, akzent } (Branding)
-//   POST { slug, telefon, name? } -> legt den Empfänger mit dokumentierter
-//        Einwilligung an (status='aktiv', einwilligung_am + einwilligung_text).
-//        Da noch kein WhatsApp-Versand aktiv ist (Paket 3), erfolgt die
-//        Einwilligung als dokumentiertes Web-Opt-in; eine WhatsApp-Bestätigung
-//        kann in Paket 3 ergänzt werden.
+//   POST { slug, telefon, name? } -> legt einen WARTENDEN Kontakt an und gibt
+//        einen Bestätigungscode + wa.me-Link zurück.
+//
+// Paket 183: Das Formular macht NIEMANDEN mehr aktiv. Aktiv wird eine Nummer
+// erst, wenn die Person selbst „ANMELDEN <CODE>" per WhatsApp an den Betrieb
+// schickt (app/api/whatsapp/webhook). Vorher standen auch fremde Nummern
+// sofort als „aktiv" in der Werbeliste. Wir schreiben an die eingetragene
+// Nummer NICHTS — das Formular kann niemanden belästigen.
+//
+// Das Formular ist nur offen, wenn der Betrieb eine WhatsApp-Nummer und den
+// Eingang (Telefonnummer-ID + App-Secret) hinterlegt hat — sonst käme die
+// Bestätigung nie an.
 //
 // Betrieb über profiles.whatsapp_optin_slug; muss whatsapp_optin_aktiv=true sein.
 // Service-Role umgeht RLS -> owner_user_id explizit.
@@ -33,7 +41,7 @@ function admin() {
 async function betriebAusSlug(db: ReturnType<typeof admin>, slug: string) {
   const { data } = await db
     .from('profiles')
-    .select('id, firma_name, firma_akzentfarbe, whatsapp_optin_aktiv, whatsapp_optin_titel, whatsapp_optin_text')
+    .select('id, firma_name, firma_akzentfarbe, whatsapp_optin_aktiv, whatsapp_optin_titel, whatsapp_optin_text, whatsapp_absender')
     .eq('whatsapp_optin_slug', slug)
     .maybeSingle();
   if (!data || (data as { whatsapp_optin_aktiv?: boolean }).whatsapp_optin_aktiv !== true) return null;
@@ -43,8 +51,21 @@ async function betriebAusSlug(db: ReturnType<typeof admin>, slug: string) {
     firma_akzentfarbe: string | null;
     whatsapp_optin_titel: string | null;
     whatsapp_optin_text: string | null;
+    whatsapp_absender: string | null;
   };
+  // Paket 183: Ohne Nummer und ohne eingerichteten Eingang kann niemand
+  // bestätigen — dann ist die Seite nicht verfügbar statt halb kaputt.
+  const nummer = telefonNormalisieren(p.whatsapp_absender);
+  if (!istTelefonPlausibel(nummer)) return null;
+  const { data: zug } = await db
+    .from('whatsapp_zugang')
+    .select('meta_phone_number_id, app_secret_verschluesselt')
+    .eq('owner_user_id', p.id)
+    .maybeSingle();
+  const z = zug as { meta_phone_number_id?: string | null; app_secret_verschluesselt?: string | null } | null;
+  if (!z?.meta_phone_number_id || !z?.app_secret_verschluesselt) return null;
   return {
+    nummer,
     ownerId: p.id,
     firma: (p.firma_name || '').trim() || 'Unternehmen',
     akzent: p.firma_akzentfarbe,
@@ -81,42 +102,48 @@ export async function POST(req: Request) {
     const betrieb = await betriebAusSlug(db, slug);
     if (!betrieb) return NextResponse.json({ ok: false, error: 'Diese Anmeldeseite ist nicht (mehr) verfügbar.' }, { status: 404 });
 
-    const consentText = einwilligungsText(betrieb.firma);
-
     const { data: vorhanden } = await db
       .from('whatsapp_kontakt')
-      .select('id, status')
+      .select('id, status, name')
       .eq('owner_user_id', betrieb.ownerId)
       .eq('telefon', telefon)
       .maybeSingle();
-    const v = vorhanden as { id: string; status: string } | null;
+    const v = vorhanden as { id: string; status: string; name: string | null } | null;
     if (v && v.status === 'aktiv') return NextResponse.json({ ok: true, status: 'bereits' });
-    // S1: Eine Abmeldung darf nicht von Dritten über das Formular aufgehoben
-    // werden (hier gibt es keine Bestätigung wie beim E-Mail-Double-Opt-in).
-    if (v && v.status === 'abgemeldet') {
-      return NextResponse.json({ ok: false, error: 'Diese Nummer wurde abgemeldet. Für eine erneute Anmeldung wenden Sie sich bitte direkt an den Betrieb.' }, { status: 409 });
-    }
 
+    // Paket 183: Nur ein Code wird hinterlegt — Status und Einwilligung bleiben
+    // unberührt, bis die Person selbst per WhatsApp bestätigt. Auch eine früher
+    // abgemeldete Nummer bleibt abgemeldet, bis sie sich selbst meldet.
+    const code = baueBestaetigungsCode();
     const jetzt = new Date().toISOString();
     if (v) {
-      await db
-        .from('whatsapp_kontakt')
-        .update({ status: 'aktiv', name, einwilligung_am: jetzt, einwilligung_text: consentText, quelle: 'opt-in' })
-        .eq('id', v.id);
+      const felder: Record<string, unknown> = { bestaetigungs_code: code, bestaetigung_angefragt_am: jetzt };
+      if (name && !(v.name || '').trim()) felder.name = name;
+      const { error } = await db.from('whatsapp_kontakt').update(felder).eq('id', v.id).eq('owner_user_id', betrieb.ownerId);
+      if (error) throw new Error(error.message);
     } else {
-      await db.from('whatsapp_kontakt').insert({
+      const { error } = await db.from('whatsapp_kontakt').insert({
         owner_user_id: betrieb.ownerId,
         telefon,
         name,
-        status: 'aktiv',
+        status: 'unbekannt',
         quelle: 'opt-in',
-        einwilligung_am: jetzt,
-        einwilligung_text: consentText,
         abmelde_token: randomUUID(),
+        bestaetigungs_code: code,
+        bestaetigung_angefragt_am: jetzt,
       });
+      if (error) throw new Error(error.message);
     }
 
-    return NextResponse.json({ ok: true, status: 'angemeldet' });
+    const nachricht = anmeldeNachricht(code);
+    return NextResponse.json({
+      ok: true,
+      status: 'bestaetigen',
+      nachricht,
+      nummer: betrieb.nummer,
+      link: waMeLink(betrieb.nummer, nachricht),
+      gueltigTage: BESTAETIGUNG_GUELTIG_TAGE,
+    });
   } catch (e: unknown) {
     // S1: interne Fehlertexte nie nach außen.
     console.error('whatsapp-optin POST:', e instanceof Error ? e.message : e);

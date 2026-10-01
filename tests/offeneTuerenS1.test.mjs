@@ -186,7 +186,10 @@ test('Abmeldungen werden nicht von Dritten wiederbelebt', () => {
   const iAktiv = opt.indexOf("update({ status: 'aktiv'");
   assert.ok(iCheck > 0 && iCheck < iAktiv, 'optin-bestaetigen: abgemeldet vor dem Aktivieren abfangen');
   const wa = quelle('oeffentlich/whatsapp-optin');
-  assert.ok(wa.indexOf("v.status === 'abgemeldet'") > 0 && wa.indexOf("v.status === 'abgemeldet'") < wa.indexOf("update({ status: 'aktiv'"));
+  // Paket 183 (bewusst angepasst): Das WhatsApp-Formular aktiviert niemanden
+  // mehr und fasst den Status nie an — Aktivieren/Wiederanmelden geht nur
+  // noch über die WhatsApp-Nachricht der Person selbst (Webhook).
+  assert.ok(!wa.includes("status: 'aktiv'") && !wa.includes("status: 'abgemeldet'"));
 });
 
 test('Widerruf: erst speichern, nie eine falsche Eingangsbestaetigung', () => {

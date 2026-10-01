@@ -3,6 +3,8 @@
 // ============================================================
 // ARGONAUT OS · Öffentliche WhatsApp-Anmeldeseite (ohne Login) · WhatsApp P2
 // /whatsapp-anmelden/<slug> — Interessent trägt Handynummer + Einwilligung ein.
+// Paket 183: Danach bestätigt die Person selbst per WhatsApp („ANMELDEN <CODE>"
+// an die Nummer des Betriebs). Erst dann ist sie aktiv.
 // Liest & schreibt nur über /api/oeffentlich/whatsapp-optin. Branding des Betriebs.
 // ============================================================
 
@@ -31,7 +33,8 @@ export default function WhatsappAnmeldenSeite() {
   const [telefon, setTelefon] = useState('');
   const [einwilligung, setEinwilligung] = useState(false);
   const [senden, setSenden] = useState(false);
-  const [fertig, setFertig] = useState<'angemeldet' | 'bereits' | null>(null);
+  const [fertig, setFertig] = useState<'bestaetigen' | 'bereits' | null>(null);
+  const [bestaetigung, setBestaetigung] = useState<{ nachricht: string; nummer: string; link: string; gueltigTage: number } | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -65,7 +68,11 @@ export default function WhatsappAnmeldenSeite() {
       });
       const j = await res.json();
       if (!res.ok || !j?.ok) setFehler(j?.error || 'Anmeldung fehlgeschlagen.');
-      else setFertig(j.status === 'bereits' ? 'bereits' : 'angemeldet');
+      else if (j.status === 'bereits') setFertig('bereits');
+      else {
+        setBestaetigung({ nachricht: String(j.nachricht || ''), nummer: String(j.nummer || ''), link: String(j.link || ''), gueltigTage: Number(j.gueltigTage) || 7 });
+        setFertig('bestaetigen');
+      }
     } catch {
       setFehler('Verbindung fehlgeschlagen. Bitte erneut versuchen.');
     } finally { setSenden(false); }
@@ -95,14 +102,29 @@ export default function WhatsappAnmeldenSeite() {
             <h1 style={S.h1}>Nicht verfügbar</h1>
             <p style={S.sub}>{fehler}</p>
           </div>
-        ) : fertig ? (
+        ) : fertig === 'bereits' ? (
           <div style={S.card}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>{fertig === 'bereits' ? '👍' : '✅'}</div>
-            <h1 style={S.h1}>{fertig === 'bereits' ? 'Sie sind schon dabei' : 'Angemeldet!'}</h1>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>👍</div>
+            <h1 style={S.h1}>Sie sind schon dabei</h1>
+            <p style={S.sub}>Ihre Nummer ist bereits bei {betrieb} angemeldet. Es ist nichts weiter zu tun.</p>
+          </div>
+        ) : fertig === 'bestaetigen' && bestaetigung ? (
+          <div style={S.card}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>📲</div>
+            <h1 style={S.h1}>Fast geschafft – bitte bestätigen</h1>
             <p style={S.sub}>
-              {fertig === 'bereits'
-                ? `Ihre Nummer ist bereits bei ${betrieb} eingetragen. Es ist nichts weiter zu tun.`
-                : `Danke! Ihre Nummer ist bei ${betrieb} eingetragen. Sie können sich jederzeit wieder abmelden.`}
+              Damit niemand fremde Nummern eintragen kann, bestätigen Sie die Anmeldung bitte selbst: Senden Sie die vorbereitete Nachricht per WhatsApp an {betrieb}. Erst dann erhalten Sie Nachrichten.
+            </p>
+            {bestaetigung.link && (
+              <a href={bestaetigung.link} target="_blank" rel="noopener noreferrer" style={{ ...S.primaer, display: 'block', textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box', marginBottom: 16 }}>
+                WhatsApp öffnen und senden
+              </a>
+            )}
+            <p style={{ ...S.sub, fontSize: 14, margin: '0 0 6px' }}>Falls sich WhatsApp nicht öffnet, schicken Sie diesen Text</p>
+            <div style={{ background: NAVY, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '12px 14px', fontSize: 20, fontWeight: 800, letterSpacing: 2, marginBottom: 8, wordBreak: 'break-word' }}>{bestaetigung.nachricht}</div>
+            <p style={{ ...S.sub, fontSize: 14, margin: '0 0 12px' }}>an die WhatsApp-Nummer <strong style={{ color: TEXT }}>{bestaetigung.nummer}</strong>.</p>
+            <p style={{ color: DIM, fontSize: 13, lineHeight: 1.5, margin: 0 }}>
+              Die Bestätigung ist {bestaetigung.gueltigTage} Tage gültig. Abmelden können Sie sich jederzeit mit der Nachricht „STOP“.
             </p>
           </div>
         ) : (
@@ -125,7 +147,7 @@ export default function WhatsappAnmeldenSeite() {
             </label>
 
             <button style={{ ...S.primaer, opacity: senden ? 0.6 : 1 }} onClick={absenden} disabled={senden}>
-              {senden ? 'Wird gesendet …' : 'Anmelden'}
+              {senden ? 'Wird gesendet …' : 'Weiter zur Bestätigung'}
             </button>
           </div>
         )}
