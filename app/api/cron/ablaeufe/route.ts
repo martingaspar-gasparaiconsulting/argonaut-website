@@ -9,16 +9,19 @@ import {
 } from '@/lib/ablaufMotor';
 import { zeitplanSlot, slotKennung } from '@/lib/ablaufZeit';
 import {
-  arbeiteAb, schritteFuer, protokoll, setzeLauf, starteLauf,
+  arbeiteAb, schritteFuer, protokoll, setzeLauf, starteLauf, laufFehlerGlocke,
   type AblaufZeile, type LaufZeile,
 } from '@/lib/ablaufAusfuehren';
+import { haengtGrenze, laufHaengt, HAENGT_MELDUNG } from '@/lib/ablaufRobust';
 import { ergaenzeKontakte } from '@/lib/ablaufDaten';
 import type { Datensatz } from '@/lib/automation';
 
 // ============================================================================
 // ARGONAUT OS · /api/cron/ablaeufe — der Motor der Abläufe (Paket 157, 28.09.2026)
 //
-// Läuft stündlich (vercel.json). Je Durchgang drei Teile:
+// Läuft stündlich (vercel.json). Je Durchgang diese Teile:
+//   0. HÄNGENDE LÄUFE (Paket 186): „läuft" seit über 2 Stunden -> „Fehler" +
+//      Glocke an die Geschäftsleitung (vorher blieben sie ewig auf „läuft").
 //   1. FORTSETZEN: Läufe, deren Wartezeit um ist (auch nach einer Freigabe durch
 //      den Chef — die Seite setzt den Lauf dann auf „wartet, weiter ab jetzt").
 //      Bei Läufen mit Vorgang wird vorher geprüft, ob der Auslöser noch gilt
@@ -73,6 +76,33 @@ async function durchgang(req: Request) {
   const ablaeufe = ((ablaufDaten ?? []) as AblaufZeile[]).filter((a) => laufbereit(a));
   const nachId = new Map(ablaeufe.map((a) => [a.id, a]));
 
+  // ---- 0) Hängende Läufe beenden (Paket 186) --------------------------------
+  let haengend = 0;
+  {
+    const grenze = haengtGrenze(jetzt);
+    const { data: hRoh, error: hFehler } = await admin.from('ablauf_laeufe').select('*')
+      .eq('status', 'laeuft').eq('probe', false)
+      .or(`laeuft_seit.lt."${grenze}",and(laeuft_seit.is.null,gestartet_am.lt."${grenze}")`)
+      .limit(MAX_FORTSETZUNGEN);
+    for (const lauf of (hFehler ? [] : (hRoh ?? [])) as LaufZeile[]) {
+      if (!laufHaengt(lauf, jetzt)) continue;
+      if (nurAblauf && lauf.ablauf_id !== nurAblauf) continue;
+      if (probe) { bericht.push({ lauf: lauf.id, wuerde: 'als hängend beenden' }); continue; }
+      const { data: meins } = await admin.from('ablauf_laeufe')
+        .update({ status: 'fehler', meldung: HAENGT_MELDUNG, weiter_am: null, beendet_am: jetzt.toISOString() })
+        .eq('id', lauf.id).eq('owner_user_id', lauf.owner_user_id).eq('status', 'laeuft').select('id');
+      if (!meins || meins.length === 0) continue;
+      await protokoll(admin, lauf, lauf.pfad, 'pruefung', 'fehler', HAENGT_MELDUNG);
+      let name = nachId.get(lauf.ablauf_id)?.name ?? '';
+      if (!name) {
+        const { data: a } = await admin.from('ablaeufe').select('name').eq('id', lauf.ablauf_id).eq('owner_user_id', lauf.owner_user_id).maybeSingle();
+        name = String((a as { name?: string } | null)?.name ?? 'Ablauf');
+      }
+      await laufFehlerGlocke(admin, lauf, name, HAENGT_MELDUNG);
+      haengend++;
+    }
+  }
+
   // ---- 1) Fortsetzen: Wartezeit um (oder vom Chef freigegeben) -------------
   const { data: wartend } = await admin.from('ablauf_laeufe').select('*')
     .eq('status', 'wartet').eq('probe', false).lte('weiter_am', jetzt.toISOString())
@@ -87,7 +117,7 @@ async function durchgang(req: Request) {
     if (probe) { bericht.push({ ablauf: ablauf.name, lauf: lauf.id, wuerde: 'fortsetzen', ab: lauf.pfad }); continue; }
 
     // Anspruch anmelden: nur EIN Durchgang setzt einen Lauf fort.
-    const { data: meins } = await admin.from('ablauf_laeufe').update({ status: 'laeuft' })
+    const { data: meins } = await admin.from('ablauf_laeufe').update({ status: 'laeuft', laeuft_seit: jetzt.toISOString() })
       .eq('id', lauf.id).eq('owner_user_id', lauf.owner_user_id).eq('status', 'wartet').select('id');
     if (!meins || meins.length === 0) continue;
 
@@ -236,7 +266,7 @@ async function durchgang(req: Request) {
   return NextResponse.json({
     ok: true, probelauf: probe, zeitpunkt: jetzt.toISOString(),
     ablaeufe_aktiv: ablaeufe.length,
-    ...(probe ? {} : { fortgesetzt, gestartet, zeitplaene, ereignis_starts: ereignisStarts }),
+    ...(probe ? {} : { fortgesetzt, gestartet, zeitplaene, ereignis_starts: ereignisStarts, haengend_beendet: haengend }),
     deckel_je_ablauf_24h: MAX_JE_ABLAUF, rueckblick_tage: RUECKBLICK_TAGE,
     bericht,
   });

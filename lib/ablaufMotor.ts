@@ -145,6 +145,8 @@ export function freieStarts(inLetzten24h: number): number {
 
 /** Läuft dieser Ablauf im Motor? Nur eingeschaltet UND fehlerfrei geprüft. */
 export function laufbereit(ablauf: Ablauf): boolean {
+  // Paket 186: Ein gelöschter Ablauf läuft nie mehr — auch wenn „aktiv" noch true wäre.
+  if ((ablauf as { geloescht_am?: string | null }).geloescht_am) return false;
   return ablauf.aktiv === true && pruefeAblauf(ablauf).aktivierbar;
 }
 

@@ -216,6 +216,7 @@ test('Code: Cron nur mit Zeitplan-Geheimnis, streng je Betrieb, stündlich; alte
     if (/^'ablaeufe'\)\.select\('\*'\)\.eq\('aktiv', true\)/.test(stueck)) continue;            // Liste aller aktiven Ablaeufe
     if (/^'ablauf_laeufe'\)\.select\('\*'\)\s*\.eq\('status', 'wartet'\)/.test(stueck)) continue; // Warteliste, danach Besitzer-Abgleich
     if (/^'ablauf_ereignisse'\)\.select\('\*'\)\s*\.is\('verarbeitet_am', null\)/.test(stueck)) continue; // Paket 166: Ereignis-Warteschlange, danach passendeAblaeufe je Betrieb
+    if (/^'ablauf_laeufe'\)\.select\('\*'\)\s*\.eq\('status', 'laeuft'\)/.test(stueck)) continue;  // Paket 186 (bewusst ergänzt): hängende Läufe, Beenden danach je Betrieb gefiltert
     if (/^plan\.tabelle\)\.insert\(\{ \.\.\.plan\.daten, owner_user_id: ownerId \}\)/.test(stueck)) continue;
     if (/^'ablauf_protokoll'\)\.insert\(\{\s*owner_user_id: lauf\.owner_user_id/.test(stueck)) continue;
     if (/^'ablauf_laeufe'\)\.insert\(\{\s*owner_user_id: ablauf\.owner_user_id/.test(stueck)) continue;

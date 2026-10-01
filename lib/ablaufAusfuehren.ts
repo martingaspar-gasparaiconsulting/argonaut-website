@@ -24,6 +24,7 @@ import { werbungErlaubt } from './werbeErlaubnisServer';
 import { createAdminClient } from './supabase-admin';
 import { werbeVersandTeile } from './werbeAbmeldeLink';
 import { WERBE_GRUND_TEXT } from './werbeErlaubnis';
+import { webhookWiederholbar, neuversuchPlanen } from './ablaufRobust';
 
 /** Grundadresse für Abmeldelinks in Mails aus Abläufen. */
 function basisUrl(): string {
@@ -48,8 +49,11 @@ export type AblaufZeile = Ablauf & { id: string; owner_user_id: string; version:
 export type LaufZeile = {
   id: string; owner_user_id: string; ablauf_id: string; version: number; ziel_typ: string | null; ziel_id: string | null;
   status: string; pfad: string | null; kontext: { tabelle?: string; slot?: string } | null;
+  // Paket 186 (SQL p186): Neuversuch je Schritt + seit wann der Lauf läuft
+  neuversuche?: number | null; neuversuch_pfad?: string | null; laeuft_seit?: string | null; gestartet_am?: string | null;
 };
-type Ergebnis = { ergebnis: 'ok' | 'fehler' | 'uebersprungen'; meldung: string };
+/** wiederholbar: Fehler, bei dem Warten hilft (Empfänger kurz nicht erreichbar) — Paket 186. */
+type Ergebnis = { ergebnis: 'ok' | 'fehler' | 'uebersprungen'; meldung: string; wiederholbar?: boolean };
 
 async function fuehreAus(db: Db, plan: AktionPlan, ownerId: string, u: Umfeld): Promise<Ergebnis> {
   if (plan.art === 'uebersprungen') return { ergebnis: 'uebersprungen', meldung: plan.meldung };
@@ -205,7 +209,9 @@ async function webhook(plan: Extract<AktionPlan, { art: 'webhook' }>, u: Umfeld)
   const inhalt = JSON.stringify({ ...nutzlast, lauf_id: u.lauf.id });
   const zeit = String(Math.floor(u.jetzt.getTime() / 1000));
   const r = await sendeWebhook(plan.url, webhookKoepfe(schluessel, zeit, inhalt), inhalt);
-  return r.ok ? { ergebnis: 'ok', meldung: `${plan.meldung}: ${r.meldung}` } : { ergebnis: 'fehler', meldung: `${plan.meldung}: ${r.meldung}` };
+  return r.ok
+    ? { ergebnis: 'ok', meldung: `${plan.meldung}: ${r.meldung}` }
+    : { ergebnis: 'fehler', meldung: `${plan.meldung}: ${r.meldung}`, wiederholbar: webhookWiederholbar(r) };
 }
 
 export async function protokoll(db: Db, lauf: LaufZeile, pfad: string | null, schrittTyp: string, ergebnis: string, meldung: string, details: Record<string, unknown> = {}) {
@@ -217,6 +223,14 @@ export async function protokoll(db: Db, lauf: LaufZeile, pfad: string | null, sc
 
 export async function setzeLauf(db: Db, lauf: LaufZeile, felder: Record<string, unknown>) {
   await db.from('ablauf_laeufe').update(felder).eq('id', lauf.id).eq('owner_user_id', lauf.owner_user_id);
+}
+
+/** Paket 186: Endet ein Lauf mit Fehler, erfährt es die Geschäftsleitung (Glocke, je Lauf höchstens einmal). */
+export async function laufFehlerGlocke(db: Db, lauf: LaufZeile, ablaufName: string, meldung: string): Promise<void> {
+  try {
+    await glocke(db, lauf.owner_user_id, { an: 'chef' }, `Ablauf gestoppt: ${String(ablaufName || 'Ablauf').slice(0, 80)}`,
+      meldung.slice(0, 300), '/dashboard/ablaeufe', `${lauf.id}:fehler`, '');
+  } catch { /* Glocke ist Hinweis, nie Grund für einen weiteren Fehler */ }
 }
 
 /** Den Fahrplan ab `startPfad` abarbeiten, Protokoll schreiben, Zustand setzen. */
@@ -236,8 +250,19 @@ export async function arbeiteAb(
     catch (err: unknown) { r = { ergebnis: 'fehler', meldung: err instanceof Error ? err.message : 'unbekannter Fehler' }; }
     await protokoll(db, lauf, e.pfad, 'aktion', r.ergebnis, r.meldung, { aktion: e.schritt.aktion });
     if (r.ergebnis === 'fehler') {
+      // Paket 186: Empfänger kurz weg -> derselbe Schritt später noch einmal (3 Neuversuche).
+      if (r.wiederholbar) {
+        const nv = neuversuchPlanen(lauf, e.pfad, jetzt);
+        if (nv.art === 'neuversuch') {
+          await protokoll(db, lauf, e.pfad, 'warten', 'wartet', nv.meldung);
+          await setzeLauf(db, lauf, { status: 'wartet', pfad: e.pfad, weiter_am: nv.weiter_am, meldung: nv.meldung, neuversuche: nv.nr, neuversuch_pfad: e.pfad });
+          return 'wartet';
+        }
+        r = { ...r, meldung: `${r.meldung} — ${nv.meldung}` };
+      }
       // Nach einem Fehler geht es NICHT weiter — keine Folge-Mail auf kaputter Grundlage.
       await setzeLauf(db, lauf, { status: 'fehler', pfad: e.pfad, weiter_am: null, meldung: r.meldung.slice(0, 500), beendet_am: jetzt.toISOString() });
+      await laufFehlerGlocke(db, lauf, ablauf.name, r.meldung);
       return 'fehler';
     }
   }
@@ -266,7 +291,7 @@ export async function starteLauf(
 ): Promise<string | null> {
   const { data: neu, error } = await db.from('ablauf_laeufe').insert({
     owner_user_id: ablauf.owner_user_id, ablauf_id: ablauf.id, version: ablauf.version,
-    ziel_typ: zielTyp, ziel_id: zielId, status: 'laeuft', probe: false, kontext,
+    ziel_typ: zielTyp, ziel_id: zielId, status: 'laeuft', probe: false, kontext, laeuft_seit: jetzt.toISOString(),
   }).select('*').single();
   if (error || !neu) return null;
   await protokoll(db, neu as LaufZeile, null, 'start', 'ok', startMeldung);

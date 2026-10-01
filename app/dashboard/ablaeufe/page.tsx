@@ -26,6 +26,7 @@ import { ABLAUF_VORLAGEN, GRUPPEN, vorlagenFuer, type BranchenGruppe, type Ablau
 import { neueFassungNoetig, kopie, enthaeltAktion } from '@/lib/ablaufEditor';
 import AblaufErgebnisse from './_teile/AblaufErgebnisse';
 import WebhookSchluessel from './_teile/WebhookSchluessel';
+import { ablaufSichtbar, loeschFrage, OFFENE_STATUS_BEIM_LOESCHEN } from '@/lib/ablaufRobust';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -37,7 +38,7 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
-type AblaufZeile = Ablauf & { id: string; owner_user_id: string; version: number; alt_regel_id: string | null; zuletzt_lauf_am: string | null };
+type AblaufZeile = Ablauf & { id: string; owner_user_id: string; version: number; alt_regel_id: string | null; zuletzt_lauf_am: string | null; geloescht_am?: string | null };
 type LaufZeile = {
   id: string; ablauf_id: string; ziel_typ: string | null; ziel_id: string | null; status: string; pfad: string | null;
   weiter_am: string | null; meldung: string | null; gestartet_am: string; kontext: { tabelle?: string; slot?: string } | null;
@@ -171,6 +172,9 @@ export default function AblaeufePage() {
 
   const ablaufName = useCallback((id: string) => ablaeufe.find((a) => a.id === id)?.name ?? '—', [ablaeufe]);
   const freigaben = useMemo(() => laeufe.filter((l) => l.status === 'freigabe'), [laeufe]);
+  // Paket 186: gelöschte Abläufe bleiben im Speicher (Namen im Protokoll, übernommene
+  // Automationen), werden aber nicht mehr angezeigt.
+  const sichtbar = useMemo(() => ablaeufe.filter((a) => ablaufSichtbar(a)), [ablaeufe]);
   const offeneRegeln = useMemo(() => regeln.filter((r) => !ablaeufe.some((a) => a.alt_regel_id === r.id)), [regeln, ablaeufe]);
 
   async function tu(schluessel: string, arbeit: () => Promise<string>) {
@@ -220,6 +224,28 @@ export default function AblaeufePage() {
       if (error) throw error;
       if (nichtsGeschrieben(data)) throw new Error(NICHT_GESPEICHERT);
       return `„${a.name}" ist ausgeschaltet. Wartende Läufe bleiben stehen, bis Sie ihn wieder einschalten.`;
+    });
+  }
+
+  // --- Löschen (Paket 186): ausblenden statt löschen — Läufe und Protokoll bleiben ---
+  function loeschen(a: AblaufZeile) {
+    return tu('loe-' + a.id, async () => {
+      if (!uid) throw new Error('Nicht angemeldet.');
+      const offen = laeufe.filter((l) => l.ablauf_id === a.id && (OFFENE_STATUS_BEIM_LOESCHEN as readonly string[]).includes(l.status));
+      if (typeof window !== 'undefined' && !window.confirm(loeschFrage(a.name, offen.length))) return 'Nichts geändert.';
+      const jetzt = new Date().toISOString();
+      const { data, error } = await supabase.from('ablaeufe')
+        .update({ aktiv: false, geloescht_am: jetzt, geaendert_am: jetzt }).eq('id', a.id).is('geloescht_am', null).select('id');
+      if (error) throw new Error('Löschen fehlgeschlagen: ' + error.message);
+      if (nichtsGeschrieben(data)) throw new Error(NICHT_GESPEICHERT);
+      const { data: beendet } = await supabase.from('ablauf_laeufe')
+        .update({ status: 'abgebrochen', meldung: 'Ablauf gelöscht', weiter_am: null, beendet_am: jetzt })
+        .eq('ablauf_id', a.id).in('status', [...OFFENE_STATUS_BEIM_LOESCHEN]).select('id, pfad');
+      for (const l of (beendet ?? []) as { id: string; pfad: string | null }[]) {
+        await supabase.from('ablauf_protokoll').insert({ owner_user_id: uid, lauf_id: l.id, ablauf_id: a.id, pfad: l.pfad, schritt_typ: 'stopp', ergebnis: 'uebersprungen', meldung: 'Ablauf gelöscht — Lauf beendet' });
+      }
+      const n = (beendet ?? []).length;
+      return `„${a.name}" ist gelöscht.${n ? ` ${n} wartende${n === 1 ? 'r Lauf wurde' : ' Läufe wurden'} beendet.` : ''} Bisherige Läufe und Protokoll bleiben gespeichert.`;
     });
   }
 
@@ -421,8 +447,8 @@ export default function AblaeufePage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 12, marginBottom: 18 }}>
         {[
-          { label: 'Abläufe', wert: String(ablaeufe.length), farbe: C.cyan },
-          { label: 'Eingeschaltet', wert: String(ablaeufe.filter((a) => a.aktiv).length), farbe: C.green },
+          { label: 'Abläufe', wert: String(sichtbar.length), farbe: C.cyan },
+          { label: 'Eingeschaltet', wert: String(sichtbar.filter((a) => a.aktiv).length), farbe: C.green },
           { label: 'Warten auf Freigabe', wert: String(freigaben.length), farbe: C.gold },
           { label: 'Laufen / warten', wert: String(laeufe.filter((l) => l.status === 'wartet' || l.status === 'laeuft').length), farbe: C.textDim },
         ].map((k) => (
@@ -470,7 +496,7 @@ export default function AblaeufePage() {
 
       <div style={karte}>
         <h2 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 12px' }}>Ihre Abläufe</h2>
-        {laden ? <div style={klein}>Lädt …</div> : ablaeufe.length === 0 ? (
+        {laden ? <div style={klein}>Lädt …</div> : sichtbar.length === 0 ? (
           <Leerzustand
             icon="🔀"
             titel="Noch keine Abläufe"
@@ -479,7 +505,7 @@ export default function AblaeufePage() {
             aktionText="＋ Leerer Ablauf"
             onAktion={() => oeffne(leer())}
           />
-        ) : ablaeufe.map((a) => {
+        ) : sichtbar.map((a) => {
           const p = pruefeAblauf(a);
           const pr = probe[a.id];
           return (
@@ -500,6 +526,7 @@ export default function AblaeufePage() {
                     {a.aktiv
                       ? <button type="button" disabled={busy !== null} onClick={() => ausschalten(a)} style={knopf('rand')}>Ausschalten</button>
                       : <button type="button" disabled={busy !== null || !p.aktivierbar} onClick={() => einschalten(a)} style={knopf('gold')}>Einschalten</button>}
+                    <button type="button" disabled={busy !== null} onClick={() => loeschen(a)} style={knopf('rot')}>{busy === 'loe-' + a.id ? 'Löscht …' : 'Löschen'}</button>
                   </div>
                 )}
               </div>
