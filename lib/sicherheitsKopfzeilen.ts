@@ -106,3 +106,89 @@ export const INNERE_BEREICHE: string[] = [
 export function rahmenSchutzRegeln(): { source: string; headers: Kopfzeile[] }[] {
   return INNERE_BEREICHE.map((source) => ({ source, headers: RAHMEN_SCHUTZ }));
 }
+
+// ============================================================================
+// CSP IM BEOBACHTUNGSMODUS (Paket 187b)
+//
+// Eine harte Content-Security-Policy „bricht zuverlässig irgendeine Seite"
+// (siehe oben). Deshalb zuerst als Content-Security-Policy-Report-Only: Der
+// Browser BLOCKIERT NICHTS, er meldet nur, was er bei einer echten Regel
+// blockieren würde — an /api/oeffentlich/csp-bericht (landet im Vercel-
+// Protokoll als Zeile „[csp] …"). Nach ein paar Wochen ohne Meldungen bzw.
+// mit nachgetragenen Quellen kann dieselbe Liste scharf geschaltet werden.
+//
+// Kann keine Seite abschalten und niemanden aussperren.
+// ============================================================================
+
+export const CSP_BERICHT_PFAD = '/api/oeffentlich/csp-bericht';
+
+/** Erlaubte Quellen je Bereich — aus dem Code gesammelt (01.10.2026). */
+export const CSP_QUELLEN: Record<string, string[]> = {
+  'default-src': ["'self'"],
+  // Next.js braucht Inline-Skripte (Hydration); Stripe lädt sein Skript selbst.
+  'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://js.stripe.com'],
+  'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+  'font-src': ["'self'", 'data:', 'https://fonts.gstatic.com'],
+  // Bilder: Kunden-Logos, Speicher, Vorschaubilder von überall (https), data/blob für Vorschauen
+  'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+  'media-src': ["'self'", 'blob:', 'https:'],
+  'connect-src': ["'self'", 'https://*.supabase.co', 'wss://*.supabase.co', 'https://api.openrouteservice.org', 'https://api.unsplash.com', 'https://api.stripe.com'],
+  // Videos nur über Zwei-Klick (youtube-nocookie, vimeo), Stripe, Google-Karte/Kalender
+  'frame-src': ["'self'", 'https://www.youtube-nocookie.com', 'https://player.vimeo.com', 'https://js.stripe.com', 'https://hooks.stripe.com', 'https://www.google.com', 'https://maps.google.com', 'https://calendar.google.com'],
+  'worker-src': ["'self'", 'blob:'],
+  'object-src': ["'none'"],
+  'base-uri': ["'self'"],
+  'form-action': ["'self'", 'https:'],
+};
+
+/** Die Regel als Text für die Kopfzeile. */
+export function cspText(quellen: Record<string, string[]> = CSP_QUELLEN, berichtPfad: string = CSP_BERICHT_PFAD): string {
+  const teile = Object.entries(quellen).map(([k, v]) => `${k} ${v.join(' ')}`);
+  teile.push(`report-uri ${berichtPfad}`);
+  return teile.join('; ');
+}
+
+/** Regel für next.config.ts: überall, NUR melden (Report-Only), nie blockieren. */
+export function cspBeobachtungRegel(): { source: string; headers: Kopfzeile[] } {
+  return { source: '/:pfad*', headers: [{ key: 'Content-Security-Policy-Report-Only', value: cspText() }] };
+}
+
+export type CspMeldung = { regel: string; blockiert: string; seite: string };
+
+function nurUrsprung(roh: unknown): string {
+  const s = String(roh ?? '').trim().slice(0, 300);
+  if (!s) return '';
+  if (/^(inline|eval|data|blob|self|wasm-eval|trusted-types-[a-z-]+)$/i.test(s)) return s.toLowerCase();
+  try { const u = new URL(s); return u.protocol === 'data:' || u.protocol === 'blob:' ? u.protocol.slice(0, -1) : u.origin; } catch { return s.split(/[?#]/)[0].slice(0, 120); }
+}
+function nurPfad(roh: unknown): string {
+  const s = String(roh ?? '').trim().slice(0, 500);
+  if (!s) return '';
+  try { return new URL(s).pathname.slice(0, 160); } catch { return s.split(/[?#]/)[0].slice(0, 160); }
+}
+
+/**
+ * Meldung des Browsers lesen — beide Formate (alt: {"csp-report":{…}},
+ * neu: [{type:"csp-violation", body:{…}}]). Nur Regel, Ursprung des
+ * blockierten Inhalts und PFAD der Seite — nie die Abfrage-Zeichen (?token=…),
+ * damit keine Anmelde-Links ins Protokoll geraten. Höchstens 10 je Sendung.
+ */
+export function cspMeldungenLesen(text: string): CspMeldung[] {
+  let daten: unknown;
+  try { daten = JSON.parse(String(text ?? '').slice(0, 20000)); } catch { return []; }
+  const roh: Record<string, unknown>[] = [];
+  if (Array.isArray(daten)) {
+    for (const e of daten) {
+      const b = (e as { body?: unknown })?.body;
+      if (b && typeof b === 'object') roh.push(b as Record<string, unknown>);
+    }
+  } else if (daten && typeof daten === 'object') {
+    const r = (daten as Record<string, unknown>)['csp-report'];
+    if (r && typeof r === 'object') roh.push(r as Record<string, unknown>);
+  }
+  return roh.slice(0, 10).map((r) => ({
+    regel: String(r['effective-directive'] ?? r['effectiveDirective'] ?? r['violated-directive'] ?? '').split(' ')[0].slice(0, 40),
+    blockiert: nurUrsprung(r['blocked-uri'] ?? r['blockedURL']),
+    seite: nurPfad(r['document-uri'] ?? r['documentURL']),
+  })).filter((m) => m.regel !== '');
+}

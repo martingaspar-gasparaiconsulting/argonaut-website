@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { kopfzeilenRegel, rahmenSchutzRegeln } from "./lib/sicherheitsKopfzeilen";
+import { kopfzeilenRegel, rahmenSchutzRegeln, cspBeobachtungRegel } from "./lib/sicherheitsKopfzeilen";
 
 const nextConfig: NextConfig = {
   // Lese-Bibliotheken serverseitig laden statt bündeln (Vercel-sicher).
@@ -20,7 +20,8 @@ const nextConfig: NextConfig = {
   // nachgeprueft.
   async headers() {
     // S1 (Paket 161): Rahmen-Schutz nur fuer Dashboard/Betreiber/Anmeldung.
-    return [kopfzeilenRegel(), ...rahmenSchutzRegeln()];
+    // Paket 187b: CSP zuerst nur im Beobachtungsmodus (Report-Only, blockiert nichts).
+    return [kopfzeilenRegel(), cspBeobachtungRegel(), ...rahmenSchutzRegeln()];
   },
 
   async redirects() {

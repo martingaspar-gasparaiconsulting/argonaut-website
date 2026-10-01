@@ -10,6 +10,7 @@
 // Aufruf: n8n-Cron 1x täglich, POST mit Header x-cron-secret.
 // ============================================================
 
+import { cronGuard } from '@/lib/cronGuard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
@@ -40,25 +41,14 @@ type TerminZeile = {
 
 export const dynamic = 'force-dynamic';
 
-/** Vercel-Cron-fähig: Bearer CRON_SECRET oder ?secret= (Vercel/manuell),
- *  plus Alt-Header x-cron-secret===TERMIN_CRON_GEHEIM (Rückwärtskompatibilität). */
-function erlaubt(req: NextRequest): boolean {
-  const cron = process.env.CRON_SECRET;
-  if (cron) {
-    const auth = req.headers.get('authorization') || '';
-    const url = new URL(req.url);
-    if (auth === `Bearer ${cron}` || url.searchParams.get('secret') === cron) return true;
-  }
-  const legacy = process.env.TERMIN_CRON_GEHEIM;
-  if (legacy && (req.headers.get('x-cron-secret') === legacy || req.headers.get('authorization') === `Bearer ${legacy}`)) return true;
-  return false;
-}
+// Paket 187b: eigene Prüfung (mit ?secret= in der Adresse und === statt
+// zeitgleichem Vergleich) durch lib/cronGuard ersetzt — Bearer CRON_SECRET
+// oder der Alt-Weg TERMIN_CRON_GEHEIM (Kopf), kein Geheimnis mehr in der Adresse.
 
 async function lauf(req: NextRequest) {
   // Autorisierung: Vercel-Cron (Bearer CRON_SECRET) oder Alt-Header
-  if (!erlaubt(req)) {
-    return NextResponse.json({ ok: false, fehler: 'Nicht autorisiert.' }, { status: 401 });
-  }
+  const gesperrt = await cronGuard(req, { altGeheimnisNutzen: true });
+  if (gesperrt) return gesperrt;
 
   // 2) Service-Role-Client (betriebsübergreifend)
   const supabase = createClient(

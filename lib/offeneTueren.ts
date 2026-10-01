@@ -67,6 +67,7 @@ export const OFFENE_TUEREN: OffeneTuer[] = [
   { pfad: 'oeffentlich/webinar-bestaetigen', grund: 'Webinar Double-Opt-in bestätigen', schutz: 'token', geprueft: true },
   { pfad: 'oeffentlich/webinar-abmelden', grund: 'Webinar-Mails abmelden', schutz: 'token', geprueft: true },
   { pfad: 'oeffentlich/rueckhol-abmelden', grund: 'Rückhol-Mails abmelden', schutz: 'token', geprueft: true },
+  { pfad: 'oeffentlich/csp-bericht', grund: 'Meldungen der Sicherheitsregel (CSP im Beobachtungsmodus, Paket 187b) — schreibt nichts, nur eine Protokollzeile ohne Abfrage-Zeichen', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/werbung-abmelden', grund: 'Abmeldelink für alle Werbe-Mails eines Betriebs (Paket 173) — nur mit HMAC-Unterschrift über Betrieb + Adresse, schreibt nur den Widerspruch', schutz: 'token', geprueft: true },
   { pfad: 'oeffentlich/mail-klick', grund: 'Klick-Zählung in Mails (Weiterleitung)', schutz: 'token', geprueft: true },
   { pfad: 'oeffentlich/mail-pixel', grund: 'Öffnungs-Zählung in Mails', schutz: 'token', geprueft: true },

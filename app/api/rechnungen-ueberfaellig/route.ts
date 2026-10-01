@@ -1,3 +1,4 @@
+import { cronGuard } from '@/lib/cronGuard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -33,24 +34,13 @@ function eur(n: number | null | undefined): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(wert);
 }
 
-/** Vercel-Cron-fähig: Bearer CRON_SECRET oder ?secret= (Vercel/manuell),
- *  plus Alt-Bearer TERMIN_CRON_GEHEIM (Rückwärtskompatibilität). */
-function erlaubt(req: NextRequest): boolean {
-  const cron = process.env.CRON_SECRET;
-  if (cron) {
-    const a = req.headers.get('authorization') || '';
-    const url = new URL(req.url);
-    if (a === `Bearer ${cron}` || url.searchParams.get('secret') === cron) return true;
-  }
-  const legacy = process.env.TERMIN_CRON_GEHEIM;
-  if (legacy && (req.headers.get('authorization') === `Bearer ${legacy}` || req.headers.get('x-cron-secret') === legacy)) return true;
-  return false;
-}
+// Paket 187b: eigene Prüfung (mit ?secret= in der Adresse und === statt
+// zeitgleichem Vergleich) durch lib/cronGuard ersetzt — Bearer CRON_SECRET
+// oder der Alt-Weg TERMIN_CRON_GEHEIM (Kopf), kein Geheimnis mehr in der Adresse.
 
 async function lauf(req: NextRequest) {
-  if (!erlaubt(req)) {
-    return NextResponse.json({ ok: false, fehler: 'Nicht autorisiert' }, { status: 401 });
-  }
+  const gesperrt = await cronGuard(req, { altGeheimnisNutzen: true });
+  if (gesperrt) return gesperrt;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

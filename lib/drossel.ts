@@ -98,6 +98,8 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 10, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },
   ],
+  // --- Paket 187b: CSP-Meldungen der Browser (nur Protokollzeile) ---
+  'oeffentlich/csp-bericht': [{ art: 'ip', max: 60, fensterSek: STUNDE }],
   // --- Kundenportal: PDF wird bei jedem Aufruf neu erzeugt ---
   'oeffentlich/portal/rechnung': [{ art: 'ip', max: 60, fensterSek: STUNDE }],
 };

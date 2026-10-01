@@ -46,9 +46,12 @@ export type CronGuardOptionen = {
    */
   altGeheimnisNutzen?: boolean;
   /**
-   * Das Geheimnis in der Adresse (?secret=…) zulassen. Voreinstellung: ja —
-   * weil Martin Läufe so von Hand auslöst. Ein späteres Abschalten ist
-   * hiermit eine einzige Änderung, an einer Stelle, für alle Endpunkte.
+   * Das Geheimnis in der Adresse (?secret=…) zulassen.
+   * Paket 187b: Voreinstellung jetzt NEIN. Eine Adresse landet in Server-
+   * Protokollen, im Browser-Verlauf und bei Weiterleitungen — ein Geheimnis
+   * gehört in den Kopf (Authorization: Bearer). Vercel nutzt ohnehin den Kopf.
+   * Von Hand auslösen: angemeldet als Betreiber (wo betreiberErlaubt) oder
+   * per curl mit Kopf. Wer es je wieder braucht: adresseErlaubt: true.
    */
   adresseErlaubt?: boolean;
 };
@@ -78,7 +81,7 @@ export async function cronPruefung(
     authKopf: req.headers.get('authorization'),
     altKopf: req.headers.get('x-cron-secret'),
     adresse: adressGeheimnis(req),
-    adresseErlaubt: opt.adresseErlaubt,
+    adresseErlaubt: opt.adresseErlaubt === true,
   });
 
   if (ergebnis.frei) return { absage: null, weg: ergebnis.weg };
