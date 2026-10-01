@@ -512,3 +512,14 @@ export function radarKommend(heute: string, kategorie?: string | null): RadarEin
     .filter((r) => !r.branchen || (kategorie ? r.branchen.includes(kategorie) : true))
     .sort((a, b) => a.ab.localeCompare(b.ab));
 }
+
+/**
+ * Paket 187: Erster bzw. letzter Kalendertag eines Monats relativ zu `jetzt`
+ * (Ortszeit des Geräts). offset 0 = dieser Monat, -1 = Vormonat.
+ * Ersetzt setMonth()+toISOString() (ELSTER-Zeitraum: am 31. lief „Monatsende"
+ * über, kurz nach Mitternacht kam der Vortag).
+ */
+export function monatsGrenzeIso(jetzt: Date, offset: number, ende: boolean): string {
+  const ziel = new Date(jetzt.getFullYear(), jetzt.getMonth() + Math.round(offset) + (ende ? 1 : 0), ende ? 0 : 1);
+  return `${ziel.getFullYear()}-${zwei(ziel.getMonth() + 1)}-${zwei(ziel.getDate())}`;
+}

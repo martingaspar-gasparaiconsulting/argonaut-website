@@ -298,7 +298,8 @@ test('B1: Anlegen speichert den Betrieb als Besitzer, nie die angemeldete Person
   let geprueft = 0;
   for (const [datei, tabellen] of Object.entries(DATEIEN)) {
     const src = fs.readFileSync(new URL('../' + datei, import.meta.url), 'utf8');
-    assert.match(src, /rpc\(['"]mein_chef_id['"]\)/, `${datei}: Besitzer wird nicht ueber mein_chef_id bestimmt`);
+    // Paket 187: lib/modulRecht.modulRechtPruefen bestimmt den Betrieb ebenfalls ueber mein_chef_id (dort getestet).
+    assert.match(src, /rpc\(['"]mein_chef_id['"]\)|modulRechtPruefen\(/, `${datei}: Besitzer wird nicht ueber mein_chef_id bestimmt`);
     for (const t of tabellen) {
       for (const wert of schreibstellen(src, t)) {
         assert.doesNotMatch(wert, ROH, `${datei} -> ${t}: owner_user_id ist noch die eigene Kennung (${wert})`);

@@ -19,6 +19,7 @@ import { eventPdf } from '@/lib/eventPdf';
 import { offeneBuchungen } from '@/lib/umsatzBuchung';
 import KiAuge from '../_components/KiAuge';
 import Leerzustand from '../_components/Leerzustand';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -53,6 +54,8 @@ function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { styl
 function auslFarbe(a: number) { return a >= 0.9 ? C.gold : a >= 0.5 ? C.green : C.cyan; }
 
 export default function VeranstaltungenPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
@@ -348,7 +351,7 @@ export default function VeranstaltungenPage() {
                         <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                           {a.rechnung_id
                             ? <a href="/dashboard/rechnungen" style={{ ...styles.mini, color: C.green, borderColor: C.green + '55', textDecoration: 'none' }}>Rechnung ›</a>
-                            : <button style={{ ...styles.mini, color: C.gold, borderColor: C.gold + '55' }} disabled={rechnungBusy === a.id || Number(a.betrag) <= 0} onClick={() => rechnungErstellen(a)}>{rechnungBusy === a.id ? '…' : '🧾 Rechnung'}</button>}
+                            : darfAbrechnen !== false && <button style={{ ...styles.mini, color: C.gold, borderColor: C.gold + '55' }} disabled={rechnungBusy === a.id || Number(a.betrag) <= 0} onClick={() => rechnungErstellen(a)}>{rechnungBusy === a.id ? '…' : '🧾 Rechnung'}</button>}
                           <button style={{ ...styles.miniX, marginLeft: 6 }} disabled={busy === a.id} onClick={() => loesche('event_anmeldung', a.id)}>✕</button>
                         </td>
                       </tr>

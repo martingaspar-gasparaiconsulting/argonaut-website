@@ -56,6 +56,7 @@ import {
 } from '../../_components/auftragLogik';
 import { eur, steuerAusweisZeilen, type Position } from '../../_components/positionsLogik';
 import { lieferscheinPdf } from '../../_components/lieferscheinPdf';
+import { useDarfAbrechnen } from '../../_components/useDarfAbrechnen';
 import { klappeAuf, paketKurz, type Paket, type PaketPosition } from '../../_components/paketLogik';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
 import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
@@ -102,6 +103,8 @@ function datumHuebsch(iso: string | null): string {
 }
 
 export default function AuftraegePage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   // 165: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
   const [besitzer, setBesitzer] = useState<string | null>(null);
@@ -952,7 +955,7 @@ export default function AuftraegePage() {
                     🖨 Lieferschein
                   </button>
 
-                  {!rechnungId && status === 'geliefert' && (
+                  {!rechnungId && status === 'geliefert' && darfAbrechnen !== false && (
                     <button onClick={rechnungErstellen} disabled={rechnungLaeuft || speichert}
                       style={{ ...styles.goldBtn, opacity: rechnungLaeuft ? 0.6 : 1 }}>
                       {rechnungLaeuft ? 'Erstellt …' : '→ Rechnung erstellen'}

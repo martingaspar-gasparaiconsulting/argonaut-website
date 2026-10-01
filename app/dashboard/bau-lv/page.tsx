@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
 import Leerzustand from '../_components/Leerzustand';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -45,6 +46,8 @@ const ART_FARBE: Record<string, string> = { voll: C.green, unter_vorbehalt: C.wa
 const LEER_POS = { ordnungszahl: '', kurztext: '', menge: '1', einheit: 'm²', einzelpreis: '', mwst_satz: '19', ist_nachtrag: false, nachtrag_grund: '' };
 
 export default function BauLvPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'lv' | 'abnahme'>('lv');
@@ -264,7 +267,7 @@ export default function BauLvPage() {
                       <button style={styles.dazuBtn} disabled={busy} onClick={posAnlegen}>＋ Position</button>
                     </div>
 
-                    <button style={{ ...styles.rechnungBtn, opacity: busy || !positionen.length ? 0.6 : 1 }} disabled={busy || !positionen.length} onClick={inRechnung}>🧾 Aus LV eine Rechnung erstellen</button>
+                    {darfAbrechnen !== false && <button style={{ ...styles.rechnungBtn, opacity: busy || !positionen.length ? 0.6 : 1 }} disabled={busy || !positionen.length} onClick={inRechnung}>🧾 Aus LV eine Rechnung erstellen</button>}
                     </>)}
                   </div>
                 )}

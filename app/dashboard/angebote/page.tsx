@@ -24,6 +24,7 @@ import { augeAmpel } from '@/lib/auge';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import AngebotSprache from '../_components/AngebotSprache';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { fehlendePreise, type FormPos } from '@/lib/angebotSprache';
 import { leseZahlOder, centRunden, inCent, rundeStellen } from '@/lib/zahlen';
 
@@ -73,6 +74,8 @@ function rechne(pos: Pos[]) {
 }
 
 export default function AngebotePage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
@@ -357,7 +360,7 @@ export default function AngebotePage() {
                 {a.status === 'gesendet' && <button style={{ ...styles.mini, color: C.navy, background: C.green, borderColor: C.green }} disabled={busy === a.id} onClick={() => statusSetzen(a, 'angenommen')}>✓ angenommen</button>}
                 {a.status === 'angenommen' && (a.rechnung_id
                   ? <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>✓ Rechnung</span>
-                  : <button style={{ ...styles.mini, color: C.navy, background: C.gold, borderColor: C.gold }} disabled={busy === a.id} onClick={() => inRechnung(a)}>→ Rechnung</button>)}
+                  : darfAbrechnen !== false && <button style={{ ...styles.mini, color: C.navy, background: C.gold, borderColor: C.gold }} disabled={busy === a.id} onClick={() => inRechnung(a)}>→ Rechnung</button>)}
                 {angebotLoeschbar(a) && <button style={styles.miniWeg} disabled={busy === a.id} onClick={() => loeschen(a)} title="Angebot löschen (mit Rückfrage)">🗑</button>}
               </div>
             </div>

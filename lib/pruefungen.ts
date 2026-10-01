@@ -6,6 +6,8 @@
 // und Ampel. Prüfpunkte je Norm als Startvorlage — vom Prüfer anpassbar.
 // ============================================================================
 
+import { plusMonate } from './nachweisMotor';
+
 export interface PruefNorm {
   key: string;
   bezeichnung: string;
@@ -78,13 +80,15 @@ export function pruefNorm(key: string): PruefNorm | undefined {
   return PRUEF_NORMEN.find((n) => n.key === key);
 }
 
-/** Datum + Monate (monatsgenau), ISO zurück. */
+/**
+ * Datum + Monate (monatsgenau), ISO zurück.
+ * Paket 187: rechnete vorher mit new Date(...T00:00:00).setMonth().toISOString() —
+ * im Browser in Deutschland ergab das den VORTAG, und 31.01. + 1 Monat wurde 03.03.
+ * Jetzt über lib/nachweisMotor.plusMonate (reine Kalendertage, Monatsende festgehalten).
+ */
 export function naechsteFaelligkeit(datumIso: string, intervallMonate: number): string {
-  const d = new Date((datumIso || '').slice(0, 10) + 'T00:00:00');
-  if (isNaN(d.getTime())) return '';
   const m = Math.max(0, Math.round(Number(intervallMonate) || 0));
-  d.setMonth(d.getMonth() + m);
-  return d.toISOString().slice(0, 10);
+  return plusMonate(String(datumIso || '').slice(0, 10), m) ?? '';
 }
 
 export interface PunktBasis { status?: string | null; }

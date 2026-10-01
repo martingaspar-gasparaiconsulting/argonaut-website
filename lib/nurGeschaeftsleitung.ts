@@ -96,3 +96,12 @@ export async function rechnungsRechtFehlt(supabase: unknown): Promise<string | n
 
 export const MAHNUNG_NUR_CHEF =
   'Mahnungen verschickt die Geschäftsleitung oder wer das Recht „Darf abrechnen" hat.';
+
+/**
+ * Paket 187: Soll der Knopf „Rechnung erstellen" angezeigt werden?
+ * Chef (keine Chef-Kennung) -> ja. Mitarbeiter -> nur mit darf_ich_abrechnen() === true.
+ * Nur Anzeige — die Sperre bleibt auf dem Server.
+ */
+export function abrechnenKnopfZeigen(chef: unknown, darf: unknown): boolean {
+  return abrechnungEntscheiden(chef, darf, '').ok;
+}

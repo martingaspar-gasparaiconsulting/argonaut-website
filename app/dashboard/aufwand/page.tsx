@@ -22,6 +22,7 @@ import {
 } from '@/lib/aufwand';
 import { augeAufwand } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -42,6 +43,8 @@ function eur(n: number): string { return (Number(n) || 0).toLocaleString('de-DE'
 function std(n: number): string { return (Number(n) || 0).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' h'; }
 
 export default function AufwandCockpit() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [eintraege, setEintraege] = useState<AufwandEintrag[]>([]);
   const [laden, setLaden] = useState(true);
@@ -180,7 +183,7 @@ export default function AufwandCockpit() {
                       <td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{gr.betragAbg > 0 ? eur(gr.betragAbg) : '—'}</td>
                       <td style={{ ...styles.td, textAlign: 'right' }}>
                         {gr.betragOffen > 0 ? (
-                          <button onClick={() => abrechnen(gr)} disabled={busy === key} style={{ ...styles.miniBtn, color: C.gold, borderColor: `${C.gold}55` }}>{busy === key ? '…' : '🧾 abrechnen'}</button>
+                          darfAbrechnen !== false ? <button onClick={() => abrechnen(gr)} disabled={busy === key} style={{ ...styles.miniBtn, color: C.gold, borderColor: `${C.gold}55` }}>{busy === key ? '…' : '🧾 abrechnen'}</button> : null
                         ) : <span style={{ color: C.green, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>✓ fakturiert</span>}
                       </td>
                     </tr>

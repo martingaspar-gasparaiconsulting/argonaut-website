@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import Link from 'next/link';
+import { plusMonate as plusMonateIso, heuteIso } from '@/lib/nachweisMotor';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../../_components/KiAuge';
 import { leseZahlOder } from '@/lib/zahlen';
@@ -37,11 +38,12 @@ const GUT_ARTEN: { key: string; label: string }[] = [
 ];
 function gutLabel(k: string) { return GUT_ARTEN.find((a) => a.key === k)?.label ?? k; }
 
-function heute() { return new Date().toISOString().slice(0, 10); }
+function heute() { return heuteIso(new Date()); } // Paket 187: deutsche Zeit statt UTC
 function inTagen(tage: number) { const g = new Date(); g.setDate(g.getDate() + tage); return g.toISOString().slice(0, 10); }
 function num(s: string) { return leseZahlOder(s, 0); }
 function d(iso: string | null) { if (!iso) return '—'; const p = iso.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
-function plusMonate(iso: string, monate: number) { const dt = new Date(iso); dt.setMonth(dt.getMonth() + monate); return dt.toISOString().slice(0, 10); }
+// Paket 187: monatsende-sicher (31.01. + 1 = 28.02., vorher 03.03.); leeres Datum -> ''.
+function plusMonate(iso: string, monate: number) { return plusMonateIso(String(iso || '').slice(0, 10), monate) ?? ''; }
 function istSperrfrist(iso: string) { const p = iso.split('-').map(Number); const md = p[1] * 100 + p[2]; return md >= 301 && md <= 930; }
 
 const HEUTE = heute();

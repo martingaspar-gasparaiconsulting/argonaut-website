@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { augeDispo } from '@/lib/auge';
 import { zaehleDispo } from '@/lib/augeZaehler';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
@@ -116,6 +117,8 @@ type Form = {
 const WT_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
 export default function DispoPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [chefName, setChefName] = useState('Ich (Chef)');
@@ -630,11 +633,11 @@ export default function DispoPage() {
                     <span>✅ Rechnung erstellt — die erfassten Leistungen wurden übernommen.</span>
                     <a href="/dashboard/rechnungen" style={styles.rechnungLink}>Zur Rechnung ›</a>
                   </div>
-                ) : (
+                ) : darfAbrechnen !== false ? (
                   <button onClick={rechnungErstellen} disabled={rechnungBusy} style={{ ...styles.rechnungBtn, opacity: rechnungBusy ? 0.6 : 1 }}>
                     {rechnungBusy ? 'Erstellt Rechnung …' : '🧾 Rechnung aus Einsatz erstellen'}
                   </button>
-                )}
+                ) : null}
               </div>
             )}
 

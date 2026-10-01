@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { datumPlusMonate } from "@/lib/wiederkehr";
+import { heuteIso, istIsoDatum } from "@/lib/nachweisMotor";
 
 export const runtime = "nodejs";
 
@@ -18,12 +20,13 @@ const MWST_STD = 19;
 
 type Pos = { bezeichnung?: string; menge?: number; einheit?: string; einzelpreis?: number; mwst_satz?: number };
 
+// Paket 187: vorher setMonth() + toISOString() — 31.01. + 1 Monat wurde 03.03.
+// Jetzt monatsende-sicher und ohne Zeitzonen-Versatz (lib/wiederkehr).
 function naechstesDatum(iso: string, intervall: string): string {
-  const d = new Date((iso || '').slice(0, 10) + 'T00:00:00');
-  if (isNaN(d.getTime())) return new Date().toISOString().slice(0, 10);
+  const tag = String(iso || '').slice(0, 10);
+  if (!istIsoDatum(tag)) return heuteIso(new Date());
   const add = intervall === 'jahr' ? 12 : intervall === 'quartal' ? 3 : 1;
-  d.setMonth(d.getMonth() + add);
-  return d.toISOString().slice(0, 10);
+  return datumPlusMonate(tag, add);
 }
 
 export async function POST(req: Request) {

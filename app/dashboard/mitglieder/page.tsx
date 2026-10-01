@@ -14,6 +14,8 @@ import { baueSepaXml, ibanGueltig, istSepaBetragFehler, type SepaLastschrift } f
 import { leseBetrag, centRunden } from '@/lib/zahlen';
 import { bankarbeitstagHinweis } from '@/lib/bankarbeitstag';
 import { imEinzug, laeuftAus } from '@/lib/mitgliedEinzug';
+import { betriebIstVerein } from '@/lib/vereinErkennen';
+import { gebuchteModulKeys, type TenantModulRow } from '@/lib/tenantModule';
 import Leerzustand from '../_components/Leerzustand';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
@@ -84,6 +86,7 @@ export default function MitgliederPage() {
   const [felder, setFelder] = useState<EigenesFeld[]>([]);
   const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+  const [istVerein, setIstVerein] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -94,7 +97,14 @@ export default function MitgliederPage() {
       { const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(betriebsKennung(chef, id));
         let bank = !(typeof chef === 'string' && chef);
         if (!bank) { const { data: darf } = await supabase.rpc('darf_ich_modul_aendern', { p_modul: 'mitglieder' }); bank = darf === true; }
-        setDarfBank(bank); }
+        setDarfBank(bank);
+        // Paket 187: Verein? Dann bekommen neue Mitglieder die Vertragsart 'verein' statt des DB-Standards 'studio'.
+        try {
+          const { data: bp } = await supabase.from('profiles').select('firma_name, firma_rechtsform').eq('id', betriebsKennung(chef, id)).maybeSingle();
+          const { data: tm } = await supabase.from('tenant_module').select('modul_key, aktiv');
+          const b = (bp as { firma_name?: string | null; firma_rechtsform?: string | null } | null) ?? null;
+          setIstVerein(betriebIstVerein({ rechtsform: b?.firma_rechtsform, firmaName: b?.firma_name, gebucht: gebuchteModulKeys((tm as TenantModulRow[] | null) ?? null) }));
+        } catch { /* ohne Angabe: Standard bleibt */ } }
       const { data: p } = await supabase.from('profiles')
         .select('firma_name, sepa_glaeubiger_id, sepa_kontoinhaber, sepa_iban, sepa_bic').eq('id', id).maybeSingle();
       setFirma((p?.firma_name as string) || '');
@@ -184,7 +194,11 @@ export default function MitgliederPage() {
         if (error) throw error;
         try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
-        const { ergebnis: { data: neu, error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('mitglieder').insert(d).select('id').single());
+        // Paket 187: Verein -> vertragsart 'verein'; fehlt die Spalte (SQL PS5 nicht gelaufen), ohne erneut.
+        let { ergebnis: { data: neu, error } } = await anlegenFuerBetrieb(istVerein ? { ...payload, vertragsart: 'verein' } : payload, besitzer, uid, (d) => supabase.from('mitglieder').insert(d).select('id').single());
+        if (error && istVerein && /vertragsart/.test(error.message || '')) {
+          ({ ergebnis: { data: neu, error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('mitglieder').insert(d).select('id').single()));
+        }
         if (error) throw error;
         try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }

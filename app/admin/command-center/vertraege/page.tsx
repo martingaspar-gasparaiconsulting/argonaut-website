@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import Dreizack from '@/components/Dreizack';
 import VertragNeu from './VertragNeu';
 import VertragZeile from './VertragZeile';
+import { mrrAusAbos, type AboFuerMrr } from '@/lib/mrr';
 
 // ============================================================================
 // ARGONAUT OS · Command Center · app/admin/command-center/vertraege/page.tsx
@@ -24,7 +25,7 @@ const C = {
   card: 'rgba(255,255,255,0.04)',
 };
 
-const MRR_BY_PLAN: Record<string, number> = { SOLO: 1799, START: 3000, PRO: 4000, BUS: 6000, ENT: 9000, BASIS: 1500, STARTER: 1799 };
+// Paket 187: MRR aus den echten ARGONAUT-Abos (kunden_abo) — siehe lib/mrr.ts.
 
 function eur(v: number): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(v);
@@ -90,11 +91,8 @@ export default async function VertraegePage({
       kiMonatEur = usd * 0.92;
     } catch { /* still */ }
     try {
-      const { data: rawCustomers } = await supabase.from('customers').select('paket, status');
-      const customers = (rawCustomers as Array<{ paket?: string; status?: string }>) || [];
-      mrr = customers
-        .filter((c) => (c.status === 'active' || c.status === 'aktiv') && c.paket && c.paket in MRR_BY_PLAN)
-        .reduce((s, c) => s + MRR_BY_PLAN[c.paket as string], 0);
+      const { data: ab } = await db.from('kunden_abo').select('status, monatspreis_netto');
+      mrr = mrrAusAbos((ab as AboFuerMrr[] | null) ?? []);
     } catch { /* still */ }
   }
   const gesamtMonat = fixMonat + kiMonatEur;
@@ -108,7 +106,7 @@ export default async function VertraegePage({
           { label: 'Fixkosten / Monat', wert: eur(fixMonat), akzent: C.cyan, sub: `${aktive.length} aktive Verträge` },
           { label: 'KI-Kosten / Monat', wert: eur(kiMonatEur), akzent: C.gold, sub: 'Anthropic-Token, laufend' },
           { label: 'Kosten gesamt / Monat', wert: eur(gesamtMonat), akzent: C.text, sub: 'Fixkosten + KI' },
-          { label: 'MRR / Monat', wert: eur(mrr), akzent: C.green, sub: 'wiederkehrender Umsatz' },
+          { label: 'MRR / Monat', wert: eur(mrr), akzent: C.green, sub: 'aktive ARGONAUT-Abos (netto)' },
           { label: 'Deckungsbeitrag / Monat', wert: eur(deckung), akzent: deckung >= 0 ? C.gold : '#e06666', sub: deckung >= 0 ? 'über Break-even' : 'unter Break-even' },
         ]
       : [

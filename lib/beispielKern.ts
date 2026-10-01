@@ -116,7 +116,7 @@ export function baueBelege(_kat: string | null | undefined, uid: string, heute: 
 export const DEMO_TOKEN = 'DEMO-UEBUNGSWELT';
 
 export function baueMailZugang(_k: string | null | undefined, uid: string, heute: string): Zeile[] {
-  return [{ owner_user_id: uid, anbieter: 'microsoft', konto_id: 'beispiel@ihre-firma.de', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];
+  return [{ owner_user_id: uid, anbieter: 'microsoft', konto_id: 'beispiel@ihre-firma.example.com', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];
 }
 export function baueMarktplatzZugang(_k: string | null | undefined, uid: string, heute: string): Zeile[] {
   return [{ owner_user_id: uid, plattform: 'amazon', konto_id: 'Beispiel-Verkäuferkonto', token_verschluesselt: DEMO_TOKEN, verbunden: true, geprueft_am: heute }];

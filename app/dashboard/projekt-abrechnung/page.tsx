@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
@@ -40,6 +41,8 @@ function num(s: string) { return leseZahlOder(s, 0); }
 const LEER = { datum: heute(), beschreibung: '', stunden: '', stundensatz: '', kunde_name: '' };
 
 export default function ProjektAbrechnungPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [projekte, setProjekte] = useState<Projekt[]>([]);
@@ -188,9 +191,11 @@ export default function ProjektAbrechnungPage() {
           <div style={{ ...styles.card, marginTop: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
               <h2 style={{ ...styles.cardTitel, margin: 0 }}>Offene Leistungen</h2>
+              {darfAbrechnen !== false && (
               <button onClick={rechnungErstellen} disabled={rechnungBusy || offene.length === 0} style={{ ...styles.primaer, opacity: (rechnungBusy || offene.length === 0) ? 0.5 : 1 }}>
                 {rechnungBusy ? 'Erstellt …' : `🧾 Rechnung erstellen (${eur(offenNetto)})`}
               </button>
+              )}
             </div>
             {offene.length === 0 ? <div style={styles.hint}>Keine offenen Leistungen. Erfasse oben Zeiten oder alles ist abgerechnet.</div> : (
               <Tabelle rows={offene} onDelete={loeschen} />

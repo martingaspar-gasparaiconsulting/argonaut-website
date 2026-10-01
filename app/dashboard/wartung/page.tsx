@@ -19,6 +19,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import FristAmpel from '../_components/FristAmpel';
 import Leerzustand from '../_components/Leerzustand';
 import KiAuge from '../_components/KiAuge';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { augeWartung } from '@/lib/auge';
 import {
   naechsteFaelligkeitString,
@@ -155,6 +156,8 @@ type ProtokollForm = {
 };
 
 export default function WartungPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   /** Paket 125 (Claude-Befund): der Betrieb (beim Mitarbeiter der Chef) — neue Vertraege gehoeren ihm. */
   const [besitzer, setBesitzer] = useState<string | null>(null);
@@ -586,7 +589,7 @@ export default function WartungPage() {
                         {!zeigeArchiv && aktiv && (
                           <button onClick={() => protokollOeffnen(r)} style={styles.miniBtn} title="Wartung durchführen & Prüfprotokoll erfassen">✓ Wartung + Protokoll</button>
                         )}
-                        {!zeigeArchiv && aktiv && (r.betrag_netto ?? 0) > 0 && (
+                        {!zeigeArchiv && aktiv && (r.betrag_netto ?? 0) > 0 && darfAbrechnen !== false && (
                           <button onClick={() => rechnungErzeugen(r)} disabled={rechnungBusy === r.id} style={{ ...styles.miniBtn, background: 'rgba(201,168,76,0.14)', color: C.gold, borderColor: 'rgba(201,168,76,0.4)' }} title="Aus diesem Wartungsvertrag eine Rechnung erzeugen">{rechnungBusy === r.id ? '…' : '→ Rechnung'}</button>
                         )}
                         <button onClick={() => historieOeffnen(r)} style={styles.miniBtnGhost} title="Bisherige Wartungen & Protokolle">Historie</button>

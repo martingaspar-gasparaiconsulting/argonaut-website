@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import { anlegenFuerBetrieb, betriebsKennung, istZugriffsFehler } from '@/lib/betriebBesitzer';
 import Leerzustand from '../_components/Leerzustand';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
@@ -46,6 +47,8 @@ const LEER_POS: PosRow = { bezeichnung: '', menge: '1', einheit: 'Pauschal', ein
 const OHNE_ABRECHNEN = 'Wiederkehrende Rechnungen anlegen und ändern darf nur, wer „Darf abrechnen“ hat – bitte die Geschäftsleitung fragen.';
 
 export default function AboRechnungenPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   // 181: Neues gehoert dem BETRIEB (beim Mitarbeiter die Kennung des Chefs)
   const [besitzer, setBesitzer] = useState<string | null>(null);
@@ -249,7 +252,7 @@ export default function AboRechnungenPage() {
       {/* Fällige */}
       <div style={{ ...styles.card, marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div><b>{faelligeAnzahl}</b> Vorlage(n) sind heute oder früher fällig.</div>
-        <button style={{ ...styles.primaer, opacity: (busy || !faelligeAnzahl) ? 0.5 : 1 }} disabled={busy || !faelligeAnzahl} onClick={alleFaelligen}>⚡ Alle fälligen jetzt erzeugen</button>
+        {darfAbrechnen !== false && <button style={{ ...styles.primaer, opacity: (busy || !faelligeAnzahl) ? 0.5 : 1 }} disabled={busy || !faelligeAnzahl} onClick={alleFaelligen}>⚡ Alle fälligen jetzt erzeugen</button>}
       </div>
 
       {/* Liste */}
@@ -268,7 +271,7 @@ export default function AboRechnungenPage() {
                     <div style={{ color: C.textDim, fontSize: 13 }}>{a.empfaenger_name || '—'} · nächste Fälligkeit {d(a.naechste_faellig)}{a.anzahl_erzeugt ? ` · ${a.anzahl_erzeugt}× erzeugt` : ''}</div>
                   </div>
                   {faellig && <span style={{ ...styles.badge, color: C.warn, borderColor: C.warn }}>fällig</span>}
-                  <button style={styles.aboBtn} disabled={busy || !a.aktiv} onClick={() => einzeln(a)}>→ Rechnung</button>
+                  {darfAbrechnen !== false && <button style={styles.aboBtn} disabled={busy || !a.aktiv} onClick={() => einzeln(a)}>→ Rechnung</button>}
                   <button style={styles.mini} onClick={() => bearbeiten(a)}>Bearbeiten</button>
                   <button style={styles.mini} onClick={() => aktivToggle(a)}>{a.aktiv ? 'Pausieren' : 'Aktivieren'}</button>
                   <button style={{ ...styles.mini, color: C.danger, borderColor: 'rgba(224,102,102,0.4)' }} onClick={() => loeschen(a)}>Löschen</button>

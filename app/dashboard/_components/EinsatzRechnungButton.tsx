@@ -19,6 +19,7 @@
 // ============================================================
 
 import React, { useState } from "react";
+import { useDarfAbrechnen } from "./useDarfAbrechnen";
 
 const CYAN = "#00e5ff";
 const GRUEN = "#00e676";
@@ -30,6 +31,8 @@ type Props = {
 };
 
 export default function EinsatzRechnungButton({ einsatzId, rechnungId, onErstellt }: Props) {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [laden, setLaden] = useState(false);
   const [fehler, setFehler] = useState("");
   const [erstellteId, setErstellteId] = useState<string | null>(rechnungId || null);
@@ -82,6 +85,8 @@ export default function EinsatzRechnungButton({ einsatzId, rechnungId, onErstell
       </a>
     );
   }
+
+  if (darfAbrechnen === false) return null;
 
   return (
     <span style={{ display: "inline-flex", flexDirection: "column", gap: 4 }}>

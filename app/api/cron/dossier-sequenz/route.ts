@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cronGuard } from '@/lib/cronGuard';
 import { sendeMail } from '@/lib/mail';
-import { TEST_STEPS, naechsterSchrittIndex } from '@/lib/dossierSequenz';
+import { TEST_STEPS, naechsterPlan } from '@/lib/dossierSequenz';
 import { tagesBudget, mengeFuerWerbelauf, begruendung } from '@/lib/mailBudget';
 import { werbeKopfzeilen } from '@/lib/werbemail';
 import { werbePrueferLaden, betreiberKennung } from '@/lib/werbeErlaubnisServer';
@@ -46,7 +46,7 @@ async function erlaubt(req: Request): Promise<boolean> {
   return (await cronGuard(req, { betreiberErlaubt: true })) === null;
 }
 
-type SeqLead = { id: string; email: string; name: string | null; seq_schritt: number | null; abmelde_token: string | null; bestaetigt_am: string | null };
+type SeqLead = { id: string; email: string; name: string | null; seq_schritt: number | null; abmelde_token: string | null; bestaetigt_am: string | null; test_start_am: string | null; test_ende_am: string | null };
 
 async function lauf(req: Request) {
   if (!(await erlaubt(req))) {
@@ -60,7 +60,7 @@ async function lauf(req: Request) {
 
   const { data, error } = await admin
     .from('dossier_leads')
-    .select('id, email, name, seq_schritt, abmelde_token, bestaetigt_am')
+    .select('id, email, name, seq_schritt, abmelde_token, bestaetigt_am, test_start_am, test_ende_am')
     .eq('seq_quelle', 'test')
     .eq('seq_status', 'aktiv')
     .lte('seq_naechster_am', jetzt.toISOString())
@@ -69,7 +69,7 @@ async function lauf(req: Request) {
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
   const leads = (data ?? []) as SeqLead[];
-  let gesendet = 0, fertig = 0, fehler = 0, gesperrt = 0;
+  let gesendet = 0, fertig = 0, fehler = 0, gesperrt = 0, wartet = 0;
 
   const betreiber = betreiberKennung();
   const darf = betreiber ? await werbePrueferLaden(admin, leads.map((l) => ({ betrieb: betreiber, email: l.email }))) : null;
@@ -105,15 +105,17 @@ async function lauf(req: Request) {
       continue;
     }
 
-    const next = naechsterSchrittIndex(idx);
-    const nextStep = next >= 0 ? TEST_STEPS[next] : undefined;
-    if (!nextStep) {
+    // Paket 187: Folgeschritte zählen ab Freischaltung bzw. Testende (gesetzt von
+    // /api/admin/demo-setzen). Ohne Freischaltung wartet die Strecke.
+    const plan = naechsterPlan(idx, l.bestaetigt_am, l.test_start_am, l.test_ende_am, jetzt);
+    if (plan.art === 'fertig') {
       await admin.from('dossier_leads').update({ seq_schritt: idx, seq_status: 'fertig' }).eq('id', l.id);
       fertig++;
+    } else if (plan.art === 'warten') {
+      await admin.from('dossier_leads').update({ seq_schritt: idx + 1, seq_status: 'wartet_freischaltung', seq_naechster_am: null }).eq('id', l.id);
+      wartet++;
     } else {
-      const deltaTage = nextStep.tag - step.tag;
-      const nextAm = new Date(jetzt.getTime() + Math.max(0, deltaTage) * 86400000).toISOString();
-      await admin.from('dossier_leads').update({ seq_schritt: next, seq_naechster_am: nextAm }).eq('id', l.id);
+      await admin.from('dossier_leads').update({ seq_schritt: plan.schritt, seq_naechster_am: plan.am }).eq('id', l.id);
     }
   }
 
@@ -122,7 +124,7 @@ async function lauf(req: Request) {
   if (gedeckelt) console.warn(`[dossier-sequenz] ${hinweis}`);
 
   return NextResponse.json({
-    ok: true, geprueft: leads.length, gesendet, fertig, fehler, gesperrt,
+    ok: true, geprueft: leads.length, gesendet, fertig, fehler, gesperrt, wartet,
     gedeckelt, tagesbudget: budget, deckel: MAX_PRO_DURCHGANG, hinweis,
   });
 }

@@ -27,6 +27,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import KiAuge from '../_components/KiAuge';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { NurVoll } from '../_components/Ansicht';
 import Leerzustand from '../_components/Leerzustand';
 import { augeAufmass } from '@/lib/auge';
@@ -89,6 +90,8 @@ function istPauschal(p: PositionBasis): boolean {
 
 export default function AufmassPage() {
   const router = useRouter();
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aufmasse, setAufmasse] = useState<AufmassRow[]>([]);
@@ -749,7 +752,7 @@ export default function AufmassPage() {
               {form.id && (
                 <button onClick={pdfErzeugen} disabled={speichert} style={styles.ghostBtn}>🖨 Aufmaßblatt PDF</button>
               )}
-              {form.id && (
+              {form.id && darfAbrechnen !== false && (
                 <button onClick={rechnungErstellen}
                   disabled={speichert || rechnungBusy || positionen.length === 0 || summe.betragUnvollstaendig}
                   title={summe.betragUnvollstaendig ? 'Erst alle Preise ergänzen' : ''}

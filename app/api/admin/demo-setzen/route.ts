@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { betreiberGuard } from '../../../../lib/betreiberGuard';
 import { ablaufAusTagen } from '../../../../lib/demo';
+import { naechsterPlan } from '../../../../lib/dossierSequenz';
+import { ilikeGenau } from '../../../../lib/kontoSchutz';
 
 // ============================================================================
 // ARGONAUT OS · app/api/admin/demo-setzen/route.ts  (Punkt 26a)
@@ -53,8 +55,47 @@ export async function POST(req: Request) {
   }
 
   const tage = Math.max(1, Math.round(Number(body?.tage) || 7));
-  const ablauf = ablaufAusTagen(new Date().toISOString(), tage);
+  const jetzt = new Date();
+  const ablauf = ablaufAusTagen(jetzt.toISOString(), tage);
   const { error } = await admin.from('profiles').update({ demo: true, demo_ablauf: ablauf }).eq('id', tenantId);
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, demo: true, demo_ablauf: ablauf, tage });
+  const strecke = await testStreckeStarten(admin, tenantId, jetzt, ablauf);
+  return NextResponse.json({ ok: true, demo: true, demo_ablauf: ablauf, tage, testStrecke: strecke });
+}
+
+// ----------------------------------------------------------------------------
+// Paket 187: Die Test-Mailstrecke (lib/dossierSequenz) zählt ab jetzt ab der
+// FREISCHALTUNG. Hier — beim Start/Verlängern des Testzugangs — bekommt der
+// passende Test-Lead (gleiche E-Mail wie das Konto) Start und Ende gesetzt;
+// eine wartende Strecke läuft weiter. Fehler hier brechen das Freischalten
+// nie ab (Antwort sagt nur „nicht gefunden"/„Fehler").
+// ----------------------------------------------------------------------------
+type Lead = { id: string; seq_schritt: number | null; seq_status: string | null; bestaetigt_am: string | null };
+async function testStreckeStarten(admin: ReturnType<typeof getClient>, tenantId: string, jetzt: Date, ablauf: string): Promise<'gestartet' | 'aktualisiert' | 'kein_lead' | 'fehler'> {
+  try {
+    const { data: u } = await admin.auth.admin.getUserById(tenantId);
+    const email = String(u?.user?.email || '').trim().toLowerCase();
+    if (!email) return 'kein_lead';
+    const { data: leads, error } = await admin.from('dossier_leads')
+      .select('id, seq_schritt, seq_status, bestaetigt_am')
+      .eq('seq_quelle', 'test').ilike('email', ilikeGenau(email))
+      .in('seq_status', ['aktiv', 'wartet_freischaltung']);
+    if (error) return 'fehler';
+    const liste = (leads ?? []) as Lead[];
+    if (liste.length === 0) return 'kein_lead';
+    const start = jetzt.toISOString();
+    let gestartet = false;
+    for (const l of liste) {
+      const update: Record<string, unknown> = { test_start_am: start, test_ende_am: ablauf };
+      if (l.seq_status === 'wartet_freischaltung') {
+        const plan = naechsterPlan(Math.max(0, (l.seq_schritt ?? 1) - 1), l.bestaetigt_am, start, ablauf, jetzt);
+        if (plan.art === 'termin') { update.seq_status = 'aktiv'; update.seq_schritt = plan.schritt; update.seq_naechster_am = plan.am; gestartet = true; }
+        else if (plan.art === 'fertig') update.seq_status = 'fertig';
+      }
+      await admin.from('dossier_leads').update(update).eq('id', l.id);
+    }
+    return gestartet ? 'gestartet' : 'aktualisiert';
+  } catch {
+    return 'fehler';
+  }
 }

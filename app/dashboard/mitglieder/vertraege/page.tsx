@@ -18,6 +18,8 @@ import {
   type VertragsDaten,
 } from '@/lib/gebuehrenHonorare';
 import { leseZahl } from '@/lib/zahlen';
+import { betriebIstVerein, vertragsartStandard, studioNurStandard } from '@/lib/vereinErkennen';
+import { gebuchteModulKeys, type TenantModulRow } from '@/lib/tenantModule';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -43,17 +45,18 @@ type M = {
 type Form = { vertragsart: 'studio' | 'verein'; mitglieds_nr: string; abgeschlossen_am: string; beginn_am: string; erstlaufzeit_monate: string; kuendigungsfrist_monate: string; verlaengerung_monate: string; satzung_frist_monate: string; satzung_zum: NonNullable<VertragsDaten['satzungZum']> };
 const SPALTEN = 'id, name, status, beginn_am, kuendigung_zum, vertragsart, mitglieds_nr, abgeschlossen_am, erstlaufzeit_monate, kuendigungsfrist_monate, verlaengerung_monate, satzung_frist_monate, satzung_zum, kuendigung_eingang';
 
-function vertragAus(m: M): VertragsDaten {
+// Paket 187: leerer Wert -> Standard des Betriebs (Verein: 'verein'), nicht mehr fest 'studio'.
+function vertragAus(m: M, istVerein = false): VertragsDaten {
   return {
-    art: m.vertragsart ?? 'studio', beginn: m.beginn_am, abgeschlossen: m.abgeschlossen_am,
+    art: m.vertragsart ?? vertragsartStandard(istVerein), beginn: m.beginn_am, abgeschlossen: m.abgeschlossen_am,
     erstlaufzeitMonate: m.erstlaufzeit_monate, kuendigungsfristMonate: m.kuendigungsfrist_monate,
     verlaengerungMonate: m.verlaengerung_monate, satzungFristMonate: m.satzung_frist_monate, satzungZum: m.satzung_zum ?? 'jahresende',
   };
 }
-function zuForm(m: M): Form {
+function zuForm(m: M, istVerein = false): Form {
   const t = (n: number | null) => (n == null ? '' : String(n).replace('.', ','));
   return {
-    vertragsart: m.vertragsart ?? 'studio', mitglieds_nr: m.mitglieds_nr ?? '', abgeschlossen_am: m.abgeschlossen_am ?? '', beginn_am: m.beginn_am ?? '',
+    vertragsart: m.vertragsart ?? vertragsartStandard(istVerein), mitglieds_nr: m.mitglieds_nr ?? '', abgeschlossen_am: m.abgeschlossen_am ?? '', beginn_am: m.beginn_am ?? '',
     erstlaufzeit_monate: t(m.erstlaufzeit_monate), kuendigungsfrist_monate: t(m.kuendigungsfrist_monate), verlaengerung_monate: t(m.verlaengerung_monate),
     satzung_frist_monate: t(m.satzung_frist_monate), satzung_zum: m.satzung_zum ?? 'jahresende',
   };
@@ -71,6 +74,7 @@ export default function VertraegeSeite() {
   const [form, setForm] = useState<Form | null>(null);
   const [eingang, setEingang] = useState(heute);
   const [text, setText] = useState('');
+  const [istVerein, setIstVerein] = useState(false);
 
   const laden = useCallback(async () => {
     setFehler(null);
@@ -84,19 +88,25 @@ export default function VertraegeSeite() {
       let chef: string | null = null;
       try { const r = await supabase.rpc('mein_chef_id'); chef = (r.data as string | null) ?? null; } catch { /* Chef */ }
       try {
-        const { data: p } = await supabase.from('profiles').select('firma_name').eq('id', chef || data?.user?.id || '').maybeSingle();
-        setFirma(String((p as { firma_name?: string } | null)?.firma_name ?? ''));
+        const { data: p } = await supabase.from('profiles').select('firma_name, firma_rechtsform').eq('id', chef || data?.user?.id || '').maybeSingle();
+        const pr = (p as { firma_name?: string | null; firma_rechtsform?: string | null } | null) ?? null;
+        setFirma(String(pr?.firma_name ?? ''));
+        // Paket 187: Ist der Betrieb ein Verein? (Rechtsform/Name oder gebuchte Module)
+        let gebucht: Set<string> | null = null;
+        try { const { data: tm } = await supabase.from('tenant_module').select('modul_key, aktiv'); gebucht = gebuchteModulKeys((tm as TenantModulRow[] | null) ?? null); } catch { gebucht = null; }
+        setIstVerein(betriebIstVerein({ rechtsform: pr?.firma_rechtsform, firmaName: pr?.firma_name, gebucht }));
       } catch { /* optional */ }
       await laden();
     })();
   }, [laden]);
 
   const aktiv = liste.find((m) => m.id === aktivId) ?? null;
-  const ergebnis = useMemo(() => (aktiv ? fruehestesEnde(vertragAus(aktiv), eingang) : null), [aktiv, eingang]);
+  const ergebnis = useMemo(() => (aktiv ? fruehestesEnde(vertragAus(aktiv, istVerein), eingang) : null), [aktiv, eingang, istVerein]);
+  const nurStandard = istVerein ? liste.filter((m) => studioNurStandard(m)) : [];
   const bald = liste.filter((m) => m.kuendigung_zum && m.kuendigung_zum >= heute && tageZwischen(heute, m.kuendigung_zum) <= 31).sort((a, b) => String(a.kuendigung_zum).localeCompare(String(b.kuendigung_zum)));
   const gefiltert = liste.filter((m) => !suche.trim() || m.name.toLowerCase().includes(suche.trim().toLowerCase()) || (m.mitglieds_nr ?? '').includes(suche.trim()));
 
-  function waehlen(m: M) { setAktivId(m.id); setForm(zuForm(m)); setEingang(heute); setText(''); setOk(null); setFehler(null); }
+  function waehlen(m: M) { setAktivId(m.id); setForm(zuForm(m, istVerein)); setEingang(heute); setText(''); setOk(null); setFehler(null); }
 
   async function vertragSpeichern() {
     if (!aktiv || !form) return;
@@ -108,6 +118,14 @@ export default function VertraegeSeite() {
     }).eq('id', aktiv.id);
     if (error) { setFehler('Speichern fehlgeschlagen: ' + error.message); return; }
     setOk('Vertragsdaten gespeichert.'); await laden();
+  }
+  // Paket 187: Mitglieder, die nur durch den alten Standard auf „Studio" stehen, auf Verein umstellen.
+  async function aufVereinUmstellen() {
+    if (nurStandard.length === 0) return;
+    if (!window.confirm(`${nurStandard.length} Mitglieder stehen auf „Studio / Abo", ohne dass je Studio-Vertragsdaten eingetragen wurden. Auf „Vereinsmitgliedschaft" (Kündigung nach Satzung) umstellen?`)) return;
+    const { error } = await supabase.from('mitglieder').update({ vertragsart: 'verein' }).in('id', nurStandard.map((m) => m.id));
+    if (error) { setFehler('Umstellen fehlgeschlagen: ' + error.message); return; }
+    setOk(`${nurStandard.length} Mitglieder auf Vereinsmitgliedschaft umgestellt.`); setAktivId(null); setForm(null); await laden();
   }
   async function kuendigungEintragen() {
     if (!aktiv || !ergebnis?.ok || !ergebnis.endeAm) return;
@@ -130,6 +148,13 @@ export default function VertraegeSeite() {
 
       {!sqlFehlt && (
         <>
+          {nurStandard.length > 0 && (
+            <div style={{ ...karte, borderColor: C.warn }}>
+              <b>Ihr Betrieb ist ein Verein — {nurStandard.length} Mitglieder stehen trotzdem auf „Studio / Abo"</b>
+              <div style={{ color: C.textDim, fontSize: 13.5, margin: '6px 0 10px' }}>Diese Einträge haben nie Studio-Vertragsdaten bekommen; die Art stammt nur aus der alten Voreinstellung. Für Vereinsmitglieder gilt die Kündigungsfrist aus Ihrer Satzung.</div>
+              <button style={primaer} onClick={aufVereinUmstellen}>Auf Vereinsmitgliedschaft umstellen</button>
+            </div>
+          )}
           {bald.length > 0 && (
             <div style={{ ...karte, borderColor: C.warn }}>
               <b>Laufen in den nächsten 31 Tagen aus</b>

@@ -20,6 +20,7 @@ import {
 import { augeKurse } from '@/lib/auge';
 import { teilnahmebescheinigungPdf } from '@/lib/zertifikat';
 import KiAuge from '../_components/KiAuge';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { NurVoll } from '../_components/Ansicht';
 import { leseZahlOder } from '@/lib/zahlen';
 
@@ -45,6 +46,8 @@ function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { styl
 const AN_STATUS = ['angemeldet', 'bestaetigt', 'teilgenommen', 'storniert', 'warteliste'];
 
 export default function BildungPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState<string | null>(null);
@@ -325,7 +328,7 @@ export default function BildungPage() {
                             <button style={styles.zertBtn} onClick={() => zertifikatErstellen(a)}>🎓 Bescheinigung</button>}
                           {a.abgerechnet
                             ? <span style={styles.badgeOk}>✓ berechnet</span>
-                            : <button style={styles.rechnungBtnSmall} onClick={() => rechnungErstellen(a)}>→ Rechnung</button>}
+                            : darfAbrechnen !== false && <button style={styles.rechnungBtnSmall} onClick={() => rechnungErstellen(a)}>→ Rechnung</button>}
                         </div>
                       );
                     })}

@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
+import { useDarfAbrechnen } from "../../_components/useDarfAbrechnen";
 import { leseZahlOder, centRunden } from '@/lib/zahlen';
 
 // ============================================================
@@ -106,6 +107,8 @@ function firmaName(f: any): string {
 export default function AuftragDetail() {
   const router = useRouter();
   const params = useParams();
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
 
   const [loading, setLoading] = useState(true);
@@ -686,7 +689,7 @@ export default function AuftragDetail() {
               >
                 ✓ Fakturiert
               </span>
-            ) : (
+            ) : darfAbrechnen === false ? null : (
               <button
                 onClick={rechnungOeffnen}
                 disabled={rechnungLaedt}

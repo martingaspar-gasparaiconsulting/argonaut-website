@@ -53,6 +53,7 @@ import {
 import AnhaengeBox from '../_components/AnhaengeBox';
 import { werkstattAuftragPdf } from '../_components/werkstattAuftragPdf';
 import MaterialEntnahme from '../_components/MaterialEntnahme';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -146,6 +147,8 @@ function istPauschal(p: PositionBasis): boolean {
 
 export default function WerkstattPage() {
   const router = useRouter();
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   // Besitzer aller Werkstatt-Datensaetze ist der BETRIEB, nicht die angemeldete
   // Person. Siehe Kommentar beim Laden weiter unten.
@@ -1443,7 +1446,7 @@ export default function WerkstattPage() {
               {form.id && (
                 <button onClick={pdfErzeugen} disabled={speichert} style={styles.ghostBtn}>🖨 Als PDF</button>
               )}
-              {form.id && (
+              {form.id && darfAbrechnen !== false && (
                 <button onClick={rechnungErstellen} disabled={speichert || rechnungBusy || positionen.length === 0}
                   title={positionen.length === 0 ? 'Erst Leistungen/Material erfassen' : ''}
                   style={{ ...styles.rechnungBtn, opacity: (speichert || rechnungBusy || positionen.length === 0) ? 0.5 : 1, cursor: positionen.length === 0 ? 'not-allowed' : 'pointer' }}>

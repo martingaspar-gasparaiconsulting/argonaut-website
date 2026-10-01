@@ -4,17 +4,13 @@ import { createClient } from '@/lib/supabase-server'
 import LogoutButton from './LogoutButton'
 import CustomersTable, { type Customer, type Plan } from './CustomersTable'
 import Dreizack from '@/components/Dreizack';
+import { createAdminClient } from '@/lib/supabase-admin'
+import { mrrAusAbos, type AboFuerMrr } from '@/lib/mrr'
 
 // ─── MRR config ───────────────────────────────────────────────────────────────
 
-const MRR_BY_PLAN: Record<string, number> = {
-  SOLO:  1799,
-  START: 3000,
-  PRO:   4000,
-  BUS:   6000,
-  ENT:   9000,
-  BASIS: 1500,
-}
+// Paket 187: Die feste Liste alter Paketpreise (SOLO 1.799 … ENT 9.000) ist raus.
+// MRR = Netto-Monatspreise der aktiven ARGONAUT-Abos (kunden_abo) — lib/mrr.ts.
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -57,9 +53,12 @@ export default async function AdminPage() {
   const totalKunden  = customers.length
   const activeKunden = customers.filter((c) => c.status === 'active').length
 
-  const mrr = customers
-    .filter((c) => (c.status === 'aktiv' || c.status === 'active') && c.paket && c.paket in MRR_BY_PLAN)
-    .reduce((sum, c) => sum + MRR_BY_PLAN[c.paket as string], 0)
+  let abos: AboFuerMrr[] = []
+  try {
+    const { data: ab } = await createAdminClient().from('kunden_abo').select('status, monatspreis_netto')
+    abos = (ab as AboFuerMrr[] | null) ?? []
+  } catch { /* still: MRR bleibt 0 */ }
+  const mrr = mrrAusAbos(abos)
 
   const weekCutoff   = oneWeekAgo()
   const neueWoche    = customers.filter((c) => c.created_at && c.created_at >= weekCutoff).length
@@ -98,7 +97,7 @@ export default async function AdminPage() {
           <path d="M9 10C9 8.9 10.34 8 12 8C13.66 8 15 8.9 15 10C15 11.1 13.66 12 12 12C10.34 12 9 12.9 9 14C9 15.1 10.34 16 12 16C13.66 16 15 15.1 15 14" stroke="#C9A84C" strokeWidth="1.8" strokeLinecap="round"/>
         </svg>
       ),
-      sub: 'Monatlich wiederkehrend',
+      sub: 'Aktive ARGONAUT-Abos, netto',
     },
     {
       label: 'Neue diese Woche',

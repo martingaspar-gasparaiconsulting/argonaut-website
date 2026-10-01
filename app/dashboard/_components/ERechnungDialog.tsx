@@ -20,6 +20,7 @@
 
 import React, { useState } from "react";
 import { validiereERechnung, type ValidierErgebnis } from "../../../lib/erechnung-validator";
+import { useDarfAbrechnen } from "./useDarfAbrechnen";
 
 const GOLD = "#C9A84C";
 const CYAN = "#00e5ff";
@@ -57,6 +58,8 @@ function blobBase64(blob: Blob): Promise<string> {
 }
 
 export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supabase, zeileNetto }: Props) {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [offen, setOffen] = useState(false);
   const [profil, setProfil] = useState<"xrechnung" | "zugferd" | "zugferd-pdf">("zugferd");
   const [leitweg, setLeitweg] = useState("");
@@ -355,6 +358,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
               >
                 Abbrechen
               </button>
+              {darfAbrechnen !== false && (
               <button
                 onClick={senden}
                 disabled={laden}
@@ -363,6 +367,7 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
               >
                 {laden ? "…" : "📧 Per E-Mail senden"}
               </button>
+              )}
               <button
                 onClick={erzeuge}
                 disabled={laden}

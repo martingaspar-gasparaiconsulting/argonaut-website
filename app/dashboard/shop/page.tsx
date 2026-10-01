@@ -15,6 +15,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { anbieterVon, type IntegrationTyp } from '@/lib/konnektoren';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { leseZahlOder } from '@/lib/zahlen';
 
 const MODUL = 'shop_bestellungen';
@@ -73,6 +74,8 @@ function parseCsv(text: string): { extern_id: string; besteller: string; email: 
 }
 
 export default function ShopPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [liste, setListe] = useState<Bestellung[]>([]);
   const [modus, setModus] = useState<'live' | 'demo'>('demo');
@@ -322,7 +325,7 @@ export default function ShopPage() {
                 ) : (<>
                 {b.rechnung_id ? (
                   <a href={`/dashboard/rechnungen/${b.rechnung_id}`} style={styles.rechBtn}>🧾 Rechnung</a>
-                ) : (
+                ) : darfAbrechnen !== false && (
                   <button
                     style={{ ...styles.rechBtn, opacity: rechBusy === b.id ? 0.6 : 1, cursor: rechBusy === b.id ? 'default' : 'pointer' }}
                     disabled={rechBusy === b.id || b.status === 'storniert'}

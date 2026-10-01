@@ -38,6 +38,7 @@ import {
   nachschlagIndex, fehlendeNamen, loeseNachschlag, elternZeilen, positionenJeEintrag, nachschlagPflichtGrund,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
 } from '@/lib/importMotor';
+import { gemappteFelder, werteFuerAktualisierung, werteFuerNeuanlage, bestandVerworfen, ARTIKEL_BESTAND_HINWEIS } from '@/lib/importAktualisieren';
 import {
   ALTSYSTEME, altsystem, anleitung, sperrText, sucheAltsysteme, gruppiereAltsysteme, sichtbareAltsysteme,
   bereinigeWahl, erkenneAltsystem, zaehleAltsysteme, istBelegt, type Altsystem,
@@ -1600,6 +1601,18 @@ export default function ImportCenterPage() {
       // Paket 129: laufende Nummer je Rezept/Tour, wo die Datei keine hat
       const posNr = nach?.positionSpalte ? positionenJeEintrag(bericht.saetze, nach.positionSpalte) : null;
 
+      // Paket 187: Beim Aktualisieren nur schreiben, was die Datei wirklich liefert;
+      // Artikel bei Filialbetrieben ohne Bestand (der läuft über „Bestand je Filiale").
+      const gemappt = gemappteFelder(mapping);
+      let aktiveFilialen = 0;
+      if (ziel.key === 'artikel') {
+        try {
+          const { data: stf, error: eStf } = await supabase.from('standorte').select('id,aktiv');
+          if (!eStf) aktiveFilialen = ((stf ?? []) as { aktiv?: boolean | null }[]).filter((x) => x.aktiv !== false).length;
+        } catch { /* ohne Tabelle standorte: keine Filialen */ }
+      }
+      let bestandNichtUebernommen = 0;
+
       const neu: Record<string, unknown>[] = [];
       const neuZeile: number[] = [];               // F6: echte Dateizeile je neuem Satz
       const neuPos: unknown[] = [];                // Paket 146: Positionen je neuem Kopf (Kind-Tabelle)
@@ -1667,18 +1680,20 @@ export default function ImportCenterPage() {
           }
         }
         const treffer = findeImBestand(satz, erkennung, bestand);
+        if (aktiveFilialen > 0 && bestandVerworfen(satz)) bestandNichtUebernommen++;
         if (treffer) {
           // Paket 141: Ziele mit nurNeu (Spenden) ueberschreiben nie Vorhandenes.
-          if (beiDublette === 'aktualisieren' && !ziel.nurNeu) zuAendern.push({ id: treffer, werte: satz, zeile: dateiZeile });
+          if (beiDublette === 'aktualisieren' && !ziel.nurNeu) zuAendern.push({ id: treffer, werte: werteFuerAktualisierung(satz, ziel, gemappt, aktiveFilialen), zeile: dateiZeile });
           else erg.uebersprungen++;
           return;
         }
-        neu.push({ ...satz, owner_user_id: neuOwner });
+        neu.push({ ...werteFuerNeuanlage(satz, ziel, aktiveFilialen), owner_user_id: neuOwner });
         if (kindTab) neuPos.push(satzRoh[ziel.jsonPositionen!.spalte] ?? []);
         if (ziel.gesundheitNotizen) neuGes.push(satzRoh.__gesundheit);
         neuZeile.push(dateiZeile);
       });
       gesamtSchreiben = neu.length + zuAendern.length;
+      if (bestandNichtUebernommen > 0) (erg.zusatzHinweise ??= []).push(`${ARTIKEL_BESTAND_HINWEIS} (${zahlDe(bestandNichtUebernommen)} Zeilen mit Bestand)`);
       if (nach && (nachNeu > 0 || nachOhne > 0)) {
         erg.zusammenfassung = `${nach.label}: ${nachNeu > 0 ? `${zahlDe(nachNeu)} neu angelegt` : 'alle vorhanden'}`
           + (nachOhne > 0 ? ` · ${zahlDe(nachOhne)} Zeilen ohne Verknüpfung (${nach.label} nicht gefunden${nachVirtuell ? ', Name steht im Text' : ''})` : '');

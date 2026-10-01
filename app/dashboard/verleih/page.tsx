@@ -17,6 +17,7 @@ import {
 } from '@/lib/verleih';
 import { augeVerleih } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -58,6 +59,8 @@ function kontaktName(k: Record<string, unknown>): string {
 }
 
 export default function VerleihPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'vorgaenge' | 'artikel'>('vorgaenge');
@@ -292,7 +295,7 @@ export default function VerleihPage() {
                             {v.status === 'reserviert' && <button style={styles.mini} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'ausgegeben')}>📤 Ausgeben</button>}
                             {v.status === 'ausgegeben' && <button style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55` }} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'zurueck')}>✓ Zurück</button>}
                             {(v.status === 'reserviert' || v.status === 'ausgegeben') && <button style={styles.mini} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'storniert')}>Stornieren</button>}
-                            {(v.status === 'ausgegeben' || v.status === 'zurueck') && !v.rechnung_id && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => rechnungErstellen(v)}>€ Rechnung</button>}
+                            {(v.status === 'ausgegeben' || v.status === 'zurueck') && !v.rechnung_id && darfAbrechnen !== false && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => rechnungErstellen(v)}>€ Rechnung</button>}
                             {v.rechnung_id && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} onClick={() => rechnungErstellen(v)}>Rechnung ›</button>}
                           </td>
                         </tr>

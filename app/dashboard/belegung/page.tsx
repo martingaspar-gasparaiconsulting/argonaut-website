@@ -23,6 +23,7 @@ import {
 } from '@/lib/belegung';
 import { augeBelegung } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
@@ -73,6 +74,8 @@ function kontaktName(k: Record<string, unknown>): string {
 }
 
 export default function BelegungPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tab, setTab] = useState<'belegungen' | 'einheiten'>('belegungen');
@@ -339,7 +342,7 @@ export default function BelegungPage() {
                             {v.status === 'bestaetigt' && <button style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55` }} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'eingecheckt')}>🔑 Check-in</button>}
                             {v.status === 'eingecheckt' && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'ausgecheckt')}>📤 Check-out</button>}
                             {(v.status === 'reserviert' || v.status === 'bestaetigt') && <button style={styles.mini} disabled={busy === v.id} onClick={() => vorgangStatus(v, 'storniert')}>Stornieren</button>}
-                            {(v.status === 'bestaetigt' || v.status === 'eingecheckt' || v.status === 'ausgecheckt') && !v.rechnung_id && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => rechnungErstellen(v)}>€ Rechnung</button>}
+                            {(v.status === 'bestaetigt' || v.status === 'eingecheckt' || v.status === 'ausgecheckt') && !v.rechnung_id && darfAbrechnen !== false && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => rechnungErstellen(v)}>€ Rechnung</button>}
                             {v.rechnung_id && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} onClick={() => rechnungErstellen(v)}>Rechnung ›</button>}
                           </td>
                         </tr>

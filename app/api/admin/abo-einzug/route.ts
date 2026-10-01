@@ -4,6 +4,8 @@ import { betreiberGuard } from '../../../../lib/betreiberGuard'
 import { baueSepaXml, type SepaLastschrift, type SepaSeq } from '../../../../lib/sepa'
 import { MWST } from '../../../../lib/tarif'
 import { centRunden } from '../../../../lib/zahlen'
+import { datumPlusMonate, datumPlusTage } from '../../../../lib/wiederkehr'
+import { heuteIso } from '../../../../lib/nachweisMotor'
 
 // ============================================================================
 // ARGONAUT OS · app/api/admin/abo-einzug/route.ts  (Teil 2b · Betreiber-Einzug)
@@ -40,9 +42,11 @@ async function adminGuard(): Promise<NextResponse | null> {
 function brutto(netto: number): number {
   return centRunden(netto * (1 + MWST)) // Paket 191
 }
-function heute(): string { return new Date().toISOString().slice(0, 10) }
-function plusTage(iso: string, t: number): string { const d = new Date(iso); d.setDate(d.getDate() + t); return d.toISOString().slice(0, 10) }
-function plusMonat(iso: string, m: number): string { const d = new Date(iso); d.setMonth(d.getMonth() + m); return d.toISOString().slice(0, 10) }
+// Paket 187: Kalendertage in deutscher Zeit, Monatsende festgehalten
+// (vorher 31.01. + 1 Monat = 03.03. und UTC-Datum kurz nach Mitternacht = Vortag).
+function heute(): string { return heuteIso(new Date()) }
+function plusTage(iso: string, t: number): string { return datumPlusTage(iso, t) }
+function plusMonat(iso: string, m: number): string { return datumPlusMonate(iso, m) }
 function monatKuerzel(): string { return new Date().toISOString().slice(0, 7) } // YYYY-MM
 
 type AboRow = {

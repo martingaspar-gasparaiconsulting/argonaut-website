@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import Leerzustand from '../_components/Leerzustand';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
@@ -73,6 +74,8 @@ const LEER_NV = {
 };
 
 export default function ReservierungPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aussteller, setAussteller] = useState('');
@@ -405,7 +408,7 @@ export default function ReservierungPage() {
                             {/* Rechnung aus Vorgang (Einlagerung/Vorbestellung mit Betrag) */}
                             {ai.hatBetrag && v.betrag > 0 && v.status !== 'storniert' && (v.rechnung_id
                               ? <a href="/dashboard/rechnungen" style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55`, textDecoration: 'none', display: 'inline-block' }}>Rechnung ›</a>
-                              : <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => rechnungErstellen(v)}>€ Rechnung</button>)}
+                              : darfAbrechnen !== false && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => rechnungErstellen(v)}>€ Rechnung</button>)}
                           </td>
                         </tr>
                       );

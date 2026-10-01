@@ -8,6 +8,7 @@ import { BESTELLSTRECKE_LIVE } from '@/lib/flags';
 import BestellstreckeFreischalten from './BestellstreckeFreischalten';
 import CtaModusSchalter from './CtaModusSchalter';
 import MusterbetriebXxl from './MusterbetriebXxl';
+import { mrrAusAbos, aktiveAbos, mrrHinweis, type AboFuerMrr } from '@/lib/mrr';
 
 // ============================================================================
 // ARGONAUT OS · app/admin/command-center/page.tsx — Betreiber-Cockpit
@@ -26,7 +27,7 @@ const C = {
   card: 'rgba(255,255,255,0.04)',
 };
 
-const MRR_BY_PLAN: Record<string, number> = { SOLO: 1799, START: 3000, PRO: 4000, BUS: 6000, ENT: 9000, BASIS: 1500, STARTER: 1799 };
+// Paket 187: MRR aus den echten ARGONAUT-Abos (kunden_abo), nicht mehr aus alten Paketpreisen — siehe lib/mrr.ts.
 
 function eur(v: number): string {
   return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
@@ -56,11 +57,14 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
   const { data: rawCustomers } = await supabase.from('customers').select('paket, status');
   const customers = (rawCustomers as Array<{ paket?: string; status?: string }>) || [];
   const aktiveKunden = customers.filter((c) => c.status === 'active' || c.status === 'aktiv').length;
-  const mrr = customers
-    .filter((c) => (c.status === 'active' || c.status === 'aktiv') && c.paket && c.paket in MRR_BY_PLAN)
-    .reduce((s, c) => s + MRR_BY_PLAN[c.paket as string], 0);
-
   const db = admin();
+  let abos: AboFuerMrr[] = [];
+  try {
+    const { data: ab } = await db.from('kunden_abo').select('status, monatspreis_netto');
+    abos = (ab as AboFuerMrr[] | null) ?? [];
+  } catch { /* still: MRR bleibt 0 */ }
+  const mrr = mrrAusAbos(abos);
+  const mrrSub = mrrHinweis(aktiveAbos(abos), aktiveKunden);
   let besucher7 = 0, anfragenMonat = 0, kiKostenUsd = 0;
   try {
     const { data: ov } = await db.rpc('web_stats_uebersicht', { seit: vor7Tagen, p_seite: 'argonaut-os' });
@@ -84,7 +88,7 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
   } catch { /* still */ }
 
   const kpisGesch: Kpi[] = [
-    { label: 'MRR / Monat', wert: eur(mrr), sub: 'wiederkehrend, aktive Kunden', akzent: C.gold },
+    { label: 'MRR / Monat', wert: eur(mrr), sub: mrrSub, akzent: C.gold },
     { label: 'Aktive Kunden', wert: String(aktiveKunden), sub: `${customers.length} gesamt`, akzent: C.cyan },
     { label: 'Letzte SEPA-Zahlung', wert: '—', sub: 'Einzug · folgt (Block C)', akzent: C.dim },
     { label: 'Website-Besucher', wert: String(besucher7), sub: 'letzte 7 Tage · argonaut-os.com', akzent: C.cyan },

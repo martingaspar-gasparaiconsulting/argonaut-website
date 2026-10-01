@@ -102,7 +102,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 30.09.2026 · _p183 live</div>
+<div class="eyebrow">ARGONAUT OS · Stand 30.09.2026 · _p186 live</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

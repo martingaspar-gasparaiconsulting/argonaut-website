@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { NurVoll } from '../_components/Ansicht';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
@@ -31,6 +32,8 @@ function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { styl
 function d(iso: string) { const p = (iso || '').split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 
 export default function WellnessPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [kunden, setKunden] = useState<Kunde[]>([]);
@@ -151,7 +154,7 @@ export default function WellnessPage() {
               <div style={styles.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <div style={{ fontWeight: 800 }}>{aktiv.name}</div>
-                  <button style={styles.rechnungBtn} onClick={rechnungErstellen}>→ Rechnung aus offenen Behandlungen</button>
+                  {darfAbrechnen !== false && <button style={styles.rechnungBtn} onClick={rechnungErstellen}>→ Rechnung aus offenen Behandlungen</button>}
                 </div>
                 {aktiv.hinweise && <div style={styles.hinweis}>⚠️ {aktiv.hinweise}</div>}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

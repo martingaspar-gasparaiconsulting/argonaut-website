@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import Leerzustand from '../_components/Leerzustand';
 import { augeObjektzeiten } from '@/lib/auge';
 import {
@@ -89,6 +90,8 @@ function heuteIso() { const d = new Date(); return `${d.getFullYear()}-${zwei(d.
 function isoTag(d: Date) { return `${d.getFullYear()}-${zwei(d.getMonth() + 1)}-${zwei(d.getDate())}`; }
 
 export default function ObjektzeitenPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [objekte, setObjekte] = useState<ObjektRow[]>([]);
@@ -438,7 +441,7 @@ export default function ObjektzeitenPage() {
                           {s.kostenAbrechenbar != null ? eur(s.kostenAbrechenbar) : '— (kein Satz)'}
                         </td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>
-                          {s.objektId && s.minutenAbrechenbar > 0 ? (
+                          {s.objektId && s.minutenAbrechenbar > 0 && darfAbrechnen !== false ? (
                             <button onClick={() => rechnungStarten(s.objektId as string, s.bezeichnung)} disabled={rechnungBusy === s.objektId} style={{ ...styles.miniBtnGhost, color: C.gold, borderColor: `${C.gold}55`, whiteSpace: 'nowrap' }} title="Offene abrechenbare Zeiten dieses Objekts abrechnen">{rechnungBusy === s.objektId ? '…' : '🧾 Rechnung'}</button>
                           ) : null}
                         </td>
@@ -459,7 +462,7 @@ export default function ObjektzeitenPage() {
                     </div>
                     <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>Alle offenen, abrechenbaren Zeiten dieses Objekts kommen auf die Rechnung. Die Anschrift ergänzen Sie in der Rechnung, falls sie fehlt.</div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                      <button onClick={rechnungAusObjekt} disabled={rechnungBusy === rechnungFuer.objektId} style={styles.primaerBtn}>{rechnungBusy === rechnungFuer.objektId ? 'Erstellt …' : 'Rechnung erstellen'}</button>
+                      {darfAbrechnen !== false && <button onClick={rechnungAusObjekt} disabled={rechnungBusy === rechnungFuer.objektId} style={styles.primaerBtn}>{rechnungBusy === rechnungFuer.objektId ? 'Erstellt …' : 'Rechnung erstellen'}</button>}
                       <button onClick={() => setRechnungFuer(null)} style={styles.ghostBtn}>Abbrechen</button>
                     </div>
                   </div>

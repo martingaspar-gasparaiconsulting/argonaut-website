@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
 import { NurVoll } from '../_components/Ansicht';
+import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { leseZahlOder } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
@@ -39,6 +40,8 @@ function faellig(f: string | null): { txt: string; farbe: string } | null {
 const ART_LABEL: Record<string, string> = { behandlung: '🩺 Behandlung', impfung: '💉 Impfung', untersuchung: '🔬 Untersuchung' };
 
 export default function TierPage() {
+  // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [tiere, setTiere] = useState<Tier[]>([]);
@@ -156,7 +159,7 @@ export default function TierPage() {
               <div style={styles.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <div style={{ fontWeight: 800 }}>{aktiv.name} · Historie{aktiv.chip_nr ? ` · Chip ${aktiv.chip_nr}` : ''}</div>
-                  <button style={styles.rechnungBtn} onClick={rechnungErstellen}>→ Rechnung an Halter</button>
+                  {darfAbrechnen !== false && <button style={styles.rechnungBtn} onClick={rechnungErstellen}>→ Rechnung an Halter</button>}
                 </div>
                 <div style={styles.row}>
                   <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={nb.datum} onChange={(e) => setNb({ ...nb, datum: e.target.value })} /></label>

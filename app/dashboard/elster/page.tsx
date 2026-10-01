@@ -7,6 +7,7 @@
 // anschlussfertig vorbereitet, aber „in Aufbau". Pfad: app/dashboard/elster/page.tsx
 // ============================================================
 
+import { monatsGrenzeIso } from '@/lib/nachweisMotor';
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { baueUstva, ustvaHinweise, formatEuro, type UstvaErgebnis } from '@/lib/ustva';
@@ -24,8 +25,12 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
-function monatsStart(offset = 0) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + offset); return d.toISOString().slice(0, 10); }
-function monatsEnde() { const d = new Date(); d.setMonth(d.getMonth() + 1); d.setDate(0); return d.toISOString().slice(0, 10); }
+// Paket 187: Monatsgrenzen als reine Kalendertage. Vorher setMonth() + toISOString():
+// am 31. eines Monats sprang „Monatsende" in den Folgemonat-Überlauf (31.01. -> Ende Februar),
+// und kurz nach Mitternacht lieferte toISOString() den Vortag (UTC).
+function monatsGrenze(offset: number, ende: boolean) { return monatsGrenzeIso(new Date(), offset, ende); }
+function monatsStart(offset = 0) { return monatsGrenze(offset, false); }
+function monatsEnde(offset = 0) { return monatsGrenze(offset, true); }
 
 export default function ElsterSeite() {
   const [von, setVon] = useState(monatsStart(0));
@@ -136,7 +141,7 @@ export default function ElsterSeite() {
     } finally { setBusy(null); }
   }
 
-  function monatSetzen(offset: number) { setVon(monatsStart(offset)); const d = new Date(); d.setMonth(d.getMonth() + offset + 1); d.setDate(0); setBis(d.toISOString().slice(0, 10)); }
+  function monatSetzen(offset: number) { setVon(monatsStart(offset)); setBis(monatsEnde(offset)); }
 
   return (
     <div style={styles.page}>

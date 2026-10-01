@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { telefonNormalisieren, istTelefonPlausibel } from '@/lib/whatsapp';
 import { bestaetigungNochGueltig, manuellerNachweis } from '@/lib/whatsappBestaetigung';
+import { modulRechtPruefen } from '@/lib/modulRecht';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/whatsapp-kontakte/route.ts  (WhatsApp P2)
@@ -19,19 +20,21 @@ import { bestaetigungNochGueltig, manuellerNachweis } from '@/lib/whatsappBestae
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-async function besitzerId() {
+// Paket 187: zusätzlich Modulrecht Marketing (Lesen für GET, Ändern für POST/DELETE).
+// Vorher durfte jeder Mitarbeiter des Betriebs per Service-Schlüssel Nummern anlegen und löschen.
+async function besitzerId(art: 'sehen' | 'aendern'): Promise<{ besitzer: string } | { antwort: NextResponse }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data: chef } = await supabase.rpc('mein_chef_id');
   // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
-  const besitzer = typeof chef === 'string' && chef ? chef : user.id;
-  return besitzer;
+  const r = await modulRechtPruefen(supabase, user?.id ?? null, 'marketing', art);
+  if (!r.ok) return { antwort: NextResponse.json({ ok: false, error: r.fehler }, { status: r.status }) };
+  return { besitzer: r.betrieb };
 }
 
 export async function GET() {
-  const besitzer = await besitzerId();
-  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const pruefung = await besitzerId('sehen');
+  if ('antwort' in pruefung) return pruefung.antwort;
+  const besitzer = pruefung.besitzer;
 
   const admin = createAdminClient();
   const { data: liste } = await admin
@@ -54,8 +57,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const besitzer = await besitzerId();
-  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const pruefung = await besitzerId('aendern');
+  if ('antwort' in pruefung) return pruefung.antwort;
+  const besitzer = pruefung.besitzer;
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== 'object') return NextResponse.json({ ok: false, error: 'Ungültige Daten.' }, { status: 400 });
@@ -90,8 +94,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const besitzer = await besitzerId();
-  if (!besitzer) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
+  const pruefung = await besitzerId('aendern');
+  if ('antwort' in pruefung) return pruefung.antwort;
+  const besitzer = pruefung.besitzer;
   const id = (new URL(req.url).searchParams.get('id') || '').trim();
   if (!id) return NextResponse.json({ ok: false, error: 'Keine ID.' }, { status: 400 });
 
