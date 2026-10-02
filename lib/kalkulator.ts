@@ -391,6 +391,49 @@ export const GEWERKE: GewerkVorlage[] = [
       { art: 'zeit', bezeichnung: 'Stemmen, Verlegen, Anschließen', menge_je_einheit: 26, einheit: 'min', preis_je_einheit: 1.1 },
     ],
   },
+  // Paket 196: Elektro-Feinschliff — drei typische Elektro-Aufträge als Startvorlage.
+  // Lohn wie oben 1,10 €/min = 66 €/h (Selbstkosten-Ansatz), Material netto Großhandel, Stand 10/2026.
+  {
+    key: 'elektro_zaehlerschrank', label: 'Elektro · Zählerschrank', icon: '🔌', einheit: 'Stk', beispielMenge: 1,
+    hinweis: 'Zählerschrank tauschen: 1 Zählerplatz (eHZ), Verteilerfeld, APZ-Feld, Überspannungsschutz.',
+    posten: [
+      { art: 'material', bezeichnung: 'Zählerschrank 1 ZP mit Verteiler- und APZ-Feld', menge_je_einheit: 1, einheit: 'Stk', preis_je_einheit: 520 },
+      { art: 'material', bezeichnung: 'SLS-Schalter 35 A, selektiv', menge_je_einheit: 1, einheit: 'Stk', preis_je_einheit: 95 },
+      { art: 'material', bezeichnung: 'Überspannungsschutz Typ 1+2', menge_je_einheit: 1, einheit: 'Stk', preis_je_einheit: 230 },
+      { art: 'material', bezeichnung: 'FI-Schutzschalter 40 A / 30 mA, Typ A, 4-polig', menge_je_einheit: 2, einheit: 'Stk', preis_je_einheit: 45 },
+      { art: 'material', bezeichnung: 'Leitungsschutzschalter B16', menge_je_einheit: 12, einheit: 'Stk', preis_je_einheit: 4.5 },
+      { art: 'material', bezeichnung: 'Klemmen, Phasenschiene, Beschriftung', menge_je_einheit: 1, einheit: 'Satz', preis_je_einheit: 60 },
+      { art: 'zeit', bezeichnung: 'Demontage, Montage, Umklemmen', menge_je_einheit: 6, einheit: 'h', preis_je_einheit: 66 },
+      { art: 'zeit', bezeichnung: 'Erstprüfung VDE 0100-600 mit Protokoll', menge_je_einheit: 1, einheit: 'h', preis_je_einheit: 66 },
+      { art: 'fremd', bezeichnung: 'Entsorgung Altanlage', menge_je_einheit: 1, einheit: 'Stk', preis_je_einheit: 25 },
+    ],
+  },
+  {
+    key: 'elektro_wallbox', label: 'Elektro · Wallbox', icon: '🔋', einheit: 'Stk', beispielMenge: 1,
+    hinweis: 'Wallbox 11 kW mit eigener Zuleitung bis 15 m; Meldung an den Netzbetreiber inklusive.',
+    posten: [
+      { art: 'material', bezeichnung: 'Wallbox 11 kW mit DC-Fehlerstromerkennung', menge_je_einheit: 1, einheit: 'Stk', preis_je_einheit: 650 },
+      { art: 'material', bezeichnung: 'Leitung NYM-J 5×6 mm²', menge_je_einheit: 15, einheit: 'm', preis_je_einheit: 4.9, verschnitt_prozent: 5 },
+      { art: 'material', bezeichnung: 'FI-Schutzschalter 40 A / 30 mA, Typ A, 4-polig', menge_je_einheit: 1, einheit: 'Stk', preis_je_einheit: 48 },
+      { art: 'material', bezeichnung: 'Leitungsschutzschalter B16, 3-polig', menge_je_einheit: 1, einheit: 'Stk', preis_je_einheit: 25 },
+      { art: 'material', bezeichnung: 'Befestigung, Kabelkanal, Kleinmaterial', menge_je_einheit: 1, einheit: 'Satz', preis_je_einheit: 35 },
+      { art: 'zeit', bezeichnung: 'Leitung verlegen, Montage, Inbetriebnahme', menge_je_einheit: 4.5, einheit: 'h', preis_je_einheit: 66 },
+      { art: 'zeit', bezeichnung: 'Messung, Protokoll, Einweisung, Netzbetreiber-Meldung', menge_je_einheit: 1, einheit: 'h', preis_je_einheit: 66 },
+    ],
+  },
+  {
+    key: 'elektro_uv', label: 'Elektro · Unterverteilung', icon: '🗄', einheit: 'Stk', beispielMenge: 1,
+    hinweis: 'Etagen-Unterverteilung 3-reihig setzen, Zuleitung 8 m, 12 Stromkreise.',
+    posten: [
+      { art: 'material', bezeichnung: 'Kleinverteiler 3-reihig, 36 TE', menge_je_einheit: 1, einheit: 'Stk', preis_je_einheit: 95 },
+      { art: 'material', bezeichnung: 'FI-Schutzschalter 40 A / 30 mA, Typ A, 4-polig', menge_je_einheit: 2, einheit: 'Stk', preis_je_einheit: 48 },
+      { art: 'material', bezeichnung: 'Leitungsschutzschalter B16', menge_je_einheit: 12, einheit: 'Stk', preis_je_einheit: 4.5 },
+      { art: 'material', bezeichnung: 'Zuleitung NYM-J 5×10 mm²', menge_je_einheit: 8, einheit: 'm', preis_je_einheit: 7.8, verschnitt_prozent: 5 },
+      { art: 'material', bezeichnung: 'Phasenschiene, Klemmen, Kleinmaterial', menge_je_einheit: 1, einheit: 'Satz', preis_je_einheit: 45 },
+      { art: 'zeit', bezeichnung: 'Setzen, Verdrahten, Stromkreise auflegen', menge_je_einheit: 5, einheit: 'h', preis_je_einheit: 66 },
+      { art: 'zeit', bezeichnung: 'Erstprüfung mit Protokoll', menge_je_einheit: 1, einheit: 'h', preis_je_einheit: 66 },
+    ],
+  },
   {
     key: 'tischler', label: 'Tischlerei & Schreinerei', icon: '🪵', einheit: 'm²', beispielMenge: 12,
     hinweis: 'Möbelfront aus beschichteter Platte, gekantet und montiert.',

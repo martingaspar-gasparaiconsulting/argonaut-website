@@ -93,6 +93,46 @@ export const STARTKATALOG: Record<string, StartLeistung[]> = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// Paket 196: Branchen-Feinschliff — eigene Startleistungen für einzelne Branchen
+// (profiles.branche, Anzeigename), die ZUSÄTZLICH zur Kategorie geladen werden.
+// Erkennung über den Namen, damit „Elektriker & Elektrobetriebe", „Elektrotechnik
+// Müller" oder „Elektroinstallation" greifen — „Elektronik" (Industrie) bewusst nicht.
+// ---------------------------------------------------------------------------
+
+const ELEKTRO: StartLeistung[] = [
+  { bezeichnung: 'Arbeitsstunde Elektroniker/in', erfassungsart: 'stunden', kategorie: 'Arbeitszeit', stundensatz_netto: 62 },
+  { bezeichnung: 'Arbeitsstunde Elektromeister/in', erfassungsart: 'stunden', kategorie: 'Arbeitszeit', stundensatz_netto: 78 },
+  { bezeichnung: 'Störungssuche (je Stunde)', erfassungsart: 'stunden', kategorie: 'Service', stundensatz_netto: 69 },
+  { bezeichnung: 'Notdienst-Zuschlag (abends, Wochenende)', erfassungsart: 'stunden', kategorie: 'Service', festpreis_netto: 89 },
+  { bezeichnung: 'Steckdose setzen inkl. Leitung (bis 5 m)', erfassungsart: 'stueck', kategorie: 'Installation', einheit: 'Stk', einheitspreis_netto: 69 },
+  { bezeichnung: 'Rauchwarnmelder setzen', erfassungsart: 'stueck', kategorie: 'Installation', einheit: 'Stk', einheitspreis_netto: 39 },
+  { bezeichnung: 'Unterverteilung setzen (ohne Material)', erfassungsart: 'stunden', kategorie: 'Verteilung', festpreis_netto: 490 },
+  { bezeichnung: 'Zählerschrank erneuern (ohne Material)', erfassungsart: 'stunden', kategorie: 'Verteilung', festpreis_netto: 590 },
+  { bezeichnung: 'Wallbox-Installation bis 11 kW (ohne Gerät, Leitung bis 15 m)', erfassungsart: 'stunden', kategorie: 'E-Mobilität', festpreis_netto: 890 },
+  { bezeichnung: 'Erstprüfung VDE 0100-600 je Stromkreis', erfassungsart: 'stueck', kategorie: 'Prüfung', einheit: 'Stromkreis', einheitspreis_netto: 18 },
+  { bezeichnung: 'E-Check Wohnung (bis 3 Zimmer)', erfassungsart: 'stunden', kategorie: 'Prüfung', festpreis_netto: 149 },
+  { bezeichnung: 'Prüfung ortsfeste Anlage je Stromkreis (DGUV V3)', erfassungsart: 'stueck', kategorie: 'Prüfung', einheit: 'Stromkreis', einheitspreis_netto: 14 },
+  { bezeichnung: 'Geräteprüfung DGUV V3 / VDE 0701-0702 je Gerät', erfassungsart: 'stueck', kategorie: 'Prüfung', einheit: 'Gerät', einheitspreis_netto: 6.5 },
+];
+
+/** Branchen mit eigenen Startleistungen: Erkennung über den Branchennamen. */
+export const BRANCHEN_STARTKATALOG: { key: string; label: string; passt: (branche: string) => boolean; leistungen: StartLeistung[] }[] = [
+  {
+    key: 'elektro', label: 'Elektro',
+    passt: (b) => /elektr/i.test(b) && !/elektronik/i.test(b),
+    leistungen: ELEKTRO,
+  },
+];
+
+/** Eigene Startleistungen der Branche (profiles.branche) — leer, wenn es keine gibt. */
+export function brancheLeistungen(branche: string | null | undefined): StartLeistung[] {
+  const b = (branche || '').trim();
+  if (!b) return [];
+  const t = BRANCHEN_STARTKATALOG.find((x) => x.passt(b));
+  return t ? t.leistungen : [];
+}
+
 /** Gibt es für diese Branche eine kuratierte Vorlage (nicht nur den Default)? */
 export function hatStartKatalog(kategorie: string | null | undefined): boolean {
   return !!kategorie && kategorie in STARTKATALOG && kategorie !== '__default';
@@ -128,12 +168,18 @@ export interface KatalogInsertRow {
 export function baueStartKatalog(
   kategorie: string | null | undefined,
   ownerId: string,
-  vorhandeneBezeichnungen: Iterable<string>
+  vorhandeneBezeichnungen: Iterable<string>,
+  branche?: string | null
 ): KatalogInsertRow[] {
   const gesehen = new Set<string>();
   for (const b of vorhandeneBezeichnungen) gesehen.add((b || '').trim().toLowerCase());
   const rows: KatalogInsertRow[] = [];
-  for (const l of startLeistungen(kategorie)) {
+  // Paket 196: zuerst die Branchen-Leistungen (z. B. Elektro), dann die der Kategorie.
+  // Ohne Kategorie, aber mit erkannter Branche: nur die Branchen-Leistungen, ohne den allgemeinen Default.
+  const kat = (kategorie || '').trim();
+  const spezial = brancheLeistungen(branche);
+  const basis = kat || spezial.length === 0 ? startLeistungen(kategorie) : [];
+  for (const l of [...spezial, ...basis]) {
     const key = l.bezeichnung.trim().toLowerCase();
     if (!key || gesehen.has(key)) continue;
     gesehen.add(key);

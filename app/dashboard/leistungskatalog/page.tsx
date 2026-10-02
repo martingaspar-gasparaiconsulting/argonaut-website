@@ -27,7 +27,7 @@ import Leerzustand from '../_components/Leerzustand';
 import FilialZuordnung, { type FilialeLite } from '../_components/FilialZuordnung';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort } from '@/lib/standortDaten';
-import { baueStartKatalog, hatStartKatalog } from '@/lib/startKatalog';
+import { baueStartKatalog, hatStartKatalog, brancheLeistungen } from '@/lib/startKatalog';
 import {
   nachMinuten, zeitText, eur, preisText, istMengenLeistung, EINHEITEN_MENGE,
   type KatalogEintrag,
@@ -204,17 +204,27 @@ export default function LeistungskatalogPage() {
     if (!uid) return;
     setStartBusy(true); setFehler(null);
     try {
-      const { data: prof } = await supabase.from('profiles').select('kategorie').eq('id', uid).maybeSingle();
+      // Paket 196: Profil und Eintraege gehoeren dem Betrieb (beim Mitarbeiter der Chef) — vorher uid.
+      // Dazu die Branche (profiles.branche): Elektro bekommt eigene Startleistungen.
+      const betrieb = besitzer ?? uid;
+      type ProfilBranche = { kategorie?: string | null; branche?: string | null };
+      let prof: ProfilBranche | null;
+      {
+        const r = await supabase.from('profiles').select('kategorie, branche').eq('id', betrieb).maybeSingle();
+        if (r.error) { const r2 = await supabase.from('profiles').select('kategorie').eq('id', betrieb).maybeSingle(); prof = (r2.data as ProfilBranche | null) ?? null; }
+        else prof = (r.data as ProfilBranche | null) ?? null;
+      }
       const kat = ((prof?.kategorie as string) || '').trim();
-      const zeilen = baueStartKatalog(kat, uid, liste.map((k) => k.bezeichnung || ''))
+      const branche = ((prof?.branche as string) || '').trim();
+      const zeilen = baueStartKatalog(kat, betrieb, liste.map((k) => k.bezeichnung || ''), branche)
         .map((z) => ({ ...z, aktualisiert_am: new Date().toISOString() }));
       if (zeilen.length === 0) {
-        setFehler(kat
-          ? `Für „${kat}" sind keine neuen Vorschläge übrig — Ihr Katalog ist schon gefüllt.`
+        setFehler(kat || branche
+          ? `Für „${branche || kat}" sind keine neuen Vorschläge übrig — Ihr Katalog ist schon gefüllt.`
           : 'Für Vorschläge brauche ich Ihre Branche: Setzen Sie sie im Onboarding bzw. in den Einstellungen, dann lade ich typische Leistungen.');
         setStartBusy(false); return;
       }
-      const label = kat && hatStartKatalog(kat) ? `„${kat}"` : 'Ihre Branche';
+      const label = branche && brancheLeistungen(branche).length ? `„${branche}"` : kat && hatStartKatalog(kat) ? `„${kat}"` : 'Ihre Branche';
       if (!window.confirm(`${zeilen.length} typische Leistungen für ${label} in den Katalog laden?\n\nAlles sind Startwerte — Sie können danach jede Leistung frei anpassen oder löschen.`)) { setStartBusy(false); return; }
       const { error } = await supabase.from('leistungskatalog').insert(zeilen);
       if (error) throw error;

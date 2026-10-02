@@ -8,8 +8,11 @@
 import { jsPDF } from 'jspdf';
 import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
 import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
+import { messTextPdf } from '@/lib/elektroMesswerte';
 
-export interface PruefPunktPdf { punkt: string; status: string; hinweis?: string | null; }
+// Paket 196: Messpunkte bringen Messwert, Einheit und Grenzen mit — im PDF als
+// „Messwert 0,21 Ohm (Grenze max. 0,3 Ohm)" vor dem Hinweis (Helvetica kennt kein Ω/≤).
+export interface PruefPunktPdf { punkt: string; status: string; hinweis?: string | null; messwert?: number | null; einheit?: string | null; grenz_min?: number | null; grenz_max?: number | null; }
 
 export interface PruefPdfDaten {
   pruef_art: string;
@@ -85,7 +88,8 @@ export function pruefprotokollPdf(dn: PruefPdfDaten): void {
     doc.setTextColor(p.status === 'mangel' ? RED : p.status === 'ok' ? GREEN : GREY);
     doc.setFont('helvetica', 'bold'); doc.text(STATUS_TXT[p.status] || p.status, cStatus, y);
     doc.setFont('helvetica', 'normal'); doc.setTextColor(GREY);
-    const hinLines = doc.splitTextToSize(p.hinweis || '', R - cHinweis);
+    const hinText = [messTextPdf(p), p.hinweis || ''].filter(Boolean).join(' · ');
+    const hinLines = doc.splitTextToSize(hinText, R - cHinweis);
     doc.text(hinLines, cHinweis, y);
     const rows = Math.max(punktLines.length, hinLines.length, 1);
     y += 5.5 * rows + 1.5;

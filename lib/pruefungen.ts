@@ -7,6 +7,7 @@
 // ============================================================================
 
 import { plusMonate } from './nachweisMotor';
+import { MESS_VDE_0100_600, MESS_VDE_0105, MESS_VDE_0701_0702, bewerteMesswert, type MessVorlage } from './elektroMesswerte';
 
 export interface PruefNorm {
   key: string;
@@ -14,6 +15,10 @@ export interface PruefNorm {
   norm: string;
   intervall_monate: number;
   pruefpunkte: string[];
+  /** Paket 196: Messpunkte mit Zahlenfeld, Einheit und Grenzwert (lib/elektroMesswerte). */
+  messungen?: MessVorlage[];
+  /** Kurzer Hinweis zur Frist (z. B. Erstprüfung ohne eigenes Intervall). */
+  fristHinweis?: string;
 }
 
 /** Norm-Katalog. Fristen per WebSearch verifiziert (07/2026). */
@@ -23,14 +28,35 @@ export const PRUEF_NORMEN: PruefNorm[] = [
     bezeichnung: 'Ortsveränderliche Elektrogeräte (E-Check)',
     norm: 'DGUV V3 / DIN VDE 0701-0702',
     intervall_monate: 24, // Büro/leichte Beanspruchung; Werkstatt 12, Baustelle 3
-    pruefpunkte: ['Sichtprüfung Gehäuse & Anschlussleitung', 'Schutzleiterwiderstand', 'Isolationswiderstand', 'Schutzleiter-/Berührungsstrom', 'Funktionsprüfung'],
+    // Paket 196: die Messungen (Schutzleiter, Isolation, Ströme) sind jetzt Zahlenfelder mit Grenzwert.
+    pruefpunkte: ['Sichtprüfung Gehäuse & Anschlussleitung', 'Funktionsprüfung'],
+    messungen: MESS_VDE_0701_0702,
   },
   {
     key: 'elektro_ortsfest',
     bezeichnung: 'Ortsfeste elektrische Anlage',
     norm: 'DGUV V3 / DIN VDE 0105',
     intervall_monate: 48, // 4 Jahre allgemein
-    pruefpunkte: ['Sichtprüfung Verteilung & Leitungen', 'RCD/FI-Auslösung geprüft', 'Isolationswiderstand', 'Schleifenimpedanz', 'Funktionsprüfung Schutzeinrichtungen'],
+    pruefpunkte: ['Sichtprüfung Verteilung & Leitungen', 'RCD/FI-Prüftaste erprobt', 'Funktionsprüfung Schutzeinrichtungen'],
+    messungen: MESS_VDE_0105,
+  },
+  {
+    // Paket 196: Erstprüfung vor der ersten Inbetriebnahme bzw. nach Erweiterung/Änderung.
+    key: 'elektro_erstpruefung',
+    bezeichnung: 'Erstprüfung elektrische Anlage (Neubau/Erweiterung)',
+    norm: 'DIN VDE 0100-600',
+    intervall_monate: 48, // danach Wiederholungsprüfung nach DGUV V3 / DIN VDE 0105-100
+    fristHinweis: 'Erstprüfung vor Inbetriebnahme; die nächste Fälligkeit ist die erste Wiederholungsprüfung (gewerblich 4 Jahre).',
+    pruefpunkte: [
+      'Besichtigen: Schutz gegen elektrischen Schlag (Abdeckungen, Schutzmaßnahme)',
+      'Besichtigen: Leitungsauswahl, Querschnitte, Verlegung',
+      'Besichtigen: Schutz- und Trenneinrichtungen richtig ausgewählt und eingestellt',
+      'Besichtigen: Brandabschottungen, Kennzeichnung, Beschriftung der Stromkreise',
+      'Erproben: RCD-Prüftaste, Schalter und Steuerungen',
+      'Erproben: Drehfeld rechts / Spannung an den Anschlussstellen',
+      'Dokumentation übergeben (Stromkreisliste, Schaltplan, Messprotokoll)',
+    ],
+    messungen: MESS_VDE_0100_600,
   },
   {
     key: 'feuerloescher',
@@ -92,6 +118,48 @@ export function naechsteFaelligkeit(datumIso: string, intervallMonate: number): 
 }
 
 export interface PunktBasis { status?: string | null; }
+
+/** Ein Prüfpunkt im Entwurf — Messfelder nur bei Messpunkten. */
+export interface PunktEntwurf {
+  punkt: string;
+  status: string;
+  hinweis: string;
+  /** Paket 196: Messpunkt? Dann Messwert als Text (deutsche Eingabe), Einheit, Grenzen. */
+  mess?: boolean;
+  messwert?: string;
+  einheit?: string;
+  grenz_min?: number | null;
+  grenz_max?: number | null;
+  /** Hinweis aus der Norm-Vorlage (Prüfspannung, Bezug) — nur Anzeige, wird nicht gespeichert. */
+  tipp?: string;
+}
+
+/** Startpunkte einer Norm: erst die Sicht-/Erprobungspunkte, dann die Messpunkte mit leerem Messwert. */
+export function entwurfAusNorm(n: PruefNorm | undefined): PunktEntwurf[] {
+  if (!n) return [];
+  const sicht: PunktEntwurf[] = n.pruefpunkte.map((p) => ({ punkt: p, status: 'ok', hinweis: '' }));
+  const mess: PunktEntwurf[] = (n.messungen ?? []).map((m) => ({
+    punkt: m.punkt, status: 'ok', hinweis: '', mess: true, messwert: '',
+    einheit: m.einheit, grenz_min: m.min ?? null, grenz_max: m.max ?? null, tipp: m.hinweis,
+  }));
+  return [...sicht, ...mess];
+}
+
+/**
+ * Status eines Messpunkts nach Eingabe des Messwerts: ausserhalb der Grenze → 'mangel',
+ * innerhalb → 'ok'. Ohne Messwert bleibt der bisherige Status (der Prüfer entscheidet).
+ */
+export function statusNachMessung(p: PunktEntwurf): string {
+  if (!p.mess) return p.status;
+  const b = bewerteMesswert(p.messwert, p.grenz_min, p.grenz_max);
+  if (b === 'leer') return p.status;
+  return b;
+}
+
+/** Messpunkte ohne Messwert (zum Hinweis vor dem Speichern). */
+export function offeneMessungen(punkte: PunktEntwurf[]): number {
+  return punkte.filter((p) => p.mess && p.status !== 'na' && bewerteMesswert(p.messwert, null, null) === 'leer').length;
+}
 
 /**
  * Gesamtergebnis aus den Prüfpunkten:

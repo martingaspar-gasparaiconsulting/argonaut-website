@@ -13,7 +13,9 @@ import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../_components/Leerzustand';
 import {
   PRUEF_NORMEN, pruefNorm, naechsteFaelligkeit, gesamtErgebnis, faelligBucket, zaehlePruef,
+  entwurfAusNorm, statusNachMessung, offeneMessungen, type PunktEntwurf,
 } from '@/lib/pruefungen';
+import { messZahl, grenzeText, bewerteMesswert, zahlDe, messTextPdf } from '@/lib/elektroMesswerte';
 import { augePruef } from '@/lib/auge';
 import { pruefprotokollPdf } from '@/lib/pruefPdf';
 import KiAuge from '../_components/KiAuge';
@@ -35,8 +37,9 @@ const C = {
 
 type Asset = { id: string; bezeichnung: string };
 type Protokoll = { id: string; asset_id: string | null; objekt_bezeichnung: string | null; pruef_key: string | null; pruef_art: string; norm: string | null; datum: string; pruefer: string | null; intervall_monate: number | null; naechste_pruefung: string | null; ergebnis: string; bemerkung: string | null };
-type Punkt = { id: string; protokoll_id: string; position: number | null; punkt: string; status: string; hinweis: string | null };
-type Draft = { punkt: string; status: string; hinweis: string };
+// Paket 196: Messwert-Spalten (SQL p196). Fehlen sie noch, bleiben die Felder leer.
+type Punkt = { id: string; protokoll_id: string; position: number | null; punkt: string; status: string; hinweis: string | null; messwert?: number | null; einheit?: string | null; grenz_min?: number | null; grenz_max?: number | null };
+type Draft = PunktEntwurf;
 
 const P_STATUS: Record<string, { label: string; farbe: string }> = {
   ok: { label: '✓ ok', farbe: C.green },
@@ -116,7 +119,7 @@ export default function PruefprotokollePage() {
   function normWahl(key: string) {
     const n = key && key !== 'sonstige' ? pruefNorm(key) : undefined;
     setNk((f) => ({ ...f, pruef_key: key }));
-    setDraft(n ? n.pruefpunkte.map((p) => ({ punkt: p, status: 'ok', hinweis: '' })) : []);
+    setDraft(entwurfAusNorm(n));
   }
 
   function assetWahl(id: string) {
@@ -127,6 +130,19 @@ export default function PruefprotokollePage() {
   function setDraftStatus(i: number, status: string) { setDraft((l) => l.map((p, j) => (j === i ? { ...p, status } : p))); }
   function setDraftHinweis(i: number, hinweis: string) { setDraft((l) => l.map((p, j) => (j === i ? { ...p, hinweis } : p))); }
   function punktHinzu() { setDraft((l) => [...l, { punkt: '', status: 'ok', hinweis: '' }]); }
+  // Paket 196: eigener Messpunkt (Zahl + Einheit + Grenze) und Messwert-Eingabe mit Auto-Status.
+  function messpunktHinzu() { setDraft((l) => [...l, { punkt: '', status: 'ok', hinweis: '', mess: true, messwert: '', einheit: '', grenz_min: null, grenz_max: null }]); }
+  function setMesswert(i: number, messwert: string) {
+    setDraft((l) => l.map((p, j) => (j === i ? { ...p, messwert, status: statusNachMessung({ ...p, messwert }) } : p)));
+  }
+  function setMessFeld(i: number, feld: 'einheit' | 'grenz_min' | 'grenz_max', wert: string) {
+    setDraft((l) => l.map((p, j) => {
+      if (j !== i) return p;
+      const neu: PunktEntwurf = feld === 'einheit' ? { ...p, einheit: wert } : { ...p, [feld]: messZahl(wert) };
+      return { ...neu, status: statusNachMessung(neu) };
+    }));
+  }
+  const offeneMess = offeneMessungen(draft);
   function punktWeg(i: number) { setDraft((l) => l.filter((_, j) => j !== i)); }
   function setDraftText(i: number, punkt: string) { setDraft((l) => l.map((p, j) => (j === i ? { ...p, punkt } : p))); }
 
@@ -145,11 +161,27 @@ export default function PruefprotokollePage() {
       }).select('id').single();
       if (error || !neu) throw new Error(error?.message || 'Speichern fehlgeschlagen.');
       try { await speichereWerte(MODUL, (neu as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
-      const reihen = draft.filter((p) => p.punkt.trim()).map((p, i) => ({
+      const gefuellt = draft.filter((p) => p.punkt.trim());
+      const reihen = gefuellt.map((p, i) => ({
         owner_user_id: besitzer ?? uid, protokoll_id: neu.id, position: i + 1, punkt: p.punkt.trim(), status: p.status, hinweis: p.hinweis.trim() || null,
+        ...(p.mess ? {
+          messwert: messZahl(p.messwert), einheit: (p.einheit || '').trim() || null,
+          grenz_min: messZahl(p.grenz_min), grenz_max: messZahl(p.grenz_max),
+        } : {}),
       }));
       if (reihen.length) {
-        const { error: pe } = await supabase.from('pruef_punkt').insert(reihen);
+        let { error: pe } = await supabase.from('pruef_punkt').insert(reihen);
+        // Paket 196: Fehlen die Messwert-Spalten noch (SQL p196 nicht gelaufen), nichts verlieren:
+        // Messwert + Grenze wandern in den Hinweis-Text, gespeichert wird ohne die neuen Spalten.
+        if (pe && /messwert|einheit|grenz_m|column|schema cache/i.test(pe.message || '')) {
+          const ersatz = gefuellt.map((p, i) => {
+            // PDF-taugliche Schreibweise (Ohm statt Ω, max./min. statt ≤/≥) — der Hinweis landet später im PDF.
+            const mtxt = p.mess ? messTextPdf({ messwert: messZahl(p.messwert), einheit: p.einheit, grenz_min: p.grenz_min, grenz_max: p.grenz_max }) : '';
+            const hin = [mtxt, p.hinweis.trim()].filter(Boolean).join(' · ');
+            return { owner_user_id: besitzer ?? uid, protokoll_id: neu.id, position: i + 1, punkt: p.punkt.trim(), status: p.status, hinweis: hin || null };
+          });
+          ({ error: pe } = await supabase.from('pruef_punkt').insert(ersatz));
+        }
         if (pe) throw new Error(pe.message);
       }
       // Andockung ans Objekt-Register: Ergebnis -> Zustand-Ampel, nächste Prüfung übernehmen.
@@ -164,7 +196,7 @@ export default function PruefprotokollePage() {
   }
 
   function pdfErstellen(p: Protokoll) {
-    const pkte = punkte.filter((x) => x.protokoll_id === p.id).map((x) => ({ punkt: x.punkt, status: x.status, hinweis: x.hinweis }));
+    const pkte = punkte.filter((x) => x.protokoll_id === p.id).map((x) => ({ punkt: x.punkt, status: x.status, hinweis: x.hinweis, messwert: x.messwert ?? null, einheit: x.einheit ?? null, grenz_min: x.grenz_min ?? null, grenz_max: x.grenz_max ?? null }));
     pruefprotokollPdf({
       pruef_art: p.pruef_art, norm: p.norm, objekt: p.objekt_bezeichnung, datum: p.datum, pruefer: p.pruefer,
       intervall_monate: p.intervall_monate, naechste_pruefung: p.naechste_pruefung, ergebnis: p.ergebnis,
@@ -221,9 +253,35 @@ export default function PruefprotokollePage() {
           <>
             <div style={styles.punktKopf}>
               <span>Prüfpunkte</span>
-              <button style={styles.miniAdd} onClick={punktHinzu}>＋ Punkt</button>
+              <span style={{ display: 'flex', gap: 6 }}>
+                <button style={styles.miniAdd} onClick={punktHinzu}>＋ Punkt</button>
+                <button style={styles.miniAdd} onClick={messpunktHinzu}>＋ Messwert</button>
+              </span>
             </div>
-            {draft.map((p, i) => (
+            {aktNorm?.fristHinweis && <div style={styles.hint}>{aktNorm.fristHinweis}</div>}
+            {draft.map((p, i) => p.mess ? (
+              // Schlüssel mit Norm + Länge: die Grenz-Felder sind ungesteuert (Eingabe erst beim Verlassen übernommen)
+              // und müssen bei Normwechsel oder Löschen neu aufgebaut werden.
+              <div key={`m-${nk.pruef_key}-${draft.length}-${i}`} style={{ ...styles.punktZeile, borderLeft: `3px solid ${P_STATUS[p.status]?.farbe ?? C.border}`, paddingLeft: 8 }}>
+                <input style={{ ...styles.inp, flex: 2, minWidth: 160 }} value={p.punkt} onChange={(e) => setDraftText(i, e.target.value)} placeholder="Messung (z. B. Isolationswiderstand)" />
+                <input style={{ ...styles.inp, width: 110 }} inputMode="decimal" value={p.messwert ?? ''} onChange={(e) => setMesswert(i, e.target.value)} placeholder="Messwert" aria-label="Messwert" />
+                <input style={{ ...styles.inp, width: 70 }} value={p.einheit ?? ''} onChange={(e) => setMessFeld(i, 'einheit', e.target.value)} placeholder="Einheit" aria-label="Einheit" />
+                <input style={{ ...styles.inp, width: 80 }} inputMode="decimal" defaultValue={p.grenz_min != null ? zahlDe(p.grenz_min) : ''} onBlur={(e) => setMessFeld(i, 'grenz_min', e.target.value)} placeholder="min." aria-label="Untere Grenze" title="Untere Grenze (Messwert muss mindestens so hoch sein)" />
+                <input style={{ ...styles.inp, width: 80 }} inputMode="decimal" defaultValue={p.grenz_max != null ? zahlDe(p.grenz_max) : ''} onBlur={(e) => setMessFeld(i, 'grenz_max', e.target.value)} placeholder="max." aria-label="Obere Grenze" title="Obere Grenze (Messwert darf höchstens so hoch sein)" />
+                <select style={{ ...styles.inp, width: 120, color: P_STATUS[p.status]?.farbe }} value={p.status} onChange={(e) => setDraftStatus(i, e.target.value)}>
+                  <option value="ok">✓ ok</option>
+                  <option value="mangel">⚠ Mangel</option>
+                  <option value="na">– n.z.</option>
+                </select>
+                <button style={styles.miniWeg} onClick={() => punktWeg(i)}>✕</button>
+                <div style={{ width: '100%', color: C.textDim, fontSize: 12.5, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {grenzeText(p.grenz_min, p.grenz_max, p.einheit || '') && <span>Grenze: <b style={{ color: C.text }}>{grenzeText(p.grenz_min, p.grenz_max, p.einheit || '')}</b></span>}
+                  {p.tipp && <span>{p.tipp}</span>}
+                  {bewerteMesswert(p.messwert, p.grenz_min, p.grenz_max) === 'mangel' && <span style={{ color: C.danger, fontWeight: 700 }}>außerhalb der Grenze → Mangel</span>}
+                  <input style={{ ...styles.inp, flex: 1, minWidth: 140, padding: '5px 9px', fontSize: 13 }} value={p.hinweis} onChange={(e) => setDraftHinweis(i, e.target.value)} placeholder="Hinweis (optional)" />
+                </div>
+              </div>
+            ) : (
               <div key={i} style={styles.punktZeile}>
                 <input style={{ ...styles.inp, flex: 1, minWidth: 140 }} value={p.punkt} onChange={(e) => setDraftText(i, e.target.value)} placeholder="Prüfpunkt" />
                 <select style={{ ...styles.inp, width: 120, color: P_STATUS[p.status]?.farbe }} value={p.status} onChange={(e) => setDraftStatus(i, e.target.value)}>
@@ -236,6 +294,7 @@ export default function PruefprotokollePage() {
               </div>
             ))}
             {!draft.length && <div style={styles.hint}>Noch keine Prüfpunkte — mit „＋ Punkt" ergänzen.</div>}
+            {offeneMess > 0 && <div style={{ ...styles.hint, color: C.warn }}>Noch {offeneMess} Messung{offeneMess === 1 ? '' : 'en'} ohne Messwert — nicht gemessene Punkte bitte auf „– n.z." stellen.</div>}
 
             <div style={styles.vorschau}>
               <span>Ergebnis: <b style={{ color: ERG_META[ergebnisLive]?.farbe }}>{ERG_META[ergebnisLive]?.label}</b></span>
@@ -285,7 +344,10 @@ export default function PruefprotokollePage() {
                             {pkte.map((x) => (
                               <div key={x.id} style={styles.punktZeigen}>
                                 <span style={{ color: P_STATUS[x.status]?.farbe, fontWeight: 700, minWidth: 90 }}>{P_STATUS[x.status]?.label}</span>
-                                <span style={{ flex: 1 }}>{x.punkt}{x.hinweis ? <span style={{ color: C.textDim }}> — {x.hinweis}</span> : ''}</span>
+                                <span style={{ flex: 1 }}>{x.punkt}
+                                  {x.messwert != null && <b style={{ color: C.text, marginLeft: 8 }}>{zahlDe(messZahl(x.messwert))}{x.einheit ? ' ' + x.einheit : ''}</b>}
+                                  {x.messwert != null && grenzeText(x.grenz_min, x.grenz_max, x.einheit || '') && <span style={{ color: C.textDim }}> (Grenze {grenzeText(x.grenz_min, x.grenz_max, x.einheit || '')})</span>}
+                                  {x.hinweis ? <span style={{ color: C.textDim }}> — {x.hinweis}</span> : ''}</span>
                               </div>
                             ))}
                             {p.bemerkung && <div style={{ color: C.textDim, marginTop: 6, fontSize: 'clamp(13px,1.1vw,17px)' }}>Bemerkung: {p.bemerkung}</div>}

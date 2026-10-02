@@ -11,6 +11,7 @@ import {
   darfVerteilen,
 } from "../../../lib/rechte";
 import type { Rolle } from "../../../lib/rechte";
+import { RECHTE_VORLAGEN } from "../../../lib/rechteVorlagen";
 
 // ============================================================
 // ARGONAUT OS · RECHTE-SYSTEM · WELLE 3 — VERTEIL-OBERFLÄCHE "ZUGRIFFSRECHTE"
@@ -92,7 +93,6 @@ const ALLE_GRUPPEN = MODULE_NACH_GRUPPE.map((g) => ({
 }));
 
 // Zaehlbasis = ALLE Modul-Keys aus NAV_LINKS (nicht nur die hartcodierten)
-const ALLE_KEYS = ALLE_MODUL_KEYS;
 
 // Schluessel -> lesbares Label (fuer die Bestaetigungs-Dialoge).
 const LABEL_MAP: Record<string, string> = Object.fromEntries(
@@ -107,15 +107,8 @@ const ROLLE_LABEL: Record<Rolle, string> = {
   mitarbeiter: "Mitarbeiter",
 };
 
-// Rollen-Vorlagen (Ein-Klick-Presets)
-const VORLAGEN: { name: string; module: string[] }[] = [
-  { name: "Lager", module: ["erp", "auftraege"] },
-  { name: "Produktion", module: ["projekte", "auftraege", "service", "erp"] },
-  { name: "Büro", module: ["rechnungen", "korrespondenz", "dokumente", "crm", "auftraege"] },
-  { name: "Vertrieb", module: ["leads", "crm", "marketing", "auftraege", "rechnungen"] },
-  { name: "Alle", module: [...ALLE_KEYS] },
-  { name: "Keine", module: [] },
-];
+// Rollen-Vorlagen (Ein-Klick-Presets) — Paket 196: in lib/rechteVorlagen (mit „Monteur").
+const VORLAGEN = RECHTE_VORLAGEN;
 
 type Mitarbeiter = {
   id: string;

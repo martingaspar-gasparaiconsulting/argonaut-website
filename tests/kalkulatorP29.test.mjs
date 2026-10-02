@@ -364,10 +364,11 @@ test('jede Vorlage laesst sich rechnen und ergibt einen sinnvollen Preis', () =>
   }
 });
 
-test('alle acht Gewerke sind da und eindeutig', () => {
-  assert.equal(GEWERKE.length, 8);
+// Paket 196: 8 -> 11 (Elektro: Zaehlerschrank, Wallbox, Unterverteilung) — bewusst angepasst.
+test('alle elf Gewerke sind da und eindeutig', () => {
+  assert.equal(GEWERKE.length, 11);
   const keys = GEWERKE.map((g) => g.key);
-  assert.equal(new Set(keys).size, 8, 'doppelte Schluessel');
+  assert.equal(new Set(keys).size, 11, 'doppelte Schluessel');
   for (const g of GEWERKE) {
     assert.ok(g.posten.length > 0, g.key);
     assert.ok(g.beispielMenge > 0, g.key);
