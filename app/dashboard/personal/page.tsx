@@ -1113,8 +1113,18 @@ function DokumenteTab({ typ, id, docs, loading, msg, setMsg, reload }: {
       const ownerId = userData?.user?.id;
       if (!ownerId) { setMsg('Keine aktive Sitzung gefunden.'); setUploading(false); return; }
       const sauber = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const pfad = `${ownerId}/${typ}/${id}/${Date.now()}-${sauber}`;
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(pfad, file);
+      // Paket 187d: Datei in den Ordner des BETRIEBS (beim Mitarbeiter der Chef), sonst kann der
+      // Chef sie nie öffnen. Fehlt die Speicher-Regel (SQL p187d), wie bisher im eigenen Ordner.
+      let chef: unknown = null;
+      try { chef = (await supabase.rpc('mein_chef_id')).data; } catch { chef = null; }
+      const betrieb = betriebsKennung(chef, ownerId) ?? ownerId;
+      const stempel = Date.now();
+      let pfad = `${betrieb}/${typ}/${id}/${stempel}-${sauber}`;
+      let { error: upErr } = await supabase.storage.from(BUCKET).upload(pfad, file);
+      if (upErr && betrieb !== ownerId) {
+        pfad = `${ownerId}/${typ}/${id}/${stempel}-${sauber}`;
+        ({ error: upErr } = await supabase.storage.from(BUCKET).upload(pfad, file));
+      }
       if (upErr) throw upErr;
       const zeile: Record<string, unknown> = {
         owner_user_id: ownerId, dateiname: file.name, storage_pfad: pfad, groesse_bytes: file.size,
@@ -1125,7 +1135,7 @@ function DokumenteTab({ typ, id, docs, loading, msg, setMsg, reload }: {
       if (insErr) throw insErr;
       setMsg(istMA && fuerMa
         ? 'Hochgeladen und freigegeben — der Mitarbeiter sieht die Datei in „Mein Bereich → Meine Unterlagen".'
-        : 'Hochgeladen. Nur für Sie sichtbar.');
+        : 'Hochgeladen. Sichtbar für die Geschäftsleitung und alle mit Personal-Recht.');
       reload();
     } catch (err: unknown) { setMsg('Upload fehlgeschlagen: ' + (err instanceof Error ? err.message : 'Fehler')); }
     finally { setUploading(false); e.target.value = ''; }
