@@ -8,6 +8,7 @@ import {
   zeilenSichern, neuerKontext, kontextErgaenzen, gruppenZaehlung, type XxlGruppe,
 } from '../../../../lib/musterbetriebXxl';
 import { XXL_ALLE_SEEDER, loeschPlanAlle } from '../../../../lib/musterbetriebXxlBranchen';
+import { ABLAGE_BUCKET } from '../../../../lib/rechnungAblage';
 
 // ============================================================================
 // ARGONAUT OS · app/api/admin/musterbetrieb-xxl/route.ts — Paket 179
@@ -147,6 +148,16 @@ async function loeschen(admin: Admin) {
   const uid = k.id;
   const hinweise: string[] = [];
   let entfernt = 0;
+
+  // Paket 197: am Testtag festgeschriebene Musterrechnungen — Ablage (Dateien + Einträge) zuerst
+  // aufräumen. Nur der Server-Schlüssel darf das; echte Betriebe werden hier nie angefasst.
+  try {
+    const { data: abl } = await admin.from('rechnung_ablage').select('datei_pfad').eq('owner_user_id', uid);
+    const pfade = [...new Set(((abl as Array<{ datei_pfad: string }> | null) || []).map((a) => a.datei_pfad).filter((p) => typeof p === 'string' && p.startsWith(uid + '/')))];
+    for (let i = 0; i < pfade.length; i += 100) await admin.storage.from(ABLAGE_BUCKET).remove(pfade.slice(i, i + 100));
+    const { error: aErr } = await admin.from('rechnung_ablage').delete().eq('owner_user_id', uid);
+    if (aErr && !/rechnung_ablage|does not exist|schema cache/i.test(aErr.message)) hinweise.push(`rechnung_ablage: ${aErr.message}`);
+  } catch { /* Ablage noch nicht eingerichtet */ }
 
   const { data: reg } = await admin.from(REGISTER_TABELLE).select('tabelle, datensatz_id').eq('owner_user_id', uid);
   for (const schritt of loeschPlanAlle((reg as Array<{ tabelle: string; datensatz_id: string }> | null) || [])) {

@@ -8,7 +8,12 @@
 // Branding: Mail geht im Namen DES KUNDEN raus (kundenMailLayout + Firmenname
 // + Firmen-Akzentfarbe), nicht ARGONAUT.
 //
-// Body: { an, betreff?, nachricht?, rechnungsnummer?, dateiname, inhaltBase64, typ }
+// Body: { an, betreff?, nachricht?, rechnungsnummer?, dateiname, inhaltBase64, typ, rechnung_id? }
+//
+// Paket 197 (GoBD): Mit rechnung_id wird GENAU der verschickte Anhang nach dem
+// erfolgreichen Versand unverändert abgelegt (Prüfsumme) und die Rechnung
+// festgeschrieben. Scheitert nur die Ablage, ist die Mail trotzdem raus — die
+// Antwort sagt es (abgelegt: false + Grund), damit niemand doppelt verschickt.
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,6 +23,8 @@ import { abrechnungPruefen } from '@/lib/nurGeschaeftsleitung';
 import { quellSchreiber } from '@/lib/abrechnungServer';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { drosselSchluessel, type DrosselRegel } from '@/lib/drossel';
+import { legeRechnungAb } from '@/lib/rechnungAblageServer';
+import { istUuid, pruefeAblageDatei } from '@/lib/rechnungAblage';
 
 // Paket 175 (Befund M6): die Route war ein Mail-Relais fuer JEDEN Angemeldeten —
 // beliebige Adresse, beliebiger Anhang, ohne Deckel. Jetzt: nur wer abrechnen darf
@@ -72,6 +79,7 @@ export async function POST(req: NextRequest) {
     const typ = typeof body?.typ === 'string' ? body.typ : 'application/octet-stream';
     const nummer = typeof body?.rechnungsnummer === 'string' ? body.rechnungsnummer : '';
     const nachricht = typeof body?.nachricht === 'string' ? body.nachricht : '';
+    const rechnungId = istUuid(body?.rechnung_id) ? String(body.rechnung_id) : '';
 
     if (!istMail(an)) return NextResponse.json({ error: 'Keine gültige Empfänger-E-Mail.' }, { status: 400 });
     if (!inhaltBase64) return NextResponse.json({ error: 'Keine Datei zum Versenden übergeben.' }, { status: 400 });
@@ -87,6 +95,10 @@ export async function POST(req: NextRequest) {
     if (anhangBuffer.length === 0 || anhangBuffer.length > MAX_ANHANG_BYTES) {
       return NextResponse.json({ error: 'Der Anhang ist leer oder größer als 10 MB.' }, { status: 400 });
     }
+    // Paket 197: Inhalt muss zum Typ passen (echtes PDF bzw. XML) — sonst ginge
+    // eine beliebige Datei als „Rechnung" raus und würde so abgelegt.
+    const inhaltOk = pruefeAblageDatei(new Uint8Array(anhangBuffer), typ);
+    if (!inhaltOk.ok) return NextResponse.json({ error: inhaltOk.fehler }, { status: 400 });
     if (await deckelErreicht(absenderId)) {
       return NextResponse.json({ error: 'Heute wurden schon sehr viele Rechnungen verschickt. Bitte versuchen Sie es morgen erneut oder melden Sie sich beim Support.' }, { status: 429 });
     }
@@ -113,7 +125,22 @@ export async function POST(req: NextRequest) {
       anhaenge: [{ dateiname, inhalt: anhangBuffer, typ }],
     });
     if (!r.ok) return NextResponse.json({ error: r.fehler }, { status: 500 });
-    return NextResponse.json({ ok: true, id: r.id });
+
+    // Paket 197: verschickte Datei fest ablegen (nach dem Versand — nur was wirklich raus ist).
+    let ablage: { abgelegt: boolean; hash?: string; ablage_fehler?: string } = { abgelegt: false };
+    if (rechnungId) {
+      try {
+        const erg = await legeRechnungAb({
+          sitzung: supabase, betrieb: absenderId, rechnungId, bytes: new Uint8Array(anhangBuffer),
+          dateiname, typ, anlass: 'versand_mail', empfaenger: an, erstelltVon: user.id,
+        });
+        ablage = erg.ok ? { abgelegt: true, hash: erg.hash } : { abgelegt: false, ablage_fehler: erg.fehler };
+      } catch (e: unknown) {
+        ablage = { abgelegt: false, ablage_fehler: e instanceof Error ? e.message : 'unbekannt' };
+      }
+      if (!ablage.abgelegt) console.error('[rechnung-senden] Ablage fehlgeschlagen:', ablage.ablage_fehler);
+    }
+    return NextResponse.json({ ok: true, id: r.id, ...ablage });
   } catch (e: unknown) {
     console.error('Rechnung-senden Fehler:', e instanceof Error ? e.message : 'unbekannt');
     return NextResponse.json({ error: 'Unerwarteter Fehler beim Versand.' }, { status: 500 });

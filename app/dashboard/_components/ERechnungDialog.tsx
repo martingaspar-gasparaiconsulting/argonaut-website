@@ -36,6 +36,8 @@ type Props = {
   firma: any;
   supabase: any;
   zeileNetto: (z: any) => number;
+  /** Paket 197: nach erfolgreicher Ablage (Versand) — Seite lädt die Ablage neu. */
+  onAbgelegt?: () => void;
 };
 
 function feldWert(obj: any, ...namen: string[]): string {
@@ -57,7 +59,7 @@ function blobBase64(blob: Blob): Promise<string> {
   });
 }
 
-export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supabase, zeileNetto }: Props) {
+export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supabase, zeileNetto, onAbgelegt }: Props) {
   // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
   const darfAbrechnen = useDarfAbrechnen();
   const [offen, setOffen] = useState(false);
@@ -242,11 +244,17 @@ export default function ERechnungDialog({ rechnung, zeilen, kontakt, firma, supa
 
       const sres = await fetch("/api/rechnung-senden", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ an, betreff: `Ihre Rechnung ${nummer}`, rechnungsnummer: nummer, dateiname, inhaltBase64: b64, typ }),
+        // Paket 197: rechnung_id -> der Server legt genau diesen Anhang fest ab (GoBD).
+        body: JSON.stringify({ an, betreff: `Ihre Rechnung ${nummer}`, rechnungsnummer: nummer, dateiname, inhaltBase64: b64, typ, rechnung_id: rechnung?.id }),
       });
       const sj = await sres.json().catch(() => null);
       if (!sres.ok) { setHinweis("Versand fehlgeschlagen: " + (sj?.error || "")); return; }
-      setHinweis("✓ E-Rechnung an " + an + " gesendet.");
+      if (sj?.abgelegt) {
+        setHinweis("✓ E-Rechnung an " + an + " gesendet und fest abgelegt (Prüfsumme " + String(sj.hash || "").slice(0, 12) + " …). Die Rechnung ist jetzt festgeschrieben.");
+        onAbgelegt?.();
+      } else {
+        setHinweis("✓ E-Rechnung an " + an + " gesendet. ⚠ Ablage nicht möglich" + (sj?.ablage_fehler ? ": " + sj.ablage_fehler : "") + " — bitte NICHT erneut senden, sondern den Support informieren.");
+      }
     } catch (e: any) {
       setHinweis("Unerwarteter Fehler beim Senden: " + (e?.message || String(e)));
     } finally {

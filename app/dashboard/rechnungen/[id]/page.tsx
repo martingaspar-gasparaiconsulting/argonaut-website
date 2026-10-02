@@ -23,6 +23,8 @@ import {
 import { satzAusBetraegen } from "@/lib/abschlagsrechnung";
 import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 import { istMitarbeiterKennung, RECHNUNG_NUR_CHEF, ZAHLUNG_NUR_CHEF, STORNO_NUR_CHEF, ZAHLUNG_LOESCHEN_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
+// Paket 197 (GoBD): verschickte Rechnungen fest ablegen, danach festgeschrieben.
+import { ABLAGE_ANLASS_TEXT, FESTGESCHRIEBEN_HINWEIS, istFestgeschrieben, originalPdf, pruefsummeKurz, type AblageZeile } from '@/lib/rechnungAblage';
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R4 — Rechnungs-Detailseite
@@ -197,8 +199,14 @@ export default function RechnungDetail() {
   const [gespeichert, setGespeichert] = useState(false);
   const [pdfLaedt, setPdfLaedt] = useState(false);
 
-  // Bezahlte Rechnungen sind schreibgeschützt (Storno+Neu ist der korrekte Weg)
-  const gesperrt = status === "bezahlt" || status === "storniert";
+  // Paket 197: abgelegte Fassungen (verschickt / festgeschrieben). Fehlt die Tabelle (SQL p197), bleibt die Liste leer.
+  const [ablagen, setAblagen] = useState<AblageZeile[]>([]);
+  const festgeschrieben = istFestgeschrieben(rechnung, ablagen);
+  const original = originalPdf(ablagen);
+
+  // Bezahlte Rechnungen sind schreibgeschützt (Storno+Neu ist der korrekte Weg).
+  // Paket 197: festgeschriebene (verschickte) Rechnungen ebenso — GoBD.
+  const gesperrt = status === "bezahlt" || status === "storniert" || festgeschrieben;
 
   async function laden() {
     setLoading(true);
@@ -221,6 +229,15 @@ export default function RechnungDetail() {
 
     const r = rRes.data as any;
     setRechnung(r);
+    // Paket 197: Ablage dieser Rechnung (RLS: Chef bzw. „Darf abrechnen")
+    try {
+      const { data: abl, error: ablErr } = await supabase
+        .from("rechnung_ablage")
+        .select("id, anlass, datei_typ, datei_hash, datei_name, empfaenger, erstellt_am")
+        .eq("rechnung_id", id)
+        .order("erstellt_am", { ascending: true });
+      setAblagen(ablErr ? [] : ((abl as AblageZeile[]) || []));
+    } catch { setAblagen([]); }
     setTitel(r.titel || "");
     setStatus((r.zahlungsstatus as StatusKey) || "offen");
     setRechnungsdatum(r.rechnungsdatum || "");
@@ -400,6 +417,15 @@ export default function RechnungDetail() {
       }
       if (istMa && !darfAbrechnen) {
         setFehler(RECHNUNG_NUR_CHEF);
+        setSpeichern(false);
+        return;
+      }
+
+      // Paket 197: festgeschrieben -> nur die internen Notizen sind noch änderbar.
+      if (festgeschrieben) {
+        const { error: nErr } = await supabase.from("rechnungen").update({ notizen: notizen || null }).eq("id", id);
+        if (nErr) setFehler("Speichern fehlgeschlagen: " + nErr.message);
+        else { setGespeichert(true); setDirty(false); await laden(); }
         setSpeichern(false);
         return;
       }
@@ -640,8 +666,54 @@ export default function RechnungDetail() {
     }
   }
 
+  // Paket 197: Datei herunterladen (Blob -> Download-Link).
+  function dateiSpeichern(blob: Blob, name: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // Paket 197: abgelegtes Original holen (Server prüft die Prüfsumme).
+  async function ablageOeffnen(ablageId: string, name: string) {
+    setFehler(null);
+    const res = await fetch("/api/rechnung-ablage?id=" + encodeURIComponent(ablageId));
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setFehler(d?.error || "Die abgelegte Datei konnte nicht geladen werden.");
+      return;
+    }
+    dateiSpeichern(await res.blob(), name || "Rechnung.pdf");
+  }
+
+  // Paket 197: genau dieses PDF ablegen und die Rechnung festschreiben.
+  async function festschreiben(blob: Blob, name: string): Promise<boolean> {
+    const fd = new FormData();
+    fd.append("datei", new File([blob], name, { type: "application/pdf" }));
+    fd.append("rechnung_id", id);
+    const res = await fetch("/api/rechnung-ablage", { method: "POST", body: fd });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setFehler("Festschreiben fehlgeschlagen: " + (j?.error || "unbekannt") + " — das PDF wurde trotzdem heruntergeladen.");
+      return false;
+    }
+    await laden();
+    return true;
+  }
+
   async function pdfErstellen() {
     if (pdfLaedt) return;
+    // Paket 197: festgeschrieben -> immer das abgelegte Original, nie neu gerechnet.
+    if (original) {
+      setPdfLaedt(true);
+      await ablageOeffnen(original.id, original.datei_name || ("Rechnung_" + (rechnung?.rechnungsnummer || "Dokument") + ".pdf"));
+      setPdfLaedt(false);
+      return;
+    }
     if (dirty) {
       const weiter = window.confirm(
         "Es gibt ungespeicherte Änderungen. Für ein korrektes PDF sollten die Daten erst gespeichert werden. Trotzdem fortfahren?"
@@ -725,14 +797,21 @@ export default function RechnungDetail() {
       }
 
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Rechnung_" + (rechnung?.rechnungsnummer || "Dokument") + ".pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const name = "Rechnung_" + (rechnung?.rechnungsnummer || "Dokument") + ".pdf";
+      dateiSpeichern(blob, name);
+
+      // Paket 197: Verschickt der Betrieb dieses PDF selbst (eigene Mail, Post)?
+      // Dann jetzt festschreiben — genau diese Datei wird abgelegt (GoBD).
+      // Nur wer abrechnen darf, nur ohne ungespeicherte Änderungen, nicht bei Storno.
+      if (darfAbrechnen && !dirty && status !== "storniert" && !festgeschrieben) {
+        const ja = window.confirm(
+          "Schicken Sie dieses PDF jetzt an Ihren Kunden?\n\n" +
+          "Dann jetzt festschreiben: Genau dieses PDF wird unveränderbar abgelegt (GoBD). " +
+          "Danach lassen sich Beträge, Daten und Positionen nicht mehr ändern — Korrektur nur per Storno und neuer Rechnung.\n\n" +
+          "OK = festschreiben · Abbrechen = nur Entwurf zum Ansehen"
+        );
+        if (ja) await festschreiben(blob, name);
+      }
     } catch (e: any) {
       setFehler("PDF-Fehler: " + (e?.message || "unbekannt"));
     }
@@ -990,9 +1069,9 @@ export default function RechnungDetail() {
               opacity: pdfLaedt ? 0.6 : 1,
             }}
           >
-            {pdfLaedt ? "ARGONAUT erstellt das PDF…" : "📄 Rechnung als PDF"}
+            {pdfLaedt ? "ARGONAUT erstellt das PDF…" : original ? "📄 Original-PDF" : "📄 Rechnung als PDF"}
           </button>
-            <ERechnungDialog rechnung={rechnung} zeilen={zeilen} kontakt={kontakt} firma={firma} supabase={supabase} zeileNetto={zeileNetto} />
+            <ERechnungDialog rechnung={rechnung} zeilen={zeilen} kontakt={kontakt} firma={firma} supabase={supabase} zeileNetto={zeileNetto} onAbgelegt={laden} />
           <button
             onClick={speichernJetzt}
             disabled={speichern || !dirty}
@@ -1009,6 +1088,29 @@ export default function RechnungDetail() {
 
       {/* P46: durchgängige Verknüpfung – Sprung zu Kunde/Auftrag */}
       <VerknuepfungsLeiste kontaktId={rechnung?.kontakt_id} auftragId={rechnung?.auftrag_id} />
+
+      {/* Paket 197 — festgeschrieben + abgelegte Fassungen (GoBD) */}
+      {festgeschrieben && (
+        <div style={{ marginTop: 16, background: `${C.gold}14`, border: `1px solid ${C.gold}55`, borderRadius: 12, padding: "14px 16px" }}>
+          <div style={{ fontWeight: 800, color: C.gold, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
+            🔒 Festgeschrieben{rechnung?.festgeschrieben_am ? " am " + datumDe(String(rechnung.festgeschrieben_am).slice(0, 10)) : ""}
+          </div>
+          <p style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: "6px 0 0", lineHeight: 1.5 }}>{FESTGESCHRIEBEN_HINWEIS}</p>
+          {ablagen.length > 0 && (
+            <div style={{ marginTop: 10, display: "grid", gap: 6 }}>
+              {ablagen.map((a) => (
+                <div key={a.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
+                  <span style={{ minWidth: 150 }}>{new Date(a.erstellt_am).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}</span>
+                  <span style={{ fontWeight: 700 }}>{ABLAGE_ANLASS_TEXT[a.anlass as keyof typeof ABLAGE_ANLASS_TEXT] || a.anlass}</span>
+                  {a.empfaenger && <span style={{ color: C.textDim }}>an {a.empfaenger}</span>}
+                  <span style={{ color: C.textDim }}>{a.datei_typ === "application/pdf" ? "PDF" : "XML"} · Prüfsumme {pruefsummeKurz(a.datei_hash)}</span>
+                  <button onClick={() => ablageOeffnen(a.id, a.datei_name || "Rechnung")} style={btnKlein}>Öffnen</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ZAHLUNGSSTATUS (automatisch aus erfassten Zahlungen) */}
       <div style={{ marginBottom: 20, marginTop: 20 }}>
@@ -1171,22 +1273,22 @@ export default function RechnungDetail() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
             <div>
               <label style={labelStyle}>Titel / Betreff</label>
-              <input value={titel} onChange={(e) => aendern(setTitel, e.target.value)} placeholder="z. B. Leistungen Mai" style={inputStyle} />
+              <input value={titel} disabled={festgeschrieben} onChange={(e) => aendern(setTitel, e.target.value)} placeholder="z. B. Leistungen Mai" style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>Rechnungsdatum</label>
-              <input type="date" value={rechnungsdatum} onChange={(e) => aendern(setRechnungsdatum, e.target.value)} style={inputStyle} />
+              <input type="date" value={rechnungsdatum} disabled={festgeschrieben} onChange={(e) => aendern(setRechnungsdatum, e.target.value)} style={inputStyle} />
             </div>
             <NurVoll>
               <div>
                 <label style={labelStyle}>Leistungsdatum</label>
-                <input type="date" value={leistungsdatum} onChange={(e) => aendern(setLeistungsdatum, e.target.value)} style={inputStyle} />
+                <input type="date" value={leistungsdatum} disabled={festgeschrieben} onChange={(e) => aendern(setLeistungsdatum, e.target.value)} style={inputStyle} />
               </div>
             </NurVoll>
             <NurVoll>
               <div>
                 <label style={labelStyle}>Zahlungsziel (Tage)</label>
-                <input value={zahlungszielTage} onChange={(e) => aendern(setZahlungszielTage, e.target.value)} inputMode="numeric" style={inputStyle} />
+                <input value={zahlungszielTage} disabled={festgeschrieben} onChange={(e) => aendern(setZahlungszielTage, e.target.value)} inputMode="numeric" style={inputStyle} />
               </div>
             </NurVoll>
             <div>
@@ -1214,6 +1316,7 @@ export default function RechnungDetail() {
               <input
                 type="checkbox"
                 checked={kleinunternehmer}
+                disabled={festgeschrieben}
                 onChange={(e) => aendern(setKleinunternehmer, e.target.checked)}
                 style={{ width: 18, height: 18, accentColor: C.gold, cursor: "pointer" }}
               />
@@ -1263,7 +1366,9 @@ export default function RechnungDetail() {
 
           {gesperrt && (
             <p style={{ color: C.warn, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "0 0 14px" }}>
-              {status === "bezahlt"
+              {festgeschrieben
+                ? "Festgeschrieben (verschickt) – schreibgeschützt. Für Änderungen bitte stornieren und neu erstellen."
+                : status === "bezahlt"
                 ? "Diese Rechnung ist als bezahlt markiert und schreibgeschützt. Für Änderungen bitte stornieren und neu erstellen."
                 : "Stornierte Rechnung – schreibgeschützt. Zum Bearbeiten reaktivieren."}
             </p>
