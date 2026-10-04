@@ -13,6 +13,7 @@
 // die Summenformel `rechne` sind unverändert.
 // ============================================================
 
+import { erfasserText } from '@/lib/erfasser';
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { nichtsGeschrieben, NICHT_GELOESCHT } from '@/lib/speichernPruefen';
@@ -44,6 +45,7 @@ type Angebot = {
   id: string; angebotsnummer: string | null; titel: string; kunde_name: string | null;
   status: string; gueltig_bis: string | null; brutto_summe: number; token: string; rechnung_id: string | null;
   kunde_email: string | null; kontakt_id: string | null;
+  erstellt_von_name?: string | null; erstellt_am?: string | null; geaendert_am?: string | null;
 };
 
 /** G4: Angenommene oder abgerechnete Angebote werden nicht gelöscht. */
@@ -103,7 +105,7 @@ export default function AngebotePage() {
     // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Angebote.
     const sid = konkreterStandort(leseStandortCookie());
     let q = supabase.from('angebote')
-      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, kunde_email, kontakt_id');
+      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, kunde_email, kontakt_id, erstellt_von_name, erstellt_am, geaendert_am');
     if (sid) q = q.or(standortOrFilter(sid));
     q = zeigeArchiv ? q.eq('status', ARCHIV) : q.neq('status', ARCHIV);
     const { data } = await q.order('erstellt_am', { ascending: false }).limit(zeigeArchiv ? 500 : 1000);
@@ -348,6 +350,7 @@ export default function AngebotePage() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700 }}>{a.titel} <span style={{ color: C.textDim, fontWeight: 400 }}>· {a.kunde_name || '—'}</span></div>
                 <div style={{ color: C.textDim, fontSize: 13 }}>{eur(a.brutto_summe)} brutto{a.gueltig_bis ? ` · gültig bis ${a.gueltig_bis.split('-').reverse().join('.')}` : ''}</div>
+                {erfasserText(a) && <div style={{ color: C.textDim, fontSize: 12 }}>{erfasserText(a)}</div>}
               </div>
               <span style={{ ...styles.badge, color: STATUS_FARBE[a.status] || C.textDim, borderColor: STATUS_FARBE[a.status] || C.border }}>
                 {a.status === ARCHIV ? `🗄 Archiv (Altsystem)${a.angebotsnummer ? ` · ${a.angebotsnummer}` : ''}` : a.status}

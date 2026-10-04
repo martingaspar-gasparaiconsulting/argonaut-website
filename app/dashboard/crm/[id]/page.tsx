@@ -1,5 +1,6 @@
 "use client";
 
+import { erfasserName, tagDe } from '@/lib/erfasser';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
@@ -1574,6 +1575,8 @@ export default function CrmDetailPage() {
                   wert={datumLang(kontakt.naechster_kontakt_am)}
                 />
                 <Info label="Angelegt am" wert={datumLang(kontakt.created_at)} />
+                {erfasserName(kontakt) && <Info label="Angelegt von" wert={erfasserName(kontakt) as string} />}
+                {tagDe((kontakt as { geaendert_am?: unknown }).geaendert_am) && <Info label="Zuletzt geändert" wert={tagDe((kontakt as { geaendert_am?: unknown }).geaendert_am)} />}
               </div>
               {kontakt.firma_id && (
                 <div style={{ marginTop: 16 }}>

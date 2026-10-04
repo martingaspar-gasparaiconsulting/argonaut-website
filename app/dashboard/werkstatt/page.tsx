@@ -776,10 +776,11 @@ export default function WerkstattPage() {
 
     setBuchBusy(true); setFehler(null);
     try {
-      // ANDOCKPUNKT: 'buchungen' ist KEINE werkstatt_*-Tabelle und hat (Stand
-      // 13.09.2026) keine Mitarbeiter-Regel. Deshalb bleibt hier bewusst die
-      // eigene Kennung stehen. Wird 'buchungen' spaeter fuer Mitarbeiter
-      // geoeffnet, gehoert hier ebenfalls 'besitzer ?? uid' hin.
+      // Paket 200 (E7): Buehne buchen und stornieren duerfen Mitarbeiter mit
+      // Schreibrecht „Buchungen" ODER „Werkstatt" (SQL p200, nur Buchungen
+      // mit Werkstatt-Auftrag). owner_user_id setzt der Trigger p165_besitzer
+      // beim Mitarbeiter auf den Betrieb — die eigene Kennung hier ist nur der
+      // Wert fuer den Chef.
       const { error } = await supabase.from('buchungen').insert({
         owner_user_id: uid,
         ressource_id: buchForm.ressource_id,

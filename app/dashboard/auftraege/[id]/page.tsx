@@ -1,5 +1,6 @@
 "use client";
 
+import { erfasserText } from '@/lib/erfasser';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
@@ -647,6 +648,9 @@ export default function AuftragDetail() {
             >
               {titel || "Auftrag"}
             </h1>
+            {erfasserText(auftrag) && (
+              <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.06vw, 16px)', marginTop: 4 }}>{erfasserText(auftrag)}</div>
+            )}
           </div>
 
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>

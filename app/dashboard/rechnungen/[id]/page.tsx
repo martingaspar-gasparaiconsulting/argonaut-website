@@ -1,5 +1,6 @@
 "use client";
 
+import { erfasserName } from '@/lib/erfasser';
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
@@ -322,7 +323,11 @@ export default function RechnungDetail() {
 
     // Wer hat die Rechnung angelegt? Nur anzeigen, wenn es nicht der Betrieb selbst war.
     setErsteller(null);
-    if (r.erstellt_von && r.erstellt_von !== r.owner_user_id) {
+    // Paket 200 (E8): Seit Paket 162 steht der Name als Schnappschuss an der Rechnung.
+    const gespeichert = erfasserName(r);
+    if (gespeichert) {
+      setErsteller(gespeichert);
+    } else if (r.erstellt_von && r.erstellt_von !== r.owner_user_id) {
       const { data: wer } = await supabase
         .from("mitarbeiter")
         .select("vorname, nachname")
