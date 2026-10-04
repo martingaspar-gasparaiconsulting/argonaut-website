@@ -11,6 +11,9 @@
 // Logik: lib/kundenVorgaenge.ts (getestet). SQL: supabase-sql/ps3-kunden-vorgaenge.sql.
 // Unterpfad von /dashboard/shop (erbt dessen Freigabe).
 // Pfad: app/dashboard/shop/retouren/page.tsx
+// Paket 199 (D6): Online-Widerrufe aus dem Shop (shop_widerrufe) oben als
+// eigene Liste — „Als Retoure übernehmen" befüllt das Formular vor, „Erledigt"
+// vermerkt Zeitpunkt + Person (SQL p199 hält die Angaben des Kunden fest).
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -23,6 +26,7 @@ import {
   type RetourenArt, type RetourenStatus, type Zustand, type RetourePosition,
 } from '@/lib/kundenVorgaenge';
 import { leseZahl } from '@/lib/zahlen';
+import { type ShopWiderruf, widerrufZahlen, widerrufZuRetoure, sortiereWiderrufe, istErledigt, tagBerlin } from '@/lib/shopWiderrufe';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -70,15 +74,24 @@ export default function RetourenSeite() {
   const [filter, setFilter] = useState<'offen' | 'alle'>('offen');
   const [firma, setFirma] = useState('');
   const [busy, setBusy] = useState(false);
+  const [widerrufe, setWiderrufe] = useState<ShopWiderruf[]>([]);
+  const [wAlle, setWAlle] = useState(false);
+  const [wBusy, setWBusy] = useState<string | null>(null);
+
+  const ladeWiderrufe = useCallback(async () => {
+    const w = await supabase.from('shop_widerrufe').select('id, name, anschrift, email, bestellung, datum, ware, eingang_am, erledigt_am').order('eingang_am', { ascending: false }).limit(500);
+    setWiderrufe(w.error ? [] : ((w.data as ShopWiderruf[]) ?? []));
+  }, []);
 
   const laden = useCallback(async () => {
     setFehler(null);
+    void ladeWiderrufe();
     const r = await supabase.from('shop_retoure').select('*').order('erstellt_am', { ascending: false });
     if (r.error) { if (/shop_retoure/.test(r.error.message)) setSqlFehlt(true); else setFehler('Laden fehlgeschlagen: ' + r.error.message); return; }
     setListe(((r.data as Retoure[]) ?? []).map((x) => ({ ...x, positionen: x.positionen ?? [] })));
     const b = await supabase.from('shop_bestellungen').select('id, extern_id, besteller, email, positionen, brutto_summe, bestell_am, erstellt_am').neq('status', 'abgeschlossen').order('erstellt_am', { ascending: false }).limit(500); // Paket 144: Archiv aus dem Altsystem nicht in der Auswahl
     setBestellungen((b.data as Bestellung[]) ?? []);
-  }, []);
+  }, [ladeWiderrufe]);
 
   useEffect(() => {
     laden();
@@ -136,6 +149,30 @@ export default function RetourenSeite() {
     finally { setBusy(false); }
   }
 
+  function widerrufUebernehmen(w: ShopWiderruf) {
+    const v = widerrufZuRetoure(w);
+    const passend = bestellungen.find((b) => v.bestellnummer && (b.extern_id ?? '').trim().toLowerCase() === v.bestellnummer.toLowerCase());
+    if (passend) bestellungWaehlen(passend.id);
+    setNeu((n) => ({
+      ...n, bestellung_id: passend?.id ?? n.bestellung_id, art: 'widerruf',
+      kunde_name: v.kunde_name || n.kunde_name, email: v.email || n.email, bestellnummer: v.bestellnummer || n.bestellnummer,
+      widerruf_am: v.widerruf_am || n.widerruf_am,
+    }));
+    setOk(`Online-Widerruf von ${v.kunde_name || 'Kunde'} ins Formular übernommen — bitte Positionen prüfen und „Retoure anlegen" klicken.`);
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function widerrufErledigt(w: ShopWiderruf, erledigt: boolean) {
+    setFehler(null); setWBusy(w.id);
+    const { error } = await supabase.from('shop_widerrufe').update({ erledigt_am: erledigt ? new Date().toISOString() : null }).eq('id', w.id);
+    setWBusy(null);
+    if (error) { setFehler('Speichern fehlgeschlagen: ' + error.message); return; }
+    await ladeWiderrufe();
+  }
+
+  const wZahlen = widerrufZahlen(widerrufe);
+  const wSichtbar = sortiereWiderrufe(widerrufe).filter((w) => wAlle || !istErledigt(w));
+
   const wf = neu.art === 'widerruf' ? pruefeWiderruf({ erhalten_am: neu.erhalten_am || null, widerruf_am: neu.widerruf_am || null, belehrung_ok: neu.belehrung_ok }) : null;
 
   return (
@@ -155,6 +192,34 @@ export default function RetourenSeite() {
               <div key={t} style={{ ...karte, marginBottom: 0 }}><div style={{ color: C.textDim, fontSize: 13 }}>{t}</div><div style={{ fontSize: 24, fontWeight: 800, color: f }}>{w}</div></div>
             ))}
           </div>
+
+          {widerrufe.length > 0 && (
+            <div style={{ ...karte, borderColor: wZahlen.offen ? C.warn : C.border }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <h2 style={{ margin: 0, fontSize: 18 }}>📨 Online-Widerrufe aus dem Shop {wZahlen.offen > 0 && <span style={{ color: C.warn }}>· {wZahlen.offen} offen</span>}</h2>
+                <button style={knopf} onClick={() => setWAlle(!wAlle)}>{wAlle ? 'Nur offene' : `Alle (${widerrufe.length})`}</button>
+              </div>
+              <div style={{ color: C.textDim, fontSize: 13, margin: '4px 0 8px' }}>Über den Widerrufs-Knopf Ihres Shops eingegangen. Der Kunde hat automatisch eine Eingangsbestätigung bekommen; storniert wird nichts von selbst.</div>
+              {wSichtbar.length === 0 && <div style={{ color: C.textDim }}>Keine offenen Widerrufe.</div>}
+              {wSichtbar.map((w) => {
+                const erl = istErledigt(w);
+                return (
+                  <div key={w.id} style={{ borderTop: `1px solid ${C.border}`, padding: '8px 0', display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', opacity: erl ? 0.6 : 1 }}>
+                    <div style={{ flex: '1 1 320px' }}>
+                      <div style={{ fontWeight: 700 }}>{w.name || 'ohne Namen'} {w.bestellung ? <span style={{ color: C.textDim, fontWeight: 400 }}>· Bestellung {w.bestellung}</span> : null}</div>
+                      <div style={{ color: C.textDim, fontSize: 13 }}>Eingang {datumDe(tagBerlin(w.eingang_am))}{w.email ? ` · ${w.email}` : ''}{w.datum ? ` · bestellt/erhalten: ${w.datum}` : ''}{erl ? ` · erledigt ${datumDe(tagBerlin(w.erledigt_am))}` : ''}</div>
+                      {w.ware && <div style={{ fontSize: 13.5, marginTop: 2, whiteSpace: 'pre-wrap' }}>{w.ware}</div>}
+                      {w.anschrift && <div style={{ color: C.textDim, fontSize: 12.5, marginTop: 2 }}>{w.anschrift}</div>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      {!erl && <button style={knopf} onClick={() => widerrufUebernehmen(w)}>↩️ Als Retoure übernehmen</button>}
+                      <button style={knopf} disabled={wBusy === w.id} onClick={() => widerrufErledigt(w, !erl)}>{erl ? 'Wieder öffnen' : '✓ Erledigt'}</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <div style={karte}>
             <h2 style={{ margin: '0 0 6px', fontSize: 18 }}>Neue Retoure erfassen</h2>

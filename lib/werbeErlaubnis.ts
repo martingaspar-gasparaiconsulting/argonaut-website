@@ -37,7 +37,7 @@ export const DOI_QUELLEN: readonly string[] = ['opt-in', 'website', 'landingpage
 
 export type SperrZeile = { email?: unknown; am?: unknown };
 export type KontaktZeile = { email?: unknown; werbe_einwilligung?: unknown; werbe_widerspruch_am?: unknown };
-export type AboZeile = { email?: unknown; status?: unknown; bestaetigt_am?: unknown; abgemeldet_am?: unknown; quelle?: unknown };
+export type AboZeile = { email?: unknown; status?: unknown; bestaetigt_am?: unknown; abgemeldet_am?: unknown; quelle?: unknown; doi_gesendet_am?: unknown };
 
 export type WerbeFakten = {
   sperren: SperrZeile[];
@@ -105,6 +105,22 @@ export function aboBestaetigtAm(a: AboZeile | null | undefined): number | null {
   return b;
 }
 
+/**
+ * Paket 199 (D1): von Hand eingetragene Adresse, die die nachgeholte
+ * Bestätigungs-Mail angeklickt hat. Gilt nur, wenn die Bestätigung NACH dem
+ * Versand dieser Mail liegt (doi_gesendet_am setzt nur der Server, SQL p199).
+ */
+export function doiNachgeholtAm(a: AboZeile | null | undefined): number | null {
+  if (!a) return null;
+  if (String(a.status ?? '').trim().toLowerCase() !== 'aktiv') return null;
+  const gesendet = zeit(a.doi_gesendet_am);
+  const b = zeit(a.bestaetigt_am);
+  if (gesendet === null || b === null || b <= gesendet) return null;
+  const ab = zeit(a.abgemeldet_am);
+  if (ab !== null && b <= ab) return null;
+  return b;
+}
+
 type Sperre = { am: number | null };
 
 /**
@@ -131,7 +147,7 @@ export function entscheideWerbung(emailRoh: unknown, fakten: WerbeFakten | null 
     if (!gleich(a?.email)) continue;
     const st = String(a?.status ?? '').trim().toLowerCase();
     if (st === 'abgemeldet' || st === 'widersprochen') sperren.push({ am: zeit(a?.abgemeldet_am) });
-    const b = aboBestaetigtAm(a);
+    const b = aboBestaetigtAm(a) ?? doiNachgeholtAm(a);
     if (b !== null) zustimmungen.push(b);
   }
   const kanal = zeit(opt.kanalBestaetigtAm);

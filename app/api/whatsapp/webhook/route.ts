@@ -34,7 +34,8 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { entschluessele } from '@/lib/crypto';
 import { signaturGueltig, pruefeEinrichtung, leseEingang } from '@/lib/whatsappEingang';
 import { telefonNormalisieren, einwilligungsText } from '@/lib/whatsapp';
-import { eingangAuswerten, bestaetigungPasst, bestaetigterEinwilligungsText } from '@/lib/whatsappBestaetigung';
+import { eingangAuswerten, bestaetigungPasst, bestaetigterEinwilligungsText, dankeNachBestaetigung } from '@/lib/whatsappBestaetigung';
+import { versandEndpoint, versandHeaders, baueTextPayload, sendeEineNachricht, type WaAnbieter } from '@/lib/whatsappVersand';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -111,10 +112,13 @@ export async function POST(req: Request) {
     // Zu welchem Betrieb gehört diese Nummer?
     const { data: zug } = await db
       .from('whatsapp_zugang')
-      .select('owner_user_id, app_secret_verschluesselt')
+      .select('owner_user_id, app_secret_verschluesselt, token_verschluesselt, verbunden, meta_phone_number_id')
       .eq('meta_phone_number_id', phoneNumberId)
       .maybeSingle();
-    const z = zug as { owner_user_id?: string; app_secret_verschluesselt?: string | null } | null;
+    const z = zug as {
+      owner_user_id?: string; app_secret_verschluesselt?: string | null;
+      token_verschluesselt?: string | null; verbunden?: boolean | null; meta_phone_number_id?: string | null;
+    } | null;
     if (!z?.owner_user_id) {
       console.warn('whatsapp/webhook: unbekannte phone_number_id', phoneNumberId);
       return still();
@@ -210,9 +214,9 @@ export async function POST(req: Request) {
         continue;
       }
       if (absicht.art === 'bestaetigung' && bestaetigungPasst(k, absicht.code)) {
-        const { data: prof } = await db.from('profiles').select('firma_name').eq('id', ownerId).maybeSingle();
+        const { data: prof } = await db.from('profiles').select('firma_name, whatsapp_anbieter').eq('id', ownerId).maybeSingle();
         const firma = ((prof as { firma_name?: string | null } | null)?.firma_name || '').trim();
-        const { error: e3 } = await db
+        const { data: aktiviert, error: e3 } = await db
           .from('whatsapp_kontakt')
           .update({
             status: 'aktiv',
@@ -225,8 +229,15 @@ export async function POST(req: Request) {
           })
           .eq('id', kontaktId)
           .eq('owner_user_id', ownerId)
-          .neq('status', 'aktiv');
+          .neq('status', 'aktiv')
+          .select('id');
         if (e3) console.error('whatsapp/webhook Bestaetigen:', e3.message);
+        // Paket 199 (D3): „Danke, angemeldet" — nur wenn GERADE aktiviert
+        // (Meta stellt doppelt zu; die zweite Zustellung aktiviert nichts mehr).
+        if (!e3 && Array.isArray(aktiviert) && aktiviert.length > 0) {
+          const anbieter = ((prof as { whatsapp_anbieter?: string | null } | null)?.whatsapp_anbieter || 'meta') as WaAnbieter;
+          await dankeSenden(db, ownerId, kontaktId, telefon, firma, anbieter, z);
+        }
       }
     }
   } catch (e) {
@@ -234,6 +245,44 @@ export async function POST(req: Request) {
   }
 
   return still();
+}
+
+/**
+ * Paket 199 (D3): Danke-Nachricht nach der Bestätigung. Wirft nie — eine
+ * fehlende Antwort ändert nichts an der Anmeldung. Ohne verbundenen Zugang
+ * (Token) bleibt es still. Die Antwort steht danach im Gesprächsverlauf.
+ */
+async function dankeSenden(
+  db: ReturnType<typeof createAdminClient>,
+  ownerId: string,
+  kontaktId: string,
+  telefon: string,
+  firma: string,
+  anbieter: WaAnbieter,
+  z: { token_verschluesselt?: string | null; verbunden?: boolean | null; meta_phone_number_id?: string | null },
+): Promise<void> {
+  try {
+    if (!z.verbunden || !z.token_verschluesselt) return;
+    let token = '';
+    try { token = entschluessele(z.token_verschluesselt); } catch { token = ''; }
+    if (!token) return;
+    const text = dankeNachBestaetigung(firma);
+    const r = await sendeEineNachricht(anbieter, versandEndpoint(anbieter, z.meta_phone_number_id), versandHeaders(anbieter, token), baueTextPayload(telefon, text));
+    await db.from('whatsapp_nachricht').insert({
+      owner_user_id: ownerId,
+      kontakt_id: kontaktId,
+      telefon,
+      richtung: 'aus',
+      art: 'text',
+      text,
+      provider_id: r.id,
+      status: r.ok ? 'gesendet' : 'fehler',
+      empfangen_am: new Date().toISOString(),
+    });
+    if (!r.ok) console.warn('whatsapp/webhook Danke:', r.fehler);
+  } catch (e) {
+    console.error('whatsapp/webhook Danke:', e instanceof Error ? e.message : e);
+  }
 }
 
 /** Kein Preflight nötig — Meta ruft serverseitig auf. Nur der Vollständigkeit. */

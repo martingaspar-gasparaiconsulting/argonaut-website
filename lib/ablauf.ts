@@ -42,8 +42,12 @@ export type Ausloeser =
   | { art: 'ereignis'; ereignis: string; filter?: BedingungsGruppe | null }
   /** Von außen (n8n, Formular, anderes Programm) — mit geheimem Schlüssel. */
   | { art: 'webhook' }
-  /** Per Knopf in einem Modul. Paket 192: mitarbeiter = auch Mitarbeiter mit Schreibrecht dürfen drücken. */
-  | { art: 'knopf'; modul?: string; mitarbeiter?: boolean };
+  /**
+   * Per Knopf in einem Modul. Paket 192: mitarbeiter = auch Mitarbeiter mit Schreibrecht dürfen drücken.
+   * Paket 199 (C9): betriebspost = der Knopf verschickt Betriebspost (Unterlagen, Terminbestätigung …),
+   * KEINE Werbung — dann ohne Werbe-Einwilligung. Nur bei Knöpfen auf einer Modulseite (ein Vorgang je Druck).
+   */
+  | { art: 'knopf'; modul?: string; mitarbeiter?: boolean; betriebspost?: boolean };
 
 export type SchrittAktion = { id: string; typ: 'aktion'; aktion: string; config: Record<string, unknown> };
 export type SchrittWarten = { id: string; typ: 'warten'; tage?: number; stunden?: number };
@@ -389,9 +393,23 @@ export type AblaufPruefung = { fehler: string[]; hinweise: string[]; aktivierbar
 export function ausloeserIstWerbung(a: Ausloeser): boolean {
   if (a.art === 'datum') return istWerbung(a.trigger);
   if (a.art === 'ereignis') return EREIGNISSE.find((e) => e.key === a.ereignis)?.werbung ?? true;
-  if (a.art === 'knopf' && a.modul) return knopfModul(a.modul)?.werbung ?? true;
+  if (a.art === 'knopf' && a.modul) {
+    const def = knopfModul(a.modul);
+    if (!def) return true;
+    // Paket 199 (C9): Betriebspost nur bei einem bekannten Modul-Knopf.
+    if (def.werbung && a.betriebspost === true) return false;
+    return def.werbung;
+  }
   return true;
 }
+
+/** Paket 199 (C9): Kann bei diesem Knopf überhaupt „Betriebspost" gewählt werden? */
+export function betriebspostWaehlbar(a: Ausloeser | null | undefined): boolean {
+  return !!a && a.art === 'knopf' && !!a.modul && knopfModul(a.modul)?.werbung === true;
+}
+
+/** Text für Editor und Prüfung. */
+export const BETRIEBSPOST_TEXT = 'Betriebspost (Unterlagen, Terminbestätigung, Rückfrage zum Auftrag) — keine Werbung. Geht dann auch an Kunden ohne Werbe-Einwilligung, nur einzeln per Knopf.';
 
 export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
   const fehler: string[] = [];
@@ -419,6 +437,9 @@ export function pruefeAblauf(ablauf: Ablauf): AblaufPruefung {
     if (a.art === 'knopf' && a.modul && !knopfModul(a.modul)) fehler.push('Knopf: Dieses Modul hat (noch) keinen Ablauf-Knopf.');
     // Paket 192: Mitarbeiter-Knopf nur auf einer Modulseite (mit Vorgang).
     if (a.art === 'knopf' && a.mitarbeiter === true && !a.modul) fehler.push('Knopf: Mitarbeiter dürfen nur Knöpfe auf einer Modulseite starten, nicht auf der Seite Abläufe.');
+    // Paket 199 (C9): Betriebspost nur bei Modul-Knöpfen, die sonst als Werbung gelten.
+    if (a.art === 'knopf' && a.betriebspost === true && !betriebspostWaehlbar(a)) fehler.push('Knopf: „Betriebspost" gibt es nur für Knöpfe auf einer Kundenseite.');
+    if (a.art === 'knopf' && a.betriebspost === true && betriebspostWaehlbar(a)) hinweise.push('Betriebspost: Mails aus diesem Knopf gehen ohne Werbe-Einwilligung und ohne Abmeldelink. Bitte nur Sachliches verschicken (Unterlagen, Termine, Rückfragen) — Angebote, Aktionen oder Rabatte sind Werbung.');
     if (a.art === 'knopf' && a.mitarbeiter === true && a.modul) hinweise.push('Auch Mitarbeiter mit Schreibrecht für dieses Modul können den Knopf drücken. Mails gehen im Namen des Betriebs; die Geschäftsleitung sieht jeden Lauf im Protokoll.');
     if ((a.art === 'datum' || a.art === 'ereignis') && zaehleBedingungen(a.filter) > GRENZEN.bedingungen) fehler.push(`Höchstens ${GRENZEN.bedingungen} Bedingungen.`);
   }
@@ -580,7 +601,7 @@ export function ausloeserText(a: Ausloeser): string {
     return `${r}${wann}${a.uhrzeit ? ` um ${a.uhrzeit} Uhr` : ''}`;
   }
   if (a.art === 'webhook') return 'Von außen (Webhook)';
-  return a.modul ? `Per Knopf auf der Seite ${knopfModul(a.modul)?.einzahl ?? a.modul}` : 'Per Knopf auf der Seite Abläufe';
+  return a.modul ? `Per Knopf auf der Seite ${knopfModul(a.modul)?.einzahl ?? a.modul}${betriebspostWaehlbar(a) && a.betriebspost === true ? ' (Betriebspost)' : ''}` : 'Per Knopf auf der Seite Abläufe';
 }
 
 export function schrittText(s: Schritt): string {

@@ -6,6 +6,8 @@ import { emailNormalisieren, istEmailGueltig, zaehleAbonnenten } from '@/lib/new
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { quoten, messHinweis } from '@/lib/mailMessung';
+import { DOI_QUELLEN, aboBestaetigtAm } from '@/lib/werbeErlaubnis';
+import { doiNachgeholtAm, doiNachholenErlaubt, angabeAmEintrag, DOI_GRUND_TEXT, DOI_MAX_MAILS, datumDe, heuteIsoBerlin } from '@/lib/doiNachholen';
 
 const MODUL = 'newsletter_abonnenten';
 
@@ -13,6 +15,10 @@ const MODUL = 'newsletter_abonnenten';
 // ARGONAUT OS · MARKETING · Newsletter (Punkt 29a + 29b)
 // Abonnenten-Liste + Versand über Resend + Versand-Historie.
 // Öffentliche Abmeldung: /api/newsletter/abmelden?token=…
+// Paket 199 (D1): Von Hand eingetragene Adressen bekommen per Knopf eine
+// Bestätigungs-Mail — nur mit Quelle + Datum der Einwilligung
+// (/api/newsletter/doi-nachholen). „Reaktivieren" ist entfallen: wer sich
+// abgemeldet hat, meldet sich nur selbst wieder an (Anmeldeseite).
 // ============================================================
 
 const C = {
@@ -39,7 +45,20 @@ type Abonnent = {
   quelle: string | null;
   angemeldet_am: string;
   abgemeldet_am: string | null;
+  bestaetigt_am?: string | null;
+  einwilligung_quelle?: string | null;
+  einwilligung_am?: string | null;
+  doi_gesendet_am?: string | null;
+  doi_anzahl?: number | null;
 };
+
+/** Paket 199: Wie steht es um die Bestätigung dieser Adresse? */
+function bestaetigungsStand(a: Abonnent): 'bestaetigt' | 'eigene_strecke' | 'von_hand' | 'abgemeldet' {
+  if (a.status === 'abgemeldet' || a.abgemeldet_am) return 'abgemeldet';
+  if (aboBestaetigtAm(a) !== null || doiNachgeholtAm(a) !== null) return 'bestaetigt';
+  if (DOI_QUELLEN.includes(String(a.quelle ?? '').trim().toLowerCase())) return 'eigene_strecke';
+  return 'von_hand';
+}
 
 type Versand = {
   id: string;
@@ -76,6 +95,16 @@ export default function NewsletterAbonnenten() {
   const [fName, setFName] = useState('');
   const [speichern, setSpeichern] = useState(false);
   const [hinweis, setHinweis] = useState<string | null>(null);
+  const [fDoi, setFDoi] = useState(false);
+  const [fQuelle, setFQuelle] = useState('');
+  const [fDatum, setFDatum] = useState('');
+
+  // Paket 199: Bestätigungs-Mail für einen Eintrag der Liste
+  const [doiOffen, setDoiOffen] = useState<string | null>(null);
+  const [doiQuelle, setDoiQuelle] = useState('');
+  const [doiDatum, setDoiDatum] = useState('');
+  const [doiBusy, setDoiBusy] = useState(false);
+  const [doiMeldung, setDoiMeldung] = useState<{ id: string; art: 'ok' | 'fehler'; text: string } | null>(null);
 
   const [betreff, setBetreff] = useState('');
   const [inhalt, setInhalt] = useState('');
@@ -187,11 +216,45 @@ export default function NewsletterAbonnenten() {
 
   const kpi = useMemo(() => zaehleAbonnenten(liste), [liste]);
 
+  async function doiSenden(id: string, quelle: string, datum: string): Promise<{ ok: boolean; text: string }> {
+    try {
+      const res = await fetch('/api/newsletter/doi-nachholen', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, einwilligung_quelle: quelle, einwilligung_am: datum }),
+      });
+      const j = await res.json().catch(() => null);
+      if (!res.ok || !j?.ok) return { ok: false, text: j?.error || 'Senden fehlgeschlagen.' };
+      return { ok: true, text: j.hinweis || 'Bestätigungs-Mail gesendet.' };
+    } catch {
+      return { ok: false, text: 'Senden fehlgeschlagen.' };
+    }
+  }
+
+  function doiOeffnen(a: Abonnent) {
+    setDoiMeldung(null);
+    setDoiOffen(doiOffen === a.id ? null : a.id);
+    setDoiQuelle(a.einwilligung_quelle ?? '');
+    setDoiDatum((a.einwilligung_am ?? '').slice(0, 10));
+  }
+
+  async function doiAusListe(a: Abonnent) {
+    setDoiBusy(true);
+    const r = await doiSenden(a.id, doiQuelle, doiDatum);
+    setDoiBusy(false);
+    setDoiMeldung({ id: a.id, art: r.ok ? 'ok' : 'fehler', text: r.text });
+    if (r.ok) { setDoiOffen(null); laden(); }
+  }
+
   async function hinzufuegen() {
     setHinweis(null);
     const email = emailNormalisieren(fEmail);
     if (!istEmailGueltig(email)) {
       setHinweis('Bitte eine gültige E-Mail-Adresse eingeben.');
+      return;
+    }
+    if (fDoi && (fQuelle.trim().length < 5 || !fDatum)) {
+      setHinweis('Für die Bestätigungs-Mail bitte angeben, wo und wann die Person eingewilligt hat.');
       return;
     }
     setSpeichern(true);
@@ -210,19 +273,23 @@ export default function NewsletterAbonnenten() {
       return;
     }
     try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
+    if (fDoi) {
+      const r = await doiSenden((neu as { id: string }).id, fQuelle, fDatum);
+      setHinweis(r.ok ? '✓ Eingetragen. ' + r.text : 'Eingetragen, aber: ' + r.text);
+    }
     setFEmail('');
     setFName('');
     setNmExtra({});
+    setFDoi(false);
+    setFQuelle('');
+    setFDatum('');
     laden();
   }
 
-  async function statusSetzen(a: Abonnent, neu: 'aktiv' | 'abgemeldet') {
+  async function statusSetzen(a: Abonnent, neu: 'abgemeldet') {
     const { error } = await supabase
       .from('newsletter_abonnenten')
-      .update({
-        status: neu,
-        abgemeldet_am: neu === 'abgemeldet' ? new Date().toISOString() : null,
-      })
+      .update({ status: neu, abgemeldet_am: new Date().toISOString() })
       .eq('id', a.id);
     if (error) {
       alert('Fehler: ' + error.message);
@@ -428,8 +495,10 @@ export default function NewsletterAbonnenten() {
             Abonnent hinzufügen
           </div>
           <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '0 0 14px', fontSize: 'clamp(12px, 1vw, 16px)', lineHeight: 1.5 }}>
-            Von Hand eingetragene Adressen erhalten den Newsletter erst, wenn am Kontakt eine Einwilligung hinterlegt ist
-            oder sich die Person über Ihre Anmeldeseite bestätigt angemeldet hat.
+            Von Hand eingetragene Adressen erhalten den Newsletter erst, wenn am Kontakt eine Einwilligung hinterlegt ist,
+            sich die Person über Ihre Anmeldeseite angemeldet hat oder Ihre Bestätigungs-Mail angeklickt hat.
+            Die Bestätigungs-Mail dürfen Sie nur schicken, wenn die Person Ihnen ihre Adresse selbst für Informationen gegeben hat —
+            dafür tragen Sie ein, wo und wann.
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: '2 1 240px' }}>
@@ -449,8 +518,24 @@ export default function NewsletterAbonnenten() {
               {speichern ? 'Speichere…' : '+ Hinzufügen'}
             </button>
           </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', margin: '14px 0 0' }}>
+            <input type="checkbox" checked={fDoi} onChange={(e) => setFDoi(e.target.checked)} style={{ width: 18, height: 18, accentColor: C.cyan }} />
+            <span style={{ fontFamily: 'DM Sans, sans-serif', color: '#fff', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Gleich eine Bestätigungs-Mail senden</span>
+          </label>
+          {fDoi && (
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 10 }}>
+              <div style={{ flex: '3 1 260px' }}>
+                <label style={labelStyle}>Wo hat die Person eingewilligt? *</label>
+                <input value={fQuelle} onChange={(e) => setFQuelle(e.target.value)} maxLength={160} placeholder="z. B. Visitenkarte Messe Stuttgart" style={inputStyle} />
+              </div>
+              <div style={{ flex: '1 1 160px' }}>
+                <label style={labelStyle}>Wann? *</label>
+                <input type="date" value={fDatum} max={heuteIsoBerlin()} onChange={(e) => setFDatum(e.target.value)} style={inputStyle} />
+              </div>
+            </div>
+          )}
           {hinweis && (
-            <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.warn, margin: '12px 0 0', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', color: hinweis.startsWith('✓') ? C.green : C.warn, margin: '12px 0 0', fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
               {hinweis}
             </p>
           )}
@@ -474,10 +559,14 @@ export default function NewsletterAbonnenten() {
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {liste.map((a) => {
-              const abgemeldet = a.status === 'abgemeldet';
+              const stand = bestaetigungsStand(a);
+              const abgemeldet = stand === 'abgemeldet';
               const unbest = a.status === 'unbestaetigt';
-              const badgeFarbe = abgemeldet ? C.textDim : unbest ? C.warn : C.green;
-              const badgeText = abgemeldet ? 'Abgemeldet' : unbest ? 'Unbestätigt' : 'Aktiv';
+              const vonHand = stand === 'von_hand' && !unbest;
+              const badgeFarbe = abgemeldet ? C.textDim : unbest || vonHand ? C.warn : C.green;
+              const badgeText = abgemeldet ? 'Abgemeldet' : unbest ? 'Unbestätigt' : vonHand ? 'Von Hand · ohne Bestätigung' : 'Aktiv';
+              const doiGrund = stand === 'von_hand' ? doiNachholenErlaubt(a, true) : null;
+              const angabeFest = angabeAmEintrag(a);
               return (
                 <div key={a.id} style={{ background: C.navy2, borderRadius: 12, padding: '14px 18px', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: 220 }}>
@@ -493,13 +582,47 @@ export default function NewsletterAbonnenten() {
                       {a.name && <span>{a.name}</span>}
                       <span>Quelle: {a.quelle ?? '—'}</span>
                       <span>Seit: {fmtDatum(a.angemeldet_am)}</span>
+                      {a.einwilligung_quelle && <span>Einwilligung: {a.einwilligung_quelle}{a.einwilligung_am ? ` (${datumDe(a.einwilligung_am)})` : ''}</span>}
+                      {a.doi_gesendet_am && stand !== 'bestaetigt' && <span>Bestätigung angefragt: {fmtDatum(a.doi_gesendet_am)} ({a.doi_anzahl ?? 1}/{DOI_MAX_MAILS})</span>}
                     </div>
+                    {doiOffen === a.id && (
+                      <div style={{ marginTop: 10, background: C.navy, borderRadius: 10, padding: '12px 14px', border: `1px solid ${C.cyan}` }}>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                          <div style={{ flex: '3 1 220px' }}>
+                            <label style={labelStyle}>Wo hat die Person eingewilligt? *</label>
+                            <input value={doiQuelle} disabled={angabeFest} onChange={(e) => setDoiQuelle(e.target.value)} maxLength={160} placeholder="z. B. Häkchen Auftragsformular" style={inputStyle} />
+                          </div>
+                          <div style={{ flex: '1 1 150px' }}>
+                            <label style={labelStyle}>Wann? *</label>
+                            <input type="date" value={doiDatum} disabled={angabeFest} max={heuteIsoBerlin()} onChange={(e) => setDoiDatum(e.target.value)} style={inputStyle} />
+                          </div>
+                          <button onClick={() => doiAusListe(a)} disabled={doiBusy} style={{ ...btnStyle(C.cyan), height: 44 }}>
+                            {doiBusy ? 'Sende…' : 'Bestätigungs-Mail senden'}
+                          </button>
+                        </div>
+                        <p style={{ fontFamily: 'DM Sans, sans-serif', color: C.textDim, margin: '8px 0 0', fontSize: 'clamp(12px, 1vw, 15px)', lineHeight: 1.5 }}>
+                          Die Mail enthält nur die Bitte um Bestätigung, keine Werbung. Höchstens {DOI_MAX_MAILS} Mails je Adresse, mindestens 7 Tage Abstand.
+                          {angabeFest ? ' Quelle und Datum sind als Nachweis gespeichert und lassen sich nicht mehr ändern.' : ' Quelle und Datum werden als Nachweis gespeichert.'}
+                        </p>
+                      </div>
+                    )}
+                    {doiMeldung?.id === a.id && (
+                      <p style={{ fontFamily: 'DM Sans, sans-serif', color: doiMeldung.art === 'ok' ? C.green : C.danger, margin: '8px 0 0', fontSize: 'clamp(13px, 1.13vw, 17px)' }}>{doiMeldung.text}</p>
+                    )}
                     <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />
                   </div>
-                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                    {abgemeldet ? (
-                      <button onClick={() => statusSetzen(a, 'aktiv')} style={btnStyle(C.green)}>Reaktivieren</button>
-                    ) : (
+                  <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                    {stand === 'von_hand' && (
+                      <button
+                        onClick={() => doiOeffnen(a)}
+                        disabled={doiGrund !== 'ok'}
+                        title={doiGrund && doiGrund !== 'ok' ? DOI_GRUND_TEXT[doiGrund] : 'Bestätigungs-Mail (Double-Opt-in) senden'}
+                        style={{ ...btnStyle(C.cyan), opacity: doiGrund === 'ok' ? 1 : 0.45, cursor: doiGrund === 'ok' ? 'pointer' : 'not-allowed' }}
+                      >
+                        ✉️ Bestätigung anfragen
+                      </button>
+                    )}
+                    {!abgemeldet && (
                       <button onClick={() => statusSetzen(a, 'abgemeldet')} style={btnStyle(C.warn)}>Abmelden</button>
                     )}
                     <button onClick={() => loeschen(a)} style={btnStyle(C.textDim)}>Löschen</button>

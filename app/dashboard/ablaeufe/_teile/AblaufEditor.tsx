@@ -16,6 +16,7 @@ import {
 } from '@/lib/automation';
 import {
   pruefeAblauf, ausloeserText, istGruppe, AUSLOESER_ARTEN, ablaufAktion, ausloeserHatVorgang, EREIGNISSE, aktionFelder, KNOPF_MODULE,
+  betriebspostWaehlbar, BETRIEBSPOST_TEXT,
   glockePersonen,
   type Ablauf, type Ausloeser, type Schritt, type BedingungsGruppe, type SchrittAktion,
 } from '@/lib/ablauf';
@@ -402,7 +403,7 @@ export default function AblaufEditor({ start, busy, onSpeichern, onAbbrechen }: 
         {e.ausloeser.art === 'knopf' && (
           <div style={{ marginBottom: 8 }}>
             <label style={beschriftung}>Wo erscheint der Knopf?</label>
-            <select value={e.ausloeser.modul ?? ''} onChange={(ev) => setE((x) => ({ ...x, ausloeser: ev.target.value ? { art: 'knopf', modul: ev.target.value, ...(x.ausloeser.art === 'knopf' && x.ausloeser.mitarbeiter ? { mitarbeiter: true } : {}) } : { art: 'knopf' } }))} style={{ ...feld, maxWidth: 360 }}>
+            <select value={e.ausloeser.modul ?? ''} onChange={(ev) => setE((x) => ({ ...x, ausloeser: ev.target.value ? { art: 'knopf', modul: ev.target.value, ...(x.ausloeser.art === 'knopf' && x.ausloeser.mitarbeiter ? { mitarbeiter: true } : {}), ...(x.ausloeser.art === 'knopf' && x.ausloeser.betriebspost && KNOPF_MODULE.find((k) => k.modul === ev.target.value)?.werbung ? { betriebspost: true } : {}) } : { art: 'knopf' } }))} style={{ ...feld, maxWidth: 360 }}>
               <option value="">Auf der Seite Abläufe (ohne Vorgang)</option>
               {KNOPF_MODULE.map((k) => <option key={k.modul} value={k.modul}>Auf jeder Seite: {k.einzahl}</option>)}
             </select>
@@ -415,9 +416,18 @@ export default function AblaufEditor({ start, busy, onSpeichern, onAbbrechen }: 
               <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, marginTop: 8, cursor: 'pointer' }}>
                 <input type="checkbox" checked={e.ausloeser.mitarbeiter === true}
                   onChange={(ev) => setE((x) => (x.ausloeser.art === 'knopf' && x.ausloeser.modul
-                    ? { ...x, ausloeser: ev.target.checked ? { art: 'knopf', modul: x.ausloeser.modul, mitarbeiter: true } : { art: 'knopf', modul: x.ausloeser.modul } }
+                    ? { ...x, ausloeser: { art: 'knopf', modul: x.ausloeser.modul, ...(ev.target.checked ? { mitarbeiter: true } : {}), ...(x.ausloeser.betriebspost ? { betriebspost: true } : {}) } }
                     : x))} style={{ marginTop: 3 }} />
                 <span>Auch Mitarbeiter mit Schreibrecht für {KNOPF_MODULE.find((k) => e.ausloeser.art === 'knopf' && k.modul === e.ausloeser.modul)?.label ?? 'dieses Modul'} dürfen den Knopf drücken</span>
+              </label>
+            )}
+            {betriebspostWaehlbar(e.ausloeser) && (
+              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, marginTop: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={e.ausloeser.art === 'knopf' && e.ausloeser.betriebspost === true}
+                  onChange={(ev) => setE((x) => (x.ausloeser.art === 'knopf' && x.ausloeser.modul
+                    ? { ...x, ausloeser: { art: 'knopf', modul: x.ausloeser.modul, ...(x.ausloeser.mitarbeiter ? { mitarbeiter: true } : {}), ...(ev.target.checked ? { betriebspost: true } : {}) } }
+                    : x))} style={{ marginTop: 3 }} />
+                <span>{BETRIEBSPOST_TEXT}</span>
               </label>
             )}
           </div>

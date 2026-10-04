@@ -151,3 +151,14 @@ export function manuellerNachweis(bestaetigt: unknown, nachweis: unknown): { ok:
   }
   return { ok: true, text: `Manuell erfasst — Einwilligung liegt dem Betrieb vor: ${n}` };
 }
+
+/**
+ * Paket 199 (Entscheidung D3): Antwort direkt nach der Bestätigung.
+ * Freier Text ist erlaubt — die Person hat gerade selbst geschrieben, das
+ * 24-Stunden-Fenster ist offen. Keine Werbung, nur Bestätigung + Abmeldeweg.
+ */
+export function dankeNachBestaetigung(firma: string | null | undefined): string {
+  const f = String(firma ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
+  const bei = f ? ` bei ${f}` : '';
+  return `Danke, Sie sind jetzt angemeldet${bei}. Sie erhalten hier künftig unsere Nachrichten. Abmelden können Sie sich jederzeit, indem Sie STOP schreiben.`;
+}

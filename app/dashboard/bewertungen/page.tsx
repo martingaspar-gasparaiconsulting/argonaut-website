@@ -9,6 +9,7 @@
 // vorgeschlagen und kopiert, veröffentlicht wird von Hand.
 // ============================================================
 
+import { oeffentlicherName } from '@/lib/bewertungName';
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
@@ -200,7 +201,7 @@ export default function BewertungenPage() {
               <div key={a.id} style={styles.bewBox}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                   <div style={{ color: C.gold, fontSize: 'clamp(16px, 1.5vw, 22px)', letterSpacing: 2 }}>{sterneText(a.sterne)}</div>
-                  <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{a.kunde_name || 'Kunde'} · {datumHuebsch(a.abgegeben_am)}</div>
+                  <div style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{a.kunde_name || 'Kunde'} · {datumHuebsch(a.abgegeben_am)} · auf der Webseite als „{oeffentlicherName(a.kunde_name)}"</div>
                 </div>
                 {a.text && <div style={{ marginTop: 8, lineHeight: 1.5, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>„{a.text}"</div>}
                 <EigeneFelderAnzeige felder={felder} werte={werteMap[a.id]} />

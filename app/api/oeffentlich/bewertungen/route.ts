@@ -5,10 +5,12 @@
 // die oeffentlich_id aus web_seiten (nur status=live) bestimmt — NIE vom Client.
 // Es gehen nur die minimal nötigen Felder nach außen (Name/Sterne/Text/Monat),
 // keine E-Mail, kein Token. Service-Role umgeht RLS wie bei web-anfrage.
+// Paket 199 (D7): Name nur als „Vorname + Initial" (lib/bewertungName.ts).
 // ============================================================================
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { oeffentlicherName } from '@/lib/bewertungName';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,7 +58,7 @@ export async function GET(req: Request) {
 
     const rows = (data as BewRow[]) ?? [];
     const bewertungen = rows.map((r) => ({
-      name: (r.kunde_name || 'Kunde').toString(),
+      name: oeffentlicherName(r.kunde_name),
       sterne: Math.max(0, Math.min(5, Number(r.sterne) || 0)),
       text: (r.text || '').toString().slice(0, 2000),
       datum: monatJahr(r.abgegeben_am),
