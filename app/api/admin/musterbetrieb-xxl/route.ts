@@ -158,6 +158,14 @@ async function loeschen(admin: Admin) {
     const { error: aErr } = await admin.from('rechnung_ablage').delete().eq('owner_user_id', uid);
     if (aErr && !/rechnung_ablage|does not exist|schema cache/i.test(aErr.message)) hinweise.push(`rechnung_ablage: ${aErr.message}`);
   } catch { /* Ablage noch nicht eingerichtet */ }
+  // Paket 198: abgelegte Mahnungen und Zusage-Nachweise des Musterbetriebs ebenso.
+  try {
+    const { data: bel } = await admin.from('beleg_ablage').select('datei_pfad').eq('owner_user_id', uid);
+    const pfade = [...new Set(((bel as Array<{ datei_pfad: string }> | null) || []).map((a) => a.datei_pfad).filter((p) => typeof p === 'string' && p.startsWith(uid + '/')))];
+    for (let i = 0; i < pfade.length; i += 100) await admin.storage.from(ABLAGE_BUCKET).remove(pfade.slice(i, i + 100));
+    const { error: bErr } = await admin.from('beleg_ablage').delete().eq('owner_user_id', uid);
+    if (bErr && !/beleg_ablage|does not exist|schema cache/i.test(bErr.message)) hinweise.push(`beleg_ablage: ${bErr.message}`);
+  } catch { /* Beleg-Ablage noch nicht eingerichtet */ }
 
   const { data: reg } = await admin.from(REGISTER_TABELLE).select('tabelle, datensatz_id').eq('owner_user_id', uid);
   for (const schritt of loeschPlanAlle((reg as Array<{ tabelle: string; datensatz_id: string }> | null) || [])) {

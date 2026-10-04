@@ -176,6 +176,21 @@ export default function MahnungErstellen() {
     setHistorie((data || []) as HistorieEintrag[]);
   }
 
+  // Paket 198: abgelegte Mahnungs-PDFs dieser Rechnung (Original mit Prüfsumme).
+  // Fehlt die Tabelle noch (SQL p198) oder fehlt das Recht, bleibt die Liste leer.
+  const [ablagen, setAblagen] = useState<{ id: string; stufe: number | null; datei_name: string; erstellt_am: string }[]>([]);
+  async function ladeAblagen() {
+    const { data, error } = await supabase
+      .from("beleg_ablage")
+      .select("id, stufe, datei_name, erstellt_am")
+      .eq("art", "mahnung")
+      .eq("bezug_id", id)
+      .order("erstellt_am", { ascending: false });
+    setAblagen(error ? [] : ((data || []) as { id: string; stufe: number | null; datei_name: string; erstellt_am: string }[]));
+  }
+  // Zuletzt erzeugtes PDF (gleiche Stufe + gleicher Text = gleiches Schreiben)
+  const [letztesPdf, setLetztesPdf] = useState<{ schluessel: string; blob: Blob } | null>(null);
+
   async function laden() {
     setLoading(true);
     setFehler(null);
@@ -235,6 +250,7 @@ export default function MahnungErstellen() {
 
     // #3: Historie mitladen
     await ladeHistorie();
+    await ladeAblagen();
 
     setLoading(false);
   }
@@ -362,6 +378,70 @@ export default function MahnungErstellen() {
   }
 
   // ---------- PDF erzeugen ----------
+  // Paket 198: Erzeugen und Herunterladen getrennt — dasselbe PDF wird beim
+  // „Als gesendet markieren" unverändert abgelegt.
+  function pdfSchluessel() {
+    return `${stufe}|${centRunden(Number(gesamtforderung) || 0)}|${text}`;
+  }
+
+  async function pdfHolen(): Promise<Blob> {
+    const p = firmenprofil || {};
+    const anschrift = [
+      p.firma_strasse,
+      [p.firma_plz, p.firma_ort].filter(Boolean).join(" "),
+    ]
+      .filter((s: any) => s && String(s).trim())
+      .join("\n");
+    const aussteller = {
+      name: p.firma_name || "",
+      anschrift,
+      steuernummer: p.firma_steuernummer || "",
+      ust_idnr: p.firma_ust_id || "",
+      telefon: p.firma_telefon || "",
+      email: p.firma_email || "",
+      bank_iban: p.firma_iban || "",
+      bank_bic: p.firma_bic || "",
+      bank_name: p.firma_bank || "",
+    };
+
+    const res = await fetch("/api/mahnung-pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mahnung: { stufe, betreff: STUFE_LABEL[stufe], text },
+        rechnung: {
+          rechnungsnummer: rechnung?.rechnungsnummer || "",
+          rechnungsdatum: rechnung?.rechnungsdatum || "",
+          faelligkeitsdatum: rechnung?.faelligkeitsdatum || "",
+          waehrung: rechnung?.waehrung || "EUR",
+          brutto_summe: rechnung?.brutto_summe || 0,
+          offener_betrag: offenerRest,
+          // #1/#2: Forderungsaufstellung fürs PDF
+          mahngebuehr,
+          verzugszinsen: zinsBetrag,
+          pauschale: pauschaleBetrag,
+          ist_verbraucher: istVerbraucher,
+          zins_satz: zinsSatzAnzeige,
+          zins_label: zinsLabel,
+          zins_erklaerung: zinsText,
+          zins_tage: tageUeberfaellig,
+          gesamtforderung,
+        },
+        empfaengerName,
+        firmaName: firma ? firmaName(firma) : "",
+        aussteller,
+      }),
+    });
+
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d?.error || "PDF konnte nicht erstellt werden.");
+    }
+    const blob = await res.blob();
+    setLetztesPdf({ schluessel: pdfSchluessel(), blob });
+    return blob;
+  }
+
   async function pdfErstellen() {
     if (pdfBusy) return;
     if (!text.trim()) {
@@ -372,62 +452,7 @@ export default function MahnungErstellen() {
     setFehler(null);
     setErfolg(null);
     try {
-      const p = firmenprofil || {};
-      const anschrift = [
-        p.firma_strasse,
-        [p.firma_plz, p.firma_ort].filter(Boolean).join(" "),
-      ]
-        .filter((s: any) => s && String(s).trim())
-        .join("\n");
-      const aussteller = {
-        name: p.firma_name || "",
-        anschrift,
-        steuernummer: p.firma_steuernummer || "",
-        ust_idnr: p.firma_ust_id || "",
-        telefon: p.firma_telefon || "",
-        email: p.firma_email || "",
-        bank_iban: p.firma_iban || "",
-        bank_bic: p.firma_bic || "",
-        bank_name: p.firma_bank || "",
-      };
-
-      const res = await fetch("/api/mahnung-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mahnung: { stufe, betreff: STUFE_LABEL[stufe], text },
-          rechnung: {
-            rechnungsnummer: rechnung?.rechnungsnummer || "",
-            rechnungsdatum: rechnung?.rechnungsdatum || "",
-            faelligkeitsdatum: rechnung?.faelligkeitsdatum || "",
-            waehrung: rechnung?.waehrung || "EUR",
-            brutto_summe: rechnung?.brutto_summe || 0,
-            offener_betrag: offenerRest,
-            // #1/#2: Forderungsaufstellung fürs PDF
-            mahngebuehr,
-            verzugszinsen: zinsBetrag,
-            pauschale: pauschaleBetrag,
-            ist_verbraucher: istVerbraucher,
-            zins_satz: zinsSatzAnzeige,
-            zins_label: zinsLabel,
-            zins_erklaerung: zinsText,
-            zins_tage: tageUeberfaellig,
-            gesamtforderung,
-          },
-          empfaengerName,
-          firmaName: firma ? firmaName(firma) : "",
-          aussteller,
-        }),
-      });
-
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        setFehler(d?.error || "PDF konnte nicht erstellt werden.");
-        setPdfBusy(false);
-        return;
-      }
-
-      const blob = await res.blob();
+      const blob = await pdfHolen();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const praefix =
@@ -495,8 +520,32 @@ export default function MahnungErstellen() {
     }
 
     setRechnung((prev: any) => (prev ? { ...prev, mahnstufe: stufe, letzte_mahnung_am: heute } : prev));
-    setErfolg(`Als „${STUFE_LABEL[stufe]}" vermerkt (${datumDe(heute)}) und in der Historie protokolliert.`);
+
+    // 3) Paket 198: genau dieses Schreiben als PDF fest ablegen (GoBD, Prüfsumme).
+    //    Gleiche Stufe + gleicher Text wie zuletzt erzeugt -> dasselbe PDF, sonst neu erzeugen.
+    let ablageText = " Das PDF ist fest abgelegt.";
+    if (text.trim()) {
+      try {
+        const blob = letztesPdf && letztesPdf.schluessel === pdfSchluessel() ? letztesPdf.blob : await pdfHolen();
+        const fd = new FormData();
+        fd.append("datei", new File([blob], "Mahnung.pdf", { type: "application/pdf" }));
+        fd.append("rechnung_id", String(id));
+        fd.append("stufe", String(stufe));
+        const r = await fetch("/api/beleg-ablage", { method: "POST", body: fd });
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          ablageText = ` Achtung: Das PDF konnte nicht abgelegt werden (${d?.error || "Fehler"}).`;
+        }
+      } catch (e: any) {
+        ablageText = ` Achtung: Das PDF konnte nicht abgelegt werden (${e?.message || "Fehler"}).`;
+      }
+    } else {
+      ablageText = " Ohne Mahntext wurde kein PDF abgelegt.";
+    }
+
+    setErfolg(`Als „${STUFE_LABEL[stufe]}" vermerkt (${datumDe(heute)}) und in der Historie protokolliert.${ablageText}`);
     await ladeHistorie();
+    await ladeAblagen();
     setSendBusy(false);
   }
 
@@ -858,6 +907,25 @@ export default function MahnungErstellen() {
           }}
         >
           ⚠️ {fehler}
+        </div>
+      )}
+
+      {/* Paket 198: abgelegte Mahnungs-PDFs (Original mit Prüfsumme) */}
+      {ablagen.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <Karte titel="Abgelegte Mahnungen (Original-PDF)">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {ablagen.map((a) => (
+                <a
+                  key={a.id}
+                  href={`/api/beleg-ablage?id=${a.id}`}
+                  style={{ color: C.cyan, fontSize: 'clamp(14px, 1.25vw, 20px)', textDecoration: "underline" }}
+                >
+                  {a.stufe != null ? (STUFE_LABEL[a.stufe] || `Stufe ${a.stufe}`) : "Mahnung"} · {datumDe(a.erstellt_am)} · {a.datei_name}
+                </a>
+              ))}
+            </div>
+          </Karte>
         </div>
       )}
 

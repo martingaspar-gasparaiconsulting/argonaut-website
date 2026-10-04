@@ -15,11 +15,17 @@
 // nur mit Namen; gespeichert werden Name, Zeitpunkt und der Wortlaut der
 // Erklärung. Der Betrieb bekommt eine Meldung in der Glocke.
 // Regeln: lib/angebotZusage.ts.
+//
+// PAKET 198 (04.10.2026): Bei der Annahme wird ein Nachweis (Kopf, Positionen,
+// Summen, Name, Erklaerung, Zeitpunkt) mit Pruefsumme fest abgelegt
+// (lib/belegAblage.ts); danach sperrt die Datenbank das Angebot.
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { perLinkSichtbar, entscheidbar, zusageName, abgelaufen as istAbgelaufenAm, ZUSAGE_ERKLAERUNG } from '@/lib/angebotZusage';
+import { annahmeNachweis, type AnnahmeKopf, type AnnahmePosition } from '@/lib/belegAblage';
+import { legeBelegAb } from '@/lib/belegAblageServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -109,6 +115,33 @@ export async function POST(req: NextRequest) {
       .eq('id', a.id).eq('status', 'gesendet').select('id');
     if (error) throw error;
     if (!geaendert || geaendert.length === 0) return NextResponse.json({ error: 'Dieses Angebot wurde bereits entschieden.' }, { status: 409 });
+
+    // Paket 198: Nachweis der Zusage fest ablegen — WAS angenommen wurde
+    // (Kopf, Positionen, Summen, Name, Erklärung, Zeitpunkt) mit Prüfsumme.
+    // Ab jetzt sperrt die Datenbank das Angebot (SQL p198). Ein Fehler hier
+    // hält die Zusage nicht auf, wird aber protokolliert.
+    if (entscheidung === 'annehmen') {
+      try {
+        const { data: kopf } = await db.from('angebote')
+          .select('id, angebotsnummer, titel, kunde_name, gueltig_bis, netto_summe, mwst_summe, brutto_summe').eq('id', a.id).maybeSingle();
+        const { data: pos } = await db.from('angebot_positionen')
+          .select('position, bezeichnung, menge, einheit, einzelpreis, mwst_satz, gesamt_netto').eq('angebot_id', a.id);
+        if (kopf) {
+          const text = annahmeNachweis({
+            kopf: kopf as AnnahmeKopf, positionen: (pos || []) as AnnahmePosition[],
+            betrieb: await betriebName(db, String(a.owner_user_id)), name: name || '', erklaerung: ZUSAGE_ERKLAERUNG, zeitpunkt: jetzt,
+          });
+          const erg = await legeBelegAb({
+            betrieb: String(a.owner_user_id), art: 'angebot_annahme', bezugId: String(a.id),
+            bezugNummer: a.angebotsnummer as string | null, bytes: new TextEncoder().encode(text),
+            dateiname: `Zusage_${a.angebotsnummer || 'Angebot'}`,
+          });
+          if (!erg.ok) console.error('[angebot] Zusage-Nachweis nicht abgelegt:', erg.fehler);
+        }
+      } catch (e: unknown) {
+        console.error('[angebot] Zusage-Nachweis Fehler:', e instanceof Error ? e.message : 'unbekannt');
+      }
+    }
 
     // Meldung an den Betrieb (Glocke). Fehler hier hält die Zusage nicht auf.
     try {
