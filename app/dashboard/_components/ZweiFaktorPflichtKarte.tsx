@@ -9,11 +9,13 @@
 // Mitarbeiter informiert + Betriebsrat einbezogen bzw. keiner vorhanden.
 // 7 Tage Übergangsfrist, jederzeit abschaltbar. Entscheidung am Server
 // (/api/zwei-faktor/pflicht). Kundentext mit „Sie".
+// Paket 203: darunter die Ausnahmen je Mitarbeiter (ZweiFaktorAusnahmen).
 // ============================================================================
 
 import { useEffect, useState, useCallback } from 'react';
 import { EINRICHT_PFAD } from '@/lib/zweiFaktor';
 import { datumDe } from '@/lib/zweiFaktorPflicht';
+import ZweiFaktorAusnahmen from './ZweiFaktorAusnahmen';
 
 type Stand = {
   rolle: 'chef' | null; aal2?: boolean; uebergangTage?: number;
@@ -123,6 +125,8 @@ export default function ZweiFaktorPflichtKarte() {
           Pflicht ausschalten
         </button>
       )}
+
+      {an && <ZweiFaktorAusnahmen />}
     </div>
   );
 }
