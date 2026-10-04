@@ -103,8 +103,11 @@ test('WAECHTER: Mitglieder laden Bankdaten nur fuer Berechtigte, Speichern leert
   assert.ok(!s.includes("from('mitglieder').select('*')"));
   assert.match(s, /const SPALTEN_OHNE_BANK = '[^']*'/);
   assert.ok(!/iban|bic|mandat/.test(s.match(/const SPALTEN_OHNE_BANK = '([^']*)'/)[1]));
-  assert.match(s, /if \(darfBank\) \{\s+const \{ data: bank \} = await supabase\.from\('mitglieder'\)\.select\(SPALTEN_BANK\)/);
-  assert.match(s, /\.\.\.\(darfBank \? \{\s+iban:/);
+  // Paket 201 (bewusst angepasst): Bankdaten liegen in mitglieder_bank; geladen
+  // nur bei darfBank, gespeichert getrennt und nur bei darfBank — nie leerend.
+  assert.match(s, /if \(darfBank\) \{\s+const neu = await supabase\.from\(BANK_TABELLE\)\.select\(BANK_SPALTEN\)/);
+  assert.match(s, /if \(darfBank\) \{ const vorher = liste\.find/);
+  assert.match(s, /if \(bankIstLeer\(b\) && !schonDa\) return;/);
   assert.match(s, /darf_ich_modul_aendern', \{ p_modul: 'mitglieder' \}/);
   assert.ok(!lies('app/dashboard/wiederkehr/page.tsx').includes("from('mitglieder').select('*')"));
 });

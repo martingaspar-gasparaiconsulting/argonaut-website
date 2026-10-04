@@ -7,6 +7,7 @@
 // Gläubigerdaten liegen am Profil. Pfad: app/dashboard/mitglieder/page.tsx
 // ============================================================
 
+import { BANK_TABELLE, BANK_SPALTEN, ALT_BANK_SPALTEN, bankAusFormular, bankIstLeer, mischeBank, tabelleFehlt } from '@/lib/mitgliederBank';
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { anlegenFuerBetrieb, betriebsKennung } from '@/lib/betriebBesitzer';
@@ -61,7 +62,8 @@ function eur(n: number | null) { return (Number(n) || 0).toLocaleString('de-DE',
 // Geschaeftsleitung oder ein Mitarbeiter mit Schreibrecht fuer Mitglieder.
 // Die Liste fuer alle anderen (z. B. Tresenkraft) kommt ohne Bankdaten.
 const SPALTEN_OHNE_BANK = 'id, name, email, telefon, betrag, intervall, status, beginn_am, kuendigung_zum, notiz, erst_einzug, letzte_einziehung';
-const SPALTEN_BANK = 'id, iban, bic, mandatsreferenz, mandat_datum';
+// 201: Bankdaten liegen in mitglieder_bank (lib/mitgliederBank.ts). Vor SQL
+// p201 faellt die Seite auf die alten Spalten zurueck.
 function heutePlus(tage: number) { return new Date(Date.now() + tage * 86400000).toISOString().slice(0, 10); }
 
 export default function MitgliederPage() {
@@ -122,13 +124,18 @@ export default function MitgliederPage() {
     try {
       const { data, error } = await supabase.from('mitglieder').select(SPALTEN_OHNE_BANK).order('name', { ascending: true });
       if (error) throw error;
-      const leer = { iban: null, bic: null, mandatsreferenz: null, mandat_datum: null };
-      let rows = ((data ?? []) as unknown as Omit<Mitglied, 'iban' | 'bic' | 'mandatsreferenz' | 'mandat_datum'>[]).map((m) => ({ ...leer, ...m })) as Mitglied[];
+      const basis = (data ?? []) as unknown as Omit<Mitglied, 'iban' | 'bic' | 'mandatsreferenz' | 'mandat_datum'>[];
+      let bank: Parameters<typeof mischeBank>[1] = [];
       if (darfBank) {
-        const { data: bank } = await supabase.from('mitglieder').select(SPALTEN_BANK);
-        const jeId = new Map(((bank ?? []) as unknown as (typeof leer & { id: string })[]).map((b) => [b.id, b]));
-        rows = rows.map((m) => ({ ...m, ...(jeId.get(m.id) ?? {}) }));
+        const neu = await supabase.from(BANK_TABELLE).select(BANK_SPALTEN);
+        if (neu.error && tabelleFehlt(neu.error)) {
+          const alt = await supabase.from('mitglieder').select(ALT_BANK_SPALTEN);
+          bank = (alt.data ?? []) as unknown as Parameters<typeof mischeBank>[1];
+        } else {
+          bank = (neu.data ?? []) as unknown as Parameters<typeof mischeBank>[1];
+        }
       }
+      const rows = mischeBank(basis, bank) as Mitglied[];
       setListe(rows);
       setFelder(await ladeFelder(MODUL));
       setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
@@ -183,15 +190,12 @@ export default function MitgliederPage() {
         name: form.name.trim(), email: form.email.trim() || null, telefon: form.telefon.trim() || null,
         betrag: betragWert, intervall: form.intervall, status: form.status,
         beginn_am: form.beginn_am || null, notiz: form.notiz.trim() || null,
-        // 184: Bankdaten nur, wer sie sehen darf — sonst wuerde Speichern sie leeren
-        ...(darfBank ? {
-          iban: form.iban.replace(/\s+/g, '').toUpperCase() || null, bic: form.bic.replace(/\s+/g, '').toUpperCase() || null,
-          mandatsreferenz: form.mandatsreferenz.trim() || null, mandat_datum: form.mandat_datum || null,
-        } : {}),
+        // 201: Bankdaten NICHT mehr in mitglieder — sie gehen getrennt nach mitglieder_bank (bankSpeichern).
       };
       if (form.id) {
         const { error } = await supabase.from('mitglieder').update(payload).eq('id', form.id);
         if (error) throw error;
+        if (darfBank) { const vorher = liste.find((m) => m.id === form.id); await bankSpeichern(form.id, !!vorher && !bankIstLeer(vorher)); }
         try { await speichereWerte(MODUL, form.id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       } else {
         // Paket 187: Verein -> vertragsart 'verein'; fehlt die Spalte (SQL PS5 nicht gelaufen), ohne erneut.
@@ -200,6 +204,7 @@ export default function MitgliederPage() {
           ({ ergebnis: { data: neu, error } } = await anlegenFuerBetrieb(payload, besitzer, uid, (d) => supabase.from('mitglieder').insert(d).select('id').single()));
         }
         if (error) throw error;
+        if (darfBank) await bankSpeichern((neu as { id: string }).id, false);
         try { await speichereWerte(MODUL, (neu as { id: string }).id, uid, nmExtra); } catch { /* eigene Felder optional */ }
       }
       setNmExtra({});
@@ -208,6 +213,23 @@ export default function MitgliederPage() {
       setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setSpeichert(false); }
   }
+  /**
+   * 201: Bankdaten getrennt speichern. Leeres Formular legt keine Zeile an;
+   * war vorher etwas da (schonDa), wird es geleert. Vor SQL p201: alter Weg.
+   */
+  async function bankSpeichern(mitgliedId: string, schonDa: boolean) {
+    const b = bankAusFormular(form);
+    if (bankIstLeer(b) && !schonDa) return;
+    const neu = await supabase.from(BANK_TABELLE)
+      .upsert({ mitglied_id: mitgliedId, owner_user_id: besitzer ?? uid, ...b }, { onConflict: 'mitglied_id' });
+    if (neu.error && tabelleFehlt(neu.error)) {
+      const { error } = await supabase.from('mitglieder').update(b).eq('id', mitgliedId);
+      if (error) throw error;
+      return;
+    }
+    if (neu.error) throw new Error('Bankdaten: ' + neu.error.message);
+  }
+
   async function loeschen(m: Mitglied) {
     if (!window.confirm(`Mitglied „${m.name}" löschen?`)) return;
     try {

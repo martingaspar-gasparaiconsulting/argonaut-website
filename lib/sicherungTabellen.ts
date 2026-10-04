@@ -75,7 +75,7 @@ export const WEITERE_TABELLEN: string[] = [
   'marketing_inhalte', 'marketing_kalender', 'marketing_kampagnen', 'marketing_segment',
   'marketing_zielgruppen', 'markt_produkt', 'markt_verkauf', 'material_abruf', 'menu_gericht',
   'mitarbeiter', 'mitarbeiter_qualifikation', 'mitarbeiter_rechte', 'mitarbeiter_standorte',
-  'mitglied_checkin', 'mitglieder', 'modul_nutzung', 'nachkauf_produkt', 'nachkauf_verkauf',
+  'mitglied_checkin', 'mitglieder', 'mitglieder_bank', 'modul_nutzung', 'nachkauf_produkt', 'nachkauf_verkauf',
   'nachweis', 'nachweis_unterschrift', 'newsletter_ab_test', 'newsletter_abonnenten',
   'newsletter_versand', 'objekt_zeiten', 'objekte', 'onboarding_schritte', 'paket_positionen',
   'pakete', 'personal_entsendung', 'personal_vertrag', 'portal_dokument', 'portal_freigabe',
