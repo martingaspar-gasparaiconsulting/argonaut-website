@@ -4,6 +4,7 @@ import LogoutButton from './LogoutButton'
 import DashboardNav from './DashboardNav'
 import DashboardChat from './DashboardChat'
 import Glocke from './Glocke'
+import FernhilfeKnopf from './_components/FernhilfeKnopf'
 import SwRegister from './_components/SwRegister'
 import AppInstallieren from './_components/AppInstallieren'
 import OfflineSync from './_components/OfflineSync'
@@ -136,6 +137,7 @@ export default async function DashboardLayout({
             </span>
             <AnsichtUmschalter />
             <FilialUmschalter />
+            <FernhilfeKnopf />
             <Glocke />
             <LogoutButton />
           </div>
