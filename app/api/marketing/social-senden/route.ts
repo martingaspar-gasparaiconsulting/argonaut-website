@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { entschluessele, encKeyBereit } from '@/lib/crypto';
 import { posteBeitrag, POSTBARE_PLATTFORMEN, type BeitragLite, type MetaZugang } from '@/lib/socialVersand';
 import { VERBINDBARE_PLATTFORMEN, plattformFuer } from '@/lib/social';
+import { darfVeroeffentlichen } from '@/lib/socialPruefung';
+import { ladePruefStand } from '@/lib/socialPruefungServer';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/social-senden/route.ts  (Social P3)
@@ -68,6 +70,10 @@ export async function POST(req: Request) {
     .maybeSingle();
   const beitrag = bt as BeitragLite | null;
   if (!beitrag) return NextResponse.json({ ok: false, error: 'Beitrag nicht gefunden.' }, { status: 404 });
+
+  // Paket 208: ungeprüfte KI-Entwürfe gehen nicht hinaus.
+  const darf = darfVeroeffentlichen(await ladePruefStand(admin, beitragId, uid));
+  if (!darf.ok) return NextResponse.json({ ok: false, error: darf.fehler }, { status: 400 });
 
   const postbareKanaele = (beitrag.kanaele || []).filter((k) => POSTBARE_PLATTFORMEN.includes(k));
   if (postbareKanaele.length === 0) {

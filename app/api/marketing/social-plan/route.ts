@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { validierePlanung } from '@/lib/social';
 import { istImHorizont, KALENDER_HORIZONT_MONATE } from '@/lib/socialKalender';
+import { darfVeroeffentlichen } from '@/lib/socialPruefung';
+import { ladePruefStand } from '@/lib/socialPruefungServer';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/social-plan/route.ts  (Social P4)
@@ -52,6 +54,10 @@ export async function POST(req: Request) {
   if (!istImHorizont(geplant_am, jetzt)) {
     return NextResponse.json({ ok: false, error: `Bitte einen Zeitpunkt innerhalb der nächsten ${KALENDER_HORIZONT_MONATE} Monate wählen.` }, { status: 400 });
   }
+
+  // Paket 208: ungeprüfte KI-Entwürfe nicht einplanen.
+  const darf = darfVeroeffentlichen(await ladePruefStand(admin, beitragId, uid));
+  if (!darf.ok) return NextResponse.json({ ok: false, error: darf.fehler }, { status: 400 });
 
   const { error } = await admin
     .from('social_beitrag')

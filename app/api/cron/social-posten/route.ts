@@ -4,6 +4,7 @@ import { cronGuard } from '../../../../lib/cronGuard';
 import { entschluessele, encKeyBereit } from '../../../../lib/crypto';
 import { posteBeitrag, type BeitragLite, type MetaZugang } from '../../../../lib/socialVersand';
 import { VERBINDBARE_PLATTFORMEN } from '../../../../lib/social';
+import { darfVeroeffentlichen, type PruefStand } from '@/lib/socialPruefung';
 
 // ============================================================================
 // ARGONAUT OS · app/api/cron/social-posten/route.ts  (Social P3 · Auto-Posten)
@@ -68,16 +69,20 @@ async function lauf(req: Request) {
   const admin = service();
   const jetzt = new Date().toISOString();
 
-  const { data: faelligD, error } = await admin
+  // Paket 208: Prüf-Stand mitlesen; ohne SQL p208 wie bisher.
+  const lies = (felder: string) => admin
     .from('social_beitrag')
-    .select('id, owner_user_id, text, medien_urls, kanaele')
+    .select(felder)
     .eq('status', 'geplant')
     .lte('geplant_am', jetzt)
     .order('geplant_am', { ascending: true })
     .limit(MAX_PRO_DURCHGANG);
+  let antwort = await lies('id, owner_user_id, text, medien_urls, kanaele, ki_entwurf, geprueft_am');
+  if (antwort.error) antwort = await lies('id, owner_user_id, text, medien_urls, kanaele');
+  const { data: faelligD, error } = antwort;
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
-  const faellig = (faelligD ?? []) as (BeitragLite & { owner_user_id: string })[];
+  const faellig = (faelligD ?? []) as unknown as (BeitragLite & PruefStand & { owner_user_id: string })[];
   if (faellig.length === 0) return NextResponse.json({ ok: true, geprueft: 0, gepostet: 0, fehlgeschlagen: 0 });
 
   // Demo-Konten unter den betroffenen Ownern herausfiltern.
@@ -90,6 +95,12 @@ async function lauf(req: Request) {
 
   for (const b of faellig) {
     if (demoSet.has(b.owner_user_id)) { uebersprungen++; continue; }
+    // Paket 208: ungeprüfter KI-Entwurf -> zurück in den Entwurf, nicht posten.
+    if (!darfVeroeffentlichen(b).ok) {
+      await admin.from('social_beitrag').update({ status: 'entwurf', geplant_am: null }).eq('id', b.id).eq('owner_user_id', b.owner_user_id);
+      uebersprungen++;
+      continue;
+    }
     if (!(b.owner_user_id in zugangCache)) zugangCache[b.owner_user_id] = await metaZugaenge(admin, b.owner_user_id);
     const zugaenge = zugangCache[b.owner_user_id];
 

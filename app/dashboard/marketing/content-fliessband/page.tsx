@@ -458,11 +458,12 @@ function VorschlagKarte({ v }: { v: Vorschlag }) {
           kanaele: v.plattformId ? [v.plattformId] : [],
           medien_urls: bildUrl ? [bildUrl] : [],
           status: 'entwurf',
+          ki: true, // Paket 208: KI-Entwurf -> vor dem Posten prüfen
         }),
       });
       const j = await res.json();
       if (!j.ok) { setMeldung(j.error || 'Übernehmen fehlgeschlagen.'); setAktion('fehler'); return; }
-      setMeldung('Als Entwurf gespeichert.'); setAktion('ok');
+      setMeldung('Als KI-Entwurf gespeichert — bitte unter Social lesen und als geprüft bestätigen, bevor er hinausgeht.'); setAktion('ok');
     } catch {
       setMeldung('Verbindung fehlgeschlagen.'); setAktion('fehler');
     }

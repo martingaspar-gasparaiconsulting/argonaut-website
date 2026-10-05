@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { darfWiederholen, sortiereNeuesteZuerst, type ProtokollZeile } from '@/lib/socialProtokoll';
+import { darfVeroeffentlichen } from '@/lib/socialPruefung';
+import { ladePruefStand } from '@/lib/socialPruefungServer';
 
 // ============================================================================
 // ARGONAUT OS · app/api/marketing/social-protokoll/route.ts  (Social P8)
@@ -79,6 +81,10 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+
+  // Paket 208: ungeprüfte KI-Entwürfe nicht erneut einplanen.
+  const darf = darfVeroeffentlichen(await ladePruefStand(admin, beitragId, uid));
+  if (!darf.ok) return NextResponse.json({ ok: false, error: darf.fehler }, { status: 400 });
 
   const { error } = await admin
     .from('social_beitrag')

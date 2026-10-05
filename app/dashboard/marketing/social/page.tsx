@@ -37,6 +37,8 @@ type Beitrag = {
   status: string;
   geplant_am: string | null;
   created_at: string;
+  ki_entwurf?: boolean | null;   // Paket 208
+  geprueft_am?: string | null;
 };
 
 type KanalRow = { plattform: string; aktiv: boolean; verbunden: boolean; konto_name: string | null; geprueft_am: string | null };
@@ -76,6 +78,10 @@ export default function SocialSeite() {
   const [eGeplant, setEGeplant] = useState('');
   const [eBusy, setEBusy] = useState(false);
   const [eMeldung, setEMeldung] = useState<string | null>(null);
+  const [eKi, setEKi] = useState(false);              // Paket 208: Beitrag ist ein KI-Entwurf
+  const [eGeprueft, setEGeprueft] = useState(false);  // „Ich habe den Text geprüft" angehakt
+  const [eGeprueftAm, setEGeprueftAm] = useState<string | null>(null);
+  const [eTextAlt, setETextAlt] = useState('');
   const [uploadBusy, setUploadBusy] = useState(false);
   // Eigenes Video hochladen (C5): der Server prueft und stellt eine
   // signierte Adresse aus, die Datei geht direkt in den Speicher.
@@ -157,6 +163,7 @@ export default function SocialSeite() {
   function neuerBeitrag() {
     setEditId(null); setEText(''); setEKanaele([]); setEBilder([]); setEVideo('');
     setEStatus('entwurf'); setEGeplant(''); setEMeldung(null);
+    setEKi(false); setEGeprueft(false); setEGeprueftAm(null); setETextAlt('');
   }
   function bearbeiten(b: Beitrag) {
     setEditId(b.id);
@@ -169,6 +176,7 @@ export default function SocialSeite() {
     setEStatus(b.status === 'geplant' ? 'geplant' : 'entwurf');
     setEGeplant(isoZuLokal(b.geplant_am));
     setEMeldung(null);
+    setEKi(b.ki_entwurf === true); setEGeprueft(false); setEGeprueftAm(b.geprueft_am ?? null); setETextAlt(b.text || '');
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function toggleEditorKanal(id: string) {
@@ -241,7 +249,7 @@ export default function SocialSeite() {
     try {
       const res = await fetch('/api/marketing/social-beitraege', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: editId, text: eText, medien_urls, kanaele: eKanaele, status: eStatus, geplant_am }),
+        body: JSON.stringify({ id: editId, text: eText, medien_urls, kanaele: eKanaele, status: eStatus, geplant_am, geprueft: eKi && eGeprueft }),
       });
       const j = await res.json();
       if (!res.ok || !j?.ok) { setEMeldung(j?.error || 'Speichern fehlgeschlagen.'); }
@@ -538,6 +546,17 @@ export default function SocialSeite() {
             )}
           </div>
 
+          {/* Paket 208: KI-Entwürfe gehen nur geprüft hinaus (Art. 50 Abs. 4 KI-VO). */}
+          {eKi && (
+            <div style={{ background: 'rgba(224,162,76,0.10)', border: `1px solid ${C.warn}`, borderRadius: 12, padding: '10px 14px', marginBottom: 14, fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(13px, 1.1vw, 16px)', color: '#f3dfbf' }}>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>✨ KI-Entwurf {eGeprueftAm && eText.trim() === eTextAlt.trim() ? `— geprüft am ${fmtDatum(eGeprueftAm)}` : '— noch nicht geprüft'}</div>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', cursor: 'pointer' }}>
+                <input type="checkbox" checked={eGeprueft} onChange={(e) => setEGeprueft(e.target.checked)} style={{ marginTop: 3 }} />
+                <span>Ich habe den Text gelesen und geprüft — er stimmt und darf in unserem Namen erscheinen. Ohne diesen Haken kann der Beitrag nicht eingeplant oder gepostet werden; eine Textänderung hebt die Prüfung auf.</span>
+              </label>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <button onClick={speichereBeitrag} disabled={eBusy || !pruef.ok}
               style={{ ...btnGold, opacity: (eBusy || !pruef.ok) ? 0.5 : 1, cursor: (eBusy || !pruef.ok) ? 'not-allowed' : 'pointer' }}>
@@ -715,6 +734,11 @@ export default function SocialSeite() {
                   <div style={{ flex: 1, minWidth: 220 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
                       <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: statusFarbe, border: `1px solid ${statusFarbe}`, borderRadius: 10, padding: '1px 10px' }}>{label}</span>
+                      {b.ki_entwurf === true && (
+                        <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: b.geprueft_am ? C.green : C.warn, border: `1px solid ${b.geprueft_am ? C.green : C.warn}`, borderRadius: 10, padding: '1px 10px' }}>
+                          {b.geprueft_am ? '✨ KI-Entwurf · geprüft' : '✨ KI-Entwurf · bitte prüfen'}
+                        </span>
+                      )}
                       {b.status === 'geplant' && b.geplant_am && (
                         <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 'clamp(12px, 1vw, 15px)', color: C.textDim }}>🕒 {fmtDatum(b.geplant_am)}</span>
                       )}

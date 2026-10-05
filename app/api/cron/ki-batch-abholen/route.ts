@@ -88,7 +88,10 @@ async function verarbeiteFliessband(
       ki_batch_id: stapel.id,
     }));
 
-    const { error } = await admin.from('social_beitrag').insert(saetze);
+    // Paket 208: als KI-Entwurf markieren (muss vor dem Posten geprüft werden).
+    // Fehlt die Spalte noch (SQL p208), ohne Markierung anlegen wie bisher.
+    let { error } = await admin.from('social_beitrag').insert(saetze.map((z) => ({ ...z, ki_entwurf: true })));
+    if (error && /ki_entwurf/.test(error.message || '')) ({ error } = await admin.from('social_beitrag').insert(saetze));
     if (error) fehler++; else angelegt += saetze.length;
   }
 
