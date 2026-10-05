@@ -31,6 +31,11 @@ import {
   type Vorschlag, type ZuschnittBefund,
 } from '@/lib/kalkulatorLernen';
 import { optimiereZuschnitt } from '@/lib/zuschnitt';
+import {
+  istVergleich, echteMarge, andockHinweise, ausIstZeiten, mitIstVorrang,
+} from '@/lib/kalkulatorAndocken';
+import AufmassUebernahme, { type AufmassUebernommen } from './AufmassUebernahme';
+import Hinweise from '../_components/Hinweise';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort } from '@/lib/standortDaten';
 import { NurVoll } from '../_components/Ansicht';
@@ -57,7 +62,12 @@ type GespeicherteKalkulation = {
   id: string; name: string; gewerk: string | null; menge: number; einheit: string;
   posten: Posten[]; zuschlaege: Kalkulation['zuschlaege']; ergebnis: Record<string, unknown>;
   erstellt_am: string;
+  // Paket 211 (B9): Verknüpfung mit Projekt und Aufmaß
+  projekt_id?: string | null; aufmass_id?: string | null; aufmass_rechenweg?: string | null;
 };
+
+type ProjektKurz = { id: string; name: string };
+type IstJeProjekt = Record<string, { istStunden: number; istKosten: number }>;
 
 type Norm = {
   id: string; gewerk: string; schluessel: string; bezeichnung: string; art: string;
@@ -114,6 +124,11 @@ export default function KalkulatorPage() {
   const [zielAngebot, setZielAngebot] = useState<string>('neu');
   const [kundeName, setKundeName] = useState('');
   const [zuschnitte, setZuschnitte] = useState<ZuschnittBefund[]>([]);
+  // Paket 211 (B9): Projekt-Verknüpfung, Ist-Stunden, Aufmaß-Herkunft
+  const [projekte, setProjekte] = useState<ProjektKurz[]>([]);
+  const [istJe, setIstJe] = useState<IstJeProjekt>({});
+  const [projektWahl, setProjektWahl] = useState('');
+  const [aufmassRef, setAufmassRef] = useState<AufmassUebernommen | null>(null);
 
   const laden = useCallback(async () => {
     const [kalk, norm, ang] = await Promise.all([
@@ -161,6 +176,35 @@ export default function KalkulatorPage() {
     }
   }, []);
 
+  /**
+   * Paket 211 (B9): Projekte und deren erfasste Stunden/Kosten. Fehlt ein
+   * Modul (keine Projekte), bleibt der Kalkulator wie bisher.
+   */
+  const istLaden = useCallback(async () => {
+    try {
+      const [pr, pl, pk] = await Promise.all([
+        supabase.from('projekte').select('id, name').order('name', { ascending: true }).limit(300),
+        supabase.from('projektleistungen').select('projekt_id, stunden'),
+        supabase.from('projekt_kosten').select('projekt_id, betrag'),
+      ]);
+      setProjekte(((pr.data as Array<{ id: string; name: string | null }>) ?? []).map((p) => ({ id: String(p.id), name: (p.name || '').trim() || 'Projekt' })));
+      const je: IstJeProjekt = {};
+      for (const z of ((pl.error ? [] : pl.data) as Array<{ projekt_id: string | null; stunden: unknown }>) ?? []) {
+        if (!z.projekt_id) continue;
+        je[z.projekt_id] = je[z.projekt_id] ?? { istStunden: 0, istKosten: 0 };
+        je[z.projekt_id].istStunden += zahl(z.stunden, 0);
+      }
+      for (const z of ((pk.error ? [] : pk.data) as Array<{ projekt_id: string | null; betrag: unknown }>) ?? []) {
+        if (!z.projekt_id) continue;
+        je[z.projekt_id] = je[z.projekt_id] ?? { istStunden: 0, istKosten: 0 };
+        je[z.projekt_id].istKosten += zahl(z.betrag, 0);
+      }
+      setIstJe(je);
+    } catch {
+      setProjekte([]); setIstJe({});
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -170,8 +214,9 @@ export default function KalkulatorPage() {
       { const id = data?.user?.id ?? null; const { data: chef } = await supabase.rpc('mein_chef_id'); setBesitzer(typeof chef === 'string' && chef ? chef : id); }
       await laden();
       await zuschnittLaden();
+      await istLaden();
     })();
-  }, [laden, zuschnittLaden]);
+  }, [laden, zuschnittLaden, istLaden]);
 
   // --- Was die eigene Praxis sagt -------------------------------------------
   const bisherige = useMemo(() => {
@@ -195,8 +240,35 @@ export default function KalkulatorPage() {
       gewerk, bisherige,
     );
     const ausSaege = ausZuschnitt(zuschnitte, bisherige);
-    return [...ausEigenen, ...ausSaege];
-  }, [gespeichert, zuschnitte, gewerk, bisherige]);
+    // Paket 211 (B9): echte Projekt-Stunden haben Vorrang vor den eigenen Schätzungen.
+    const ausIst = ausIstZeiten(
+      gespeichert.filter((g) => g.projekt_id && istJe[g.projekt_id]).map((g) => ({
+        name: g.name, gewerk: g.gewerk, einheit: g.einheit, menge: Number(g.menge),
+        posten: Array.isArray(g.posten) ? g.posten : [],
+        istStunden: istJe[g.projekt_id as string].istStunden, datum: g.erstellt_am,
+      })),
+      gewerk, bisherige,
+    );
+    return [...mitIstVorrang(ausEigenen, ausIst), ...ausSaege];
+  }, [gespeichert, zuschnitte, gewerk, bisherige, istJe]);
+
+  // Paket 211 (B9): Plan gegen Ist je verknüpfter Kalkulation
+  const andock = useMemo(() => {
+    const zeilen: Record<string, { planH: number; istH: number; abw: number | null; echt: number | null }> = {};
+    const hinweise: string[] = [];
+    for (const g of gespeichert) {
+      if (!g.projekt_id || !istJe[g.projekt_id]) continue;
+      const kalk: Kalkulation = {
+        menge: Number(g.menge), einheit: g.einheit, posten: Array.isArray(g.posten) ? g.posten : [],
+        zuschlaege: { ...ZUSCHLAEGE_STANDARD, ...(g.zuschlaege || {}) },
+      };
+      const v = istVergleich(kalk, istJe[g.projekt_id]);
+      const m = echteMarge(kalk, istJe[g.projekt_id]);
+      zeilen[g.id] = { planH: v.planStunden, istH: v.istStunden, abw: v.abweichungProzent, echt: m.echteMargeProzent };
+      hinweise.push(...andockHinweise(g.name, v, m));
+    }
+    return { zeilen, hinweise };
+  }, [gespeichert, istJe]);
 
   const lern = useMemo(() => lernStand(gelernt), [gelernt]);
 
@@ -275,7 +347,7 @@ export default function KalkulatorPage() {
     if (probe.length > 0) { setFehler(probe.join(' · ')); return; }
     setBusy('speichern'); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('kalkulationen').insert({
+      const basis = {
         owner_user_id: besitzer ?? uid,
         name: name.trim() || 'Kalkulation',
         gewerk: gewerk || null,
@@ -286,7 +358,17 @@ export default function KalkulatorPage() {
           angebotspreis_netto: e.angebotspreis_netto, je_einheit: e.je_einheit,
           marge_prozent: e.marge_prozent, zeit_minuten: e.zeit_minuten, energie_kwh: e.energie_kwh,
         },
-      });
+        // Paket 211 (B9): projekt_id gab es schon, wurde aber nie gesetzt.
+        projekt_id: projektWahl || null,
+      };
+      // Aufmaß-Herkunft nur, wenn die Menge noch die übernommene ist.
+      const ausAufmass = aufmassRef && Math.abs(aufmassRef.menge - Number(k.menge)) < 1e-9
+        ? { aufmass_id: aufmassRef.aufmassId, aufmass_rechenweg: aufmassRef.rechenweg.slice(0, 2000) } : {};
+      let { error } = await supabase.from('kalkulationen').insert({ ...basis, ...ausAufmass });
+      // Ohne SQL p211 fehlen die Aufmaß-Spalten — dann ohne sie speichern.
+      if (error && Object.keys(ausAufmass).length > 0 && /aufmass_/.test(error.message || '')) {
+        ({ error } = await supabase.from('kalkulationen').insert(basis));
+      }
       if (error) throw error;
       setOk('Kalkulation gespeichert.');
       await laden();
@@ -441,8 +523,17 @@ export default function KalkulatorPage() {
     });
     setGewerk(g.gewerk ?? '');
     setName(g.name);
+    setProjektWahl(g.projekt_id ?? '');
+    setAufmassRef(null);
     setWunsch(''); setFehler(null); setOk(null);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /** Paket 211 (B9): gespeicherte Kalkulation nachträglich mit einem Projekt verknüpfen. */
+  async function projektSetzen(id: string, projektId: string) {
+    const { error } = await supabase.from('kalkulationen').update({ projekt_id: projektId || null }).eq('id', id);
+    if (error) { setFehler('Verknüpfen fehlgeschlagen: ' + error.message); return; }
+    await laden();
   }
 
   async function loeschen(id: string) {
@@ -514,6 +605,27 @@ export default function KalkulatorPage() {
                 <label style={s.label}>Name der Kalkulation</label>
                 <input value={name} onChange={(ev) => setName(ev.target.value)} style={s.feld} />
               </div>
+              {projekte.length > 0 && (
+                <div style={{ flex: '2 1 220px' }}>
+                  <label style={s.label}>Projekt (für den Ist-Vergleich)</label>
+                  <select value={projektWahl} onChange={(ev) => setProjektWahl(ev.target.value)} style={s.feld}>
+                    <option value="">— ohne Projekt —</option>
+                    {projekte.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <AufmassUebernahme onUebernehmen={(u) => {
+                setK({ ...k, menge: u.menge, einheit: u.einheit });
+                setAufmassRef(u);
+                if (!name.trim()) setName(u.titel);
+              }} />
+              {aufmassRef && Math.abs(aufmassRef.menge - Number(k.menge)) < 1e-9 && (
+                <p style={{ ...s.hinweisText, margin: '6px 0 0' }}>
+                  Aus Aufmaß <b style={{ color: C.text }}>{aufmassRef.titel}</b>: {aufmassRef.rechenweg}
+                </p>
+              )}
             </div>
           </div>
 
@@ -963,6 +1075,7 @@ export default function KalkulatorPage() {
                   <th style={s.th}>Menge</th>
                   <th style={{ ...s.th, textAlign: 'right' }}>Angebot netto</th>
                   <th style={{ ...s.th, textAlign: 'right' }}>Marge</th>
+                  <th style={s.th}>Projekt · Plan / Ist</th>
                   <th style={s.th}>Wann</th>
                   <th style={s.th}></th>
                 </tr>
@@ -978,6 +1091,22 @@ export default function KalkulatorPage() {
                       <td style={{ ...s.td, textAlign: 'right', color: zahl(erg.marge_prozent) >= 12 ? C.green : C.warn }}>
                         {zahl(erg.marge_prozent)} %
                       </td>
+                      <td style={{ ...s.td, fontSize: 12.5 }}>
+                        {projekte.length > 0 ? (
+                          <select value={g.projekt_id ?? ''} onChange={(ev) => projektSetzen(g.id, ev.target.value)} style={{ ...s.feld, padding: '5px 8px', fontSize: 12.5, minWidth: 140 }}>
+                            <option value="">— kein Projekt —</option>
+                            {projekte.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                        ) : <span style={{ color: C.dim }}>—</span>}
+                        {andock.zeilen[g.id] && (
+                          <div style={{ color: C.dim, marginTop: 4, whiteSpace: 'nowrap' }}>
+                            {andock.zeilen[g.id].planH.toLocaleString('de-DE')} h / <b style={{ color: (andock.zeilen[g.id].abw ?? 0) > 10 ? C.warn : C.text }}>{andock.zeilen[g.id].istH.toLocaleString('de-DE')} h</b>
+                            {andock.zeilen[g.id].echt !== null && (
+                              <> · echt <b style={{ color: (andock.zeilen[g.id].echt ?? 0) >= 12 ? C.green : C.warn }}>{(andock.zeilen[g.id].echt as number).toLocaleString('de-DE')} %</b></>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       <td style={{ ...s.td, color: C.dim, whiteSpace: 'nowrap' }}>{fmtZeit(g.erstellt_am)}</td>
                       <td style={{ ...s.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <button type="button" onClick={() => ladenAus(g)} style={{ ...s.knopfRand, padding: '6px 11px', fontSize: 12.5 }}>Öffnen</button>{' '}
@@ -989,6 +1118,12 @@ export default function KalkulatorPage() {
               </tbody>
             </table>
           </div>
+          {/* Paket 211 (B9): Plan gegen Ist im Klartext */}
+          <Hinweise texte={andock.hinweise} titel="Plan gegen Ist" />
+          <p style={{ ...s.hinweisText, margin: '10px 0 0' }}>
+            „echt“ = Angebotspreis gegen erfasste Projekt-Stunden (zum Lohnkostensatz dieser Kalkulation), Material/Fremdkosten des
+            Projekts (sonst laut Kalkulation) und denselben Gemeinkosten-Zuschlag. Stunden kommen aus „Aufwand“ des verknüpften Projekts.
+          </p>
         </div>
       )}
 
