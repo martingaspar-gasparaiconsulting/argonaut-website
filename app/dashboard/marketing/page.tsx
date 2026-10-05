@@ -285,6 +285,7 @@ export default function MarketingCockpit() {
             { href: '/dashboard/marketing/autopilot', label: '🤖 Autopilot' },
             { href: '/dashboard/marketing/stratege', label: '🧠 KI-Stratege' },
             { href: '/dashboard/marketing/seo', label: '🔍 SEO-Modul' },
+            { href: '/dashboard/marketing/verzeichnisse', label: '📍 Branchenverzeichnisse' },
           ],
         },
         {
