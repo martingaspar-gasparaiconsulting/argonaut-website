@@ -27,13 +27,15 @@ Danach jede Funktion am ARGONAUT-Code gegengeprüft.
 | 14 | Mobiles Aufmaß (6) | ✓ mit Rechenweg, GAEB |
 | 15 | Großhandel IDS/OCI, DATANORM/UGL, GAEB (je 5) | DATANORM ✓, GAEB ✓ · **IDS Connect/OCI fehlt → externer Partner (Großhändler-Zugänge)** |
 
+## Nachtrag 05.10.2026
+B6c „Angebot aus Sprache“ gab es schon (G01). Beide echten Lücken sind seit 212/213 geschlossen.
+
 ## Weitere (≥ 4 Anbieter)
 Bankabgleich (Datei-Import ✓, Live-Abruf = E1) · Projekt-Chat ✓ · Checklisten/Formulare ✓ · Online-Zahlung/Bezahllink ✓ ·
 Belegerfassung mit Texterkennung ✓ · Anlagen/Objekte ✓ · Kalender-Abgleich ✓ · Routen ✓ · Kundenportal ✓ ·
-KI-Telefon = B2 (wartet auf Partner) · **Angebot aus Sprache oder Notiz → B6c** (nur Positionen aus dem eigenen
-Leistungskatalog, keine geschätzten Preise — KI-Grundregel).
+KI-Telefon = B2 (wartet auf Partner) · Angebot aus Sprache, Notiz oder Foto ✓ (seit Paket G01, 24.09.2026 — im ersten
+Abgleich übersehen, B6c entfällt).
 
 ## Ergebnis
 Von den 15 kaufentscheidenden Funktionen hat ARGONAUT 14 vollständig im Code; die 15. (Großhandels-Bestellung
-IDS/OCI) hängt an Zugängen der Großhändler. Echte Lücken zum Bauen: Plantafel ziehen (212), Foto-Markierung (B6b),
-Angebot aus Sprache (B6c).
+IDS/OCI) hängt an Zugängen der Großhändler. Echte Lücken zum Bauen waren: Plantafel ziehen (212) und Foto-Markierung (213) — beide live.

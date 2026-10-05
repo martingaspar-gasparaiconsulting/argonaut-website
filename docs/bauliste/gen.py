@@ -102,7 +102,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 05.10.2026 · _p211 live · _p212 bereit</div>
+<div class="eyebrow">ARGONAUT OS · Stand 05.10.2026 · _p213 live · B11a als Nächstes</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
@@ -129,7 +129,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 <section id="selbst"><header class="sh"><h2>Martin selbst</h2><p>Kein Push, aber Voraussetzung für mehrere Pakete</p></header>
 <div class="zwei">
 <div class="box"><h3>Vor dem Testtag</h3><ul><li>Resend Pro buchen, MAIL_TAGESBUDGET setzen, CRON_SECRET prüfen</li><li>Zwei-Faktor für das eigene Vercel-Konto</li><li>TOTP in Supabase prüfen, eigenen Faktor einrichten, Notfall-Codes sicher ablegen</li><li>„Sicheres Passwort ändern“ in Supabase einschalten</li></ul></div>
-<div class="box"><h3>Verträge und Partner</h3><ul><li>Anwalt Anfang Oktober: AVVs, Datenschutzerklärung, beide Checklisten</li><li>Stimme bei ElevenLabs klonen, Schlüssel in Vercel</li><li>Telefon-Partner wählen (Retell oder Vapi)</li><li>finAPI-Lizenzmodell klären, TSE-Konto, DATEVconnect-Zugang</li><li>Entwickler-Apps bei Meta, Google, LinkedIn, TikTok</li><li>Probestapel an den Steuerberater</li></ul></div>
+<div class="box"><h3>Verträge und Partner</h3><ul><li>Anwalt Anfang Oktober: AVVs, Datenschutzerklärung, beide Checklisten</li><li>Stimme bei ElevenLabs klonen, Schlüssel in Vercel</li><li>Telefon-Partner wählen (Retell oder Vapi)</li><li>BANKSapi-Test (32 Tage) starten, danach Starter 36 Monate, TSE-Konto, DATEVconnect-Zugang</li><li>Entwickler-Apps bei Meta, Google, LinkedIn, TikTok</li><li>Probestapel an den Steuerberater</li></ul></div>
 </div></section>
 <p class="fuss">Quelle: Rechts- und Sicherheitsprüfung vom 29.09.2026 (273 API-Routen, 180 SQL-Dateien, Mail-Wege, KI-Aufrufe, Uploads, Admin-Wege) und die Liste der offenen Punkte. Das Doc „ARGONAUT Rundumschlag“ enthält die Fundstellen im Code.</p>
 </div>'''

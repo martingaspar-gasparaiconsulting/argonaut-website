@@ -141,6 +141,8 @@ export default function AdminDossiers() {
   return (
     <div style={s.seite}>
       <h1 style={s.h1}>📄 Branchen-Dossiers</h1>
+      {/* Paket 214 (B11a): neuer Fachdossier-Generator nach dem Elektro-Richtwert */}
+      <p style={{ margin: '6px 0 14px' }}><a href="/admin/fachdossiers" style={{ color: '#C9A84C' }}>→ Neuer Fachdossier-Generator (Elektro-Richtwert, Entwürfe bis zur Anwalts-Abnahme)</a></p>
       <p style={s.sub}>
         Jede Branchenseite bietet ihr Dossier als PDF an. Wird es zum ersten Mal angefordert,
         entsteht es in dem Moment — und der Interessent wartet. Hier erzeugen Sie die Dateien
