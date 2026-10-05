@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { sendeMail, mailLayout } from '@/lib/mail';
 import { escapeHtml, istEmailGueltig } from '@/lib/newsletter';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
+import { baueBestellung, leseMenge, type ShopZeile } from '@/lib/shopUebernahme';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,8 +35,8 @@ function eur(n: number): string {
   return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 }
 
-type ArtikelRow = { id: string; bezeichnung: string | null; verkaufspreis: number | null; artikelnummer: string | null };
-type Pos = { bezeichnung: string; menge: number; einzelpreis: number; mwst: number; artikelnummer?: string };
+// Paket 204: aktiv + shop_mwst mitlesen; fehlt shop_mwst (SQL p204 offen), ohne lesen (dann 19 %).
+const FELDER = 'id, bezeichnung, verkaufspreis, artikelnummer, aktiv';
 
 export async function POST(req: Request) {
   try {
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
     for (const e of eingaben.slice(0, 100)) {
       const o = e as Record<string, unknown>;
       const id = typeof o.id === 'string' ? o.id : '';
-      const menge = Math.max(1, Math.min(9999, Math.round(Number(o.menge) || 0)));
+      const menge = leseMenge(o.menge);
       if (id && menge > 0) wunsch.set(id, (wunsch.get(id) || 0) + menge);
     }
     if (!wunsch.size) return NextResponse.json({ error: 'Keine gültigen Positionen.' }, { status: 400 });
@@ -83,32 +84,20 @@ export async function POST(req: Request) {
     }
     const ownerId = inh.owner_user_id;
 
-    // Preise serverseitig aus artikel — nur im_shop-Artikel des Inhabers.
-    const { data: artD } = await db
+    // Preise serverseitig aus artikel — nur im_shop-Artikel des Inhabers,
+    // nur aktive mit Preis über 0, MwSt je Artikel (Paket 204).
+    const lies = (felder: string) => db
       .from('artikel')
-      .select('id, bezeichnung, verkaufspreis, artikelnummer')
+      .select(felder)
       .eq('owner_user_id', ownerId)
       .eq('im_shop', true)
       .in('id', Array.from(wunsch.keys()));
-    const artikel = (artD as ArtikelRow[]) ?? [];
+    let antwort = await lies(FELDER + ', shop_mwst');
+    if (antwort.error) antwort = await lies(FELDER);
+    const artikel = (antwort.data as unknown as ShopZeile[]) ?? [];
 
-    const positionen: Pos[] = [];
-    let brutto = 0;
-    for (const a of artikel) {
-      const menge = wunsch.get(a.id) || 0;
-      if (menge <= 0) continue;
-      const einzel = Number(a.verkaufspreis) || 0;
-      positionen.push({
-        bezeichnung: (a.bezeichnung || 'Produkt').toString(),
-        menge,
-        einzelpreis: einzel,
-        mwst: 19,
-        ...(a.artikelnummer ? { artikelnummer: a.artikelnummer } : {}),
-      });
-      brutto += menge * einzel;
-    }
+    const { positionen, brutto } = baueBestellung(artikel, wunsch);
     if (!positionen.length) return NextResponse.json({ error: 'Die gewählten Produkte sind nicht mehr verfügbar.' }, { status: 409 });
-    brutto = Math.round(brutto * 100) / 100;
 
     const notizTeile = [telefon ? `Telefon: ${telefon}` : '', nachricht || ''].filter(Boolean);
 

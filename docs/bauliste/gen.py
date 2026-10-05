@@ -11,7 +11,7 @@ for sid,_,_,rows in S:
         p=int(r[5])
         if r[6]=="live": done+=p; continue
         if sid in("s0","s1","s2"): tot_bis_test+=p
-        elif sid=="s3": tot_s3+=p
+        elif sid in ("s3","s5"): tot_s3+=p
         else: tot_ext+=p
 gesamt=tot_bis_test+tot_s3+tot_ext
 alle=gesamt+done
@@ -102,29 +102,29 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 04.10.2026 · _p201 live</div>
+<div class="eyebrow">ARGONAUT OS · Stand 04.10.2026 · _p204 gepusht · _p205 bereit</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
-<div class="zahl gold"><b>{tot_bis_test}</b><span>Pushes bis zum Testtag (Stufe 0–2)</span></div>
-<div class="zahl"><b>{tot_s3}</b><span>Pushes neue Funktionen (Stufe 3)</span></div>
+<div class="zahl gold"><b>{tot_bis_test}</b><span>Pushes Stufe 0–2 (Rest wartet)</span></div>
+<div class="zahl"><b>{tot_s3}</b><span>Pushes Stufe 3 + Dossiers</span></div>
 <div class="zahl"><b>{tot_ext}</b><span>Pushes externe Partner</span></div>
 <div class="zahl"><b>{gesamt}</b><span>Pushes gesamt offen</span></div>
 <div class="zahl"><b>≈ {round(gesamt/2)}</b><span>Blöcke à 2 Std. + 1 Testtag</span></div>
 </div>
 <div class="fort"><span>{done} von {alle} Pushes erledigt · {proz} %</span><div class="balken" role="progressbar" aria-valuenow="{proz}" aria-valuemin="0" aria-valuemax="100"><i style="width:{proz}%"></i></div></div>
 <div class="leg">Wer: <span class="w w-g">gemeinsam</span><span class="w w-c">Claude</span><span class="w w-m">Martin</span> · Status: <span class="st st-ok">✓ erledigt</span><span class="st st-run">läuft</span><span class="st st-next">nächster</span><span class="st st-open">offen</span><span class="st st-wait">wartet</span></div>
-<nav class="sprung" aria-label="Abschnitte"><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#test">Entscheidungen + Testtag</a><a href="#s3">Stufe 3</a><a href="#s4">Externe Partner</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
+<nav class="sprung" aria-label="Abschnitte"><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3 jetzt</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
 </div>
 {secs[0]}{secs[1]}{secs[2]}
-<section id="test"><header class="sh"><h2>Entscheidungen und Testtag</h2><p>Vorschlag: nach Stufe 2, vor Stufe 3</p></header>
+{secs[3]}{secs[4]}{secs[5]}
+<section id="test"><header class="sh"><h2>Testtag · ganz zum Schluss</h2><p>Nach Stufe 3, externen Partnern und Dossiers – mit Schrift-Querschnitt</p></header>
 <div class="zwei">
-<div class="box"><h3>Entscheidungsrunde · 1 Block</h3><p>Rund 30 offene Fragen aus den Paketen 161–168 und 164 gemeinsam beantworten, zum Beispiel:</p>
-<ul><li>Wann gilt Zwei-Faktor als Pflicht für alle?</li><li>Dürfen Mitarbeiter Knopf-Abläufe starten?</li><li>Glocke an das ganze Team oder an einzelne Personen?</li><li>KI-Entwürfe mit dem günstigen oder dem stärkeren Modell?</li><li>centRunden jetzt reparieren, Zahlweg Stripe oder nur SEPA, Schwelle für die Bestellstrecke</li></ul></div>
+<div class="box"><h3>Entscheidungsrunden · erledigt</h3><p>Block 1 und Block 2 (47 Entscheidungen) sind entschieden und gebaut: Pakete 190–203. Offene Rechtsfragen liegen in der Anwaltsvorlage Oktober 2026.</p></div>
 <div class="box"><h3>Testtag · 1 ganzer Tag</h3><p>Martin, seine Freundin und Claude. Jeder Fund wird sofort dokumentiert und von Claude bearbeitet.</p>
 <ol class="ablauf"><li>Musterbetrieb XXL anlegen (Paket 179)</li><li>Klickliste aus den drei Testtag-Sammlungen abarbeiten</li><li>Funde live erfassen: Seite, Schritt, erwartet, passiert</li><li>Claude baut Korrekturen, am Abend gebündelt als Pushes</li><li>Nacharbeit ≈ 2–3 Blöcke, danach Schrift-Querschnitt</li></ol></div>
 </div></section>
-{secs[3]}{secs[4]}
+
 {KOSTEN}
 <section id="selbst"><header class="sh"><h2>Martin selbst</h2><p>Kein Push, aber Voraussetzung für mehrere Pakete</p></header>
 <div class="zwei">

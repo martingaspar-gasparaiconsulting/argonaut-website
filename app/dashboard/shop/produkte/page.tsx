@@ -6,6 +6,9 @@
 // in den Onlineshop ziehen — einzeln, ganze Kategorie oder alle. Pro Produkt
 // eine kurze Shop-Beschreibung + Bild (KI-Verkaufstext folgt in Kapitel 6).
 // Kein Abtippen: Name/Preis/Kategorie kommen aus dem Lager. RLS-scoped.
+// Paket 204 (B4): Auswahl per Häkchen, Übernahme nur mit Verkaufspreis und
+// nur aktive Artikel (Rest wird mit Grund übersprungen), Filter „nur mit
+// Bestand", MwSt-Satz je Artikel (19/7/0 %), Foto-Upload statt nur Adresse.
 // Pfad: app/dashboard/shop/produkte/page.tsx
 // ============================================================
 
@@ -14,6 +17,10 @@ import { createBrowserClient } from '@supabase/ssr';
 import FilialZuordnung, { type FilialeLite } from '@/app/dashboard/_components/FilialZuordnung';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort } from '@/lib/standortDaten';
+import {
+  planeUebernahme, uebernahmeMeldung, shopTauglich, hindernisText, hatBestand,
+  SHOP_MWST_SAETZE, shopMwst,
+} from '@/lib/shopUebernahme';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -37,7 +44,10 @@ type Artikel = {
   im_shop: boolean | null;
   shop_beschreibung: string | null;
   shop_bild_url: string | null;
+  shop_mwst?: number | null;
 };
+
+const FELDER = 'id, artikelnummer, bezeichnung, kategorie, einheit, verkaufspreis, aktiv, aktueller_bestand, im_shop, shop_beschreibung, shop_bild_url';
 
 function eur(n: number | null | undefined): string {
   return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
@@ -57,6 +67,10 @@ export default function ShopProduktePage() {
   const [offen, setOffen] = useState<string | null>(null); // aufgeklappter Artikel (Beschreibung/Bild)
   const [emoji, setEmoji] = useState(false);               // Emoji-Schalter je Branche (seriös/lebendig)
   const [kiBusy, setKiBusy] = useState<string | null>(null); // Artikel-ID oder 'bulk'
+  const [auswahl, setAuswahl] = useState<Set<string>>(new Set()); // Paket 204: Häkchen-Auswahl
+  const [nurBestand, setNurBestand] = useState(false);
+  const [mwstSpalte, setMwstSpalte] = useState(true);   // false, solange SQL p204 fehlt
+  const [bildBusy, setBildBusy] = useState<string | null>(null);
 
   // Filialen (Block D · D3): Sortiment je Standort.
   const [standorte, setStandorte] = useState<FilialeLite[]>([]);
@@ -65,12 +79,14 @@ export default function ShopProduktePage() {
 
   const lade = useCallback(async () => {
     setLaden(true); setFehler(null);
-    const { data, error } = await supabase
-      .from('artikel')
-      .select('id, artikelnummer, bezeichnung, kategorie, einheit, verkaufspreis, aktiv, aktueller_bestand, im_shop, shop_beschreibung, shop_bild_url')
-      .order('bezeichnung', { ascending: true });
+    // Paket 204: shop_mwst mitlesen; fehlt die Spalte noch, ohne sie (MwSt-Wahl ausgeblendet).
+    const lies = (felder: string) => supabase.from('artikel').select(felder).order('bezeichnung', { ascending: true });
+    const erst = await lies(FELDER + ', shop_mwst');
+    const mitMwst = !erst.error;
+    setMwstSpalte(mitMwst);
+    const { data, error } = mitMwst ? erst : await lies(FELDER);
     if (error) { setFehler('Artikel konnten nicht geladen werden: ' + error.message); setLaden(false); return; }
-    setListe((data as Artikel[]) ?? []);
+    setListe((data as unknown as Artikel[]) ?? []);
     setLaden(false);
   }, []);
 
@@ -110,6 +126,7 @@ export default function ShopProduktePage() {
     const s = suche.trim().toLowerCase();
     return liste.filter((a) => {
       if (nurShop && !a.im_shop) return false;
+      if (nurBestand && !hatBestand(a)) return false;
       if (katFilter && (a.kategorie || '') !== katFilter) return false;
       if (s && !(`${a.bezeichnung} ${a.artikelnummer || ''} ${a.kategorie || ''}`.toLowerCase().includes(s))) return false;
       // Fail-open-Zuschnitt: bei aktivem Standort nur Artikel ohne Zuordnung
@@ -120,31 +137,82 @@ export default function ShopProduktePage() {
       }
       return true;
     });
-  }, [liste, suche, katFilter, nurShop, zuord, aktStandort]);
+  }, [liste, suche, katFilter, nurShop, nurBestand, zuord, aktStandort]);
 
   const imShopAnzahl = useMemo(() => liste.filter((a) => a.im_shop).length, [liste]);
 
-  // Ein Artikel: an/aus im Shop.
+  // Ein Artikel: an/aus im Shop. Übernehmen nur, wenn er verkaufsfähig ist (Paket 204).
   async function umschalten(a: Artikel) {
     const wert = !a.im_shop;
+    if (wert && !shopTauglich(a)) {
+      setOk(null);
+      setFehler(`„${a.bezeichnung}" kann nicht in den Shop: ${hindernisText(a)}. Bitte unter ERP → Preisliste ergänzen.`);
+      return;
+    }
     setListe((l) => l.map((x) => (x.id === a.id ? { ...x, im_shop: wert } : x)));
     const { error } = await supabase.from('artikel').update({ im_shop: wert }).eq('id', a.id);
     if (error) { setFehler('Konnte nicht speichern.'); setListe((l) => l.map((x) => (x.id === a.id ? { ...x, im_shop: a.im_shop } : x))); }
   }
 
-  // Sammel-Aktion: die aktuell gefilterten Artikel in den Shop übernehmen bzw. entfernen.
-  async function sammel(wert: boolean) {
-    const ids = gefiltert.map((a) => a.id);
-    if (!ids.length) return;
+  // Sammel-Aktion (Filter oder Häkchen-Auswahl). Übernehmen: nur verkaufsfähige
+  // Artikel, der Rest wird mit Grund gemeldet (Paket 204). Entfernen: alle.
+  async function sammel(wert: boolean, quelle: Artikel[]) {
+    if (!quelle.length) return;
     setBusy(true); setFehler(null); setOk(null);
     try {
-      const { error } = await supabase.from('artikel').update({ im_shop: wert }).in('id', ids);
-      if (error) throw error;
-      setListe((l) => l.map((x) => (ids.includes(x.id) ? { ...x, im_shop: wert } : x)));
-      setOk(wert ? `${ids.length} Artikel in den Shop übernommen.` : `${ids.length} Artikel aus dem Shop entfernt.`);
+      if (wert) {
+        const plan = planeUebernahme(quelle);
+        if (plan.neu.length) {
+          const { error } = await supabase.from('artikel').update({ im_shop: true }).in('id', plan.neu);
+          if (error) throw error;
+          setListe((l) => l.map((x) => (plan.neu.includes(x.id) ? { ...x, im_shop: true } : x)));
+        }
+        setOk(uebernahmeMeldung(plan));
+      } else {
+        const ids = quelle.filter((a) => a.im_shop).map((a) => a.id);
+        if (ids.length) {
+          const { error } = await supabase.from('artikel').update({ im_shop: false }).in('id', ids);
+          if (error) throw error;
+          setListe((l) => l.map((x) => (ids.includes(x.id) ? { ...x, im_shop: false } : x)));
+        }
+        setOk(`${ids.length} Artikel aus dem Shop entfernt.`);
+      }
+      setAuswahl(new Set());
     } catch (e) {
       setFehler('Sammel-Aktion fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
     } finally { setBusy(false); }
+  }
+
+  const ausgewaehlt = useMemo(() => liste.filter((a) => auswahl.has(a.id)), [liste, auswahl]);
+  function waehle(id: string) {
+    setAuswahl((alt) => { const n = new Set(alt); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  }
+  const alleSichtbarGewaehlt = gefiltert.length > 0 && gefiltert.every((a) => auswahl.has(a.id));
+  function alleSichtbarWaehlen() {
+    setAuswahl(alleSichtbarGewaehlt ? new Set() : new Set(gefiltert.map((a) => a.id)));
+  }
+
+  async function mwstSpeichern(a: Artikel, wert: number) {
+    const vorher = a.shop_mwst;
+    setListe((l) => l.map((x) => (x.id === a.id ? { ...x, shop_mwst: wert } : x)));
+    const { error } = await supabase.from('artikel').update({ shop_mwst: wert }).eq('id', a.id);
+    if (error) { setFehler('MwSt-Satz konnte nicht gespeichert werden.'); setListe((l) => l.map((x) => (x.id === a.id ? { ...x, shop_mwst: vorher } : x))); }
+  }
+
+  // Foto hochladen (öffentlicher Bild-Speicher, wie Landingpages) -> Adresse am Artikel.
+  async function bildHochladen(a: Artikel, datei: File | null | undefined) {
+    if (!datei) return;
+    setBildBusy(a.id); setFehler(null); setOk(null);
+    try {
+      const fd = new FormData();
+      fd.append('datei', datei);
+      const res = await fetch('/api/marketing/lp-medien', { method: 'POST', body: fd });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.url) { setFehler(d?.error || 'Foto-Upload fehlgeschlagen.'); return; }
+      await feldSpeichern(a, 'shop_bild_url', d.url as string);
+      setOk('Foto gespeichert.');
+    } catch { setFehler('Foto-Upload fehlgeschlagen.'); }
+    finally { setBildBusy(null); }
   }
 
   async function feldSpeichern(a: Artikel, feld: 'shop_beschreibung' | 'shop_bild_url', wert: string) {
@@ -189,7 +257,8 @@ export default function ShopProduktePage() {
           <h1 style={styles.h1}>🛍️ Produkte in den Shop</h1>
           <p style={styles.sub}>
             Ziehen Sie Ihr bestehendes Lager mit einem Klick in den Onlineshop — Name, Preis und Kategorie kommen
-            automatisch aus Ihrer Warenwirtschaft. Kein Abtippen. Den verkaufsstarken Text schreibt später die KI.
+            automatisch aus Ihrer Warenwirtschaft. Kein Abtippen. Übernommen werden nur aktive Artikel mit
+            Verkaufspreis — alles andere wird mit Grund übersprungen.
           </p>
         </div>
         <div style={styles.kpi}><div style={styles.kpiWert}>{imShopAnzahl}</div><div style={styles.kpiLabel}>im Shop</div></div>
@@ -204,12 +273,28 @@ export default function ShopProduktePage() {
             {kategorien.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
           <label style={styles.check}><input type="checkbox" checked={nurShop} onChange={(e) => setNurShop(e.target.checked)} /> nur im Shop</label>
+          <label style={styles.check} title="Nur Artikel mit Lagerbestand über 0 anzeigen"><input type="checkbox" checked={nurBestand} onChange={(e) => setNurBestand(e.target.checked)} /> nur mit Bestand</label>
         </div>
         <div style={styles.sammelRow}>
-          <button style={{ ...styles.btnGold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => sammel(true)}>
-            ⬇ {katFilter ? `Kategorie „${katFilter}" übernehmen` : suche || nurShop ? 'Gefilterte übernehmen' : 'Alle übernehmen'} ({gefiltert.length})
-          </button>
-          <button style={styles.btnGhost} disabled={busy} onClick={() => sammel(false)}>Aus Shop entfernen</button>
+          {ausgewaehlt.length > 0 ? (
+            <>
+              <button style={{ ...styles.btnGold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => sammel(true, ausgewaehlt)}>
+                ⬇ Auswahl übernehmen ({ausgewaehlt.length})
+              </button>
+              <button style={styles.btnGhost} disabled={busy} onClick={() => sammel(false, ausgewaehlt)}>Auswahl aus Shop entfernen</button>
+              <button style={styles.btnGhost} disabled={busy} onClick={() => setAuswahl(new Set())}>Auswahl aufheben</button>
+            </>
+          ) : (
+            <>
+              <button style={{ ...styles.btnGold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => sammel(true, gefiltert)}>
+                ⬇ {katFilter ? `Kategorie „${katFilter}" übernehmen` : suche || nurShop || nurBestand ? 'Gefilterte übernehmen' : 'Alle übernehmen'} ({gefiltert.length})
+              </button>
+              <button style={styles.btnGhost} disabled={busy} onClick={() => sammel(false, gefiltert)}>Aus Shop entfernen</button>
+            </>
+          )}
+          <label style={styles.check} title="Alle sichtbaren Artikel an- bzw. abhaken">
+            <input type="checkbox" checked={alleSichtbarGewaehlt} onChange={alleSichtbarWaehlen} /> alle sichtbaren wählen
+          </label>
           <label style={styles.check} title="Verkaufstexte mit oder ohne Emojis (je nach Branche)">
             <input type="checkbox" checked={emoji} onChange={(e) => setEmoji(e.target.checked)} /> Emojis im Text
           </label>
@@ -236,6 +321,13 @@ export default function ShopProduktePage() {
           {gefiltert.map((a) => (
             <div key={a.id} style={{ ...styles.item, ...(a.im_shop ? styles.itemAn : null) }}>
               <div style={styles.itemKopf}>
+                <input
+                  type="checkbox"
+                  aria-label={`${a.bezeichnung} auswählen`}
+                  checked={auswahl.has(a.id)}
+                  onChange={() => waehle(a.id)}
+                  style={{ width: 18, height: 18, accentColor: C.gold, cursor: 'pointer' }}
+                />
                 <button style={a.im_shop ? styles.toggleAn : styles.toggleAus} onClick={() => umschalten(a)} title={a.im_shop ? 'Im Shop — klicken zum Entfernen' : 'Nicht im Shop — klicken zum Übernehmen'}>
                   {a.im_shop ? '✓ Im Shop' : '+ Übernehmen'}
                 </button>
@@ -243,7 +335,13 @@ export default function ShopProduktePage() {
                   <div style={styles.itemName}>{a.bezeichnung}</div>
                   <div style={styles.itemMeta}>
                     {a.artikelnummer ? `#${a.artikelnummer} · ` : ''}{a.kategorie || 'ohne Kategorie'} · Bestand {a.aktueller_bestand ?? '–'} {a.einheit || ''}
+                    {mwstSpalte && a.im_shop ? ` · ${shopMwst(a.shop_mwst)} % MwSt` : ''}
                   </div>
+                  {!shopTauglich(a) && (
+                    <div style={a.im_shop ? styles.warnZeile : styles.hinweisZeile}>
+                      {a.im_shop ? '⚠ Im Shop, aber für Kunden unsichtbar: ' : 'Nicht übernehmbar: '}{hindernisText(a)}
+                    </div>
+                  )}
                 </div>
                 <div style={styles.itemPreis}>{eur(a.verkaufspreis)}</div>
                 <FilialZuordnung
@@ -277,13 +375,42 @@ export default function ShopProduktePage() {
                     onBlur={(e) => feldSpeichern(a, 'shop_beschreibung', e.target.value)}
                     placeholder="Kurzer Text, den Kunden im Shop sehen … oder ✨ KI-Verkaufstext klicken."
                   />
-                  <label style={styles.feldLabel}>Bild-Adresse (URL)</label>
+                  {mwstSpalte && (
+                    <>
+                      <label style={styles.feldLabel}>MwSt-Satz im Shop</label>
+                      <select
+                        style={{ ...styles.select, maxWidth: 260 }}
+                        value={shopMwst(a.shop_mwst)}
+                        onChange={(e) => mwstSpeichern(a, Number(e.target.value))}
+                      >
+                        {SHOP_MWST_SAETZE.map((m) => (
+                          <option key={m} value={m}>{m === 19 ? '19 % (Regelsatz)' : m === 7 ? '7 % (ermäßigt, z. B. Lebensmittel)' : '0 % (steuerfrei)'}</option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                  <label style={styles.feldLabel}>Foto</label>
+                  <div style={styles.bildRow}>
+                    <label style={{ ...styles.miniBtn, opacity: bildBusy === a.id ? 0.6 : 1 }}>
+                      {bildBusy === a.id ? 'Lädt hoch …' : '📷 Foto hochladen'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        style={{ display: 'none' }}
+                        disabled={bildBusy === a.id}
+                        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; bildHochladen(a, f); }}
+                      />
+                    </label>
+                    <span style={styles.hint}>JPG, PNG, WebP oder GIF · das Foto ist auf Ihrer Webseite öffentlich sichtbar</span>
+                  </div>
+                  <label style={styles.feldLabel}>oder Bild-Adresse (URL)</label>
                   <div style={styles.bildRow}>
                     <input
                       style={styles.input}
+                      key={a.shop_bild_url || 'leer'}
                       defaultValue={a.shop_bild_url || ''}
                       onBlur={(e) => feldSpeichern(a, 'shop_bild_url', e.target.value)}
-                      placeholder="https://… (Foto-Upload & KI-Bild folgen)"
+                      placeholder="https://…"
                     />
                     {a.shop_bild_url ? <img src={a.shop_bild_url} alt="" style={styles.bildVorschau} /> : null}
                   </div>
@@ -327,6 +454,8 @@ const styles: Record<string, CSSProperties> = {
   toggleAus: { background: C.navy, color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   itemName: { fontWeight: 700, fontSize: 15 },
   itemMeta: { color: C.textDim, fontSize: 12.5, marginTop: 2 },
+  warnZeile: { color: C.warn, fontSize: 12.5, marginTop: 4, fontWeight: 700 },
+  hinweisZeile: { color: C.textDim, fontSize: 12.5, marginTop: 4, fontStyle: 'italic' },
   itemPreis: { fontWeight: 800, whiteSpace: 'nowrap', color: C.gold },
   miniBtn: { background: 'transparent', color: C.cyan, border: `1px solid ${C.cyan}55`, borderRadius: 8, padding: '7px 11px', fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' },
 

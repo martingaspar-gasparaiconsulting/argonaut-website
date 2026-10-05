@@ -9,6 +9,7 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { oeffentlichBestellbar, shopMwst } from '@/lib/shopUebernahme';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,13 @@ type ArtikelRow = {
   einheit: string | null; kategorie: string | null;
   shop_beschreibung: string | null; shop_bild_url: string | null;
   aktueller_bestand: number | null;
+  aktiv?: boolean | null;
+  shop_mwst?: number | null;
 };
+
+// Paket 204: aktiv + shop_mwst mitlesen. Fehlt die Spalte shop_mwst noch
+// (SQL p204 nicht gelaufen), ohne sie erneut lesen — der Shop bleibt sichtbar.
+const FELDER = 'id, bezeichnung, verkaufspreis, einheit, kategorie, shop_beschreibung, shop_bild_url, aktueller_bestand, aktiv';
 
 export async function GET(req: Request) {
   try {
@@ -42,16 +49,19 @@ export async function GET(req: Request) {
       return NextResponse.json({ produkte: [] });
     }
 
-    const { data } = await db
+    const lies = (felder: string) => db
       .from('artikel')
-      .select('id, bezeichnung, verkaufspreis, einheit, kategorie, shop_beschreibung, shop_bild_url, aktueller_bestand')
-      .eq('owner_user_id', inh.owner_user_id)
+      .select(felder)
+      .eq('owner_user_id', inh.owner_user_id as string)
       .eq('im_shop', true)
       .order('shop_sortierung', { ascending: true, nullsFirst: false })
       .order('bezeichnung', { ascending: true })
       .limit(200);
+    let antwort = await lies(FELDER + ', shop_mwst');
+    if (antwort.error) antwort = await lies(FELDER);
 
-    const rows = (data as ArtikelRow[]) ?? [];
+    // Paket 204: nur aktive Artikel mit Preis über 0 (vorher auch 0,00 € und ausgelistete).
+    const rows = ((antwort.data as unknown as ArtikelRow[]) ?? []).filter(oeffentlichBestellbar);
     const produkte = rows.map((r) => ({
       id: r.id,
       name: (r.bezeichnung || 'Produkt').toString(),
@@ -61,6 +71,7 @@ export async function GET(req: Request) {
       beschreibung: (r.shop_beschreibung || '').toString().slice(0, 600),
       bild: (r.shop_bild_url || '').toString(),
       bestand: r.aktueller_bestand == null ? null : Number(r.aktueller_bestand),
+      mwst: shopMwst(r.shop_mwst),
     }));
 
     return NextResponse.json({ produkte, anzahl: produkte.length });
