@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { STATUS_TEXT, type Status, type Zeile } from '@/lib/einrichtung';
 import type { Frage, Rolle, SetterEinstellung, Ziel } from '@/lib/setter';
 import { VORLAGEN, MAX_FRAGEN } from '@/lib/setterVorlagen';
+import AbsenderDomainVerwaltung from './AbsenderDomainVerwaltung';
 
 // ============================================================
 // ARGONAUT OS · Command Center · Betriebs-Akte (G3 Push 4)
@@ -64,7 +65,7 @@ type Kopf = {
 
 type Fortschritt = { erledigt: number; offen: number; gesamt: number; prozent: number };
 
-type Reiter = 'checkliste' | 'setter' | 'menge' | 'zugang';
+type Reiter = 'checkliste' | 'setter' | 'menge' | 'zugang' | 'absender';
 
 export default function BetriebsAkte() {
   const params = useParams<{ id: string }>();
@@ -242,6 +243,7 @@ export default function BetriebsAkte() {
               {tab('setter', 'KI-Berater')}
               {tab('menge', 'Menge & Domains')}
               {tab('zugang', 'Zugang / Kündigung')}
+              {tab('absender', 'Absender-Domain')}
             </div>
 
             {reiter === 'checkliste' ? (
@@ -250,6 +252,8 @@ export default function BetriebsAkte() {
               <MengeUndDomains betrieb={id} />
             ) : reiter === 'zugang' ? (
               <ZugangSperre betrieb={id} />
+            ) : reiter === 'absender' ? (
+              <AbsenderDomainVerwaltung betrieb={id} />
             ) : (
               <>
                 <div style={s.karte}>

@@ -151,6 +151,7 @@ export async function GET(req: Request) {
         betreff: `Ihr Exemplar: ${titel}`,
         html: kundenMailLayout(firma, p.firma_akzentfarbe, '', inhalt),
         absenderName: firma,
+        betriebId: l.owner_user_id,
         antwortAn: (p.firma_email || '').trim() || undefined,
       });
     } catch (e) {

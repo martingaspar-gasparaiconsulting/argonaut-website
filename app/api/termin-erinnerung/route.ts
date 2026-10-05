@@ -80,7 +80,7 @@ async function lauf(req: NextRequest) {
   );
 
   // Branding je Betrieb cachen (mehrere Termine pro Betrieb -> nur einmal laden).
-  const brandCache = new Map<string, { firma: string; akzent: string; email: string | undefined }>();
+  const brandCache = new Map<string, { firma: string; akzent: string; email: string | undefined; betriebId: string }>();
   async function ownerBrand(ownerId: string) {
     const treffer = brandCache.get(ownerId);
     if (treffer) return treffer;
@@ -119,7 +119,7 @@ async function lauf(req: NextRequest) {
     const html = kundenMailLayout(brand.firma, brand.akzent, 'Terminerinnerung', inhalt);
     const betreff = `Erinnerung: ${t.titel ?? 'Ihr Termin'} morgen um ${beginn.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })} Uhr`;
 
-    const r = await sendeMail({ an: t.kunde_email as string, betreff, html, absenderName: brand.firma, antwortAn: brand.email });
+    const r = await sendeMail({ an: t.kunde_email as string, betreff, html, absenderName: brand.firma, antwortAn: brand.email, betriebId: brand.betriebId });
     if (r.ok) {
       await supabase.from('termine').update({ erinnerung_gesendet_am: new Date().toISOString() }).eq('id', t.id);
       gesendet++;

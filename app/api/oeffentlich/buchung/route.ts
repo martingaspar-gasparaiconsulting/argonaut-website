@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
         an: kundeMail,
         betreff: `Terminbestätigung: ${art.name || 'Termin'} am ${beginnD.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })}`,
         html: kundenMailLayout(brand.firma, brand.akzent, 'Terminbestätigung', inhalt),
-        absenderName: brand.firma,
+        absenderName: brand.firma, betriebId: brand.betriebId,
         antwortAn: brand.email,
       });
     } catch { /* Mail optional */ }

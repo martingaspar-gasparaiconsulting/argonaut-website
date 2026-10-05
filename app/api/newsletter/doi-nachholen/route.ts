@@ -133,7 +133,7 @@ export async function POST(req: Request) {
         firma: brand.firma, url: optinBestaetigenUrl(BASIS_URL, token), akzent: brand.akzent,
         name: abo.name, quelle, datum,
       }),
-      absenderName: brand.firma,
+      absenderName: brand.firma, betriebId: brand.betriebId,
       antwortAn: brand.email,
       kundenPost: true,
     });

@@ -124,6 +124,7 @@ export async function POST(req: Request) {
       html,
       text: `${lead.name ? 'Guten Tag ' + lead.name + ',' : 'Guten Tag,'}\n\nvielen Dank fuer Ihr Interesse. Im Anhang finden Sie unser Angebot als PDF.\n\nMit freundlichen Gruessen\n${firma}`,
       absenderName: firma,
+      betriebId: user.id,
       antwortAn: firmaEmail,
       anhaenge: [{ dateiname, inhalt: pdfBuffer, typ: 'application/pdf' }],
     });

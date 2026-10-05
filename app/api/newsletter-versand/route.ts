@@ -164,6 +164,7 @@ export async function POST(req: Request) {
         betreff,
         html,
         absenderName: firmaName,
+        betriebId: betrieb,
         antwortAn,
         // Punkt 68 (22.09.2026): Abmeldeknopf oben in Gmail und Outlook.
         // einKlick ist erlaubt, weil /api/newsletter/abmelden seit heute ein

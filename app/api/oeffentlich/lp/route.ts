@@ -207,7 +207,7 @@ export async function POST(req: Request) {
       an: email,
       betreff: `Bitte bestätigen Sie Ihre Anmeldung bei ${brand.firma}`,
       html: optinBestaetigungHtml(brand.firma, url, brand.akzent, name),
-      absenderName: brand.firma,
+      absenderName: brand.firma, betriebId: brand.betriebId,
       antwortAn: brand.email,
     });
 

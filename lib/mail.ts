@@ -18,6 +18,8 @@
 import { Resend } from "resend";
 import { escapeHtml, sichereFarbe } from "@/lib/newsletter";
 import { werbeFuss } from "@/lib/werbemail";
+import { fromKopf, fehlerWegenDomain } from "@/lib/absenderDomain";
+import { absenderFuerBetrieb } from "@/lib/absenderDomainServer";
 
 // ---------------------------------------------------------------------------
 // Konfiguration — zentrale Absender-Identitaet.
@@ -47,9 +49,10 @@ function client(): Resend {
 /** Baut den From-Header. Standard-Absendername ARGONAUT OS; einzelne Module
  *  (z. B. der Kunden-Newsletter) koennen einen eigenen Anzeigenamen setzen —
  *  die Absender-Domain bleibt IMMER die verifizierte argonaut-os.com. */
-function fromHeader(absenderName?: string): string {
-  const clean = (absenderName || "").replace(/[<>"\r\n]/g, "").trim();
-  return `${clean || ABSENDER_NAME} <${ABSENDER_MAIL}>`;
+function fromHeader(absenderName?: string, eigeneAdresse?: string | null): string {
+  // Paket 210 (B7): eigene, bei Resend bestaetigte Domain des Betriebs —
+  // sonst wie bisher noreply@argonaut-os.com.
+  return fromKopf(absenderName, eigeneAdresse || ABSENDER_MAIL, ABSENDER_NAME);
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +102,13 @@ export type MailEingang = {
    * Mail lieber ganz ohne Antwort-Adresse raus (22.09.2026, Punkt 68).
    */
   kundenPost?: boolean;
+  /**
+   * Paket 210 (B7): Kennung des Betriebs (oder eines seiner Mitarbeiter),
+   * in dessen Namen die Mail rausgeht. Hat der Betrieb eine bestaetigte und
+   * eingeschaltete eigene Absender-Domain, kommt die Mail von dort.
+   * Ohne Angabe bleibt alles wie bisher.
+   */
+  betriebId?: string | null;
 };
 
 export type MailErgebnis =
@@ -157,8 +167,9 @@ export async function sendeMail(eingang: MailEingang): Promise<MailErgebnis> {
       ? (eingang.antwortAn || "").trim() || undefined
       : eingang.antwortAn ?? ANTWORT_MAIL;
 
-    const { data, error } = await resend.emails.send({
-      from: fromHeader(eingang.absenderName),
+    const eigeneAdresse = eingang.betriebId ? await absenderFuerBetrieb(eingang.betriebId) : null;
+    const sende = (adresse: string | null) => resend.emails.send({
+      from: fromHeader(eingang.absenderName, adresse),
       to: eingang.an,
       subject: eingang.betreff,
       html: eingang.html,
@@ -172,6 +183,14 @@ export async function sendeMail(eingang: MailEingang): Promise<MailErgebnis> {
       ...(Object.keys(kopfzeilen).length > 0 ? { headers: kopfzeilen } : {}),
       ...(attachments && attachments.length > 0 ? { attachments } : {}),
     });
+
+    let { data, error } = await sende(eigeneAdresse);
+    // Sicherheitsnetz: lehnt Resend die eigene Domain ab (DNS-Eintrag weg,
+    // Domain abgelaufen), geht die Mail ueber den Standard-Absender raus.
+    if (error && eigeneAdresse && fehlerWegenDomain(error.message)) {
+      console.warn("[mail] eigene Absender-Domain abgelehnt, Standard-Absender genutzt:", error.message);
+      ({ data, error } = await sende(null));
+    }
 
     if (error) {
       return { ok: false, fehler: error.message || "Unbekannter Resend-Fehler." };
@@ -230,7 +249,7 @@ export function mailLayout(titel: string, inhalt: string): string {
 export async function absenderBranding(
   supabase: any,
   userId: string,
-): Promise<{ firma: string; akzent: string; email: string | undefined }> {
+): Promise<{ firma: string; akzent: string; email: string | undefined; betriebId: string }> {
   try {
     const { data } = await supabase
       .from("profiles")
@@ -248,9 +267,10 @@ export async function absenderBranding(
       firma,
       akzent: sichereFarbe(p.firma_akzentfarbe),
       email: (p.firma_email || "").trim() || undefined,
+      betriebId: userId,
     };
   } catch {
-    return { firma: "Ihr Dienstleister", akzent: sichereFarbe(null), email: undefined };
+    return { firma: "Ihr Dienstleister", akzent: sichereFarbe(null), email: undefined, betriebId: userId };
   }
 }
 

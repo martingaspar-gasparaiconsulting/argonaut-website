@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       an,
       betreff: `Wie war's bei ${brand.firma}? Ihre kurze Bewertung`,
       html,
-      absenderName: brand.firma,
+      absenderName: brand.firma, betriebId: brand.betriebId,
       antwortAn: brand.email,
       kopfzeilen: teile.kopfzeilen,
       kundenPost: true,

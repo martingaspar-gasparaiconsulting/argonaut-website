@@ -187,7 +187,7 @@ async function lauf(req: Request) {
   // nur kontakte.werbe_widerspruch_am, und ohne Gross-/Kleinschreibungs-Luecke.
   const darf = await werbePrueferLaden(db, anmeldungen.map((a) => ({ betrieb: a.owner_user_id, email: a.email })));
 
-  const brandingCache = new Map<string, { firma: string; akzent: string; email: string | undefined }>();
+  const brandingCache = new Map<string, { firma: string; akzent: string; email: string | undefined; betriebId: string }>();
   async function brandingVon(ownerId: string) {
     if (!brandingCache.has(ownerId)) brandingCache.set(ownerId, await absenderBranding(db, ownerId));
     return brandingCache.get(ownerId)!;
@@ -261,7 +261,7 @@ async function lauf(req: Request) {
         const r = await sendeMail({
           an: a.email, betreff,
           html: kundenMailLayout(marke.firma, marke.akzent, '', inhalt),
-          absenderName: marke.firma, antwortAn: marke.email, kundenPost: true,
+          absenderName: marke.firma, antwortAn: marke.email, kundenPost: true, betriebId: marke.betriebId,
           ...(kalender ? { anhaenge: [kalender] } : {}),
         });
         if (!r.ok) throw new Error(r.fehler);
@@ -321,7 +321,7 @@ async function lauf(req: Request) {
           abmeldeLink: teile.abmeldeLink,
           grund: `Sie erhalten diese E-Mail, weil Sie sich für „${w.titel}" bei ${marke.firma} angemeldet hatten.`,
         }),
-        absenderName: marke.firma, antwortAn: marke.email,
+        absenderName: marke.firma, antwortAn: marke.email, betriebId: marke.betriebId,
         kopfzeilen: teile.kopfzeilen,
         kundenPost: true,
       });

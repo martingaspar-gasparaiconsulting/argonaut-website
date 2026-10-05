@@ -102,7 +102,7 @@ export async function mailSenden(db: Db, ownerId: string, plan: Extract<AktionPl
     : undefined);
   const r = await sendeMail({
     an: plan.an, betreff: plan.betreff, html,
-    absenderName: marke.firma, antwortAn: marke.email, kundenPost: true,
+    absenderName: marke.firma, antwortAn: marke.email, kundenPost: true, betriebId: marke.betriebId,
     ...(teile ? { kopfzeilen: teile.kopfzeilen } : {}),
   });
   return r.ok ? { ergebnis: 'ok', meldung: plan.meldung } : { ergebnis: 'fehler', meldung: r.fehler };

@@ -122,7 +122,7 @@ async function lauf(req: Request) {
   const titelJeFreebie = new Map<string, string>();
   for (const f of ((freebiesRoh ?? []) as FreebieRow[])) titelJeFreebie.set(f.id, f.titel);
 
-  const brandingCache = new Map<string, { firma: string; akzent: string; email: string | undefined }>();
+  const brandingCache = new Map<string, { firma: string; akzent: string; email: string | undefined; betriebId: string }>();
   async function brandingVon(ownerId: string) {
     if (!brandingCache.has(ownerId)) brandingCache.set(ownerId, await absenderBranding(db, ownerId));
     return brandingCache.get(ownerId)!;
@@ -193,7 +193,7 @@ async function lauf(req: Request) {
           abmeldeLink: abUrl,
           grund: `Sie erhalten diese E-Mail, weil Sie „${titel}" bei ${marke.firma} angefordert haben.`,
         }),
-        absenderName: marke.firma,
+        absenderName: marke.firma, betriebId: marke.betriebId,
         antwortAn: marke.email,
         kopfzeilen: werbeKopfzeilen(abUrl),
         kundenPost: true,

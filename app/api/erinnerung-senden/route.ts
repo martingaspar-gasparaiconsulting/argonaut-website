@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     const brand = await absenderBranding(supabase, user.id);
     const html = kundenMailLayout(brand.firma, brand.akzent, titel, teile.join(''));
 
-    const r = await sendeMail({ an, betreff: titel, html, absenderName: brand.firma, antwortAn: brand.email });
+    const r = await sendeMail({ an, betreff: titel, html, absenderName: brand.firma, antwortAn: brand.email, betriebId: brand.betriebId });
     if (!r.ok) return NextResponse.json({ error: 'Mailversand fehlgeschlagen: ' + r.fehler }, { status: 502 });
 
     const jetzt = new Date().toISOString();

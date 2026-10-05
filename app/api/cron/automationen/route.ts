@@ -162,7 +162,7 @@ async function fuehreAus(
       // Paket 173: Absender und Antwort-Adresse des BETRIEBS, nie „ARGONAUT OS" / info@.
       const r = await sendeMail({
         an, betreff, html,
-        absenderName: marke.firma, antwortAn: marke.email, kundenPost: true,
+        absenderName: marke.firma, antwortAn: marke.email, kundenPost: true, betriebId: marke.betriebId,
         ...(teile ? { kopfzeilen: teile.kopfzeilen } : {}),
       });
       if (!r.ok) return { ergebnis: 'fehler', meldung: r.fehler };

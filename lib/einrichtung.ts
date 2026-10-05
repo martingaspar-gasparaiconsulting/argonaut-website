@@ -155,7 +155,7 @@ export const PUNKTE: Punkt[] = [
   {
     id: 'mail_absender',
     name: 'E-Mail-Absender verifiziert',
-    warum: 'Wird ein Punkt je Betrieb, sobald D6 steht. Solange alle Betriebe über dieselbe Absenderadresse versenden, ist das EIN Punkt auf der Systeme-Seite und keiner in jeder Kundenakte.',
+    warum: 'Seit Paket 210 kann jeder Betrieb eine eigene Absender-Domain bekommen (Betriebs-Akte → Reiter „Absender-Domain“). Ohne sie gehen die Kunden-Mails mit dem Firmennamen über noreply@argonaut-os.com — das ist kein Fehler, sondern der Standard.',
     zustaendig: 'betreiber',
     feld: 'mailAbsender',
     wo: '/admin/command-center/systeme',

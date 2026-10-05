@@ -163,6 +163,7 @@ export async function GET(req: Request) {
         betreff: `Anmeldung bestätigt: ${w.titel}`,
         html: kundenMailLayout(firma, p.firma_akzentfarbe, '', inhalt),
         absenderName: firma,
+        betriebId: a.owner_user_id,
         antwortAn: (p.firma_email || '').trim() || undefined,
         ...(kalender ? { anhaenge: [kalender] } : {}),
       });

@@ -113,7 +113,7 @@ export async function POST(req: Request) {
         const html = schluessel ? messeMit(roh, origin, zeile.id, schluessel, klickSignatur) : roh;
         const abmelde = abmeldeUrl(origin, a.abmelde_token || '');
         const r = await sendeMail({
-          an: a.email, betreff, html, absenderName: firmaName, antwortAn,
+          an: a.email, betreff, html, absenderName: firmaName, antwortAn, betriebId: user!.id,
           // Paket 173: wie der normale Newsletter — Abmeldeknopf in Gmail/Outlook, Antwort nie an ARGONAUT.
           kopfzeilen: werbeKopfzeilen(abmelde, { einKlick: true }),
           kundenPost: true,

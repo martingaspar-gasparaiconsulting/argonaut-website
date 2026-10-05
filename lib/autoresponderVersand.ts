@@ -142,7 +142,7 @@ export async function verschickeFaellige(
         an: l.email,
         betreff: schritt.betreff,
         html,
-        absenderName: branding.firma,
+        absenderName: branding.firma, betriebId: l.owner_user_id,
         antwortAn: branding.email,
         // Punkt 68 (22.09.2026): Abmeldeknopf oben in Gmail und Outlook.
         // einKlick ist erlaubt, weil /api/autoresponder/abmelden seit heute

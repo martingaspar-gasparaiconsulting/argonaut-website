@@ -111,7 +111,7 @@ async function lauf(req: Request) {
 
   // Branding je Betrieb nur EINMAL laden — und immer aus der owner_user_id
   // der jeweiligen Zeile. Siehe Warnung oben.
-  const brandingCache = new Map<string, { firma: string; akzent: string; email: string | undefined }>();
+  const brandingCache = new Map<string, { firma: string; akzent: string; email: string | undefined; betriebId: string }>();
   async function brandingVon(ownerId: string) {
     if (!brandingCache.has(ownerId)) {
       brandingCache.set(ownerId, await absenderBranding(db, ownerId));
@@ -176,7 +176,7 @@ async function lauf(req: Request) {
           abmeldeLink: teile.abmeldeLink,
           grund: `Sie erhalten diese E-Mail, weil Sie bei ${marke.firma} angefragt haben.`,
         }),
-        absenderName: marke.firma,
+        absenderName: marke.firma, betriebId: marke.betriebId,
         antwortAn: marke.email,
         kopfzeilen: teile.kopfzeilen,
         kundenPost: true,

@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   const html = kundenMailLayout(brand.firma, brand.akzent, 'Terminbestätigung', inhalt);
   const betreff = `Terminbestätigung: ${termin.titel ?? 'Ihr Termin'} am ${beginn.toLocaleDateString('de-DE')}`;
 
-  const r = await sendeMail({ an: termin.kunde_email, betreff, html, absenderName: brand.firma, antwortAn: brand.email });
+  const r = await sendeMail({ an: termin.kunde_email, betreff, html, absenderName: brand.firma, antwortAn: brand.email, betriebId: brand.betriebId });
   if (!r.ok) {
     return NextResponse.json({ ok: false, fehler: r.fehler });
   }

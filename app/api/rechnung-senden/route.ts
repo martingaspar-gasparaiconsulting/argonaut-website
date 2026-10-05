@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       an,
       betreff,
       html,
-      absenderName: brand.firma,
+      absenderName: brand.firma, betriebId: brand.betriebId,
       antwortAn: brand.email,
       anhaenge: [{ dateiname, inhalt: anhangBuffer, typ }],
     });

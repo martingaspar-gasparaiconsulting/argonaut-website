@@ -260,6 +260,7 @@ export async function POST(req: Request) {
       betreff: `Bitte bestätigen Sie Ihre Anmeldung — ${firma}`,
       html: kundenMailLayout(firma, p.firma_akzentfarbe, '', inhalt),
       absenderName: firma,
+      betriebId: ownerId,
       antwortAn: (p.firma_email || '').trim() || undefined,
     });
     if (!r.ok) {
