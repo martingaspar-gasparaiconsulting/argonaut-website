@@ -22,6 +22,8 @@ import Leerzustand from '../_components/Leerzustand';
 import { NurVoll } from '../_components/Ansicht';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
+import FotoMarkierung from './FotoMarkierung';
+import { markiertName, markiertPfad } from '@/lib/fotoMarkierung';
 
 const MODUL = 'bautagebuch';
 
@@ -94,6 +96,8 @@ export default function BautagebuchPage() {
   const [eintragExtra, setEintragExtra] = useState<Record<string, string>>({});
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
   const [fotoBusy, setFotoBusy] = useState<string | null>(null);
+  // Paket 213 (B6b): Foto markieren
+  const [markieren, setMarkieren] = useState<{ foto: Foto; blob: Blob } | null>(null);
 
   const [mangelModal, setMangelModal] = useState(false);
   const [mangelForm, setMangelForm] = useState({ ...LEER_MANGEL });
@@ -204,6 +208,33 @@ export default function BautagebuchPage() {
       setFehler('Foto konnte nicht hochgeladen werden: ' + (err instanceof Error ? err.message : 'Fehler'));
     } finally { setFotoBusy(null); }
   }
+  /** Paket 213 (B6b): Original laden und im Markier-Fenster öffnen. */
+  async function markierenOeffnen(f: Foto) {
+    setFehler(null);
+    const { data, error } = await supabase.storage.from('baustellen-fotos').download(f.pfad);
+    if (error || !data) { setFehler('Foto konnte nicht geöffnet werden.'); return; }
+    setMarkieren({ foto: f, blob: data });
+  }
+
+  /** Markierte Fassung zusätzlich ablegen — das Original bleibt unverändert. */
+  async function markiertSpeichern(jpeg: Blob) {
+    if (!markieren || !uid || !betrieb) return;
+    const f = markieren.foto;
+    const pfad = markiertPfad(f.pfad, Date.now());
+    if (!pfad) throw new Error('Ablageort des Originals ist ungültig.');
+    const { error: upErr } = await supabase.storage.from('baustellen-fotos').upload(pfad, jpeg, { upsert: false, contentType: 'image/jpeg' });
+    if (upErr) throw new Error('Hochladen fehlgeschlagen: ' + upErr.message);
+    const { error: refErr } = await supabase.from('baustellen_fotos').insert({
+      owner_user_id: betrieb, bautagebuch_id: f.bautagebuch_id, pfad, dateiname: markiertName(f.dateiname), erstellt_von: uid,
+    });
+    if (refErr) {
+      await supabase.storage.from('baustellen-fotos').remove([pfad]);
+      throw new Error('Speichern fehlgeschlagen: ' + refErr.message);
+    }
+    setMarkieren(null);
+    await laden_();
+  }
+
   async function fotoLoeschen(f: Foto) {
     if (istMa) { setFehler('Fotos löschen kann nur die Geschäftsleitung.'); return; }
     if (!window.confirm('Dieses Foto löschen?')) return;
@@ -348,6 +379,7 @@ export default function BautagebuchPage() {
                                 </a>
                               ) : <div style={styles.fotoLaedt}>…</div>}
                               <button onClick={() => fotoLoeschen(f)} style={styles.fotoDel} title="Foto löschen">✕</button>
+                              <button onClick={() => markierenOeffnen(f)} style={{ ...styles.fotoDel, right: 'auto', left: 4, color: '#C9A84C' }} title="Auf dem Foto markieren (Pfeil, Kreis, Text)">✎</button>
                             </div>
                           ))}
                         </div>
@@ -449,6 +481,9 @@ export default function BautagebuchPage() {
             </div>
           </div>
         </div>
+      )}
+      {markieren && (
+        <FotoMarkierung quelle={markieren.blob} onSpeichern={markiertSpeichern} onSchliessen={() => setMarkieren(null)} />
       )}
     </div>
   );
