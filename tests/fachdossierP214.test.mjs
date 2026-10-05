@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  baueDossier, dossierStand, modulName, ohneEmoji, standText, textVerstoesse, FACH_TEXTE, IN_AUFBAU_MODULE, AGENTUR_KOSTEN,
+  baueDossier, dossierStand, modulName, ohneEmoji, standText, textVerstoesse, FACH_TEXTE, IN_AUFBAU_MODULE,
 } from '../out/fachdossier.js';
 import { KERN_MODULE } from '../out/pakete.js';
 import { KATEGORIE_MODULE } from '../out/branchenkatalog.js';
@@ -25,7 +25,6 @@ test('Elektro: vollständig, kein Entwurf, QR auf die Branchenseite', () => {
   assert.equal(d.zielgruppe, 'Elektrobetriebe');
   assert.equal(d.qrUrl, 'https://argonaut-os.com/branchen/elektriker');
   assert.equal(d.stand, 'Oktober 2026');
-  assert.equal(d.agenturKosten, AGENTUR_KOSTEN);
   assert.ok(d.paket.some((m) => m.key === 'pruefprotokolle'));
   assert.ok(d.paket.some((m) => m.key === 'aufmass'));
 });
@@ -80,6 +79,9 @@ test('Verdrahtung: Wasserzeichen bis zur Freigabe, Route nur für Betreiber', ()
   assert.match(h, /export const FREIGABE_ERTEILT = false;/);
   assert.match(h, /return d\.entwurf \|\| !FREIGABE_ERTEILT;/);
   assert.match(h, /ENTWURF – nicht zur Weitergabe/);
+  // Martin 05.10.2026: kein „alles inklusive", kein Agentur-Kostenvergleich
+  assert.doesNotMatch(h, /inklusive|kostet extra|10\.000|Agentur/i);
+  assert.ok(textVerstoesse('Alles inklusive, kein Modul kostet extra').length >= 2);
   const r = lies('app/api/admin/fachdossier/route.ts');
   assert.match(r, /const \{ absage \} = await betreiberPruefung\(\);\n  if \(absage\) return absage;/);
   assert.match(r, /\^\[a-z0-9-\]\{1,80\}\$/);

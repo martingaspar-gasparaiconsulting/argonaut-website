@@ -175,14 +175,14 @@ export async function fachdossierHtml(d: Dossier): Promise<string> {
     </tbody></table>
     ${fusszeile(d, nr)}</section>`);
 
-  // 6 · Alles inklusive
+  // 6 · Was Sie bekommen (Grundausstattung + Branchenpaket)
   nr++;
   const block = (titel: string, module: { name: string }[]) =>
     `<div class="block"><em>${esc(titel)}</em>${module.map((m) => `<span class="chip">${esc(m.name)}</span>`).join('')}</div>`;
   seiten.push(`<section class="seite">${wz}
-    <div class="eyebrow">Alles in einem System</div>
-    <h2>Alles drin. Alles inklusive.</h2>
-    <p class="sub">Grundausstattung für jeden Betrieb, dazu das Paket für Ihre Branche. <b>Kein Modul kostet extra.</b> Webseite, Werbung und Bewertungen kosten bei Agenturen ${esc(d.agenturKosten)} im Monat — in ARGONAUT OS sind sie Bausteine desselben Systems.</p>
+    <div class="eyebrow">Was Sie bekommen</div>
+    <h2>Ein System für Ihren ganzen Betrieb.</h2>
+    <p class="sub">Grundausstattung für jeden Betrieb, dazu das Paket für Ihre Branche.</p>
     <div class="gruppe"><h4>Grundausstattung</h4><small>Für jeden Betrieb</small>
       <div class="spalten">${d.kern.map((g) => block(g.titel, g.module)).join('')}</div></div>
     ${d.paket.length ? `<div class="gruppe gold"><h4>Paket ${esc(d.kategorie)}</h4><small>Speziell für ${esc(d.zielgruppe)}</small>${block('Fachmodule', d.paket)}</div>` : ''}

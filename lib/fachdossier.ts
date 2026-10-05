@@ -12,8 +12,9 @@
 //    Schwerpunkte) kommen aus FACH_TEXTE. Fehlt dort ein geprüfter Text,
 //    bleibt das Dossier ein ENTWURF (Wasserzeichen, Liste der Lücken).
 //    B11b (nach der Abnahme durch den Anwalt) füllt die Texte je Branche.
-//  · Kein Mitbewerber-Name, Agenturkosten immer „10.000–35.000 €",
-//    „Bausteine" statt „KI-Agenten", Kundenansprache mit „Sie".
+//  · Kein Mitbewerber-Name, kein Agentur-Kostenvergleich und kein „alles
+//    inklusive" (Martin 05.10.2026: KI-Telefon und KI-Berater auf fremden
+//    Webseiten kosten extra), „Bausteine" statt „KI-Agenten", „Sie".
 //
 // Rein, ohne Datenbank — node-testbar. HTML baut lib/fachdossierHtml.ts.
 // ============================================================================
@@ -23,7 +24,6 @@ import { KATEGORIE_MODULE, STANDARD_AUTOMATION } from './branchenkatalog';
 import { NAV_LINKS } from './rechte';
 
 export const FACHDOSSIER_VERSION = 'fd1';
-export const AGENTUR_KOSTEN = '10.000–35.000 €';
 export const BASIS_URL = 'https://argonaut-os.com';
 
 /** Kern-Module, die noch „in Aufbau" sind — erscheinen nie als fertig. */
@@ -131,7 +131,6 @@ export type Dossier = {
   vorbereitung: Vorbereitung[];
   qrUrl: string;
   stand: string;
-  agenturKosten: string;
 };
 
 let _labels: Record<string, string> | null = null;
@@ -195,7 +194,6 @@ export function baueDossier(b: DossierBranche, jetzt: Date = new Date()): Dossie
     kern, paket, vorbereitung,
     qrUrl: `${BASIS_URL}/branchen/${encodeURIComponent(b.slug)}`,
     stand: standText(jetzt),
-    agenturKosten: AGENTUR_KOSTEN,
   };
 }
 
@@ -212,7 +210,7 @@ export function dossierStand(branchen: DossierBranche[]): { gesamt: number; fert
 }
 
 /** Verbotene Wörter in Dossier-Texten (Vertriebsregeln). */
-export const VERBOTEN = [/KI-Agent/i, /KI-Crew/i, /\bdu\b/i, /\bdein/i, /\bdir\b/i, /\bdich\b/i];
+export const VERBOTEN = [/inklusive/i, /kostet extra/i, /10\.000/, /KI-Agent/i, /KI-Crew/i, /\bdu\b/i, /\bdein/i, /\bdir\b/i, /\bdich\b/i];
 export function textVerstoesse(t: string): string[] {
   return VERBOTEN.filter((r) => r.test(t)).map((r) => r.source);
 }
