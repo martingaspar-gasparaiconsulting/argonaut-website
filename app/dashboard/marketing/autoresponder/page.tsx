@@ -558,7 +558,7 @@ export default function AutoresponderSeite() {
             </p>
             <div style={{ marginBottom: 14 }}>
               <label style={labelStyle}>E-Mail-Adressen (eine pro Zeile oder mit Komma getrennt)</label>
-              <textarea value={eText} onChange={(e) => setEText(e.target.value)} rows={6} placeholder={'maria@beispiel.de\nthomas@beispiel.de'} style={{ ...inputStyle, resize: 'vertical' }} />
+              <textarea value={eText} onChange={(e) => setEText(e.target.value)} rows={6} placeholder={'maria@beispiel.example.com\nthomas@beispiel.example.com'} style={{ ...inputStyle, resize: 'vertical' }} />
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 4 }}>
               <input type="checkbox" checked={eAusNewsletter} onChange={(e) => setEAusNewsletter(e.target.checked)} style={{ width: 18, height: 18, accentColor: C.gold }} />

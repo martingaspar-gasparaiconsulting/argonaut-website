@@ -307,7 +307,7 @@ export default function PosteingangSeite() {
           <input
             value={entwurf.an}
             onChange={(e) => setEntwurf({ ...entwurf, an: e.target.value })}
-            placeholder="kunde@beispiel.de"
+            placeholder="kunde@beispiel.example.com"
             style={styles.input}
           />
           <p style={styles.hinweis}>

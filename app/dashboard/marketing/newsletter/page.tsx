@@ -286,13 +286,21 @@ export default function NewsletterAbonnenten() {
     laden();
   }
 
+  // Paket 205 (S1): Abmelden läuft über den Server und trägt die Adresse in die
+  // Sperrliste ALLER Kanäle ein (vorher nur Newsletter-Status).
   async function statusSetzen(a: Abonnent, neu: 'abgemeldet') {
-    const { error } = await supabase
-      .from('newsletter_abonnenten')
-      .update({ status: neu, abgemeldet_am: new Date().toISOString() })
-      .eq('id', a.id);
-    if (error) {
-      alert('Fehler: ' + error.message);
+    if (neu !== 'abgemeldet') return;
+    if (!confirm(`„${a.email}" abmelden?\n\nDie Adresse kommt in die Sperrliste und bekommt aus keinem Kanal mehr Werbung (Newsletter, Serien, Abläufe). Das lässt sich hier nicht rückgängig machen — die Person kann sich nur selbst neu anmelden.`)) return;
+    try {
+      const res = await fetch('/api/newsletter/abmelden-hand', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: a.id }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || !d.ok) { alert('Fehler: ' + (d?.error || 'Abmelden fehlgeschlagen.')); return; }
+      if (d.sperrliste === false) alert(d.hinweis);
+    } catch {
+      alert('Fehler: Verbindung fehlgeschlagen.');
       return;
     }
     laden();
@@ -503,7 +511,7 @@ export default function NewsletterAbonnenten() {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: '2 1 240px' }}>
               <label style={labelStyle}>E-Mail *</label>
-              <input value={fEmail} onChange={(e) => setFEmail(e.target.value)} placeholder="kunde@beispiel.de" style={inputStyle} />
+              <input value={fEmail} onChange={(e) => setFEmail(e.target.value)} placeholder="kunde@beispiel.example.com" style={inputStyle} />
             </div>
             <div style={{ flex: '2 1 200px' }}>
               <label style={labelStyle}>Name (optional)</label>

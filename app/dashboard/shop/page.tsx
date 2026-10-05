@@ -266,7 +266,7 @@ export default function ShopPage() {
           <span style={{ color: C.warn, fontWeight: 700 }}>Steuersatz (letzte Spalte):</span> <strong>7</strong> für Lebensmittel, <strong>19</strong> für Getränke &amp; Non-Food. Fehlt die Angabe, rechnen wir mit <strong>19 %</strong> — bei Lebensmitteln bitte <strong>7</strong> eintragen. Verschiedene Sätze in einer Bestellung sind erlaubt (werden korrekt getrennt ausgewiesen).
         </div>
         <textarea style={styles.textarea} value={csv} onChange={(e) => setCsv(e.target.value)}
-          placeholder={'1001;Max Muster;max@mail.de;Winterreifen 205/55;4;89,90;19\n1001;Max Muster;max@mail.de;Montage;1;40,00;19\n2002;Hofladen Meier;kunde@mail.de;Bio-Gemüsekiste;1;24,90;7'} />
+          placeholder={'1001;Max Muster;max@beispiel.example.com;Winterreifen 205/55;4;89,90;19\n1001;Max Muster;max@beispiel.example.com;Montage;1;40,00;19\n2002;Hofladen Meier;kunde@hofladen.example.com;Bio-Gemüsekiste;1;24,90;7'} />
         {felder.length > 0 && (
           <div style={styles.extraRow}>
             <span style={{ color: C.textDim, fontSize: 12.5, alignSelf: 'center' }}>Eigene Felder (gelten für alle importierten Bestellungen):</span>

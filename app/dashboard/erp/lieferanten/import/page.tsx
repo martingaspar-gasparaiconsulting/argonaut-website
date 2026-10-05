@@ -48,9 +48,9 @@ interface Vorschau {
   alsUpdate: boolean;
 }
 
-const BEISPIEL = `Forsttechnik Müller GmbH; Ansprechp. Hans Müller; info@mueller-forst.de; 07031/12345; Waldweg 12, 71032 Böblingen; Kundennr. K-4711
-Aspen Kraftstoffe AG, vertrieb@aspen.de, www.aspen.de
-STIHL Vertriebszentrale – Tel. 0800 1234567 – Badstraße 3, 71336 Waiblingen`;
+const BEISPIEL = `Forsttechnik Müller GmbH; Ansprechp. Hans Müller; info@mueller-forst.example.com; 07031/12345; Waldweg 12, 71032 Böblingen; Kundennr. K-4711
+Beispiel Kraftstoffe AG, vertrieb@kraftstoffe.example.com, www.kraftstoffe.example.com
+Motorsägen Vertrieb Süd – Tel. 0800 1234567 – Musterstraße 3, 71000 Musterstadt`;
 
 export default function LieferantenImport() {
   const [userId, setUserId] = useState<string | null>(null);
