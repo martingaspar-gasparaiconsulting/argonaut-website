@@ -10,6 +10,8 @@
 // Tabelle: einsaetze (RLS 1:1 wie termine). NICHT-destruktiv: "Absagen" = Status.
 // Paket PO (24.09.26): Befaehigungen je Einsatz (einsaetze.anforderungen), Warnung + Vorschlag
 // beim Zuweisen (lib/dispoPlus.ts, getestet), Routen-Knopf je Monteur/Tag (/api/tour-planen).
+// Paket 212 (05.10.26, B6): Einsätze per Ziehen und Ablegen auf Monteur/Tag oder „Unzugeordnet“
+// (lib/dispoZiehen.ts, getestet) — gleiche Warnungen wie im Fenster, Rückfrage bei Befähigung/Überschneidung.
 // Pfad: app/dashboard/dispo/page.tsx
 // ============================================================
 
@@ -22,6 +24,7 @@ import { zaehleDispo } from '@/lib/augeZaehler';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import { QUALIFIKATIONEN, qualiLabel, saubereAnforderungen, pruefeZuweisung, vorschlaege, ueberschneidungen, engePuffer, type MaQuali } from '@/lib/dispoPlus';
+import { verschiebePlan, UNZUGEORDNET } from '@/lib/dispoZiehen';
 import { zahlText } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
@@ -125,6 +128,9 @@ export default function DispoPage() {
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [erfolg, setErfolg] = useState<string | null>(null);
+  // Paket 212 (B6): Plantafel per Ziehen und Ablegen
+  const [gezogen, setGezogen] = useState<string | null>(null);
+  const [ueber, setUeber] = useState<string | null>(null);
   const [speichert, setSpeichert] = useState(false);
 
   const [monteure, setMonteure] = useState<MitarbeiterRow[]>([]);
@@ -368,6 +374,61 @@ export default function DispoPage() {
   }
 
   /** Einsaetze eines Monteurs an einem Tag (fuer Pruefung und Vorschlag). */
+  /** Paket 212 (B6): Einsatz auf Monteur/Tag (oder „Unzugeordnet") ablegen. */
+  async function ablegen(zeile: string, datum: string | null) {
+    const id = gezogen;
+    setGezogen(null); setUeber(null);
+    const e = einsaetze.find((x) => x.id === id);
+    if (!e) return;
+    const plan = verschiebePlan(e, { zeile: zeile === CHEF ? '__chef__' : zeile, datum });
+    if (!plan.ok) { if (!plan.nichts) setFehler(plan.grund); return; }
+    // Gleiche Warnungen wie im Fenster: Befähigung und Überschneidung
+    const warn: string[] = [];
+    const zielMa = plan.patch.mitarbeiter_id;
+    const zielTag = plan.patch.beginn_am ? isoTag(new Date(plan.patch.beginn_am)) : (e.beginn_am ? isoTag(new Date(e.beginn_am)) : null);
+    const anf = anfMap[e.id] ?? [];
+    if (zielMa && zielTag && anf.length > 0) {
+      const pz = pruefeZuweisung(anf, qualis, zielMa, zielTag);
+      if (pz.fehlt.length) warn.push('Es fehlt: ' + pz.fehlt.map(qualiLabel).join(', '));
+      if (pz.abgelaufen.length) warn.push('Abgelaufen: ' + pz.abgelaufen.map(qualiLabel).join(', '));
+    }
+    const beginn = plan.patch.beginn_am ?? e.beginn_am;
+    const ende = plan.patch.ende_am ?? e.ende_am;
+    if (zeile !== UNZUGEORDNET && zielTag && beginn && ende) {
+      const tag = tagesListe(zeile, zielTag);
+      const ue = ueberschneidungen(tag, beginn, ende, e.id);
+      if (ue.length) warn.push(`Überschneidet sich mit: ${ue.map((x) => x.titel || 'Einsatz').join(', ')}`);
+    }
+    if (warn.length && typeof window !== 'undefined' && !window.confirm(`${warn.join('\n')}\n\nTrotzdem verschieben?`)) return;
+    setFehler(null); setErfolg(null);
+    const { error } = await supabase.from('einsaetze').update(plan.patch).eq('id', e.id);
+    if (error) { setFehler('Verschieben fehlgeschlagen: ' + error.message); return; }
+    setErfolg(`„${e.titel || 'Einsatz'}" verschoben (${plan.aenderung}).`);
+    await laden_();
+  }
+
+  /** Eigenschaften für eine Ablage-Fläche. */
+  function ablage(zeile: string, datum: string | null) {
+    const key = `${zeile}__${datum ?? ''}`;
+    return {
+      onDragOver: (ev: React.DragEvent) => { if (gezogen) { ev.preventDefault(); if (ueber !== key) setUeber(key); } },
+      onDragLeave: () => { if (ueber === key) setUeber(null); },
+      onDrop: (ev: React.DragEvent) => { ev.preventDefault(); void ablegen(zeile, datum); },
+      istUeber: ueber === key,
+    };
+  }
+
+  /** Eigenschaften für eine ziehbare Kachel. */
+  function ziehbar(e: EinsatzRow) {
+    const st = (e.status ?? 'geplant').toLowerCase();
+    const darf = st === 'geplant';
+    return {
+      draggable: darf,
+      onDragStart: (ev: React.DragEvent) => { if (!darf) return; ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', e.id); setGezogen(e.id); },
+      onDragEnd: () => { setGezogen(null); setUeber(null); },
+    };
+  }
+
   function tagesListe(mid: string, datum: string): EinsatzRow[] {
     return zelleMap.get(`${mid}__${datum}`) ?? [];
   }
@@ -435,7 +496,9 @@ export default function DispoPage() {
       )}
 
       {/* ===== Unzugeordnet-Panel ===== */}
-      <div style={styles.unzuCard}>
+      <div
+        style={{ ...styles.unzuCard, ...(ablage(UNZUGEORDNET, null).istUeber ? { borderColor: C.gold } : {}) }}
+        onDragOver={ablage(UNZUGEORDNET, null).onDragOver} onDragLeave={ablage(UNZUGEORDNET, null).onDragLeave} onDrop={ablage(UNZUGEORDNET, null).onDrop}>
         <div style={styles.unzuKopf}>
           <span style={{ fontWeight: 700 }}>Unzugeordnet</span>
           <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{unzugeordnet.length} Einsatz(e) ohne Monteur</span>
@@ -448,8 +511,9 @@ export default function DispoPage() {
               const b = e.beginn_am ? new Date(e.beginn_am) : null;
               const si = statusInfo(e.status);
               return (
-                <button key={e.id} onClick={() => oeffneEinsatz(e)} style={{ ...styles.chip, borderColor: si.farbe }}
-                  title="Klicken zum Zuweisen / Bearbeiten">
+                <button key={e.id} onClick={() => oeffneEinsatz(e)} style={{ ...styles.chip, borderColor: si.farbe, cursor: 'grab' }}
+                  {...ziehbar(e)}
+                  title="Klicken zum Zuweisen / Bearbeiten — oder auf Monteur und Tag ziehen">
                   <span style={{ fontWeight: 700 }}>{e.titel || 'Einsatz'}</span>
                   <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim }}>
                     {b ? `${WT_KURZ[b.getDay()]} ${pad(b.getDate())}.${pad(b.getMonth() + 1)}. · ${uhr(b)}` : 'ohne Datum'}
@@ -503,7 +567,9 @@ export default function DispoPage() {
                     const am = ampelInfo(summe, tagesziel);
                     const rot = zeigeAmpel && am.stufe === 'rot';
                     return (
-                      <div key={d.datum} style={{ ...styles.tagZelle, borderColor: rot ? C.danger : (d.heute ? 'rgba(201,168,76,0.4)' : C.border), background: rot ? 'rgba(224,102,102,0.07)' : C.navy }}>
+                      <div key={d.datum}
+                        onDragOver={ablage(m.id, d.datum).onDragOver} onDragLeave={ablage(m.id, d.datum).onDragLeave} onDrop={ablage(m.id, d.datum).onDrop}
+                        style={{ ...styles.tagZelle, borderColor: ablage(m.id, d.datum).istUeber ? C.gold : (rot ? C.danger : (d.heute ? 'rgba(201,168,76,0.4)' : C.border)), background: ablage(m.id, d.datum).istUeber ? 'rgba(201,168,76,0.10)' : (rot ? 'rgba(224,102,102,0.07)' : C.navy) }}>
                         {zeigeAmpel && (
                           <div style={styles.ampelZeile} title={`Auslastung: ${zahlText(summe, 1)}h von ${zahlText(tagesziel, 1)}h`}>
                             <span style={{ ...styles.ampelPunkt, background: am.farbe }} />
@@ -518,8 +584,8 @@ export default function DispoPage() {
                           const anf = anfMap[e.id] ?? [];
                           const fehltQuali = !abg && anf.length > 0 && m.id !== CHEF && (() => { const pz = pruefeZuweisung(anf, qualis, m.id, d.datum); return pz.fehlt.length + pz.abgelaufen.length > 0; })();
                           return (
-                            <button key={e.id} onClick={() => oeffneEinsatz(e)}
-                              style={{ ...styles.einsatzKachel, borderColor: si.farbe, opacity: abg ? 0.5 : 1, textDecoration: abg ? 'line-through' : 'none' }}
+                            <button key={e.id} onClick={() => oeffneEinsatz(e)} {...ziehbar(e)}
+                              style={{ ...styles.einsatzKachel, cursor: belegend(e.status) && (e.status ?? 'geplant') === 'geplant' ? 'grab' : 'pointer', borderColor: si.farbe, opacity: abg ? 0.5 : 1, textDecoration: abg ? 'line-through' : 'none' }}
                               title={`${e.titel ?? 'Einsatz'} · ${b ? uhr(b) : ''} · ${si.label}`}>
                               <span style={{ fontWeight: 700 }}>{b ? uhr(b) : '—'}{fehltQuali && <span title="Dem Monteur fehlt eine verlangte Befähigung" style={{ color: C.danger, marginLeft: 4 }}>⚠</span>}</span>
                               <span style={{ fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.titel ?? 'Einsatz'}</span>
