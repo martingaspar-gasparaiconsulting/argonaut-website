@@ -49,6 +49,7 @@ export default function WebseitenPage() {
 
   const [modus, setModus] = useState<Modus>('vorlage');
   const [story, setStory] = useState('');
+  const [wissen, setWissen] = useState(true); // Paket 207: Leistungskatalog + Firmen-Dokumente nutzen
   const [kiBloecke, setKiBloecke] = useState<Block[] | null>(null);
   const [editBloecke, setEditBloecke] = useState<Block[] | null>(null);
   const [kiLaden, setKiLaden] = useState(false);
@@ -129,7 +130,7 @@ export default function WebseitenPage() {
     try {
       const res = await fetch('/api/webseite-ki', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ zweck, story }),
+        body: JSON.stringify({ zweck, story, wissen }),
       });
       const data = await res.json();
       if (!res.ok) { setFehler(data?.error || 'Die KI konnte die Seite nicht bauen.'); setKiLaden(false); return; }
@@ -294,7 +295,7 @@ export default function WebseitenPage() {
               <button onClick={() => { setModus('ki'); setGespeichert(null); }} style={{ ...styles.weg, ...(modus === 'ki' ? styles.wegAktiv : {}) }}>
                 <div style={styles.wegIcon}>✨</div>
                 <div style={styles.wegName}>Komplett mit KI</div>
-                <div style={styles.wegText}>Die KI schreibt die Texte aus Ihren Angaben und Ihrer Story.</div>
+                <div style={styles.wegText}>Die KI schreibt die Texte aus Ihren Firmendaten, Ihrem Leistungskatalog, Ihren Firmen-Dokumenten und Ihrer Story.</div>
                 <div style={styles.aktivBadge}>aktiv</div>
               </button>
               <button onClick={() => { setModus('vorlage'); setGespeichert(null); }} style={{ ...styles.weg, ...(modus === 'vorlage' ? styles.wegAktiv : {}) }}>
@@ -331,6 +332,10 @@ export default function WebseitenPage() {
                   onChange={(e) => setStory(e.target.value)}
                   placeholder={'z. B. „Wir sind ein Elektro-Meisterbetrieb in Rosenheim, machen Neubau, Sanierung und 24-h-Notdienst. Wir wollen mehr Anfragen für Photovoltaik."'}
                 />
+                <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13.5, color: '#8FA3BE', marginTop: 8, lineHeight: 1.45 }}>
+                  <input type="checkbox" checked={wissen} onChange={(e) => setWissen(e.target.checked)} style={{ marginTop: 3 }} />
+                  <span>Firmenwissen nutzen: Leistungskatalog (ohne Preise) und Ihre Firmen-Dokumente. Vertraulich klingende Dokumente (Verträge, Lohn, Personal, Bank, Steuer) werden nie verwendet. Kundenstimmen schreibt die KI nie selbst — dafür zeigt die Seite Ihre echten, freigegebenen Bewertungen.</span>
+                </label>
                 <div style={styles.kiBtnRow}>
                   <button style={{ ...styles.btnGold, opacity: kiLaden ? 0.6 : 1 }} disabled={kiLaden} onClick={kiBauen}>
                     {kiLaden ? 'KI schreibt …' : '✨ KI baut die Seite'}
