@@ -86,7 +86,7 @@ SPERRE dossier.teilbereich = Lebensmittel & Nahversorgung
 
 **Mitziehen (seit Paket 234):** In diesen vier Bereichen lässt das Dossier die Module **Kasse** und **Shop** im Fachpaket weg (`OHNE_IN_TEILBEREICH` in `lib/dossierFreigabe.ts`); damit entfällt dort auch die Zeile „Kasse mit zertifizierter TSE" unter „Was wir gerade noch bauen". Beim Öffnen die Liste leeren und die Branchentexte der bisher freien Betriebe prüfen (sie nennen bewusst weder Kasse noch Shop).
 
-Frei und mit Text (Stand Paket 234): Handel & E-Commerce 9 von 9.
+Frei und mit Text (Stand Paket 236): Handel & E-Commerce 9 von 9, Gastronomie, Hotellerie & Tourismus 14 von 14, Lebensmittel & Nahversorgung 6 von 8.
 
 ### Bewusst noch ohne Text (Branchen werden mit dem alten E-Book-Dossier beliefert, nicht beworben)
 - Handwerk: `zahntechniker`, `orthopaedie-schuhmacher` (Gesundheitsdaten, Krankenkassen-Abrechnung)
