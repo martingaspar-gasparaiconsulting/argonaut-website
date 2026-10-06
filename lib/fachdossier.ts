@@ -22,7 +22,7 @@
 import { KERN_MODULE } from './pakete';
 import { KATEGORIE_MODULE, STANDARD_AUTOMATION } from './branchenkatalog';
 import { NAV_LINKS } from './rechte';
-import { dossierRecht } from './dossierFreigabe';
+import { dossierRecht, weglassenImDossier } from './dossierFreigabe';
 
 export const FACHDOSSIER_VERSION = 'fd1';
 export const BASIS_URL = 'https://argonaut-os.com';
@@ -5530,6 +5530,313 @@ export const FACH_TEXTE: Record<string, FachText> = {
     },
     geprueftAm: '2026-10-06',
   },
+  // Paket 234 (06.10.2026): Handel & E-Commerce, freie Betriebe ohne Ladenkasse und ohne Webshop (🟡-Teilbereich)
+  'grosshandel': {
+    zielgruppe: 'Großhandel',
+    titel: 'Ihr Großhandel. Ein System.',
+    lead: 'Vom Angebot bis zur Auslieferung: Artikel mit Bestand und Varianten, Einkauf mit Wareneingang, Lager-Scanner, Aufträge, Touren mit Abliefernachweis, Versand und Rechnungen laufen in einer Software zusammen.',
+    vorteile: ['Artikel mit Bestand-Ampel', 'Wareneingang per Scanner', 'Varianten mit eigenem Bestand', 'Touren mit Abliefernachweis', 'Reklamationen als Ticket', 'E-Rechnung an Geschäftskunden'],
+    rolle: 'Sie handeln mit Ware. Nicht mit Zetteln.',
+    alltag: [
+      { titel: 'Bestand', text: 'Was ist noch da, was wird knapp? Die Liste stimmt selten mit dem Regal überein.' },
+      { titel: 'Bestellungen', text: 'Viele Kunden, viele Positionen. Jede Bestellung soll vollständig raus.' },
+      { titel: 'Wareneingang', text: 'Die Lieferung kommt. Stimmt sie mit der Bestellung überein?' },
+      { titel: 'Auslieferung', text: 'Eigene Fahrer, viele Stopps. Wer hat die Ware angenommen?' },
+      { titel: 'Reklamationen', text: 'Falsche Menge, beschädigte Ware. Wer kümmert sich darum?' },
+      { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
+    ],
+    ablaufTitel: 'Ein Geschäftskunde bestellt Ware für die nächste Woche.',
+    ablauf: [
+      { titel: 'Angebot', text: 'Positionen aus den Artikeln mit aktuellem Bestand.' },
+      { titel: 'Auftrag', text: 'Aus dem angenommenen Angebot wird der Auftrag.' },
+      { titel: 'Kommissionieren', text: 'Warenausgang per Barcode mit Scanner oder Handy.' },
+      { titel: 'Ausliefern', text: 'Die Tour mit Stopps, Unterschrift des Empfängers am Bildschirm.' },
+      { titel: 'Rechnung', text: 'Als E-Rechnung an den Kunden.' },
+    ],
+    schwerpunkt: {
+      titel: 'Vom Lager bis zum Kunden.',
+      text: 'Ein Großhandel lebt von Bestand und Lieferung. ARGONAUT OS hält beides zusammen.',
+      punkte: [
+        { titel: 'Artikel und Lager', text: 'Bestand, Mindestbestand und Ampel je Artikel.' },
+        { titel: 'Lager-Scanner', text: 'Wareneingang, Warenausgang und Inventur per Barcode.' },
+        { titel: 'Varianten & Matrix', text: 'Größe, Farbe oder Ausführung mit eigenem Bestand.' },
+        { titel: 'Tour & ePOD', text: 'Stopps, Unterschrift und Zeitstempel als Nachweis.' },
+      ],
+    },
+    geprueftAm: '2026-10-06',
+  },
+  'kuechenstudios': {
+    zielgruppe: 'Küchenstudios',
+    titel: 'Ihr Küchenstudio. Ein System.',
+    lead: 'Von der Beratung bis zur fertigen Küche: Beratungstermine, Angebote mit Varianten, Projekte, Montage-Planung, Anzahlungen, digitale Unterschrift, Kundenportal und Reklamationen laufen in einer Software zusammen.',
+    vorteile: ['Beratungstermine online buchbar', 'Angebote mit Ausführungen', 'Projekt je Küche', 'Montage-Teams planen', 'Abschlagsrechnungen', 'Reklamationen als Ticket'],
+    rolle: 'Sie planen Küchen. Nicht Ordner.',
+    alltag: [
+      { titel: 'Beratung', text: 'Kunden kommen mit Wünschen und Fotos. Wo liegen die Notizen später?' },
+      { titel: 'Angebot', text: 'Fronten, Griffe, Geräte. Jede Änderung ergibt eine neue Fassung.' },
+      { titel: 'Bestellung', text: 'Viele Teile von verschiedenen Lieferanten. Ist alles bestellt?' },
+      { titel: 'Montage', text: 'Liefertermin, Monteure, Anschlüsse. Alles muss an einem Tag passen.' },
+      { titel: 'Nach dem Einbau', text: 'Eine Front sitzt schief, ein Gerät fehlt. Wer kümmert sich?' },
+      { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
+    ],
+    ablaufTitel: 'Ein Ehepaar lässt sich eine neue Küche planen.',
+    ablauf: [
+      { titel: 'Termin', text: 'Der Beratungstermin, vom Kunden online gebucht.' },
+      { titel: 'Angebot', text: 'Positionen mit Ausführungen, digital unterschrieben.' },
+      { titel: 'Anzahlung', text: 'Abschlagsrechnung nach Auftrag, Rest nach Montage.' },
+      { titel: 'Montage planen', text: 'Monteure in der Einsatzplanung, Termin für den Kunden.' },
+      { titel: 'Übergabe', text: 'Restpunkte als Ticket, Unterlagen im Kundenportal.' },
+    ],
+    schwerpunkt: {
+      titel: 'Von der Planung zur fertigen Küche.',
+      text: 'Eine Küche ist ein Projekt mit vielen Beteiligten. ARGONAUT OS hält es an einem Ort.',
+      punkte: [
+        { titel: 'Projekte', text: 'Jede Küche mit Unterlagen, Bestellungen und Stand.' },
+        { titel: 'Einsatzplanung', text: 'Monteure und Liefertermine ohne Überschneidung.' },
+        { titel: 'Varianten & Matrix', text: 'Ausführungen und Farben je Artikel.' },
+        { titel: 'Service-Tickets', text: 'Restpunkte und Reklamationen mit Status.' },
+      ],
+    },
+    geprueftAm: '2026-10-06',
+  },
+  'badstudios': {
+    zielgruppe: 'Badstudios',
+    titel: 'Ihr Badstudio. Ein System.',
+    lead: 'Von der Ausstellung bis zum fertigen Bad: Beratungstermine, Angebote mit Ausführungen, Projekte, Einsatzplanung für Handwerker, Anzahlungen, digitale Unterschrift und Restpunkte laufen in einer Software zusammen.',
+    vorteile: ['Beratung mit Termin', 'Angebote mit Ausführungen', 'Projekt je Bad', 'Handwerker koordinieren', 'Anzahlung und Schluss', 'Restpunkte als Ticket'],
+    rolle: 'Sie gestalten Bäder. Nicht Zettelwirtschaft.',
+    alltag: [
+      { titel: 'Ausstellung', text: 'Kunden schauen sich Fliesen und Armaturen an. Was hat ihnen gefallen?' },
+      { titel: 'Angebot', text: 'Wanne oder Dusche, Farbe, Format. Jede Variante kostet anders.' },
+      { titel: 'Koordination', text: 'Installateur, Fliesenleger, Elektriker. Wer kommt wann?' },
+      { titel: 'Lieferung', text: 'Die Ware muss vor den Handwerkern auf der Baustelle sein.' },
+      { titel: 'Abnahme', text: 'Ein Silikonstreifen fehlt, eine Fliese ist beschädigt. Was ist noch offen?' },
+      { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
+    ],
+    ablaufTitel: 'Eine Familie lässt ihr Bad komplett erneuern.',
+    ablauf: [
+      { titel: 'Beratung', text: 'Termin in der Ausstellung, Wünsche in der Kundenakte.' },
+      { titel: 'Angebot', text: 'Positionen mit Ausführungen, digital unterschrieben.' },
+      { titel: 'Ablauf planen', text: 'Gewerke nacheinander in der Einsatzplanung.' },
+      { titel: 'Lieferung', text: 'Die Tour mit Unterschrift bei der Anlieferung.' },
+      { titel: 'Schluss', text: 'Restpunkte als Ticket, Schlussrechnung als E-Rechnung.' },
+    ],
+    schwerpunkt: {
+      titel: 'Ein Bad, viele Gewerke.',
+      text: 'Ein neues Bad braucht saubere Abstimmung. ARGONAUT OS hält Termine, Ware und Restpunkte zusammen.',
+      punkte: [
+        { titel: 'Projekte', text: 'Jedes Bad mit Unterlagen und Stand.' },
+        { titel: 'Einsatzplanung', text: 'Gewerke nacheinander, ohne Überschneidung.' },
+        { titel: 'Tour & ePOD', text: 'Anlieferung mit Unterschrift und Zeitstempel.' },
+        { titel: 'Service-Tickets', text: 'Restpunkte bis zur Erledigung.' },
+      ],
+    },
+    geprueftAm: '2026-10-06',
+  },
+  'baustoffhandel': {
+    zielgruppe: 'Baustoffhändler',
+    titel: 'Ihr Baustoffhandel. Ein System.',
+    lead: 'Vom Angebot bis zur Baustelle: Artikel mit Bestand, Einkauf mit Wareneingang, Lager-Scanner, Aufträge für Bauunternehmen, Touren mit Abliefernachweis, Mietgeräte und Rechnungen laufen in einer Software zusammen.',
+    vorteile: ['Bestand je Artikel', 'Wareneingang per Scanner', 'Lieferung mit Nachweis', 'Mietgeräte mit Rückgabe', 'Aufträge je Baustelle', 'E-Rechnung an Geschäftskunden'],
+    rolle: 'Sie liefern Baustoffe. Nicht Lieferscheine von Hand.',
+    alltag: [
+      { titel: 'Baustellen', text: 'Ein Kunde, viele Baustellen. Welche Lieferung gehört wohin?' },
+      { titel: 'Lager', text: 'Sackware, Steine, Holz. Was ist noch auf dem Hof?' },
+      { titel: 'Lieferung', text: 'Der Fahrer stellt ab, niemand ist da. Wer hat angenommen?' },
+      { titel: 'Mietgeräte', text: 'Rüttler, Mischer, Gerüst. Wann kommt das Gerät zurück?' },
+      { titel: 'Abrechnung', text: 'Viele Lieferungen im Monat. Die Rechnung soll alle enthalten.' },
+      { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
+    ],
+    ablaufTitel: 'Ein Bauunternehmen bestellt Material für einen Rohbau.',
+    ablauf: [
+      { titel: 'Angebot', text: 'Positionen aus den Artikeln, für die Baustelle.' },
+      { titel: 'Auftrag', text: 'Lieferadresse der Baustelle und Wunschtermin.' },
+      { titel: 'Tour', text: 'Die Lieferung im Tourplan mit weiteren Stopps.' },
+      { titel: 'Abliefern', text: 'Unterschrift, Name und Zeitstempel als Nachweis.' },
+      { titel: 'Rechnung', text: 'Als E-Rechnung an das Bauunternehmen.' },
+    ],
+    schwerpunkt: {
+      titel: 'Vom Hof bis zur Baustelle.',
+      text: 'Im Baustoffhandel zählt die Lieferung. ARGONAUT OS plant sie und weist sie nach.',
+      punkte: [
+        { titel: 'Tour & ePOD', text: 'Stopps, Unterschrift und Zeitstempel.' },
+        { titel: 'Verleih & Vermietung', text: 'Mietgeräte mit Kaution und Rückgabe-Ampel.' },
+        { titel: 'Artikel und Lager', text: 'Bestand und Mindestbestand je Artikel.' },
+        { titel: 'Einkauf', text: 'Bestellungen und Wareneingang beim Lieferanten.' },
+      ],
+    },
+    geprueftAm: '2026-10-06',
+  },
+  'fliesen-sanitaer-heizungshandel': {
+    zielgruppe: 'Fliesen-, Sanitär- und Heizungshändler',
+    titel: 'Ihr Fachhandel. Ein System.',
+    lead: 'Vom Handwerker am Tresen bis zur Lieferung auf die Baustelle: Artikel mit Varianten und Bestand, Einkauf, Lager-Scanner, Angebote, Touren mit Abliefernachweis, Reklamationen und Rechnungen laufen in einer Software zusammen.',
+    vorteile: ['Artikel mit Varianten', 'Bestand-Ampel je Artikel', 'Wareneingang per Scanner', 'Lieferung mit Nachweis', 'Reklamationen als Ticket', 'E-Rechnung an Handwerker'],
+    rolle: 'Sie versorgen Handwerker. Nicht Ablagen.',
+    alltag: [
+      { titel: 'Sortiment', text: 'Fliesen in vielen Formaten und Farben. Was ist in welcher Ausführung da?' },
+      { titel: 'Handwerker', text: 'Stammkunden holen täglich Material. Was ging an welchen Betrieb?' },
+      { titel: 'Baustellenlieferung', text: 'Badewanne, Heizkörper, Paletten. Wer hat angenommen?' },
+      { titel: 'Reklamation', text: 'Eine Charge Fliesen hat Farbabweichung. Wo steht der Fall?' },
+      { titel: 'Bestellungen', text: 'Viele Lieferanten. Kommt die bestellte Ware vollständig?' },
+      { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
+    ],
+    ablaufTitel: 'Ein Installateur bestellt Material für eine Badsanierung.',
+    ablauf: [
+      { titel: 'Angebot', text: 'Positionen aus den Artikeln mit Ausführung.' },
+      { titel: 'Auftrag', text: 'Lieferadresse der Baustelle und Termin.' },
+      { titel: 'Kommissionieren', text: 'Warenausgang per Scanner.' },
+      { titel: 'Abliefern', text: 'Die Tour mit Unterschrift auf der Baustelle.' },
+      { titel: 'Rechnung', text: 'Als E-Rechnung an den Installateur.' },
+    ],
+    schwerpunkt: {
+      titel: 'Sortiment, Lager, Lieferung.',
+      text: 'Ein Fachhandel lebt von einem großen Sortiment. ARGONAUT OS behält den Überblick.',
+      punkte: [
+        { titel: 'Varianten & Matrix', text: 'Format, Farbe und Ausführung mit eigenem Bestand.' },
+        { titel: 'Lager-Scanner', text: 'Wareneingang, Ausgang und Inventur per Barcode.' },
+        { titel: 'Tour & ePOD', text: 'Baustellenlieferung mit Nachweis.' },
+        { titel: 'Service-Tickets', text: 'Reklamationen mit Status und Verlauf.' },
+      ],
+    },
+    geprueftAm: '2026-10-06',
+  },
+  'landmaschinenhandel': {
+    zielgruppe: 'Landmaschinenhändler',
+    titel: 'Ihr Landmaschinenhandel. Ein System.',
+    lead: 'Vom Verkauf bis zur Werkstatt-Rückmeldung: Maschinen im Objekt-Register, Angebote, Ersatzteile mit Bestand, Prüfprotokolle, Mietmaschinen, Service-Tickets und Rechnungen laufen in einer Software zusammen.',
+    vorteile: ['Maschinen beim Kunden im Blick', 'Ersatzteile mit Bestand', 'Prüfprotokolle als PDF', 'Mietmaschinen mit Rückgabe', 'Service-Fälle als Ticket', 'Wiedervorlagen zur Saison'],
+    rolle: 'Sie verkaufen Technik. Nicht Papierkram.',
+    alltag: [
+      { titel: 'Maschinenbestand', text: 'Welcher Hof hat welchen Schlepper, welches Baujahr?' },
+      { titel: 'Ersatzteile', text: 'In der Ernte muss das Teil sofort da sein.' },
+      { titel: 'Prüfungen', text: 'Regelmäßige Prüfungen an Maschinen. Wann ist die nächste fällig?' },
+      { titel: 'Mietmaschinen', text: 'Zur Saison wollen alle gleichzeitig mieten.' },
+      { titel: 'Service', text: 'Ein Landwirt meldet einen Ausfall. Wer kümmert sich?' },
+      { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
+    ],
+    ablaufTitel: 'Ein Landwirt kauft einen gebrauchten Schlepper.',
+    ablauf: [
+      { titel: 'Angebot', text: 'Maschine und Zubehör als Positionen.' },
+      { titel: 'Unterschrift', text: 'Das Angebot digital unterschrieben.' },
+      { titel: 'Übergabe', text: 'Prüfung vor der Auslieferung als Protokoll.' },
+      { titel: 'Im Register', text: 'Die Maschine beim Kunden im Objekt-Register.' },
+      { titel: 'Wiedervorlage', text: 'Erinnerung an die nächste Prüfung.' },
+    ],
+    schwerpunkt: {
+      titel: 'Maschinen, Teile und Service.',
+      text: 'Ein Landmaschinenhandel begleitet seine Kunden über Jahre. ARGONAUT OS kennt jede Maschine.',
+      punkte: [
+        { titel: 'Objekt-Register', text: 'Maschinen beim Kunden mit Zustand und nächster Kontrolle.' },
+        { titel: 'Prüfprotokolle', text: 'Prüfpunkte, Ergebnis, nächste Fälligkeit, PDF.' },
+        { titel: 'Verleih & Vermietung', text: 'Mietmaschinen mit Kaution und Rückgabe-Ampel.' },
+        { titel: 'Artikel und Lager', text: 'Ersatzteile mit Mindestbestand.' },
+      ],
+    },
+    geprueftAm: '2026-10-06',
+  },
+  'baumaschinenhandel': {
+    zielgruppe: 'Baumaschinenhändler',
+    titel: 'Ihr Baumaschinenhandel. Ein System.',
+    lead: 'Vom Verkauf bis zur Vermietung: Maschinen im Objekt-Register, Mietpark mit Kaution und Rückgabe, Prüfprotokolle, Ersatzteile mit Bestand, Anlieferung mit Nachweis und Rechnungen laufen in einer Software zusammen.',
+    vorteile: ['Mietpark mit Rückgabe-Ampel', 'Prüfprotokolle als PDF', 'Maschinen beim Kunden', 'Ersatzteile mit Bestand', 'Anlieferung mit Nachweis', 'Reparatur-Fälle als Ticket'],
+    rolle: 'Sie bewegen Maschinen. Nicht Mietzettel.',
+    alltag: [
+      { titel: 'Mietpark', text: 'Bagger, Rüttelplatten, Arbeitsbühnen. Was ist frei, was ist draußen?' },
+      { titel: 'Rückgabe', text: 'Die Maschine sollte gestern zurück sein. Wo steht sie?' },
+      { titel: 'Prüfungen', text: 'Jede Maschine braucht regelmäßige Prüfungen. Wann ist die nächste?' },
+      { titel: 'Anlieferung', text: 'Tieflader zur Baustelle. Wer hat die Maschine angenommen?' },
+      { titel: 'Schäden', text: 'Nach der Miete fehlt ein Teil. Wo ist der Fall dokumentiert?' },
+      { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
+    ],
+    ablaufTitel: 'Ein Bauunternehmen mietet einen Minibagger für zwei Wochen.',
+    ablauf: [
+      { titel: 'Reservierung', text: 'Die Maschine im Mietpark für den Zeitraum.' },
+      { titel: 'Prüfung', text: 'Protokoll vor der Ausgabe.' },
+      { titel: 'Anlieferung', text: 'Die Tour mit Unterschrift auf der Baustelle.' },
+      { titel: 'Rückgabe', text: 'Rückgabe erfasst, Kaution vermerkt.' },
+      { titel: 'Rechnung', text: 'Miete nach Tagen als E-Rechnung.' },
+    ],
+    schwerpunkt: {
+      titel: 'Mietpark ohne Lücken.',
+      text: 'Eine Mietmaschine verdient nur, wenn sie läuft. ARGONAUT OS zeigt, wo sie steht.',
+      punkte: [
+        { titel: 'Verleih & Vermietung', text: 'Tages- und Wochenpreis, Kaution, Überfälligkeits-Ampel.' },
+        { titel: 'Prüfprotokolle', text: 'Prüfpunkte, Ergebnis und nächste Fälligkeit.' },
+        { titel: 'Objekt-Register', text: 'Maschinen mit Zustand und nächster Kontrolle.' },
+        { titel: 'Tour & ePOD', text: 'Anlieferung und Abholung mit Nachweis.' },
+      ],
+    },
+    geprueftAm: '2026-10-06',
+  },
+  'kaminofen-ofenstudios': {
+    zielgruppe: 'Kaminofen- und Ofenstudios',
+    titel: 'Ihr Ofenstudio. Ein System.',
+    lead: 'Von der Beratung im Studio bis zum ersten Feuer: Beratungstermine, Angebote mit Ausführungen, Projekte, Einbau-Planung, Anlieferung mit Nachweis, Öfen im Objekt-Register und Wiedervorlagen laufen in einer Software zusammen.',
+    vorteile: ['Beratung mit Termin', 'Angebote mit Ausführungen', 'Einbau-Teams planen', 'Anlieferung mit Nachweis', 'Öfen beim Kunden im Blick', 'Wiedervorlagen vor der Heizsaison'],
+    rolle: 'Sie bringen Wärme ins Haus. Nicht Akten.',
+    alltag: [
+      { titel: 'Beratung', text: 'Kunden kommen mit Grundriss und Wünschen. Wo liegen die Notizen?' },
+      { titel: 'Angebot', text: 'Ofen, Verkleidung, Rohr. Jede Ausführung ändert den Preis.' },
+      { titel: 'Einbau', text: 'Termin mit dem Kunden und mit weiteren Beteiligten abstimmen.' },
+      { titel: 'Anlieferung', text: 'Ein schwerer Ofen braucht einen festen Termin.' },
+      { titel: 'Nach dem Einbau', text: 'Wann sollte sich der Kunde wieder melden?' },
+      { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
+    ],
+    ablaufTitel: 'Ein Hausbesitzer lässt einen Kaminofen einbauen.',
+    ablauf: [
+      { titel: 'Termin', text: 'Beratung im Studio, online gebucht.' },
+      { titel: 'Angebot', text: 'Ofen und Zubehör, digital unterschrieben.' },
+      { titel: 'Einbau planen', text: 'Monteure in der Einsatzplanung.' },
+      { titel: 'Anlieferung', text: 'Die Tour mit Unterschrift beim Kunden.' },
+      { titel: 'Im Register', text: 'Der Ofen beim Kunden, mit Wiedervorlage.' },
+    ],
+    schwerpunkt: {
+      titel: 'Vom Studio ins Wohnzimmer.',
+      text: 'Ein Ofen begleitet den Kunden viele Jahre. ARGONAUT OS behält ihn im Blick.',
+      punkte: [
+        { titel: 'Objekt-Register', text: 'Eingebaute Öfen mit Zustand und nächster Kontrolle.' },
+        { titel: 'Einsatzplanung', text: 'Einbau-Termine ohne Überschneidung.' },
+        { titel: 'Tour & ePOD', text: 'Anlieferung mit Unterschrift und Zeitstempel.' },
+        { titel: 'Wiedervorlagen', text: 'Erinnerungen vor der Heizsaison.' },
+      ],
+    },
+    geprueftAm: '2026-10-06',
+  },
+  'pool-schwimmbadfachhandel': {
+    zielgruppe: 'Pool- und Schwimmbadfachhändler',
+    titel: 'Ihr Poolhandel. Ein System.',
+    lead: 'Vom Beratungsgespräch bis zur Saisoneröffnung: Termine, Angebote, Projekte für den Poolbau, Pflegeprodukte mit Bestand, Einsatzplanung, Pools im Objekt-Register und Wiedervorlagen laufen in einer Software zusammen.',
+    vorteile: ['Beratung mit Termin', 'Projekt je Poolbau', 'Pflegeprodukte mit Bestand', 'Einsätze zur Saison planen', 'Pools beim Kunden im Blick', 'Service-Fälle als Ticket'],
+    rolle: 'Sie bauen Pools. Nicht Terminlisten.',
+    alltag: [
+      { titel: 'Beratung', text: 'Folie oder Becken, Technik, Abdeckung. Viele Entscheidungen.' },
+      { titel: 'Poolbau', text: 'Erdarbeiten, Becken, Technik. Ein Projekt über Wochen.' },
+      { titel: 'Frühjahr', text: 'Alle wollen gleichzeitig ihren Pool in Betrieb nehmen.' },
+      { titel: 'Pflegeprodukte', text: 'Chlor, Filter, Zubehör. Was ist noch auf Lager?' },
+      { titel: 'Störungen', text: 'Die Pumpe läuft nicht. Der Kunde will schnell Hilfe.' },
+      { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
+    ],
+    ablaufTitel: 'Ein Kunde lässt seinen Pool zur Saison in Betrieb nehmen.',
+    ablauf: [
+      { titel: 'Wiedervorlage', text: 'Die Erinnerung zur Saison an den Kunden.' },
+      { titel: 'Termin', text: 'Der Einsatz in der Einsatzplanung.' },
+      { titel: 'Vor Ort', text: 'Material aus dem Lager, Arbeitszeit erfasst.' },
+      { titel: 'Im Register', text: 'Zustand des Pools im Objekt-Register.' },
+      { titel: 'Rechnung', text: 'Als E-Rechnung an den Kunden.' },
+    ],
+    schwerpunkt: {
+      titel: 'Jede Saison im Griff.',
+      text: 'Ein Poolhändler arbeitet in Wellen. ARGONAUT OS plant die Spitzen voraus.',
+      punkte: [
+        { titel: 'Objekt-Register', text: 'Pools beim Kunden mit Zustand und nächster Kontrolle.' },
+        { titel: 'Einsatzplanung', text: 'Saison-Einsätze ohne Überschneidung.' },
+        { titel: 'Artikel und Lager', text: 'Pflegeprodukte mit Mindestbestand.' },
+        { titel: 'Service-Tickets', text: 'Störungen mit Status und Verlauf.' },
+      ],
+    },
+    geprueftAm: '2026-10-06',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -5598,7 +5905,9 @@ export function baueDossier(b: DossierBranche, jetzt: Date = new Date()): Dossie
   if (rest.length) kern.push({ titel: 'Weitere', module: rest.map((key) => ({ key, name: modulName(key) })) });
   kern.find((g) => g.titel === 'Sicherheit und Recht')?.module.push({ key: STANDARD_AUTOMATION, name: modulName(STANDARD_AUTOMATION) });
 
-  const paketKeys = [...new Set(KATEGORIE_MODULE[b.kategorie] ?? [])].filter((k) => !KERN_MODULE.includes(k) && !IN_AUFBAU_MODULE.has(k));
+  // Paket 234: in den 🟡-Bereichen keine Kasse und kein Shop im Paket (lib/dossierFreigabe.ts)
+  const weglassen = weglassenImDossier(b.kategorie);
+  const paketKeys = [...new Set(KATEGORIE_MODULE[b.kategorie] ?? [])].filter((k) => !KERN_MODULE.includes(k) && !IN_AUFBAU_MODULE.has(k) && !weglassen.includes(k));
   const paket = paketKeys.map((key) => ({ key, name: modulName(key) }));
 
   const alle = new Set<string>([...KERN_MODULE, ...paketKeys]);

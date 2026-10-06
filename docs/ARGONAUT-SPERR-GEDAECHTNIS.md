@@ -84,6 +84,10 @@ SPERRE dossier.teilbereich = Lebensmittel & Nahversorgung
 
 Öffnen, wenn **Webshop** (Abschnitt 1) **und echte Kasse mit TSE** (Abschnitt 5) frei sind. Dann die übrigen Slugs in `FREI_IN_TEILBEREICH` ergänzen bzw. den Bereich ganz freigeben.
 
+**Mitziehen (seit Paket 234):** In diesen vier Bereichen lässt das Dossier die Module **Kasse** und **Shop** im Fachpaket weg (`OHNE_IN_TEILBEREICH` in `lib/dossierFreigabe.ts`); damit entfällt dort auch die Zeile „Kasse mit zertifizierter TSE" unter „Was wir gerade noch bauen". Beim Öffnen die Liste leeren und die Branchentexte der bisher freien Betriebe prüfen (sie nennen bewusst weder Kasse noch Shop).
+
+Frei und mit Text (Stand Paket 234): Handel & E-Commerce 9 von 9.
+
 ### Bewusst noch ohne Text (Branchen werden mit dem alten E-Book-Dossier beliefert, nicht beworben)
 - Handwerk: `zahntechniker`, `orthopaedie-schuhmacher` (Gesundheitsdaten, Krankenkassen-Abrechnung)
 - Dienstleistungen: `inkasso-forderungsmanagement` (Rechtsdienstleistung), `detektei-ermittlungsbuero`, `seniorenbetreuung-alltagshilfe` (Gesundheitsnähe), `bestattungsunternehmen`, `tatort-extremreinigung`

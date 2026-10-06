@@ -49,6 +49,20 @@ export const FREI_IN_TEILBEREICH: Readonly<Record<string, readonly string[]>> = 
   ],
 });
 
+/**
+ * Paket 234 (06.10.2026): Module, die in den 🟡-Bereichen im Fachpaket NICHT
+ * genannt werden. Frei sind dort nur Betriebe ohne Ladenkasse und ohne Webshop
+ * — ihr Dossier darf Kasse und Shop also auch nicht als Paket-Modul aufzählen.
+ * Beim Freischalten von Webshop und Kasse mit TSE: Liste leeren
+ * (docs/ARGONAUT-SPERR-GEDAECHTNIS.md, Abschnitt 4).
+ */
+export const OHNE_IN_TEILBEREICH: readonly string[] = Object.freeze(['shop', 'kasse']);
+
+/** Welche Paket-Module das Dossier dieser Kategorie weglässt. */
+export function weglassenImDossier(kategorie: string): readonly string[] {
+  return String(kategorie ?? '') in FREI_IN_TEILBEREICH ? OHNE_IN_TEILBEREICH : [];
+}
+
 const GRUND_TEILBEREICH = 'Ladenkasse oder Webshop werden gerade rechtlich und technisch freigeschaltet: Das Dossier erscheint, sobald beides bereit ist.';
 
 export type DossierRecht = { frei: true } | { frei: false; grund: string; art: 'bereich' | 'teilbereich' };

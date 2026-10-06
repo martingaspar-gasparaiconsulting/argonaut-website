@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  baueDossier, dossierStand, modulName, ohneEmoji, standText, textVerstoesse, FACH_TEXTE, IN_AUFBAU_MODULE,
+  baueDossier, dossierStand, modulName, ohneEmoji, standText, textVerstoesse, FACH_TEXTE, IN_AUFBAU_MODULE, IN_VORBEREITUNG,
 } from '../out/fachdossier.js';
 import { KERN_MODULE } from '../out/pakete.js';
 import { KATEGORIE_MODULE } from '../out/branchenkatalog.js';
@@ -38,7 +38,9 @@ test('Nur Gebautes: Module in Aufbau nie als fertig, Kern nicht doppelt im Paket
     for (const k of IN_AUFBAU_MODULE) assert.ok(!keys.includes(k), k);
     assert.ok(d.paket.every((m) => !KERN_MODULE.includes(m.key)));
     for (const k of KERN_MODULE.filter((x) => !IN_AUFBAU_MODULE.has(x))) assert.ok(keys.includes(k), 'Kern fehlt: ' + k);
-    for (const k of (KATEGORIE_MODULE[b.kategorie] ?? []).filter((x) => !KERN_MODULE.includes(x))) assert.ok(keys.includes(k), 'Paket fehlt: ' + k);
+    // Paket 234 bewusst angepasst: in den 🟡-Bereichen fehlen Kasse und Shop absichtlich (lib/dossierFreigabe.ts)
+    const weg = ['shop', 'kasse'];
+    for (const k of (KATEGORIE_MODULE[b.kategorie] ?? []).filter((x) => !KERN_MODULE.includes(x) && !(b === FRISEUR && weg.includes(x)))) assert.ok(keys.includes(k), 'Paket fehlt: ' + k);
     assert.equal(new Set(keys).size, keys.length, 'doppelt');
   }
 });
@@ -53,8 +55,11 @@ test('Ohne geprüfte Branchentexte: Entwurf mit Lückenliste', () => {
 });
 
 test('„In Vorbereitung" passt zur Branche', () => {
+  // Paket 234 bewusst angepasst: Kasse steht nur in 🟡-Bereichen und wird dort weggelassen — also auch keine TSE-Zeile.
+  // Der Eintrag bleibt vorbereitet und erscheint wieder, sobald OHNE_IN_TEILBEREICH geleert wird.
   const kasse = baueDossier(FRISEUR).vorbereitung.map((v) => v.was);
-  assert.ok(kasse.some((w) => /TSE/.test(w)));
+  assert.ok(!kasse.some((w) => /TSE/.test(w)));
+  assert.ok(IN_VORBEREITUNG.some((v) => /TSE/.test(v.was) && v.wenn?.includes('kasse')));
   const elektro = baueDossier(ELEKTRO).vorbereitung.map((v) => v.was);
   assert.ok(!elektro.some((w) => /TSE/.test(w)));
   assert.ok(elektro.some((w) => /Großhändler/.test(w)));
