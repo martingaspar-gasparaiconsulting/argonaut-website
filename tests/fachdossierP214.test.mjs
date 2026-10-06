@@ -74,9 +74,10 @@ test('Vertriebsregeln: geprüfte Texte ohne „KI-Agenten" und ohne Duzen', () =
   assert.ok(textVerstoesse('Unsere KI-Agenten helfen dir').length >= 2);
 });
 
-test('Verdrahtung: Wasserzeichen bis zur Freigabe, Route nur für Betreiber', () => {
+test('Verdrahtung: Wasserzeichen nur ohne geprüften Text, Route nur für Betreiber', () => {
   const h = lies('lib/fachdossierHtml.ts');
-  assert.match(h, /export const FREIGABE_ERTEILT = false;/);
+  // Paket 217: Martin gibt die Dossiers mit geprüften Branchentexten frei (06.10.2026)
+  assert.match(h, /export const FREIGABE_ERTEILT = true;/);
   assert.match(h, /return d\.entwurf \|\| !FREIGABE_ERTEILT;/);
   assert.match(h, /ENTWURF – nicht zur Weitergabe/);
   // Martin 05.10.2026: kein „alles inklusive", kein Agentur-Kostenvergleich

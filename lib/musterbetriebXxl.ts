@@ -74,6 +74,10 @@ export function xxlPasswort(zufall: (n: number) => number = (n) => Math.floor(Ma
   const zeichen = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s = '';
   for (let i = 0; i < 20; i += 1) s += zeichen[zufall(zeichen.length)];
+  // Paket 217: Eine Ziffer ist Pflicht. Ohne diese Zeile fehlte sie in rund
+  // 4 % der Fälle (20 Zeichen, 8 von 55 sind Ziffern) — der Test wackelte,
+  // und eine Passwort-Regel mit Ziffernpflicht hätte das Konto abgelehnt.
+  if (!/\d/.test(s)) s = s.slice(0, -1) + '23456789'[zufall(8)];
   return `Xxl-${s}`;
 }
 

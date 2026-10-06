@@ -204,7 +204,9 @@ test('Module, Passwort, Datum', () => {
   const p = xxlPasswort();
   assert.ok(p.length >= 24 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /\d/.test(p));
   assert.notEqual(xxlPasswort(), xxlPasswort());
-  assert.equal(xxlPasswort(() => 0), 'Xxl-' + 'a'.repeat(20));
+  assert.equal(xxlPasswort(() => 0), 'Xxl-' + 'a'.repeat(19) + '2');
+  // Paket 217: nie ohne Ziffer — auch nicht im ungünstigsten Zufall
+  for (let i = 0; i < 2000; i += 1) assert.match(xxlPasswort(), /\d/);
 
   assert.equal(berlinVersatz('2026-07-01'), '+02:00');
   assert.equal(berlinVersatz('2026-12-01'), '+01:00');
