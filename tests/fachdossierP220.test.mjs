@@ -23,8 +23,9 @@ test('Welle 4 und 5: zwanzig Branchen vollständig, ohne Verstöße, kein Entwur
   }
 });
 
+// Paket 222: bewusst angepasst — seit den Dienstleistungen gibt es mehr als 50 Texte; die Handwerk-Zahl prüft fachdossierP222.
 test('Handwerk komplett: 50 Branchen mit Text, die zwei Gesundheits-Gewerke bewusst nicht', () => {
-  assert.equal(Object.keys(FACH_TEXTE).length, 50);
+  assert.ok(Object.keys(FACH_TEXTE).length >= 50);
   for (const s of ZURUECK) assert.equal(FACH_TEXTE[s], undefined, s);
 });
 

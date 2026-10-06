@@ -128,13 +128,14 @@ function luecke(was: string): string {
 }
 
 // ---- Paket 217: feste Inhalte für alle Branchen. NUR, was gebaut ist. --------
+// Paket 222: branchenneutral formuliert (nicht nur Handwerk: „Unterwegs", „Außendienst").
 export const KUNDE_MERKT: { titel: string; text: string }[] = [
   { titel: 'Schnelle Antwort', text: 'Keine Anfrage geht unter. Eine Ampel zeigt Ihnen, was wartet.' },
   { titel: 'Klare Angebote', text: 'Der Kunde nimmt per Link an. Kein Ausdrucken, Unterschreiben und Zurückschicken.' },
   { titel: 'Saubere Rechnung', text: 'Mit allen Positionen aus dem Angebot, als E-Rechnung per Mail.' },
 ];
 export const TEAM: { wer: string; titel: string; text: string }[] = [
-  { wer: 'Auf der Baustelle', titel: 'Alles auf dem Handy', text: 'Einsätze mit Adresse und Route, Stempeluhr, Fotos und die Unterschrift des Kunden.' },
+  { wer: 'Unterwegs', titel: 'Alles auf dem Handy', text: 'Einsätze mit Adresse und Route, Stempeluhr, Fotos und die Unterschrift des Kunden.' },
   { wer: 'Im Büro', titel: 'Nichts mehr abtippen', text: 'Aus dem Angebot wird der Auftrag, daraus die Rechnung. Zahlungen werden zugeordnet.' },
   { wer: 'Für den Chef', titel: 'Der Überblick', text: 'Offene Rechnungen, Auslastung und Marge. Das wachende Auge sagt in einem Satz, was die Zahlen bedeuten.' },
 ];
@@ -147,9 +148,9 @@ export const FRAGEN: { frage: string; antwort: string }[] = [
   { frage: 'Wie aufwendig ist der Umzug?', antwort: 'Kunden, Artikel und Termine lesen Sie als Excel- oder CSV-Datei ein. Für führende Programme gibt es Anleitungen, und die Startstrecke führt Sie bis zum ersten Angebot.' },
   { frage: 'Muss ich alles auf einmal umstellen?', antwort: 'Nein. Sie beginnen mit dem, was am meisten drückt, zum Beispiel Angebote und Rechnungen. Weitere Bereiche nehmen Sie dazu, wenn Sie so weit sind.' },
   { frage: 'Läuft das auf dem Handy meiner Mitarbeiter?', antwort: 'Ja. ARGONAUT OS läuft im Browser auf Handy, Tablet und Computer. Eine Installation ist nicht nötig.' },
-  { frage: 'Brauchen meine Mitarbeiter eine Schulung?', antwort: 'Monteure brauchen meist nur ihre Einsätze, die Stempeluhr und die Kamera. Die Übungswelt füllt das System mit Beispieldaten zum Ausprobieren, und in der Academy legen Sie eigene Schulungen für Ihr Team an.' },
+  { frage: 'Brauchen meine Mitarbeiter eine Schulung?', antwort: 'Mitarbeiter im Außendienst brauchen meist nur ihre Einsätze, die Stempeluhr und die Kamera. Die Übungswelt füllt das System mit Beispieldaten zum Ausprobieren, und in der Academy legen Sie eigene Schulungen für Ihr Team an.' },
   { frage: 'Kann ich festlegen, wer was sieht?', antwort: 'Ja. Rechte vergeben Sie je Mitarbeiter und Bereich. Abrechnen darf nur, wem Sie es erlauben.' },
-  { frage: 'Kann ich die Preislisten meiner Lieferanten nutzen?', antwort: 'Ja. Artikel und Preise lesen Sie als Datei ein, im Handwerk auch im DATANORM- und BMEcat-Format.' },
+  { frage: 'Kann ich die Preislisten meiner Lieferanten nutzen?', antwort: 'Ja. Artikel und Preise lesen Sie als Datei ein, auch im DATANORM- und BMEcat-Format.' },
   { frage: 'Wie kommen die Zahlen zu meinem Steuerberater?', antwort: 'Als DATEV-Export. Die Werte für die Umsatzsteuer-Voranmeldung rechnet das System vor.' },
   { frage: 'Was ist mit der E-Rechnung?', antwort: 'Sie schreiben Rechnungen als XRechnung und ZUGFeRD. Eingehende E-Rechnungen liest das System ein.' },
   { frage: 'Was macht die KI?', antwort: 'KI-Bausteine schreiben Entwürfe, zum Beispiel für Angebotstexte und Mails. Sie lesen und geben frei.' },
