@@ -58,9 +58,22 @@ export const FREI_IN_TEILBEREICH: Readonly<Record<string, readonly string[]>> = 
  */
 export const OHNE_IN_TEILBEREICH: readonly string[] = Object.freeze(['shop', 'kasse']);
 
+/**
+ * Paket 237 (06.10.2026): Zusätzlich weggelassen je 🟡-Bereich. In „Sport, Beauty
+ * & Lifestyle" steckt das Modul „Gesundheit & Wellness" (Kundenkartei mit
+ * Behandlungen) im Paket — Gesundheitsnähe wartet auf den Anwalt (3.20), also
+ * nennen die freien Sport-Dossiers es nicht. Öffnen zusammen mit dem Bereich
+ * „Gesundheit & Wellness" (docs/ARGONAUT-SPERR-GEDAECHTNIS.md, Abschnitt 4).
+ */
+export const ZUSAETZLICH_OHNE: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  'Sport, Beauty & Lifestyle': ['wellness'],
+});
+
 /** Welche Paket-Module das Dossier dieser Kategorie weglässt. */
 export function weglassenImDossier(kategorie: string): readonly string[] {
-  return String(kategorie ?? '') in FREI_IN_TEILBEREICH ? OHNE_IN_TEILBEREICH : [];
+  const k = String(kategorie ?? '');
+  if (!(k in FREI_IN_TEILBEREICH)) return [];
+  return [...OHNE_IN_TEILBEREICH, ...(ZUSAETZLICH_OHNE[k] ?? [])];
 }
 
 const GRUND_TEILBEREICH = 'Ladenkasse oder Webshop werden gerade rechtlich und technisch freigeschaltet: Das Dossier erscheint, sobald beides bereit ist.';

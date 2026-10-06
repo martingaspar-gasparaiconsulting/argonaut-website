@@ -17,7 +17,8 @@ const lies = (p) => fs.readFileSync(path.join(WURZEL, p), 'utf8');
 const ELEKTRO = { slug: 'elektriker', name: 'Elektriker & Elektrobetriebe', kategorie: 'Handwerk & Bau' };
 const FRISEUR = { slug: 'friseure', name: 'Friseure', kategorie: 'Sport, Beauty & Lifestyle' };
 // Paket 221: Friseure sind „in rechtlicher Vorbereitung" (Ladenkasse) — für Entwurf-Tests ein freier Betrieb ohne Text
-const FITNESS = { slug: 'fitnessstudios', name: 'Fitnessstudios', kategorie: 'Sport, Beauty & Lifestyle' };
+// Paket 237 bewusst angepasst: Fitnessstudios hat jetzt Text — Beispiel ohne Text ist eine bewusst zurückgestellte Branche
+const FITNESS = { slug: 'chemische-industrie', name: 'Chemische Industrie', kategorie: 'Industrie & Produktion' };
 const alleKeys = (d) => [...d.kern.flatMap((g) => g.module), ...d.paket].map((m) => m.key);
 
 test('Elektro: vollständig, kein Entwurf, QR auf die Branchenseite', () => {
@@ -39,7 +40,7 @@ test('Nur Gebautes: Module in Aufbau nie als fertig, Kern nicht doppelt im Paket
     assert.ok(d.paket.every((m) => !KERN_MODULE.includes(m.key)));
     for (const k of KERN_MODULE.filter((x) => !IN_AUFBAU_MODULE.has(x))) assert.ok(keys.includes(k), 'Kern fehlt: ' + k);
     // Paket 234 bewusst angepasst: in den 🟡-Bereichen fehlen Kasse und Shop absichtlich (lib/dossierFreigabe.ts)
-    const weg = ['shop', 'kasse'];
+    const weg = ['shop', 'kasse', 'wellness']; // Paket 237: Sport lässt „Gesundheit & Wellness“ weg
     for (const k of (KATEGORIE_MODULE[b.kategorie] ?? []).filter((x) => !KERN_MODULE.includes(x) && !(b === FRISEUR && weg.includes(x)))) assert.ok(keys.includes(k), 'Paket fehlt: ' + k);
     assert.equal(new Set(keys).size, keys.length, 'doppelt');
   }

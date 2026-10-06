@@ -42,7 +42,8 @@ test('Handel-Vorsicht: keine Zusagen, nur Paket-Module, keine Prozente', () => {
 test('🟡-Bereiche: Kasse und Shop fehlen im Paket, Kasse-TSE nicht unter „in Vorbereitung"; andere Bereiche unberührt', () => {
   assert.deepEqual([...OHNE_IN_TEILBEREICH].sort(), ['kasse', 'shop']);
   for (const kat of Object.keys(FREI_IN_TEILBEREICH)) {
-    assert.deepEqual([...weglassenImDossier(kat)], ['shop', 'kasse'], kat);
+    // Paket 237 bewusst angepasst: Sport lässt zusätzlich „wellness“ weg — hier nur noch: Shop und Kasse sind immer dabei
+    assert.deepEqual([...weglassenImDossier(kat)].slice(0, 2), ['shop', 'kasse'], kat);
     const d = baueDossier({ slug: FREI_IN_TEILBEREICH[kat][0], name: 'x', kategorie: kat });
     const keys = d.paket.map((m) => m.key);
     assert.ok(!keys.includes('kasse') && !keys.includes('shop'), kat + ': ' + keys.join(','));
