@@ -34,8 +34,8 @@ test('Kfz-Vorsicht: keine Schadenabwicklung, Haftung, Verwertung, Gutachten oder
   }
 });
 
-test('Sachverständige und Autowäsche bleiben vorerst ohne Text', () => {
+// P241: Autowäsche hat seit Welle 2 einen Text (ohne Kasse, ohne Abwasser-/Umweltzusagen) — bewusst angepasst.
+test('Sachverständige bleiben vorerst ohne Text', () => {
   assert.equal(FACH_TEXTE['kfz-sachverstaendige-gutachter'], undefined);
-  assert.equal(FACH_TEXTE['autowaesche-autopflege'], undefined);
   assert.ok(Object.keys(FACH_TEXTE).length >= 80);
 });
