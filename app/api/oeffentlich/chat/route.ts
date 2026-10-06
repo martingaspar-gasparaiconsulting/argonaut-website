@@ -29,6 +29,7 @@ import { createClient } from '@supabase/supabase-js';
 import { kiFetch } from '@/lib/ki';
 import { pruefeDeckel, monatsSchluessel } from '@/lib/chatDeckel';
 import { originErlaubt } from '@/lib/chatEinbetten';
+import { startFrei, startSperrGrund, istFremdeHerkunft } from '@/lib/startSperre';
 import {
   leseEinstellung,
   gespraechsStand,
@@ -68,6 +69,8 @@ export async function OPTIONS(req: Request) {
   const origin = req.headers.get('origin') || '';
   const seite = new URL(req.url).searchParams.get('seite') || '';
   if (!origin || !seite) return new Response(null, { status: 204 });
+  // Paket 216: Berater auf fremden Websites bis zur Freigabe aus (lib/startSperre.ts).
+  if (!startFrei('kiBeraterFremd') && istFremdeHerkunft(origin, req.url)) return new Response(null, { status: 204 });
 
   try {
     const db = admin();
@@ -124,6 +127,10 @@ export async function POST(req: Request) {
     // Fremde Herkunft? Dann muss sie eingetragen sein — sonst kostet uns eine
     // beliebige Seite bares Geld. Ohne Origin ist es unsere eigene Seite.
     if (origin) {
+      // Paket 216: fremde Websites erst nach der Freigabe (lib/startSperre.ts).
+      if (!startFrei('kiBeraterFremd') && istFremdeHerkunft(origin, req.url)) {
+        return NextResponse.json({ error: startSperrGrund('kiBeraterFremd') }, { status: 403 });
+      }
       if (!originErlaubt(origin, inh.chat_domains)) {
         return NextResponse.json(
           { error: 'Diese Website ist für den Berater nicht freigeschaltet.' },

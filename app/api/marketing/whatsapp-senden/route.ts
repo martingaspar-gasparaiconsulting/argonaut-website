@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server';
 import { createAdminClient } from '@/lib/supabase-admin';
 import { entschluessele, encKeyBereit } from '@/lib/crypto';
 import { anbieterFuer } from '@/lib/whatsapp';
+import { startSperrGrund } from '@/lib/startSperre';
 import { verschickeKampagne, type WaAnbieter, type SendeKontakt } from '@/lib/whatsappVersand';
 
 // ============================================================================
@@ -27,6 +28,9 @@ async function userId() {
 }
 
 export async function POST(req: Request) {
+  // Paket 216: WhatsApp-Werbung bis zur Abnahme durch den Anwalt aus (lib/startSperre.ts).
+  const waGesperrt = startSperrGrund('whatsappWerbung');
+  if (waGesperrt) return NextResponse.json({ ok: false, error: waGesperrt }, { status: 403 });
   const uid = await userId();
   if (!uid) return NextResponse.json({ ok: false, error: 'Nicht eingeloggt.' }, { status: 401 });
 

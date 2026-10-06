@@ -177,7 +177,7 @@ export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean; 
     '      <a href="#impressum">Impressum</a>',
     '      <a href="#datenschutz">Datenschutz</a>',
     '      <a href="#agb">AGB</a>',
-    opts.widerruf ? '      <a href="#widerruf">Widerruf</a>' : '',
+    opts.widerruf ? '      <a href="#widerruf" class="ao-fuss-widerruf"><b>Vertrag widerrufen</b></a>' : '',
     opts.barrierefreiheit ? '      <a href="#barrierefreiheit">Barrierefreiheit</a>' : '',
     '    </nav>',
     '  </div>',

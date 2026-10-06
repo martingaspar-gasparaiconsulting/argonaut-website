@@ -14,6 +14,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendeMail, mailLayout } from '@/lib/mail';
 import { escapeHtml, istEmailGueltig } from '@/lib/newsletter';
+import { eingangZeitBerlin } from '@/lib/shopWiderrufe';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 
 export const runtime = 'nodejs';
@@ -53,7 +54,9 @@ export async function POST(req: Request) {
     if (!email) return NextResponse.json({ error: 'Bitte Ihre E-Mail-Adresse angeben.' }, { status: 400 });
     if (!istEmailGueltig(email)) return NextResponse.json({ error: 'Bitte eine gültige E-Mail-Adresse angeben.' }, { status: 400 });
     if (!ware) return NextResponse.json({ error: 'Bitte angeben, welche Bestellung / Ware Sie widerrufen.' }, { status: 400 });
-    if (b.privacy !== true) return NextResponse.json({ error: 'Bitte der Datenschutzerklärung zustimmen.' }, { status: 400 });
+    // Paket 216 (§ 356a BGB): kein Pflicht-Häkchen mehr — nur Name, Vertrag, E-Mail.
+    const eingang = new Date();
+    const eingangText = eingangZeitBerlin(eingang);
 
     const db = admin();
     // S1: Mengen-Deckel (lib/drossel.ts). Sichtbar abgewiesen, nie still verschluckt.
@@ -82,13 +85,14 @@ export async function POST(req: Request) {
     let gespeichert = false;
     try {
       const { error: wErr } = await db.from('shop_widerrufe').insert({
-        owner_user_id: ownerId, seite, name, anschrift, email, bestellung, datum, ware,
+        owner_user_id: ownerId, seite, name, anschrift, email, bestellung, datum, ware, eingang_am: eingang.toISOString(),
       });
       gespeichert = !wErr;
       if (wErr) console.error('widerruf speichern:', wErr.message);
     } catch (e) { console.error('widerruf speichern:', e instanceof Error ? e.message : e); }
 
     const zeilen: Array<[string, string | null]> = [
+      ['Eingegangen am', eingangText],
       ['Name', name],
       ['Anschrift', anschrift],
       ['E-Mail', email],
@@ -124,7 +128,7 @@ export async function POST(req: Request) {
     const htmlK = mailLayout(
       'Eingang Ihres Widerrufs bestätigt',
       `<p style="margin:0 0 14px;">Guten Tag${vorname ? ' ' + escapeHtml(vorname) : ''},</p>
-       <p style="margin:0 0 14px;">wir bestätigen den Eingang Ihres Widerrufs${firma ? ' bei ' + escapeHtml(firma) : ''}. Ihr Anliegen wird bearbeitet; die Rückabwicklung erfolgt gemäß den gesetzlichen Fristen.</p>
+       <p style="margin:0 0 14px;">wir bestätigen den Eingang Ihres Widerrufs${firma ? ' bei ' + escapeHtml(firma) : ''} am ${escapeHtml(eingangText)}. Ihre Widerrufserklärung im Wortlaut steht unten. Ihr Anliegen wird bearbeitet; die Rückabwicklung erfolgt gemäß den gesetzlichen Fristen.</p>
        <table style="border-collapse:collapse;font-size:14px;margin:0 0 12px;">${tab}</table>
        <p style="margin:8px 0 0;">Beste Grüße${firma ? '<br>' + escapeHtml(firma) : ''}</p>`,
     );

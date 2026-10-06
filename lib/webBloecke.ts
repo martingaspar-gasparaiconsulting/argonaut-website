@@ -14,6 +14,7 @@
 // ============================================================
 
 import { impressumText, datenschutzText, agbText, fussHtml, type CiRecht, type WebDienste } from './webRecht';
+import { startFrei, startSperrGrund } from './startSperre';
 
 import { einstellung as einblendungEinstellung } from './einblendung';
 import { markdownZuHtml } from './markdownEinfach';
@@ -577,7 +578,11 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
     case 'produkte': {
       const oid = ctx.oeffentlichId ? esc(ctx.oeffentlichId) : '';
       let inner: string;
-      if (oid) {
+      // Paket 216: Solange der Shop nicht freigeschaltet ist (lib/startSperre.ts),
+      // zeigt die Live-Seite keinen Warenkorb, sondern einen Hinweis.
+      if (oid && !startFrei('shop')) {
+        inner = '<div class="ao-shop-grid"><div class="ao-shop-leer">' + esc(startSperrGrund('shop') || '') + '</div></div>';
+      } else if (oid) {
         inner = '<div class="ao-wk-bar" style="display:none"><span class="ao-wk-text"></span></div>'
           + '<div class="ao-shop-grid"><div class="ao-shop-lade">Produkte werden geladen &hellip;</div></div>';
       } else if (ed) {
@@ -591,7 +596,9 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
           + '<div class="ao-prod-fuss"><span class="ao-prod-preis">' + x.p + '</span>'
           + '<span class="btn ao-prod-add">In den Warenkorb</span></div></div></div>',
         ).join('');
-        inner = '<div class="ao-shop-hinweis">Vorschau — echte Produkte übernehmen Sie unter „Produkte in den Shop".</div><div class="ao-shop-grid">' + bsp + '</div>';
+        inner = '<div class="ao-shop-hinweis">Vorschau — echte Produkte übernehmen Sie unter „Produkte in den Shop".'
+          + (startFrei('shop') ? '' : ' Auf der Live-Seite ist der Shop bis zur rechtlichen Freigabe geschlossen; Besucher sehen einen Hinweis.')
+          + '</div><div class="ao-shop-grid">' + bsp + '</div>';
       } else {
         inner = '<div class="ao-shop-grid"><div class="ao-shop-leer">Produkte folgen in Kürze.</div></div>';
       }
@@ -633,7 +640,7 @@ export function webDiensteDerSeite(bloecke: { typ?: string }[]): WebDienste {
     kontakt: hat('kontakt'),
     newsletter: hat('newsletter', 'einblendung'),
     termine: hat('termin', 'buchung'),
-    shop: hat('produkte'),
+    shop: hat('produkte') && startFrei('shop'),
     chatbot: hat('chatbot'),
     video: hat('video'),
     karte: hat('anfahrt'),
@@ -668,30 +675,37 @@ export function rechtsSektionen(ci: CiWeb, dienste?: WebDienste): string {
 // --- Widerruf (Shop-Pflicht: elektronischer Widerrufsbutton ab 19.06.2026) ---
 // Nur auf Shop-Seiten (mit Produkt-Baustein). In der Vorschau/Editor sichtbar
 // aber inert; auf der Live-Seite sendet das Formular an /api/oeffentlich/widerruf.
-function widerrufSektion(oeffentlichId?: string): string {
+export function widerrufSektion(oeffentlichId?: string): string {
+  // Paket 216: Widerrufsbutton nach § 356a BGB (seit 19.06.2026) — zwei Schritte:
+  // 1) Schaltfläche „Vertrag widerrufen" (auch im Seitenfuß, ständig erreichbar),
+  // 2) Name, Vertrag, E-Mail angeben und mit „Widerruf bestätigen" absenden.
+  // Kein Pflicht-Häkchen davor (keine zusätzliche Hürde); Datenschutz als Hinweis.
   const seite = oeffentlichId ? esc(oeffentlichId) : '';
   return [
     '<section class="recht" id="widerruf"><div class="wrap narrow">',
-    '<h2>Widerruf</h2>',
-    '<div class="pretext">Verbraucher haben das Recht, binnen 14 Tagen ohne Angabe von Gr&uuml;nden diesen Vertrag zu widerrufen. Nutzen Sie dazu einfach das folgende Formular — wir best&auml;tigen den Eingang unverz&uuml;glich.</div>',
-    '<form class="ao-anfrage ao-widerruf" id="ao-widerruf" novalidate>',
+    '<style>.ao-widerruf[hidden],.ao-widerruf-start[hidden]{display:none!important}</style>',
+    '<h2>Vertrag widerrufen</h2>',
+    '<div class="pretext">Verbraucher haben das Recht, binnen 14 Tagen ohne Angabe von Gr&uuml;nden diesen Vertrag zu widerrufen. Sie k&ouml;nnen den Widerruf hier direkt erkl&auml;ren — wir best&auml;tigen den Eingang unverz&uuml;glich per E-Mail mit Datum und Uhrzeit.</div>',
+    '<button type="button" class="btn ao-widerruf-start" id="ao-widerruf-start" aria-controls="ao-widerruf">Vertrag widerrufen</button>',
+    '<form class="ao-anfrage ao-widerruf" id="ao-widerruf" novalidate hidden>',
     '<input type="hidden" name="seite" value="' + seite + '">',
     '<input class="ao-hp" type="text" name="firma_hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
-    '<div class="ao-feld"><label>Name*</label><input aria-label="Name" type="text" name="name" required></div>',
-    '<div class="ao-feld"><label>Anschrift</label><input aria-label="Anschrift" type="text" name="anschrift"></div>',
-    '<div class="ao-zwei"><div class="ao-feld"><label>E-Mail*</label><input aria-label="E-Mail" type="email" name="email" required></div><div class="ao-feld"><label>Bestell-/Rechnungsnummer</label><input aria-label="Bestell-/Rechnungsnummer" type="text" name="bestellung"></div></div>',
-    '<div class="ao-feld"><label>Bestellt / erhalten am</label><input aria-label="Bestellt / erhalten am" type="text" name="datum" placeholder="z. B. 05.08.2026"></div>',
-    '<div class="ao-feld"><label>Ich widerrufe den Vertrag &uuml;ber folgende Ware/Dienstleistung*</label><textarea aria-label="Ich widerrufe den Vertrag &uuml;ber folgende Ware/Dienstleistung" name="ware" rows="3" required></textarea></div>',
-    '<label class="ao-dsgvo"><input type="checkbox" name="privacy"> Ich habe die <a href="#datenschutz">Datenschutzerkl&auml;rung</a> gelesen und stimme zu.*</label>',
-    '<button type="submit" class="btn">Widerruf absenden</button>',
+    '<div class="ao-feld"><label>Ihr Name*</label><input aria-label="Ihr Name" type="text" name="name" required></div>',
+    '<div class="ao-feld"><label>Welchen Vertrag widerrufen Sie? (Ware/Dienstleistung, ggf. nur teilweise)*</label><textarea aria-label="Welchen Vertrag widerrufen Sie" name="ware" rows="3" required></textarea></div>',
+    '<div class="ao-zwei"><div class="ao-feld"><label>Bestell-/Rechnungsnummer</label><input aria-label="Bestell-/Rechnungsnummer" type="text" name="bestellung"></div><div class="ao-feld"><label>Bestellt / erhalten am</label><input aria-label="Bestellt / erhalten am" type="text" name="datum" placeholder="z. B. 05.08.2026"></div></div>',
+    '<div class="ao-feld"><label>E-Mail f&uuml;r die Eingangsbest&auml;tigung*</label><input aria-label="E-Mail f&uuml;r die Eingangsbest&auml;tigung" type="email" name="email" required></div>',
+    '<div class="ao-feld"><label>Anschrift (freiwillig)</label><input aria-label="Anschrift" type="text" name="anschrift"></div>',
+    '<div class="pretext" style="font-size:13px;">Ihre Angaben verwenden wir nur, um Ihren Widerruf zu bearbeiten und zu best&auml;tigen (Art. 6 Abs. 1 lit. c DSGVO). Mehr in der <a href="#datenschutz">Datenschutzerkl&auml;rung</a>.</div>',
+    '<button type="submit" class="btn">Widerruf best&auml;tigen</button>',
     '<div class="ao-msg" id="ao-widerruf-msg" role="status"></div>',
     '</form>',
     '<div class="pretext" style="margin-top:14px;font-size:13px;">Hinweis nach EU-KI-Verordnung (Art. 50): In diesem Shop k&ouml;nnen KI-gest&uuml;tzte Inhalte (z. B. Produktbeschreibungen) zum Einsatz kommen.</div>',
     '</div></section>',
   ].join('');
 }
-function widerrufSkript(): string {
-  return '<script>(function(){var f=document.getElementById("ao-widerruf");if(!f)return;var el=f.elements;var m=document.getElementById("ao-widerruf-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var name=(el.name.value||"").trim();var email=(el.email.value||"").trim();var ware=(el.ware.value||"").trim();if(!name){set("Bitte Ihren Namen angeben.",false);return;}if(!email){set("Bitte Ihre E-Mail angeben.",false);return;}if(!ware){set("Bitte angeben, was Sie widerrufen.",false);return;}if(!el.privacy.checked){set("Bitte der Datenschutzerkl\\u00e4rung zustimmen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird Ihr Widerruf gesendet.",true);return;}var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="Senden \\u2026";fetch("/api/oeffentlich/widerruf",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,name:name,anschrift:el.anschrift.value,email:email,bestellung:el.bestellung.value,datum:el.datum.value,ware:ware,privacy:true,firma_hp:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Ihr Widerruf ist eingegangen \\u2014 Sie erhalten eine Best\\u00e4tigung per E-Mail.",true);}else{set((x.d&&x.d.error)||"Senden fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
+
+export function widerrufSkript(): string {
+  return '<script>(function(){var f=document.getElementById("ao-widerruf");if(!f)return;var st=document.getElementById("ao-widerruf-start");if(st)st.addEventListener("click",function(){f.hidden=false;st.hidden=true;var n=f.elements.name;if(n)n.focus();});var el=f.elements;var m=document.getElementById("ao-widerruf-msg");function set(t,ok){m.textContent=t;m.className="ao-msg "+(ok?"ok":"err");}f.addEventListener("submit",function(e){e.preventDefault();if(el.firma_hp&&el.firma_hp.value)return;var name=(el.name.value||"").trim();var email=(el.email.value||"").trim();var ware=(el.ware.value||"").trim();if(!name){set("Bitte Ihren Namen angeben.",false);return;}if(!email){set("Bitte Ihre E-Mail angeben.",false);return;}if(!ware){set("Bitte angeben, welchen Vertrag Sie widerrufen.",false);return;}var seite=el.seite.value;if(!seite){set("Vorschau \\u2014 im Live-Betrieb wird Ihr Widerruf gesendet.",true);return;}var btn=f.querySelector("button[type=submit]");btn.disabled=true;var bt=btn.textContent;btn.textContent="Senden \\u2026";fetch("/api/oeffentlich/widerruf",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({seite:seite,name:name,anschrift:el.anschrift.value,email:email,bestellung:el.bestellung.value,datum:el.datum.value,ware:ware,firma_hp:""})}).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});}).then(function(x){if(x.ok){f.reset();set("Ihr Widerruf ist eingegangen \\u2014 die Eingangsbest\\u00e4tigung mit Datum und Uhrzeit ist per E-Mail unterwegs.",true);}else{set((x.d&&x.d.error)||"Senden fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}}).catch(function(){set("Verbindung fehlgeschlagen. Bitte sp\\u00e4ter erneut.",false);}).finally(function(){btn.disabled=false;btn.textContent=bt;});});})();</script>';
 }
 
 // --- CSS der erzeugten Seite ------------------------------------------------
@@ -1006,7 +1020,9 @@ export function seiteHtml(
   const hatBewertungen = (seite.bloecke || []).some((b) => b.typ === 'bewertungen');
   const hatAnfahrt = (seite.bloecke || []).some((b) => b.typ === 'anfahrt');
   const hatBuchung = (seite.bloecke || []).some((b) => b.typ === 'buchung');
-  const hatProdukte = (seite.bloecke || []).some((b) => b.typ === 'produkte');
+  // Paket 216: Ohne Shop-Freigabe gibt es keine Bestellungen → kein Warenkorb-Skript,
+  // kein Widerrufsformular (der Produkte-Block zeigt dann nur einen Hinweis).
+  const hatProdukte = startFrei('shop') && (seite.bloecke || []).some((b) => b.typ === 'produkte');
   const hatChatbot = (seite.bloecke || []).some((b) => b.typ === 'chatbot');
   const hatEinblendung = (seite.bloecke || []).some((b) => b.typ === 'einblendung');
 

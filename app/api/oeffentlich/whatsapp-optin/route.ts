@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { telefonNormalisieren, istTelefonPlausibel } from '@/lib/whatsapp';
 import { baueBestaetigungsCode, anmeldeNachricht, waMeLink, BESTAETIGUNG_GUELTIG_TAGE } from '@/lib/whatsappBestaetigung';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
+import { startSperrGrund } from '@/lib/startSperre';
 
 // ============================================================================
 // ARGONAUT OS · app/api/oeffentlich/whatsapp-optin/route.ts  (WhatsApp P2 · Paket 183)
@@ -87,6 +88,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  // Paket 216: WhatsApp-Anmeldung zur Werbung bis zur Freigabe aus (lib/startSperre.ts).
+  const waGesperrt = startSperrGrund('whatsappWerbung');
+  if (waGesperrt) return NextResponse.json({ ok: false, error: waGesperrt }, { status: 403 });
   try {
     const body = await req.json().catch(() => null);
     const slug = (body?.slug || '').toString().trim().toLowerCase();

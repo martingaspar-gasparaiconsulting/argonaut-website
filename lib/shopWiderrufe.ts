@@ -65,3 +65,17 @@ export function sortiereWiderrufe(liste: ShopWiderruf[]): ShopWiderruf[] {
     return ea ? zeit(b.eingang_am) - zeit(a.eingang_am) : zeit(a.eingang_am) - zeit(b.eingang_am);
   });
 }
+
+/**
+ * Paket 216 (§ 356a BGB): Die Eingangsbestätigung nennt Datum UND Uhrzeit des
+ * Eingangs, in deutscher Zeit — z. B. „06.10.2026, 09:14 Uhr".
+ */
+export function eingangZeitBerlin(wann: Date | string | number): string {
+  const t = wann instanceof Date ? wann.getTime() : typeof wann === 'number' ? wann : Date.parse(String(wann ?? ''));
+  if (!Number.isFinite(t)) return '';
+  const teile = new Intl.DateTimeFormat('de-DE', {
+    timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date(t));
+  const g = (typ: string) => teile.find((p) => p.type === typ)?.value ?? '';
+  return `${g('day')}.${g('month')}.${g('year')}, ${g('hour')}:${g('minute')} Uhr`;
+}

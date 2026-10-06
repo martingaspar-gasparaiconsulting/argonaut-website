@@ -15,6 +15,7 @@ import { sendeMail, mailLayout } from '@/lib/mail';
 import { escapeHtml, istEmailGueltig } from '@/lib/newsletter';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 import { baueBestellung, leseMenge, type ShopZeile } from '@/lib/shopUebernahme';
+import { startSperrGrund } from '@/lib/startSperre';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,9 @@ function eur(n: number): string {
 const FELDER = 'id, bezeichnung, verkaufspreis, artikelnummer, aktiv';
 
 export async function POST(req: Request) {
+  // Paket 216: Webshop bis zur Abnahme durch den Anwalt abgeschaltet (lib/startSperre.ts).
+  const shopGesperrt = startSperrGrund('shop');
+  if (shopGesperrt) return NextResponse.json({ error: shopGesperrt }, { status: 403 });
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== 'object') return NextResponse.json({ error: 'Ungültige Anfrage.' }, { status: 400 });

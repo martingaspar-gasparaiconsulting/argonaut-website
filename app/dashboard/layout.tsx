@@ -17,6 +17,7 @@ import NutzungMelder from './_components/NutzungMelder'
 import FilialUmschalter from './_components/FilialUmschalter'
 import { AnsichtUmschalter } from './_components/Ansicht'
 import { CHURN_ZIEL } from '@/lib/churnSperre'
+import { startFrei } from '@/lib/startSperre'
 import { betriebSperrePruefen } from '@/lib/betriebSperreServer'
 
 // ============================================================
@@ -137,7 +138,8 @@ export default async function DashboardLayout({
             </span>
             <AnsichtUmschalter />
             <FilialUmschalter />
-            <FernhilfeKnopf />
+            {/* Paket 216: Fernhilfe bis zur Freigabe aus (lib/startSperre.ts) */}
+            {startFrei('fernhilfe') && <FernhilfeKnopf />}
             <Glocke />
             <LogoutButton />
           </div>

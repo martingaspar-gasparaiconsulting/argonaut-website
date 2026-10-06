@@ -15,6 +15,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
 import { baueVorlage, ZWECKE } from '@/lib/webVorlagen';
 import { leseDomainListe, baueEinbettSchnipsel, MAX_DOMAINS } from '@/lib/chatEinbetten';
+import { startFrei, startSperrGrund } from '@/lib/startSperre';
 import SeitenEditor from './_components/SeitenEditor';
 
 const supabase = createBrowserClient(
@@ -420,7 +421,10 @@ export default function WebseitenPage() {
               Zwei Zeilen genügen, und der KI-Berater steht dort unten links, kennt Ihre Produkte, Preise und Bestände.
             </p>
 
-            {liveInfo?.status === 'live' && liveInfo.oeffentlich_id ? (
+            {!startFrei('kiBeraterFremd') ? (
+              /* Paket 216: bis zur Freigabe durch den Anwalt aus (lib/startSperre.ts) */
+              <p style={{ ...styles.mini, fontWeight: 600 }}>{startSperrGrund('kiBeraterFremd')}</p>
+            ) : liveInfo?.status === 'live' && liveInfo.oeffentlich_id ? (
               <>
                 <div style={styles.feldTitel}>Welche Adressen dürfen ihn einbetten?</div>
                 <p style={styles.mini}>

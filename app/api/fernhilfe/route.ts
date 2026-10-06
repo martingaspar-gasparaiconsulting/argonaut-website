@@ -7,6 +7,7 @@ import {
   kanalAus, istHelferArt, gueltigBis, sitzungAktiv, grundSaeubern, darfBeitreten, darfBeenden,
   MAX_OFFENE_JE_PERSON, type Sitzung,
 } from '@/lib/fernhilfe';
+import { startSperrGrund } from '@/lib/startSperre';
 
 // ============================================================================
 // ARGONAUT OS · app/api/fernhilfe/route.ts  (Paket 209 · Stufe 3 B10 Fernhilfe)
@@ -91,6 +92,9 @@ export async function POST(req: Request) {
     const jetzt = new Date();
 
     if (aktion === 'anfordern') {
+      // Paket 216: Fernhilfe bis zur Abnahme durch den Anwalt aus (lib/startSperre.ts).
+      const gesperrt = startSperrGrund('fernhilfe');
+      if (gesperrt) return antwort(false, gesperrt, 403);
       if (!istHelferArt(body?.helfer)) return antwort(false, 'Bitte wählen, wer helfen soll.', 400);
       // Geschäftsleitung braucht keine Hilfe aus dem eigenen Betrieb von sich selbst.
       if (body.helfer === 'betrieb' && p.betrieb === p.id) return antwort(false, 'Sie sind selbst die Geschäftsleitung — wählen Sie „ARGONAUT-Support".', 400);

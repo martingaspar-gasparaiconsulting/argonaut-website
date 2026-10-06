@@ -17,6 +17,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { leseZahlOder } from '@/lib/zahlen';
+import { startFrei } from '@/lib/startSperre';
 
 const MODUL = 'shop_bestellungen';
 
@@ -244,6 +245,12 @@ export default function ShopPage() {
             Bestellungen aus Ihrem Online-Shop an einem Ort. Im <strong>Manuell-Modus</strong> per CSV importieren;
             mit hinterlegtem Anbieter (unter „🔌 Schnittstellen") später automatisch per Schnittstelle.
           </p>
+          {/* Paket 216: Website-Shop bis zur Freigabe durch den Anwalt geschlossen (lib/startSperre.ts) */}
+          {!startFrei('shop') && (
+            <p style={{ ...styles.sub, color: '#E0A24C', fontWeight: 600 }}>
+              Hinweis: Der Shop auf Ihrer ARGONAUT-Website nimmt bis zur rechtlichen Freigabe noch keine Bestellungen an. Besucher sehen dort einen Hinweis und können Sie per Telefon oder E-Mail erreichen.
+            </p>
+          )}
           {/* Paket PS3 (25.09.26): Retouren & Widerruf */}
           <a href="/dashboard/shop/retouren" style={{ display: 'inline-block', marginTop: 10, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>↩️ Retouren &amp; Widerruf: Frist · Erstattung · Lager</a>
         </div>
