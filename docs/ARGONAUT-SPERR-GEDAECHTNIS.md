@@ -88,12 +88,13 @@ SPERRE dossier.teilbereich = Lebensmittel & Nahversorgung
 
 **Seit Paket 237** lassen die Sport-Dossiers zusätzlich das Modul **„Gesundheit & Wellness“** weg (`ZUSAETZLICH_OHNE`, Kundenkartei mit Behandlungen = Gesundheitsnähe, Anwalt **3.20**). Öffnen zusammen mit dem Bereich „Gesundheit & Wellness“.
 
-Frei und mit Text (Stand Paket 237): Handel & E-Commerce 9 von 9, Gastronomie, Hotellerie & Tourismus 14 von 14, Lebensmittel & Nahversorgung 8 von 8, Sport, Beauty & Lifestyle 8 von 18.
+Frei und mit Text (Stand Paket 238): Handel & E-Commerce 9 von 9, Gastronomie, Hotellerie & Tourismus 14 von 14, Lebensmittel & Nahversorgung 8 von 8, Sport, Beauty & Lifestyle 17 von 18 (ohne `schuetzen-schiesssportverein`, siehe unten).
 
 ### Bewusst noch ohne Text (Branchen werden mit dem alten E-Book-Dossier beliefert, nicht beworben)
 - Handwerk: `zahntechniker`, `orthopaedie-schuhmacher` (Gesundheitsdaten, Krankenkassen-Abrechnung)
 - Dienstleistungen: `inkasso-forderungsmanagement` (Rechtsdienstleistung), `detektei-ermittlungsbuero`, `seniorenbetreuung-alltagshilfe` (Gesundheitsnähe), `bestattungsunternehmen`, `tatort-extremreinigung`
 - Industrie: `lebensmittelproduktion` (HACCP liegt nicht im Industrie-Paket), `chemische-industrie`
+- Sport, Beauty & Lifestyle: `schuetzen-schiesssportverein` (steht in der Positivliste, aber Waffen sind auf der Website ausgeschlossen und Waffenrecht ist ein eigenes Rechtsthema; Paket 238)
 
 Regeln für alle Dossier-Texte: nur Gebautes, keine Zahlen- oder Ersparnisversprechen, keine Mitbewerber, kein „inklusive", keine Kasse, kein Shop, keine WhatsApp-Werbung, keine Fernhilfe, kein KI-Berater auf fremden Websites, kein Bankabruf.
 
