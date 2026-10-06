@@ -16,6 +16,8 @@ const WURZEL = path.resolve(new URL('..', import.meta.url).pathname.replace(/^\/
 const lies = (p) => fs.readFileSync(path.join(WURZEL, p), 'utf8');
 const ELEKTRO = { slug: 'elektriker', name: 'Elektriker & Elektrobetriebe', kategorie: 'Handwerk & Bau' };
 const FRISEUR = { slug: 'friseure', name: 'Friseure', kategorie: 'Sport, Beauty & Lifestyle' };
+// Paket 221: Friseure sind „in rechtlicher Vorbereitung" (Ladenkasse) — für Entwurf-Tests ein freier Betrieb ohne Text
+const FITNESS = { slug: 'fitnessstudios', name: 'Fitnessstudios', kategorie: 'Sport, Beauty & Lifestyle' };
 const alleKeys = (d) => [...d.kern.flatMap((g) => g.module), ...d.paket].map((m) => m.key);
 
 test('Elektro: vollständig, kein Entwurf, QR auf die Branchenseite', () => {
@@ -42,7 +44,7 @@ test('Nur Gebautes: Module in Aufbau nie als fertig, Kern nicht doppelt im Paket
 });
 
 test('Ohne geprüfte Branchentexte: Entwurf mit Lückenliste', () => {
-  const d = baueDossier(FRISEUR);
+  const d = baueDossier(FITNESS);
   assert.equal(d.entwurf, true);
   assert.equal(d.text, null);
   assert.match(d.luecken[0], /B11b/);
@@ -64,9 +66,9 @@ test('Namen ohne Emoji, Stand, Übersicht', () => {
   assert.equal(modulName('leads'), 'Anfragen');
   assert.equal(modulName('aufmass'), 'Aufmaß');
   assert.equal(standText(new Date(2026, 0, 3)), 'Januar 2026');
-  const s = dossierStand([ELEKTRO, FRISEUR]);
+  const s = dossierStand([ELEKTRO, FITNESS]);
   assert.equal(s.gesamt, 2); assert.equal(s.fertig, 1); assert.equal(s.entwurf, 1);
-  assert.deepEqual(s.jeKategorie['Handwerk & Bau'], { gesamt: 1, fertig: 1 });
+  assert.deepEqual(s.jeKategorie['Handwerk & Bau'], { gesamt: 1, fertig: 1, gesperrt: 0 });
 });
 
 test('Vertriebsregeln: geprüfte Texte ohne „KI-Agenten" und ohne Duzen', () => {
@@ -78,7 +80,7 @@ test('Verdrahtung: Wasserzeichen nur ohne geprüften Text, Route nur für Betrei
   const h = lies('lib/fachdossierHtml.ts');
   // Paket 217: Martin gibt die Dossiers mit geprüften Branchentexten frei (06.10.2026)
   assert.match(h, /export const FREIGABE_ERTEILT = true;/);
-  assert.match(h, /return d\.entwurf \|\| !FREIGABE_ERTEILT;/);
+  assert.match(h, /return d\.entwurf \|\| !!d\.gesperrt \|\| !FREIGABE_ERTEILT;/);
   assert.match(h, /ENTWURF – nicht zur Weitergabe/);
   // Martin 05.10.2026: kein „alles inklusive", kein Agentur-Kostenvergleich
   assert.doesNotMatch(h, /inklusive|kostet extra|10\.000|Agentur/i);

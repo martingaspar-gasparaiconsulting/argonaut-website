@@ -4,6 +4,10 @@ import { dossierHtml, dossierKey, brancheAufloesen } from '../../../vorschau/_li
 import { dossierPdf } from '@/lib/dossierPdf';
 import { dossierDateiPfad } from '@/lib/dossierDatei';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
+import { baueDossier, dossierFertig, FACH_TEXTE, FACHDOSSIER_VERSION } from '@/lib/fachdossier';
+import { fachdossierHtml } from '@/lib/fachdossierHtml';
+import { dossierRecht, IN_VORBEREITUNG_TEXT } from '@/lib/dossierFreigabe';
+import { fachdossierCacheName, vorbereitungsSeite } from '@/lib/dossierAuslieferung';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/dossier-pdf  (I5)
@@ -54,7 +58,23 @@ export async function GET(req: Request) {
   // die der Control-Room beim Vorab-Erzeugen benutzt. Zwei getrennte Suffixe
   // waeren frueher oder spaeter auseinandergelaufen: der Control-Room haette
   // Dateien erzeugt, die diese Route nie findet.
-  const pfad = dossierDateiPfad(dossierKey(branche));
+  // Paket 221: Welche Fassung bekommt der Besucher?
+  //  · Branche „in rechtlicher Vorbereitung" -> kurze Hinweisseite, kein PDF.
+  //  · Branche mit geprüftem Fachdossier-Text -> das neue Fachdossier.
+  //  · sonst wie bisher das E-Book-Dossier.
+  const b = brancheAufloesen(branche);
+  if (b) {
+    const recht = dossierRecht(b);
+    if (!recht.frei) {
+      return new NextResponse(vorbereitungsSeite(b.name, recht.grund, IN_VORBEREITUNG_TEXT), {
+        status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      });
+    }
+  }
+  const fach = b && dossierFertig({ slug: b.slug, name: b.name, kategorie: b.kategorie }) ? b : null;
+  const pfad = fach
+    ? fachdossierCacheName(fach.slug, FACHDOSSIER_VERSION, JSON.stringify(FACH_TEXTE[fach.slug]))
+    : dossierDateiPfad(dossierKey(branche));
 
   try {
     const db = admin();
@@ -71,7 +91,10 @@ export async function GET(req: Request) {
     }
 
     // Einmalig generieren, cachen und streamen.
-    const pdf = await dossierPdf(dossierHtml(branche));
+    const html = fach
+      ? await fachdossierHtml(baueDossier({ slug: fach.slug, name: fach.name, kategorie: fach.kategorie }))
+      : dossierHtml(branche);
+    const pdf = await dossierPdf(html);
     if (!pdf) return NextResponse.redirect(`${BASIS_URL}/vorschau`);
     await db.storage.from('dossiers').upload(pfad, pdf, { contentType: 'application/pdf', upsert: true });
     return ausliefern(pdf, branche);

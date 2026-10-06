@@ -22,6 +22,7 @@
 import { KERN_MODULE } from './pakete';
 import { KATEGORIE_MODULE, STANDARD_AUTOMATION } from './branchenkatalog';
 import { NAV_LINKS } from './rechte';
+import { dossierRecht } from './dossierFreigabe';
 
 export const FACHDOSSIER_VERSION = 'fd1';
 export const BASIS_URL = 'https://argonaut-os.com';
@@ -1793,6 +1794,8 @@ export type Dossier = {
   zielgruppe: string;
   text: FachText | null;
   entwurf: boolean;
+  /** Paket 221: gesetzt, wenn das Dossier „in rechtlicher Vorbereitung" ist (lib/dossierFreigabe.ts). */
+  gesperrt: string | null;
   luecken: string[];
   kern: { titel: string; module: Modul[] }[];
   paket: Modul[];
@@ -1851,6 +1854,9 @@ export function baueDossier(b: DossierBranche, jetzt: Date = new Date()): Dossie
   const vorbereitung = IN_VORBEREITUNG.filter((v) => !v.wenn || v.wenn.some((k) => alle.has(k)));
 
   const luecken: string[] = [];
+  const recht = dossierRecht(b);
+  const gesperrt = recht.frei ? null : recht.grund;
+  if (gesperrt) luecken.push('In rechtlicher Vorbereitung: ' + gesperrt);
   if (!text) luecken.push('Branchentexte (Alltag, Ablauf eines Auftrags, Schwerpunkt) fehlen — B11b');
   if (!KATEGORIE_MODULE[b.kategorie]) luecken.push(`Kategorie „${b.kategorie}" hat kein Branchenpaket`);
 
@@ -1858,7 +1864,7 @@ export function baueDossier(b: DossierBranche, jetzt: Date = new Date()): Dossie
     version: FACHDOSSIER_VERSION,
     slug: b.slug, name: b.name, kategorie: b.kategorie,
     zielgruppe: text?.zielgruppe ?? zielgruppeAus(b.name),
-    text, entwurf: luecken.length > 0, luecken,
+    text, entwurf: luecken.length > 0, gesperrt, luecken,
     kern, paket, vorbereitung,
     qrUrl: `${BASIS_URL}/branchen/${encodeURIComponent(b.slug)}`,
     stand: standText(jetzt),
@@ -1866,15 +1872,22 @@ export function baueDossier(b: DossierBranche, jetzt: Date = new Date()): Dossie
 }
 
 /** Übersicht für das Command Center: wie viele Dossiers sind vollständig? */
-export function dossierStand(branchen: DossierBranche[]): { gesamt: number; fertig: number; entwurf: number; jeKategorie: Record<string, { gesamt: number; fertig: number }> } {
-  const jeKategorie: Record<string, { gesamt: number; fertig: number }> = {};
+export function dossierStand(branchen: DossierBranche[]): { gesamt: number; fertig: number; entwurf: number; gesperrt: number; jeKategorie: Record<string, { gesamt: number; fertig: number; gesperrt: number }> } {
+  const jeKategorie: Record<string, { gesamt: number; fertig: number; gesperrt: number }> = {};
   let fertig = 0;
+  let gesperrt = 0;
   for (const b of branchen) {
-    const k = (jeKategorie[b.kategorie] ??= { gesamt: 0, fertig: 0 });
+    const k = (jeKategorie[b.kategorie] ??= { gesamt: 0, fertig: 0, gesperrt: 0 });
     k.gesamt++;
+    if (!dossierRecht(b).frei) { k.gesperrt++; gesperrt++; continue; }
     if (FACH_TEXTE[b.slug] && KATEGORIE_MODULE[b.kategorie]) { k.fertig++; fertig++; }
   }
-  return { gesamt: branchen.length, fertig, entwurf: branchen.length - fertig, jeKategorie };
+  return { gesamt: branchen.length, fertig, entwurf: branchen.length - fertig - gesperrt, gesperrt, jeKategorie };
+}
+
+/** Paket 221: Darf das neue Fachdossier öffentlich heraus? Nur mit geprüftem Text und ohne Sperre. */
+export function dossierFertig(b: DossierBranche): boolean {
+  return !!FACH_TEXTE[b.slug] && !!KATEGORIE_MODULE[b.kategorie] && dossierRecht(b).frei;
 }
 
 /** Verbotene Wörter in Dossier-Texten (Vertriebsregeln). */

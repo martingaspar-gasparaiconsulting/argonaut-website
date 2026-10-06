@@ -15,8 +15,8 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 
-type Zeile = { slug: string; name: string; kategorie: string; fertig: boolean };
-type Stand = { gesamt: number; fertig: number; entwurf: number; jeKategorie: Record<string, { gesamt: number; fertig: number }> };
+type Zeile = { slug: string; name: string; kategorie: string; fertig: boolean; gesperrt?: string | null };
+type Stand = { gesamt: number; fertig: number; entwurf: number; gesperrt?: number; jeKategorie: Record<string, { gesamt: number; fertig: number; gesperrt?: number }> };
 
 const C = { navy: '#0A1628', navy2: '#0F1F33', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D', warn: '#E0A24C', danger: '#E06666', text: '#E8EDF4', dim: '#8FA3BE', border: 'rgba(143,163,190,0.2)' };
 
@@ -55,11 +55,11 @@ export default function Fachdossiers() {
 
       {stand && (
         <div style={st.karte}>
-          <b style={{ color: C.gold }}>{stand.fertig} von {stand.gesamt}</b> Branchen haben geprüfte Branchentexte · {stand.entwurf} sind Entwürfe
-          (Alltag, Ablauf und Schwerpunkt folgen in B11b).
+          <b style={{ color: C.gold }}>{stand.fertig} von {stand.gesamt}</b> Branchen haben geprüfte Branchentexte · {stand.entwurf} sind Entwürfe ·{' '}
+          <b style={{ color: C.warn }}>{stand.gesperrt ?? 0} in rechtlicher Vorbereitung</b> (Gesundheit, Recht/Steuern/Finanzen, Tiere sowie Betriebe mit Ladenkasse oder Webshop).
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
             {Object.entries(stand.jeKategorie).sort((a, b) => b[1].gesamt - a[1].gesamt).map(([k, v]) => (
-              <span key={k} style={st.chip}>{k}: {v.fertig}/{v.gesamt}</span>
+              <span key={k} style={st.chip}>{k}: {v.fertig}/{v.gesamt}{v.gesperrt ? ` · ${v.gesperrt} gesperrt` : ''}</span>
             ))}
           </div>
         </div>
@@ -73,7 +73,7 @@ export default function Fachdossiers() {
               <button key={b.slug} type="button" onClick={() => setWahl(b.slug)}
                 style={{ ...st.zeile, ...(b.slug === wahl ? { borderColor: C.gold } : {}) }}>
                 <span>{b.name}</span>
-                <span style={{ color: b.fertig ? C.green : C.dim, fontSize: 11 }}>{b.fertig ? 'Texte geprüft' : 'Entwurf'}</span>
+                <span style={{ color: b.gesperrt ? C.warn : b.fertig ? C.green : C.dim, fontSize: 11 }}>{b.gesperrt ? 'In rechtlicher Vorbereitung' : b.fertig ? 'Texte geprüft' : 'Entwurf'}</span>
               </button>
             ))}
             {liste.length > 0 && treffer.length === 0 && <div style={{ color: C.dim, fontSize: 13 }}>Keine Branche gefunden.</div>}

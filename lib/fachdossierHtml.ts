@@ -29,8 +29,8 @@ export function esc(s: unknown): string {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-export function mitWasserzeichen(d: Pick<Dossier, 'entwurf'>): boolean {
-  return d.entwurf || !FREIGABE_ERTEILT;
+export function mitWasserzeichen(d: Pick<Dossier, 'entwurf'> & { gesperrt?: string | null }): boolean {
+  return d.entwurf || !!d.gesperrt || !FREIGABE_ERTEILT;
 }
 
 async function qrSvg(url: string): Promise<string> {
@@ -115,8 +115,8 @@ h3{font-size:12.5pt;margin:10mm 0 3mm}
 .titel .wz span{color:rgba(255,255,255,.08)}
 `;
 
-function wasserzeichen(an: boolean): string {
-  return an ? '<div class="wz"><span>ENTWURF – nicht zur Weitergabe</span></div>' : '';
+function wasserzeichen(an: boolean, text = 'ENTWURF – nicht zur Weitergabe'): string {
+  return an ? `<div class="wz"><span>${esc(text)}</span></div>` : '';
 }
 
 function fusszeile(d: Dossier, nr: number): string {
@@ -158,7 +158,8 @@ export const FRAGEN: { frage: string; antwort: string }[] = [
 
 /** Das komplette Dossier als HTML-Dokument. */
 export async function fachdossierHtml(d: Dossier): Promise<string> {
-  const wz = wasserzeichen(mitWasserzeichen(d));
+  // Paket 221: gesperrte Branchen tragen „IN RECHTLICHER VORBEREITUNG" statt „ENTWURF".
+  const wz = wasserzeichen(mitWasserzeichen(d), d.gesperrt ? 'IN RECHTLICHER VORBEREITUNG' : undefined);
   const t = d.text;
   const seiten: string[] = [];
   let nr = 1;

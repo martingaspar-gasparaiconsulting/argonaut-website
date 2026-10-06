@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { betreiberPruefung } from '@/lib/betreiberGuard';
 import { websiteBranchen, websiteBrancheBySlug } from '@/app/vorschau/_lib/branchen-web';
 import { baueDossier, dossierStand, FACH_TEXTE } from '@/lib/fachdossier';
+import { dossierRecht } from '@/lib/dossierFreigabe';
 import { fachdossierHtml, mitWasserzeichen } from '@/lib/fachdossierHtml';
 import { dossierPdf } from '@/lib/dossierPdf';
 
@@ -32,7 +33,8 @@ export async function GET(req: Request) {
     const stand = dossierStand(alle);
     return NextResponse.json({
       ok: true, stand,
-      branchen: alle.map((b) => ({ ...b, fertig: !!FACH_TEXTE[b.slug] })),
+      // Paket 221: gesperrt = „in rechtlicher Vorbereitung"
+      branchen: alle.map((b) => { const r = dossierRecht(b); return { ...b, fertig: !!FACH_TEXTE[b.slug] && r.frei, gesperrt: r.frei ? null : r.grund }; }),
     });
   }
 
@@ -45,7 +47,7 @@ export async function GET(req: Request) {
   if (url.searchParams.get('format') === 'pdf') {
     const pdf = await dossierPdf(html);
     if (!pdf) return NextResponse.json({ ok: false, error: 'Der PDF-Dienst ist gerade nicht erreichbar.' }, { status: 503 });
-    const name = `ARGONAUT-Fachdossier-${b.slug}${mitWasserzeichen(d) ? '-ENTWURF' : ''}.pdf`;
+    const name = `ARGONAUT-Fachdossier-${b.slug}${d.gesperrt ? '-IN-VORBEREITUNG' : mitWasserzeichen(d) ? '-ENTWURF' : ''}.pdf`;
     return new NextResponse(new Uint8Array(pdf), {
       status: 200,
       headers: {
