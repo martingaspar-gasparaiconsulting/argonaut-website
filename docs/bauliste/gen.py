@@ -5,15 +5,16 @@ esc=html.escape
 WER={"G":("gemeinsam","g"),"C":("Claude","c"),"M":("Martin","m")}
 def st_cls(s):
     return {"live":"ok","läuft":"run","nächster":"next"}.get(s,"wait" if "wartet" in s else "open")
-tot_bis_test=0; tot_s3=0; tot_ext=0; done=0
+tot_bis_test=0; tot_s3=0; tot_kfz=0; tot_ext=0; done=0
 for sid,_,_,rows in S:
     for r in rows:
         p=int(r[5])
         if r[6]=="live": done+=p; continue
         if sid in("s0","s1","s2"): tot_bis_test+=p
         elif sid in ("s3","s5"): tot_s3+=p
+        elif sid=="kfz": tot_kfz+=p
         else: tot_ext+=p
-gesamt=tot_bis_test+tot_s3+tot_ext
+gesamt=tot_bis_test+tot_s3+tot_kfz+tot_ext
 alle=gesamt+done
 proz=round(done*100/alle)
 secs=[]
@@ -102,22 +103,22 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 05.10.2026 · _p214 live · Stufe 3 fertig</div>
+<div class="eyebrow">ARGONAUT OS · Stand 07.10.2026 · _p256 live · Fachdossiers fertig (385 von 698)</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
 <div class="zahl gold"><b>{tot_bis_test}</b><span>Pushes Stufe 0–2 (Rest wartet)</span></div>
 <div class="zahl"><b>{tot_s3}</b><span>Pushes Stufe 3 + Dossiers</span></div>
-<div class="zahl"><b>{tot_ext}</b><span>Pushes externe Partner</span></div>
+<div class="zahl"><b>{tot_kfz}</b><span>Pushes Kfz-Pilot</span></div><div class="zahl"><b>{tot_ext}</b><span>Pushes externe Partner</span></div>
 <div class="zahl"><b>{gesamt}</b><span>Pushes gesamt offen</span></div>
 <div class="zahl"><b>≈ {round(gesamt/2)}</b><span>Blöcke à 2 Std. + 1 Testtag</span></div>
 </div>
 <div class="fort"><span>{done} von {alle} Pushes erledigt · {proz} %</span><div class="balken" role="progressbar" aria-valuenow="{proz}" aria-valuemin="0" aria-valuemax="100"><i style="width:{proz}%"></i></div></div>
 <div class="leg">Wer: <span class="w w-g">gemeinsam</span><span class="w w-c">Claude</span><span class="w w-m">Martin</span> · Status: <span class="st st-ok">✓ erledigt</span><span class="st st-run">läuft</span><span class="st st-next">nächster</span><span class="st st-open">offen</span><span class="st st-wait">wartet</span></div>
-<nav class="sprung" aria-label="Abschnitte"><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3 jetzt</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
+<nav class="sprung" aria-label="Abschnitte"><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
 </div>
 {secs[0]}{secs[1]}{secs[2]}
-{secs[3]}{secs[4]}{secs[5]}
+{"".join(secs[3:])}
 <section id="test"><header class="sh"><h2>Testtag · ganz zum Schluss</h2><p>Nach Stufe 3, externen Partnern und Dossiers – mit Schrift-Querschnitt</p></header>
 <div class="zwei">
 <div class="box"><h3>Entscheidungsrunden · erledigt</h3><p>Block 1 und Block 2 (47 Entscheidungen) sind entschieden und gebaut: Pakete 190–203. Offene Rechtsfragen liegen in der Anwaltsvorlage Oktober 2026.</p></div>
@@ -134,4 +135,4 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 <p class="fuss">Quelle: Rechts- und Sicherheitsprüfung vom 29.09.2026 (273 API-Routen, 180 SQL-Dateien, Mail-Wege, KI-Aufrufe, Uploads, Admin-Wege) und die Liste der offenen Punkte. Das Doc „ARGONAUT Rundumschlag“ enthält die Fundstellen im Code.</p>
 </div>'''
 open('bauliste.html','w').write(body)
-print(tot_bis_test,tot_s3,tot_ext,gesamt,done)
+print(tot_bis_test,tot_s3,tot_kfz,tot_ext,gesamt,done)
