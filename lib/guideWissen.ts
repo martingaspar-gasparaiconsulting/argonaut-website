@@ -1485,6 +1485,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Ein Fahrzeug mit Kennzeichen „TEST" über „💾 Fahrzeug speichern".', loeschen: '🗑 am Fahrzeug — Es wird nach einer Rückfrage gelöscht. Eingelagerte Reifen lassen sich nur „⇧ Auslagern", nicht löschen.' },
     landetIn: [{ text: 'Schadenabwicklung (Fahrzeug aus der Kartei)', href: '/dashboard/kfz/schaden' }],
   },
+  '/dashboard/kfz/bestand': {
+    zweck: 'Der Handelsbestand: alle Fahrzeuge, die der Betrieb verkaufen will, mit Status vom Zulauf bis Verkauft, Sparte, Standort, Standtage-Ampel, Verkaufswert und gespeicherten Suchen. Status, Sparten, Ampel und Suchen sind für die Branche vorbelegt und vom Chef anpassbar.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „KFZ" sehen den Bestand; mit Schreibrecht legen sie Fahrzeuge an und ändern sie. Löschen und „⚙ Spalten und Einstellungen" kann nur die Geschäftsleitung.',
+    schritte: [
+      '„＋ Fahrzeug aufnehmen": Marke, Modell, Sparte, Status, FIN (17 Zeichen, ohne I, O, Q), Erstzulassung als MM/JJJJ, Kilometer, Leistung in kW, Standort, Eingang, Einkaufspreis netto, Verkaufspreis brutto und Besteuerung (§ 25a oder Regelsteuer). „💾 Speichern" vergibt die interne Nummer F-0001, F-0002 …',
+      'Oben filtern nach Status, Sparte und Standort oder eine „Gespeicherte Suche" anklicken (z. B. „Über 90 Standtage"). Verkauft und Archiv erscheinen nur, wenn Sie den Status wählen',
+      'Die Standtage zählen ab Eingang; die Ampel ist grün, gelb oder rot nach den Grenzen der Vorlage. „Liste" und „Karten" schalten die Ansicht um',
+      'Häkchen setzen für die Massenbearbeitung: Status setzen, Standort setzen oder alle Preise um einen Prozentwert ändern (gerundet auf volle 10 €). Jede Preisänderung landet automatisch im Preisverlauf',
+      'Die Geschäftsleitung blendet unter „⚙ Spalten und Einstellungen" Spalten ein und aus, benennt Status um, setzt Ampelgrenzen, Standkosten je Tag und Sparten; „＋ Aktuelle Auswahl speichern" legt eine eigene Suche für alle an',
+    ],
+    probe: { anlegen: 'Ein Fahrzeug „Test Testmodell" ohne FIN über „＋ Fahrzeug aufnehmen".', loeschen: 'Fahrzeug anklicken, „🗑 Löschen", dann „Ja, löschen" — nur die Geschäftsleitung. Besser: Status „Archiv".' },
+    landetIn: [{ text: 'KFZ-Fachpaket (Kundenfahrzeuge, Reifenhotel)', href: '/dashboard/kfz' }],
+  },
   '/dashboard/kfz/schaden': {
     zweck: 'Schadenfälle mit Versicherern abwickeln: Art (Haftpflicht, Kasko, Selbstzahler), Unterlagen-Checkliste, Gutachten/KVA, Freigabe, Ersatzwagen-Tage, Rechnung, Zahlungen von Versicherer und Kunde, Nachfassen nach Richtwert und fertige Schreiben. Keine Rechtsberatung — nur Abwicklung.',
     wer: 'beide',
