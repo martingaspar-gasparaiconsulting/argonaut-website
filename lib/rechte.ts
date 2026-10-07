@@ -189,6 +189,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🛂 GwG-Identifizierung', href: '/dashboard/kfz/gwg', ebene: 3, gruppe: 'betrieb' },
   // Paket 259 (07.10.26): K1 Fahrzeugbestand (Handelsbestand) — Unterpfad von /dashboard/kfz, erbt dessen Freigabe.
   { label: '🚘 Fahrzeugbestand', href: '/dashboard/kfz/bestand', ebene: 3, gruppe: 'betrieb' },
+  // Paket 263 (07.10.26): K4 Ankauf und Bewertung — Unterpfad von /dashboard/kfz, erbt dessen Freigabe.
+  { label: '🔑 Ankauf und Bewertung', href: '/dashboard/kfz/ankauf', ebene: 3, gruppe: 'betrieb' },
   { label: '🍽 Gastro & Hotel', href: '/dashboard/gastro', modul: 'gastro', ebene: 3, gruppe: 'betrieb' },
   // Paket PS5 (25.09.26): Trinkgeld-Verteilung — Unterpfad von /dashboard/gastro, erbt dessen Freigabe.
   { label: '🪙 Trinkgeld-Verteilung', href: '/dashboard/gastro/trinkgeld', ebene: 3, gruppe: 'betrieb' },

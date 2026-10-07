@@ -1502,6 +1502,22 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Ein Fahrzeug „Test Testmodell" ohne FIN über „＋ Fahrzeug aufnehmen".', loeschen: 'Fahrzeug anklicken, „🗑 Löschen", dann „Ja, löschen" — nur die Geschäftsleitung. Besser: Status „Archiv".' },
     landetIn: [{ text: 'KFZ-Fachpaket (Kundenfahrzeuge, Reifenhotel)', href: '/dashboard/kfz' }],
   },
+  '/dashboard/kfz/ankauf': {
+    zweck: 'Fahrzeuge ankaufen: Verkäufer und Fahrzeug erfassen, Prüfprotokoll mit 24 Punkten, Schäden mit Foto und Markierung, Richtwerte für Schadenskosten, Höchstpreis-Rechnung (§ 25a oder Regelsteuer), Angebot mit Ampel und Übernahme in den Bestand mit einem Klick.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „KFZ" sehen die Ankäufe; mit Schreibrecht legen sie Ankäufe an, prüfen, bewerten und kaufen an. „⚙ Richtwerte für Schäden" und Löschen kann nur die Geschäftsleitung.',
+    schritte: [
+      '„＋ Neuer Ankauf": Woher (Hof, Inzahlungnahme, Telefon), ob der Verkäufer Privatperson, Händler mit Differenzbesteuerung oder Unternehmen mit Umsatzsteuer ist, Name, Marke, Modell, Kennzeichen. „💾 Anlegen und öffnen" vergibt die Nummer A-0001, A-0002 …',
+      'Reiter „Fahrzeug und Verkäufer": Anschrift, Telefon, E-Mail, FIN, Erstzulassung als MM/JJJJ, Kilometer, Vorbesitzer, HU, Schlüssel, Serviceheft und die Unfall-Angabe des Verkäufers. Ausweisnummern werden bewusst nicht gespeichert',
+      'Reiter „Prüfprotokoll": 24 Punkte in Außen, Innen, Technik und Unterlagen je mit ✓ (in Ordnung) oder ⚠ (Mangel) antippen, nochmal tippen hebt auf. „💾 Prüfprotokoll speichern"',
+      'Reiter „Schäden": Wo, Art, Stärke und optional einen eigenen Betrag wählen (leer = Richtwert), „＋ Schaden hinzufügen". Am Schaden „📷 Foto" (am Handy öffnet die Kamera) und „✎ markieren" für Pfeil, Kreis oder Text — das Original bleibt, die markierte Fassung kommt dazu',
+      'Reiter „Bewertung": geplanten Verkaufspreis brutto, Aufbereitung, sonstige Kosten, geplante Standtage und gewünschte Marge eintragen. ARGONAUT rechnet den höchsten sinnvollen Ankaufspreis, auf volle 10 € abgerundet, mit Rechenweg. Das Angebot zeigt eine Ampel (grün im Rahmen, gelb bis 5 % darüber, rot darüber); „💾 Angebot speichern" setzt den Status „Angebot abgegeben"',
+      'Reiter „Abschluss": vereinbarten Preis und Datum eintragen, Haken „Ausweis geprüft" setzen, „✓ Ankaufen und in den Bestand übernehmen". Das Fahrzeug erscheint im Fahrzeugbestand (mit Schäden „In Aufbereitung") mit Einkaufspreis, Verkaufspreis, Besteuerung und Vorschaden-Angabe. „Nicht angekauft" legt den Vorgang ab',
+      'Die Geschäftsleitung stellt unter „⚙ Richtwerte für Schäden" die Beträge je Schadensart und Stärke ein. Ausgeliefert sind Startwerte, die auf die eigenen Preise angepasst werden sollten',
+    ],
+    probe: { anlegen: 'Einen Ankauf „Test" mit Marke „Testmarke" über „＋ Neuer Ankauf", einen Schaden „Kratzer leicht" erfassen und einen Verkaufspreis von 10.000 € eintragen.', loeschen: 'Reiter „Abschluss", „🗑 Ankauf löschen", dann „Ja, …" — nur die Geschäftsleitung. Ein schon übernommenes Fahrzeug bleibt im Bestand.' },
+    landetIn: [{ text: 'Fahrzeugbestand (nach dem Ankauf)', href: '/dashboard/kfz/bestand' }],
+  },
   '/dashboard/kfz/schaden': {
     zweck: 'Schadenfälle mit Versicherern abwickeln: Art (Haftpflicht, Kasko, Selbstzahler), Unterlagen-Checkliste, Gutachten/KVA, Freigabe, Ersatzwagen-Tage, Rechnung, Zahlungen von Versicherer und Kunde, Nachfassen nach Richtwert und fertige Schreiben. Keine Rechtsberatung — nur Abwicklung.',
     wer: 'beide',
