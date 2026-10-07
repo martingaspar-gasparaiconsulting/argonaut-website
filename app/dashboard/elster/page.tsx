@@ -50,7 +50,7 @@ export default function ElsterSeite() {
     setLaden(true); setFehler(null);
     try {
       const [r, b] = await Promise.all([
-        supabase.from('rechnungen').select('netto_summe, mwst_summe, bezahlt_am, zahlungsstatus')
+        supabase.from('rechnungen').select('*')
           .eq('zahlungsstatus', 'bezahlt').gte('bezahlt_am', von).lte('bezahlt_am', bis).limit(5000),
         supabase.from('eingangsbelege').select('ust_betrag, belegdatum')
           .gte('belegdatum', von).lte('belegdatum', bis).limit(5000),
@@ -61,10 +61,29 @@ export default function ElsterSeite() {
       // ("1.234,56") NaN und damit 0 — in der Umsatzsteuer-Voranmeldung. Jetzt
       // liest lib/zahlen.ts.
       const vorsteuer = belege.reduce((s, x) => s + leseZahlOder(x.ust_betrag, 0), 0);
+      // Paket 269: bei § 25a / EU / Ausfuhr den 0-%-Anteil aus den Positionen holen.
+      // select('*') statt fester Spalten: ohne SQL p268 fehlen die neuen Spalten sonst mit Fehler.
+      const sonder = rechnungen.filter((x) => typeof x.steuer_sonderfall === 'string' && x.steuer_sonderfall).map((x) => String(x.id));
+      const netto0 = new Map<string, number>();
+      if (sonder.length) {
+        const p = await supabase.from('rechnung_positionen').select('rechnung_id, mwst_satz, gesamt_netto').in('rechnung_id', sonder).limit(20000);
+        if (!p.error) {
+          for (const z of ((p.data as unknown) as Array<Record<string, unknown>>) ?? []) {
+            if (leseZahlOder(z.mwst_satz, -1) !== 0) continue;
+            const id = String(z.rechnung_id);
+            netto0.set(id, (netto0.get(id) ?? 0) + leseZahlOder(z.gesamt_netto, 0));
+          }
+          for (const id of sonder) if (!netto0.has(id)) netto0.set(id, 0);
+        }
+      }
       setErg(baueUstva(
         rechnungen.map((x) => ({
           netto_summe: leseZahlOder(x.netto_summe, 0),
           mwst_summe: leseZahlOder(x.mwst_summe, 0),
+          steuer_sonderfall: typeof x.steuer_sonderfall === 'string' ? x.steuer_sonderfall : null,
+          diff_bemessung: x.diff_bemessung === null || x.diff_bemessung === undefined ? null : leseZahlOder(x.diff_bemessung, 0),
+          diff_steuer: x.diff_steuer === null || x.diff_steuer === undefined ? null : leseZahlOder(x.diff_steuer, 0),
+          netto0: netto0.has(String(x.id)) ? netto0.get(String(x.id)) : null,
         })),
         vorsteuer,
       ));

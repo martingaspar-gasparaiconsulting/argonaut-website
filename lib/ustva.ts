@@ -124,7 +124,17 @@ export function satzIstEindeutig(netto: unknown, mwst: unknown): boolean {
   return Math.abs(p - satzVon(netto, mwst)) <= 1;
 }
 
-export interface UstvaRechnung { netto_summe?: number | string | null; mwst_summe?: number | string | null; }
+export interface UstvaRechnung {
+  netto_summe?: number | string | null; mwst_summe?: number | string | null;
+  // ─── Paket 268/269 (07.10.2026), alles optional ───
+  /** 'diff25a' | 'eu_ig' | 'ausfuhr' — steuerlicher Sonderfall der Rechnung (rechnungen.steuer_sonderfall). */
+  steuer_sonderfall?: string | null;
+  /** § 25a: Marge netto und Differenzsteuer (rechnungen.diff_bemessung / diff_steuer). */
+  diff_bemessung?: number | string | null;
+  diff_steuer?: number | string | null;
+  /** Summe der Positionen mit 0 % (aus rechnung_positionen) — der Teil, den der Sonderfall betrifft. */
+  netto0?: number | string | null;
+}
 export interface Kennziffer { kz: string; label: string; wert: number; istBetrag: boolean; }
 export interface UstvaErgebnis {
   umsatz19: number; ust19: number;
@@ -147,6 +157,17 @@ export interface UstvaErgebnis {
    * (Punkt 28, additiv ergänzt.)
    */
   uneindeutig: number;
+  // ─── Paket 269, additiv ───
+  /** Steuerfreie innergemeinschaftliche Lieferungen (Kz 41). */
+  umsatz41: number;
+  /** Steuerfreie Ausfuhrlieferungen (Kz 43). */
+  umsatz43: number;
+  /** § 25a: Marge netto (steckt in umsatz19) und Differenzsteuer (steckt in ust19). */
+  diff25aBemessung: number; diff25aSteuer: number;
+  /** § 25a-Rechnungen ohne gespeicherte Differenz (Einkaufspreis fehlte) — Marge fehlt in Kz 81. */
+  diff25aOffen: number;
+  /** Sonderfall-Rechnungen, deren 0-%-Anteil nicht feststand — wie bisher gerechnet. */
+  sonderfallUnklar: number;
 }
 
 /** Bemessungsgrundlage in vollen Euro — immer in Richtung Null. */
@@ -162,8 +183,31 @@ function volleEuro(n: number): number {
 export function baueUstva(rechnungen: UstvaRechnung[], vorsteuer: number | string): UstvaErgebnis {
   let umsatz19 = 0, ust19 = 0, umsatz7 = 0, ust7 = 0, umsatz0 = 0, gutschriften = 0;
   let ustUnzugeordnet = 0, uneindeutig = 0;
+  // Paket 269: § 25a (Marge in Kz 81), EU-Lieferung (Kz 41), Ausfuhr (Kz 43)
+  let umsatz41 = 0, umsatz43 = 0, diffBem = 0, diffSt = 0, diffOffen = 0, unklar = 0;
   for (const r of rechnungen || []) {
-    const netto = z(r.netto_summe), mwst = z(r.mwst_summe);
+    let netto = z(r.netto_summe);
+    const mwst = z(r.mwst_summe);
+    const sf = r.steuer_sonderfall;
+    if (sf === 'diff25a' || sf === 'eu_ig' || sf === 'ausfuhr') {
+      // Der 0-%-Anteil kommt aus den Positionen; ohne sie nur, wenn keine Steuer ausgewiesen ist.
+      const n0 = r.netto0 !== null && r.netto0 !== undefined && r.netto0 !== '' ? z(r.netto0) : (mwst === 0 ? netto : null);
+      if (n0 === null) {
+        unklar += 1;
+      } else {
+        netto = r2(netto - n0);
+        if (sf === 'eu_ig') umsatz41 += n0;
+        else if (sf === 'ausfuhr') umsatz43 += n0;
+        else if (r.diff_bemessung === null || r.diff_bemessung === undefined || r.diff_bemessung === '') {
+          diffOffen += 1;
+        } else {
+          // Der Verkaufspreis selbst ist keine Bemessungsgrundlage — nur die Marge (netto) mit 19 %.
+          const b = z(r.diff_bemessung), st = z(r.diff_steuer);
+          umsatz19 += b; ust19 += st; diffBem += b; diffSt += st;
+        }
+        if (netto === 0 && mwst === 0) continue;
+      }
+    }
     if (netto < 0) gutschriften += 1;
     if (!satzIstEindeutig(netto, mwst)) uneindeutig += 1;
     const s = satzVon(netto, mwst);
@@ -179,6 +223,7 @@ export function baueUstva(rechnungen: UstvaRechnung[], vorsteuer: number | strin
   const vst = z(vorsteuer);
   const bg19 = volleEuro(umsatz19), bg7 = volleEuro(umsatz7), bg0 = volleEuro(umsatz0);
   const zahllast = r2(ust19 + ust7 + ustUnzugeordnet - vst);
+  const bg41 = volleEuro(umsatz41), bg43 = volleEuro(umsatz43);
 
   const kennziffern: Kennziffer[] = [
     { kz: '81', label: 'Umsätze zu 19 % (netto)', wert: bg19, istBetrag: true },
@@ -193,6 +238,10 @@ export function baueUstva(rechnungen: UstvaRechnung[], vorsteuer: number | strin
       istBetrag: true,
     },
   ];
+
+  // Paket 269: steuerfreie Umsätze MIT bekanntem Grund (aus der Rechnung) bekommen ihre Kennziffer.
+  if (bg43 !== 0) kennziffern.splice(4, 0, { kz: '43', label: 'Steuerfreie Ausfuhrlieferungen (§ 4 Nr. 1a UStG)', wert: bg43, istBetrag: true });
+  if (bg41 !== 0) kennziffern.splice(4, 0, { kz: '41', label: 'Steuerfreie innergemeinschaftliche Lieferungen an Unternehmer mit USt-IdNr.', wert: bg41, istBetrag: true });
 
   // Steuerfreie Umsätze werden ausgewiesen, aber KEINER Kennziffer zugeordnet
   // (siehe Dateikopf, Punkt 3). Auch ein negativer Saldo wird gezeigt — vorher
@@ -225,6 +274,8 @@ export function baueUstva(rechnungen: UstvaRechnung[], vorsteuer: number | strin
     umsatz0: r2(umsatz0),
     vorsteuer: r2(vst), zahllast, kennziffern, gutschriften,
     ustUnzugeordnet: r2(ustUnzugeordnet), uneindeutig,
+    umsatz41: r2(umsatz41), umsatz43: r2(umsatz43),
+    diff25aBemessung: r2(diffBem), diff25aSteuer: r2(diffSt), diff25aOffen: diffOffen, sonderfallUnklar: unklar,
   };
 }
 
@@ -244,6 +295,30 @@ export function ustvaHinweise(erg: UstvaErgebnis): string[] {
         'innergemeinschaftliche Lieferung, Ausfuhr, steuerfrei ohne Vorsteuerabzug oder ' +
         'Kleinunternehmer nach § 19 sind verschiedene Zeilen im Formular. ' +
         'Bitte vom Steuerberater bestätigen lassen — geraten wird hier bewusst nicht.',
+    );
+  }
+
+  // Paket 269
+  if (erg.diff25aBemessung !== 0 || erg.diff25aSteuer !== 0) {
+    raus.push(
+      `Differenzbesteuerung (§ 25a): ${formatEuro(erg.diff25aBemessung)} Marge (netto) sind in Kennziffer 81 enthalten, ` +
+        `die Differenzsteuer ${formatEuro(erg.diff25aSteuer)} in der Umsatzsteuer 19 %. Der Verkaufspreis selbst wird nicht gemeldet. ` +
+        'Ob Ihr Steuerberater die Marge einzeln oder als Gesamtdifferenz ansetzt, bitte bestätigen lassen.',
+    );
+  }
+  if ((erg.diff25aOffen ?? 0) > 0) {
+    raus.push(
+      `${erg.diff25aOffen} ${erg.diff25aOffen === 1 ? 'Rechnung' : 'Rechnungen'} nach § 25a ohne gespeicherte Differenz (Einkaufspreis fehlte beim Erstellen). ` +
+        'Die Marge fehlt in Kennziffer 81 und die Differenzsteuer in Kennziffer 83 — zu WENIG gemeldet. Bitte Einkaufspreis klären und von Hand ergänzen.',
+    );
+  }
+  if (erg.umsatz41 !== 0) {
+    raus.push('Innergemeinschaftliche Lieferungen (Kz 41) gehören zusätzlich in die Zusammenfassende Meldung an das Bundeszentralamt für Steuern — die macht ARGONAUT nicht.');
+  }
+  if ((erg.sonderfallUnklar ?? 0) > 0) {
+    raus.push(
+      `${erg.sonderfallUnklar} ${erg.sonderfallUnklar === 1 ? 'Rechnung' : 'Rechnungen'} mit Sonderfall (§ 25a, EU, Ausfuhr) konnten nicht aufgeteilt werden — ` +
+        'sie sind wie gewöhnliche Rechnungen gerechnet. Bitte einzeln prüfen.',
     );
   }
 
