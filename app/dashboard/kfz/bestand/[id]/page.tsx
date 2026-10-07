@@ -8,6 +8,7 @@
 // /dashboard/kfz (Modul „kfz"). Stammdaten ändern weiterhin im Bestand
 // („✎ Stammdaten"), die Akte pflegt die neuen Felder aus SQL 261.
 // Paket 262 (K3): Reiter „Fotos und Video" (KfzMedien), Foto-Zahl fließt in die Inserats-Ampel.
+// Paket 265 (K5): Reiter „Kalkulation" (KfzKalkulation) — Plan/Nach, Kosten, Provision.
 // Andockpunkte: K5 Kalkulation, K6 Verkaufsunterlagen,
 // K18 Partner (eigener Reiter).
 // ============================================================
@@ -23,6 +24,7 @@ import {
   merkmaleBereinigen, preisVerlauf, type PreisEintrag,
 } from '@/lib/kfzAkte';
 import KfzMedien from '../KfzMedien';
+import KfzKalkulation from '../KfzKalkulation';
 
 const MODUL = 'kfz-bestand';
 const supabase = createBrowserClient(
@@ -41,8 +43,8 @@ type Akte = Bestand & {
   verbrauch_komb: number | null; verbrauch_einheit: string | null; co2_g_km: number | null; co2_klasse: string | null;
   erstellt_am: string | null; aktualisiert_am: string | null;
 };
-type Reiter = 'uebersicht' | 'fotos' | 'ausstattung' | 'energie' | 'inserat' | 'preis' | 'historie';
-const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['fotos', 'Fotos und Video'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
+type Reiter = 'uebersicht' | 'fotos' | 'ausstattung' | 'energie' | 'inserat' | 'kalk' | 'preis' | 'historie';
+const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['fotos', 'Fotos und Video'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['kalk', 'Kalkulation'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
 
 function heute(): string { return new Date().toISOString().slice(0, 10); }
 function deDatum(iso: string | null | undefined): string { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
@@ -265,6 +267,14 @@ export default function HandelsaktePage() {
             <div style={{ ...s.dim, marginTop: 8 }}>Fotos pflegen Sie im Reiter „Fotos und Video". Die Übertragung an die Börsen folgt mit K11.</div>
           </div>
         </div>
+      )}
+
+      {reiter === 'kalk' && (
+        <KfzKalkulation f={{
+          id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, ek_netto: akte.ek_netto, vk_brutto: akte.vk_brutto,
+          besteuerung: akte.besteuerung, standtageJetzt: t, standtagePlanStandard: vorlage.ampel.gruenBis, standkostenTag: vorlage.standkostenTag,
+          verkauft: !!akte.verkauft_am || akte.status === 'verkauft',
+        }} />
       )}
 
       {reiter === 'preis' && (
