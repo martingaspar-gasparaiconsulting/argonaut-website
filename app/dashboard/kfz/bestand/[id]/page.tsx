@@ -7,7 +7,8 @@
 // Pfad: app/dashboard/kfz/bestand/[id]/page.tsx — erbt die Freigabe von
 // /dashboard/kfz (Modul „kfz"). Stammdaten ändern weiterhin im Bestand
 // („✎ Stammdaten"), die Akte pflegt die neuen Felder aus SQL 261.
-// Andockpunkte: K3 Fotos (Zähler fotos), K5 Kalkulation, K6 Verkaufsunterlagen,
+// Paket 262 (K3): Reiter „Fotos und Video" (KfzMedien), Foto-Zahl fließt in die Inserats-Ampel.
+// Andockpunkte: K5 Kalkulation, K6 Verkaufsunterlagen,
 // K18 Partner (eigener Reiter).
 // ============================================================
 
@@ -21,6 +22,7 @@ import {
   titelPruefen, titelVorschlag, inseratAmpel, pflichtFehlt, co2KlasseVorschlag, istElektro, AUSSTATTUNG,
   merkmaleBereinigen, preisVerlauf, type PreisEintrag,
 } from '@/lib/kfzAkte';
+import KfzMedien from '../KfzMedien';
 
 const MODUL = 'kfz-bestand';
 const supabase = createBrowserClient(
@@ -39,8 +41,8 @@ type Akte = Bestand & {
   verbrauch_komb: number | null; verbrauch_einheit: string | null; co2_g_km: number | null; co2_klasse: string | null;
   erstellt_am: string | null; aktualisiert_am: string | null;
 };
-type Reiter = 'uebersicht' | 'ausstattung' | 'energie' | 'inserat' | 'preis' | 'historie';
-const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
+type Reiter = 'uebersicht' | 'fotos' | 'ausstattung' | 'energie' | 'inserat' | 'preis' | 'historie';
+const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['fotos', 'Fotos und Video'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
 
 function heute(): string { return new Date().toISOString().slice(0, 10); }
 function deDatum(iso: string | null | undefined): string { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
@@ -56,6 +58,8 @@ export default function HandelsaktePage() {
   const [branche, setBranche] = useState<string | null>(null);
   const [treffer, setTreffer] = useState<FinTreffer | null>(null);
   const [reiter, setReiter] = useState<Reiter>('uebersicht');
+  const [fotoZahl, setFotoZahl] = useState(0);
+  const zaehle = useCallback((n: number) => setFotoZahl(n), []);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -89,6 +93,7 @@ export default function HandelsaktePage() {
       supabase.from('profiles').select('branche').eq('id', (a as unknown as { owner_user_id: string }).owner_user_id).maybeSingle(),
     ]);
     setPreise(((p.data as unknown) as PreisEintrag[]) ?? []);
+    try { const { count } = await supabase.from('kfz_bestand_medien').select('id', { count: 'exact', head: true }).eq('bestand_id', id).eq('art', 'foto'); setFotoZahl(count ?? 0); } catch { setFotoZahl(0); }
     setStandort(((s.data as { name?: string } | null)?.name) ?? '—');
     setEinstellung(((e.data as { einstellung?: KundenEinstellung } | null)?.einstellung) ?? null);
     setBranche(((pr.data as { branche?: string | null } | null)?.branche) ?? null);
@@ -126,7 +131,7 @@ export default function HandelsaktePage() {
     marke: akte.marke, modell: akte.modell, vk_brutto: akte.vk_brutto, status: akte.status,
     kraftstoff: en.kraftstoff || null, verbrauch_komb: leseZahl(en.verbrauch), verbrauch_einheit: en.einheit,
     co2_g_km: leseZahl(en.co2), co2_klasse: en.klasse || null, vorschaden: zust.vorschaden || null,
-    inserat_titel: ins.titel, inserat_text: ins.text, inseriert: ins.inseriert, ausstattung: aus, fotos: 0,
+    inserat_titel: ins.titel, inserat_text: ins.text, inseriert: ins.inseriert, ausstattung: aus, fotos: fotoZahl,
   };
   const ampel = inseratAmpel(entwurfFelder);
   const fehlt = pflichtFehlt(entwurfFelder);
@@ -188,6 +193,9 @@ export default function HandelsaktePage() {
           </div>
         </div>
       )}
+
+      {reiter === 'fotos' && <KfzMedien bestandId={akte.id} betrieb={(akte as unknown as { owner_user_id: string }).owner_user_id} onAnzahl={zaehle} />}
+      {reiter === 'inserat' && fotoZahl === 0 && <div style={s.hinweis}>Noch keine Fotos: Reiter „Fotos und Video" öffnen.</div>}
 
       {reiter === 'ausstattung' && (
         <div style={s.karte}>
@@ -254,7 +262,7 @@ export default function HandelsaktePage() {
             <h3 style={s.h3}>Inserats-Ampel <span style={{ color: FARBE[ampel.stufe] }}>{ampel.prozent} %</span></h3>
             <div style={s.meter}><i style={{ display: 'block', height: '100%', width: `${ampel.prozent}%`, background: FARBE[ampel.stufe], borderRadius: 99 }} /></div>
             {ampel.punkte.map((p) => <div key={p.name} style={s.ampelZeile}><span>{p.ok ? '✓' : '○'} {p.name}</span><span style={{ color: p.ok ? C.ok : C.warn, textAlign: 'right' }}>{p.hinweis}</span></div>)}
-            <div style={{ ...s.dim, marginTop: 8 }}>Fotos kommen mit dem nächsten Ausbau (K3). Die Übertragung an die Börsen folgt mit K11.</div>
+            <div style={{ ...s.dim, marginTop: 8 }}>Fotos pflegen Sie im Reiter „Fotos und Video". Die Übertragung an die Börsen folgt mit K11.</div>
           </div>
         </div>
       )}

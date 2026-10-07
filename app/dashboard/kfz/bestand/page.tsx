@@ -11,6 +11,7 @@
 // erbt dessen Freigabe (Modul „kfz").
 // Paket 260 (K1 Teil 2): Bestandsliste als PDF, Hinweis „aus der Werkstatt
 // bekannt" über die FIN (werkstatt_fahrzeuge), Eigene Felder je Fahrzeug.
+// Paket 262 (K3): Titelbild je Fahrzeug in der Kartenansicht.
 // Paket 261 (K2): Klick auf ein Fahrzeug öffnet die Handelsakte
 // (/dashboard/kfz/bestand/[id]); „✎" bzw. ?bearbeiten=<id> öffnet das Formular.
 // ============================================================
@@ -91,6 +92,7 @@ export default function FahrzeugbestandPage() {
   const [felder, setFelder] = useState<EigenesFeld[]>([]);
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
   const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
+  const [titelbild, setTitelbild] = useState<Record<string, string>>({});
 
   const vorlage = useMemo(() => {
     const v = vorlageFuer(MODUL, branche);
@@ -123,6 +125,17 @@ export default function FahrzeugbestandPage() {
         setTreffer(finTreffer(rows, wf, ((a.data as unknown) as { fahrzeug_id: string | null }[]) ?? []));
       } else setTreffer({});
     } catch { setTreffer({}); }
+    // P262: Titelbild je Fahrzeug (erstes Foto) für Karten und Liste — optional.
+    try {
+      const m = await supabase.from('kfz_bestand_medien').select('bestand_id, pfad, position').eq('art', 'foto').order('position');
+      const erste = new Map<string, string>();
+      for (const z of ((m.data as unknown) as { bestand_id: string; pfad: string }[]) ?? []) if (!erste.has(z.bestand_id)) erste.set(z.bestand_id, z.pfad);
+      if (erste.size) {
+        const { data: urls } = await supabase.storage.from('fahrzeug-medien').createSignedUrls(Array.from(erste.values()), 3600);
+        const jePfad = new Map((urls ?? []).map((u) => [u.path, u.signedUrl]));
+        setTitelbild(Object.fromEntries(Array.from(erste.entries()).map(([b, pf]) => [b, jePfad.get(pf) ?? ''] as [string, string]).filter(([, u]) => !!u)));
+      } else setTitelbild({});
+    } catch { setTitelbild({}); }
   }, []);
 
   useEffect(() => {
@@ -498,7 +511,7 @@ export default function FahrzeugbestandPage() {
             const t = standtage(b, tag);
             return (
               <div key={b.id} style={s.fzKarte} onClick={() => akteOeffnen(b)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') akteOeffnen(b); }}>
-                <div style={s.bild}>{(b.marke ?? vorlage.einheit).toUpperCase()}</div>
+                {titelbild[b.id] ? <img src={titelbild[b.id]} alt={[b.marke, b.modell].filter(Boolean).join(' ')} style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', display: 'block', maxWidth: '100%' }} /> : <div style={s.bild}>{(b.marke ?? vorlage.einheit).toUpperCase()}</div>}
                 <div style={{ padding: '10px 12px', display: 'grid', gap: 4 }}>
                   <b>{[b.marke, b.modell].filter(Boolean).join(' ') || '—'}</b>
                   <div style={s.zeile}><span style={s.klein}>{ezText(b.erstzulassung)} · {b.km_stand !== null ? `${b.km_stand.toLocaleString('de-DE')} km` : '—'}</span><span style={{ ...s.pill, color: FARBE[st.farbe] }}>{st.label}</span></div>
