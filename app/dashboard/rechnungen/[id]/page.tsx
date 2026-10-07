@@ -25,6 +25,7 @@ import { satzAusBetraegen } from "@/lib/abschlagsrechnung";
 import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 import { istMitarbeiterKennung, RECHNUNG_NUR_CHEF, ZAHLUNG_NUR_CHEF, STORNO_NUR_CHEF, ZAHLUNG_LOESCHEN_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 // Paket 197 (GoBD): verschickte Rechnungen fest ablegen, danach festgeschrieben.
+import { stornoKnoepfe, stornoFrage, stornoFehlerText, grundBereinigen } from '@/lib/stornoRechnung';
 import { ABLAGE_ANLASS_TEXT, FESTGESCHRIEBEN_HINWEIS, istFestgeschrieben, originalPdf, pruefsummeKurz, type AblageZeile } from '@/lib/rechnungAblage';
 
 // ============================================================
@@ -158,6 +159,10 @@ export default function RechnungDetail() {
   const [nichtGefunden, setNichtGefunden] = useState(false);
 
   const [rechnung, setRechnung] = useState<any>(null);
+  // Paket 267: Stornorechnung <-> Original
+  const [stornoBezug, setStornoBezug] = useState<{ id: string; nummer: string | null; datum: string | null; bezahlt: number } | null>(null);
+  const [stornoDurch, setStornoDurch] = useState<{ id: string; nummer: string | null } | null>(null);
+  const [stornoBusy, setStornoBusy] = useState(false);
   const [kontakt, setKontakt] = useState<any>(null);
   const [firma, setFirma] = useState<any>(null);
   const [firmenprofil, setFirmenprofil] = useState<any>(null);
@@ -753,6 +758,9 @@ export default function RechnungDetail() {
         mwst_summe: summen.mwst,
         brutto_summe: summen.brutto,
         notizen,
+        // Paket 267: Stornorechnung -> Titel, Verweis, keine Zahlungsaufforderung
+        storno_zu: rechnung?.storno_zu ?? null,
+        storno_bezug: stornoBezug ? { nummer: stornoBezug.nummer, datum: stornoBezug.datum, bezahlt: stornoBezug.bezahlt } : null,
         // P54: Rechnungsart und Zahlungsbedingungen aus dem Formular —
         // NICHT aus rechnung, das ist der Stand vor dem letzten Speichern.
         ...zusatzFuerSpeichern(zusatz),
@@ -802,8 +810,13 @@ export default function RechnungDetail() {
       }
 
       const blob = await res.blob();
-      const name = "Rechnung_" + (rechnung?.rechnungsnummer || "Dokument") + ".pdf";
+      const name = (rechnung?.storno_zu ? "Stornorechnung_" : "Rechnung_") + (rechnung?.rechnungsnummer || "Dokument") + ".pdf";
       dateiSpeichern(blob, name);
+
+      // Paket 267: Die Stornorechnung ist schon festgeschrieben — ihr erstes PDF wird ohne Rückfrage abgelegt.
+      if (rechnung?.storno_zu && darfAbrechnen && ablagen.length === 0) {
+        await festschreiben(blob, name);
+      }
 
       // Paket 197: Verschickt der Betrieb dieses PDF selbst (eigene Mail, Post)?
       // Dann jetzt festschreiben — genau diese Datei wird abgelegt (GoBD).
@@ -918,6 +931,41 @@ export default function RechnungDetail() {
       await supabase.rpc("rechnung_zahlbetrag_neu_berechnen", { p_rechnung_id: id });
     }
     await laden();
+  }
+
+  // Paket 267: Verweise laden (fehlt SQL 267, bleiben beide leer)
+  useEffect(() => {
+    let aus = false;
+    (async () => {
+      setStornoBezug(null); setStornoDurch(null);
+      if (!rechnung?.id) return;
+      try {
+        if (rechnung.storno_zu) {
+          const { data } = await supabase.from("rechnungen").select("id, rechnungsnummer, rechnungsdatum, bezahlter_betrag").eq("id", rechnung.storno_zu).maybeSingle();
+          const o = data as any;
+          if (!aus && o) setStornoBezug({ id: o.id, nummer: o.rechnungsnummer ?? null, datum: o.rechnungsdatum ?? null, bezahlt: Number(o.bezahlter_betrag) || 0 });
+        } else if ("storno_zu" in rechnung) {
+          const { data } = await supabase.from("rechnungen").select("id, rechnungsnummer").eq("storno_zu", rechnung.id).maybeSingle();
+          const d = data as any;
+          if (!aus && d) setStornoDurch({ id: d.id, nummer: d.rechnungsnummer ?? null });
+        }
+      } catch { /* optional */ }
+    })();
+    return () => { aus = true; };
+  }, [rechnung?.id, rechnung?.storno_zu]);
+
+  // Paket 267: Stornorechnung als eigener Beleg (Datenbank legt alles in einem Schritt an)
+  async function stornorechnungErstellen() {
+    if (istMa) { setFehler(STORNO_NUR_CHEF); return; }
+    if (stornoBusy || !rechnung) return;
+    if (typeof window === "undefined" || !window.confirm(stornoFrage(rechnung.rechnungsnummer, Number(rechnung.bezahlter_betrag) || 0))) return;
+    const grund = grundBereinigen(window.prompt("Grund für das Storno (optional, steht im Vermerk):", "") ?? "");
+    setStornoBusy(true); setFehler(null);
+    try {
+      const { data, error } = await supabase.rpc("p267_storno_erstellen", { p_rechnung: id, p_grund: grund });
+      if (error || !data) { setFehler(stornoFehlerText(error?.message)); return; }
+      router.push("/dashboard/rechnungen/" + String(data));
+    } finally { setStornoBusy(false); }
   }
 
   const empfaengerName = useMemo(() => {
@@ -1138,16 +1186,49 @@ export default function RechnungDetail() {
               wird automatisch aus den erfassten Zahlungen berechnet
             </span>
             <div style={{ flex: 1 }} />
-            {istMa ? null : status !== "storniert" ? (
-              <button onClick={() => stornoUmschalten("storniert")} style={stornoBtn}>
-                Stornieren
-              </button>
-            ) : (
-              <button onClick={() => stornoUmschalten("offen")} style={reaktivierBtn}>
-                Reaktivieren
-              </button>
-            )}
+            {(() => {
+              const k = stornoKnoepfe({ status, festgeschrieben, istStorno: !!rechnung?.storno_zu, hatStorno: !!stornoDurch, istChef: !istMa });
+              return (
+                <>
+                  {k.nurStatus && (
+                    <button onClick={() => stornoUmschalten("storniert")} style={stornoBtn} title="Nur für Rechnungen, die nie beim Kunden waren">
+                      Stornieren (nie verschickt)
+                    </button>
+                  )}
+                  {k.stornorechnung && (
+                    <button onClick={() => void stornorechnungErstellen()} disabled={stornoBusy} style={stornoBtn}>
+                      {stornoBusy ? "…" : "Stornorechnung erstellen"}
+                    </button>
+                  )}
+                  {k.reaktivieren && (
+                    <button onClick={() => stornoUmschalten("offen")} style={reaktivierBtn}>
+                      Reaktivieren
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </div>
+          {rechnung?.storno_zu && (
+            <div style={{ marginBottom: 12, color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
+              🧾 Stornorechnung zu{" "}
+              <a href={"/dashboard/rechnungen/" + rechnung.storno_zu} style={{ color: C.gold }}>{stornoBezug?.nummer || "der ursprünglichen Rechnung"}</a>
+              {stornoBezug && stornoBezug.bezahlt > 0 ? ` · bereits gezahlt ${geld(stornoBezug.bezahlt, waehrung)} — Erstattung an den Kunden veranlassen` : ""}
+              {" · "}Schicken Sie dem Kunden das PDF dieser Stornorechnung.
+            </div>
+          )}
+          {stornoDurch && (
+            <div style={{ marginBottom: 12, color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>
+              ✕ Aufgehoben durch Stornorechnung{" "}
+              <a href={"/dashboard/rechnungen/" + stornoDurch.id} style={{ color: C.gold }}>{stornoDurch.nummer || "öffnen"}</a>
+            </div>
+          )}
+          {(() => {
+            const k = stornoKnoepfe({ status, festgeschrieben, istStorno: !!rechnung?.storno_zu, hatStorno: !!stornoDurch, istChef: !istMa });
+            return k.hinweis && !rechnung?.storno_zu && !stornoDurch ? (
+              <div style={{ marginBottom: 12, color: C.warn, fontSize: 'clamp(12.5px, 1.13vw, 18px)' }}>{k.hinweis}</div>
+            ) : null;
+          })()}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
             <SummeFeld label="Rechnungsbetrag" wert={geld(zahlungInfo.brutto, waehrung)} farbe={C.gold} />

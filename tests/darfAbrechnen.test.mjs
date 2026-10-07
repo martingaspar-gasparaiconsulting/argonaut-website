@@ -90,7 +90,8 @@ test('Zahlungen, Banking, Rechnungsseite: Zahlung gehört dem Betrieb, Recht wir
   assert.ok(!r.includes('owner_user_id: user.id'));
   assert.ok(r.includes('if (istMa) {\n      setFehler(STORNO_NUR_CHEF);'));
   assert.ok(r.includes('if (istMa) {\n      setFehler(ZAHLUNG_LOESCHEN_NUR_CHEF);'));
-  assert.ok(r.includes('{istMa ? null : status !== "storniert" ? ('), 'Storno-Knopf beim Mitarbeiter ausgeblendet');
+  // Paket 267: Storno-Knöpfe kommen aus stornoKnoepfe() — beim Mitarbeiter keine (istChef: !istMa)
+  assert.ok(r.includes('const k = stornoKnoepfe({ status, festgeschrieben, istStorno: !!rechnung?.storno_zu, hatStorno: !!stornoDurch, istChef: !istMa });'), 'Storno-Knopf beim Mitarbeiter ausgeblendet');
   assert.ok(r.includes('fetch("/api/betrieb-firmendaten")'), 'Absender vom Betrieb');
   assert.ok(r.includes('erstellt von {ersteller}'));
 });

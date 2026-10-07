@@ -11,6 +11,7 @@ import { pflichtangabenFuss } from '@/lib/rechnungFuss';
 // PUNKT 54 (21.09.2026): die Geldlogik der Schlussrechnung kommt aus der
 // getesteten Bibliothek; hier wird nur noch daraus HTML gemacht.
 import { baueSchlussrechnung, type AbschlagPosten } from '@/lib/abschlagsrechnung';
+import { dokumentTitel, stornoBezugText, stornoZahlungText } from '@/lib/stornoRechnung';
 
 export const runtime = 'nodejs';
 
@@ -274,7 +275,12 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   // PUNKT 54 — Pflichthinweise und Zahlungsbedingungen
   // Die Ueberschrift sagt, was das Dokument IST. Eine Abschlagsrechnung,
   // die schlicht "Rechnung" heisst, laedt zum Doppelzahlen ein.
-  const dokumentTitel = istSchluss ? 'Schlussrechnung' : istAbschlag ? 'Abschlagsrechnung' : 'Rechnung';
+  // Paket 267: eine Stornorechnung heisst so und verweist auf das Original.
+  const istStorno = !!rechnung?.storno_zu;
+  const titelDok = dokumentTitel(rechnung?.rechnungsart, istStorno);
+  const stornoHinweis = istStorno
+    ? `<div class="hinweis"><strong>${esc(stornoBezugText(rechnung?.storno_bezug?.nummer, rechnung?.storno_bezug?.datum))}</strong></div>`
+    : '';
 
   const rcHinweis = reverseCharge
     ? `<div class="hinweis"><strong>Steuerschuldnerschaft des Leistungsempfängers (§ 13b UStG).</strong> Die Umsatzsteuer schulden Sie als Leistungsempfänger.</div>`
@@ -303,7 +309,9 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
     ? (rechnung?.brutto_summe ?? rechnung?.netto_summe)
     : (hatGruppen ? s.brutto : rechnung?.brutto_summe);
 
-  const bank = aussteller?.bank_iban
+  const bank = istStorno
+    ? `<div>${esc(stornoZahlungText(rechnung?.storno_bezug?.bezahlt))}</div>`
+    : aussteller?.bank_iban
     ? `<div>Bitte überweisen Sie <strong>${geld(zahlBetrag, waehrung)}</strong> bis zum <strong>${datumDe(rechnung?.faelligkeitsdatum)}</strong> auf:</div>
        <div>IBAN: ${esc(aussteller.bank_iban)}${aussteller?.bank_bic ? ' &middot; BIC: ' + esc(aussteller.bank_bic) : ''}${aussteller?.bank_name ? ' (' + esc(aussteller.bank_name) + ')' : ''}</div>
        <div>Verwendungszweck: ${esc(rechnung?.rechnungsnummer) || ''}</div>`
@@ -313,7 +321,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   // GiroCode / EPC-QR: Kunde scannt mit Banking-App -> Überweisung vorausgefüllt.
   // Nur wenn IBAN + Betrag vorhanden UND die Rechnung noch nicht bezahlt ist.
   const bereitsBezahlt = !!rechnung?.bezahlt_am || rechnung?.zahlungsstatus === 'bezahlt';
-  const giroSvg = bereitsBezahlt ? null : girocodeVonDaten({
+  const giroSvg = (bereitsBezahlt || istStorno) ? null : girocodeVonDaten({
     empfaenger: String(aussteller?.name || '').trim(),
     iban: String(aussteller?.bank_iban || ''),
     bic: aussteller?.bank_bic ? String(aussteller.bank_bic) : undefined,
@@ -389,14 +397,14 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   <div class="kopf">
     <div class="aussteller">
       ${markeLogo ? `<img src="${esc(markeLogo)}" alt="Logo" class="logo">` : ''}
-      <div class="marke">${esc(dokumentTitel)}</div>
+      <div class="marke">${esc(titelDok)}</div>
       <div class="name">${pflicht(aussteller?.name, 'Firmenname ergänzen')}</div>
       <div class="dim">${pflichtMehrzeilig(aussteller?.anschrift, 'Anschrift ergänzen')}</div>
       <div class="dim">${steuerZeile}</div>
       ${aussteller?.telefon || aussteller?.email ? `<div class="dim">${esc(aussteller?.telefon || '')}${aussteller?.telefon && aussteller?.email ? ' &middot; ' : ''}${esc(aussteller?.email || '')}</div>` : ''}
     </div>
     <div style="text-align:right;">
-      <h1>${esc(dokumentTitel)}</h1>
+      <h1>${esc(titelDok)}</h1>
       <div class="nummer">${pflicht(rechnung?.rechnungsnummer, 'Nummer fehlt')}</div>
     </div>
   </div>
@@ -440,6 +448,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   </div>
 
   ${abweichungHtml}
+  ${stornoHinweis}
   ${rcHinweis}
   ${abschlagHinweis}
   ${skontoHinweis}
@@ -483,7 +492,7 @@ export async function POST(req: NextRequest) {
     // Online-Bezahllink (eigener Anbieter des Betriebs, serverseitig gelesen).
     let bezahllink: { url: string; anbieter: string } | null = null;
     try {
-      if (!rechnung?.bezahlt_am && rechnung?.zahlungsstatus !== 'bezahlt') {
+      if (!rechnung?.bezahlt_am && rechnung?.zahlungsstatus !== 'bezahlt' && !rechnung?.storno_zu) {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -571,7 +580,7 @@ export async function POST(req: NextRequest) {
     const basis = String(rechnung?.rechnungsnummer || 'Rechnung')
       .replace(/[^a-zA-Z0-9äöüÄÖÜ -]/g, '').replace(/\s+/g, '_').slice(0, 60);
     const art = String(rechnung?.rechnungsart || '');
-    const vorsatz = art === 'schluss' ? 'Schlussrechnung' : art === 'abschlag' ? 'Abschlagsrechnung' : 'Rechnung';
+    const vorsatz = dokumentTitel(art, !!rechnung?.storno_zu);
     const dateiName = `${vorsatz}_${basis}.pdf`;
 
     return new NextResponse(pdfBuffer, {
