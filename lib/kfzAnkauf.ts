@@ -19,7 +19,7 @@
 // am Verkauf (K6).
 // ============================================================================
 
-import { centRunden } from './zahlen';
+import { centRunden, leseZahl } from './zahlen';
 
 export const UST_SATZ = 19;
 
@@ -340,4 +340,178 @@ export function schadenFotoPfad(betrieb: string, ankaufId: string, endung: strin
   const e = String(endung || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5) || 'jpg';
   const z = String(zufall || '').replace(/[^a-z0-9]/gi, '').slice(0, 12) || '0';
   return `${betrieb}/ankauf/${ankaufId}/${Math.max(0, Math.floor(jetztMs))}-${z}.${e}`;
+}
+
+// ============================================================================
+// Paket 264 · K4 Teil 2: Ankaufschein und Online-Ankaufformular
+// ============================================================================
+
+/** Einstellungs-Modul (modul_einstellung) für Richtwerte und Online-Formular. */
+export const ANKAUF_MODUL = 'kfz-ankauf';
+
+/** Öffentliche Kennung des Online-Formulars: 24 Zeichen a–z, 0–9 (nicht erratbar, keine Betriebs-ID im Link). */
+export function kennungGueltig(k: unknown): k is string {
+  return typeof k === 'string' && /^[a-z0-9]{24}$/.test(k);
+}
+
+/** Kennung aus Zufallsbytes (hex/beliebig) bilden; zu wenig Zufall -> null. */
+export function neueKennung(zufall: string): string | null {
+  const z = String(zufall || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  return z.length >= 24 ? z.slice(0, 24) : null;
+}
+
+/** Online-Einstellung aus modul_einstellung lesen (nur gültige Werte). */
+export function onlineEinstellung(einst: unknown): { aktiv: boolean; kennung: string | null } {
+  const o = einst && typeof einst === 'object' ? (einst as Record<string, unknown>).online : null;
+  if (!o || typeof o !== 'object') return { aktiv: false, kennung: null };
+  const r = o as Record<string, unknown>;
+  const kennung = kennungGueltig(r.kennung) ? r.kennung : null;
+  return { aktiv: r.aktiv === true && kennung !== null, kennung };
+}
+
+function feld(v: unknown, max: number): string | null {
+  if (typeof v !== 'string') return null;
+  const t = v.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, ' ').trim();
+  return t ? t.slice(0, max) : null;
+}
+
+const MAIL_RE = /^[^\s@<>"']{1,64}@[^\s@<>"']{1,190}\.[a-z]{2,24}$/i;
+
+/**
+ * Eingabe aus dem Online-Formular prüfen und in einen kfz_ankauf-Datensatz
+ * übersetzen (ohne owner_user_id — den setzt die Route aus der Kennung).
+ * Pflicht: Name, E-Mail oder Telefon, Marke, Modell, Kilometer, Zustimmung Datenschutz.
+ */
+export function onlineEingabePruefen(roh: unknown, jahr: number): { ok: true; daten: Record<string, unknown> } | { ok: false; fehler: string } {
+  if (!roh || typeof roh !== 'object') return { ok: false, fehler: 'Ungültige Anfrage.' };
+  const b = roh as Record<string, unknown>;
+  const name = feld(b.name, 120);
+  const email = feld(b.email, 160);
+  const telefon = feld(b.telefon, 40);
+  const marke = feld(b.marke, 60);
+  const modell = feld(b.modell, 80);
+  if (!name) return { ok: false, fehler: 'Bitte geben Sie Ihren Namen an.' };
+  if (!email && !telefon) return { ok: false, fehler: 'Bitte geben Sie eine E-Mail-Adresse oder Telefonnummer an.' };
+  if (email && !MAIL_RE.test(email)) return { ok: false, fehler: 'Bitte geben Sie eine gültige E-Mail-Adresse an.' };
+  if (telefon && !/^[+0-9 ()/-]{5,40}$/.test(telefon)) return { ok: false, fehler: 'Bitte prüfen Sie die Telefonnummer.' };
+  if (!marke || !modell) return { ok: false, fehler: 'Bitte geben Sie Marke und Modell an.' };
+  const kmRoh = leseZahl(b.km) ?? NaN;
+  if (!Number.isFinite(kmRoh) || kmRoh < 0 || kmRoh > 2000000) return { ok: false, fehler: 'Bitte geben Sie den Kilometerstand an.' };
+  if (b.datenschutz !== true) return { ok: false, fehler: 'Bitte stimmen Sie der Verarbeitung Ihrer Angaben zu.' };
+
+  let erstzulassung: string | null = null;
+  const ez = feld(b.erstzulassung, 10);
+  if (ez) {
+    const m1 = ez.match(/^(\d{1,2})[./](\d{4})$/);
+    const m2 = ez.match(/^(\d{4})-(\d{2})$/);
+    const mm = m1 ? Number(m1[1]) : m2 ? Number(m2[2]) : NaN;
+    const jj = m1 ? Number(m1[2]) : m2 ? Number(m2[1]) : NaN;
+    if (!(mm >= 1 && mm <= 12 && jj >= 1900 && jj <= jahr)) return { ok: false, fehler: 'Erstzulassung bitte als MM/JJJJ angeben, z. B. 03/2019.' };
+    erstzulassung = `${jj}-${String(mm).padStart(2, '0')}-01`;
+  }
+  const fin = (feld(b.fin, 30) ?? '').replace(/[\s-]/g, '').toUpperCase();
+  if (fin && !/^[A-HJ-NPR-Z0-9]{17}$/.test(fin)) return { ok: false, fehler: 'Die FIN hat 17 Zeichen (ohne I, O, Q). Lassen Sie das Feld sonst leer.' };
+  const unfall = b.unfall === 'keine_bekannt' || b.unfall === 'ja' || b.unfall === 'unbekannt' ? b.unfall : 'unbekannt';
+  const preis = feld(b.preis, 20);
+  const preisZahl = preis ? leseZahl(preis) : null;
+  const beschreibung = feld(b.beschreibung, 1500);
+  const notiz = [
+    preisZahl !== null && Number.isFinite(preisZahl) && preisZahl > 0 ? `Preisvorstellung des Verkäufers: ${Math.round(preisZahl).toLocaleString('de-DE')} €` : null,
+    beschreibung ? `Beschreibung des Verkäufers: ${beschreibung}` : null,
+  ].filter(Boolean).join('\n') || null;
+  const ort = [feld(b.plz, 10), feld(b.ort, 80)].filter(Boolean).join(' ') || null;
+  return {
+    ok: true,
+    daten: {
+      status: 'offen', quelle: 'online',
+      verkaeufer_art: b.gewerblich === true ? 'gewerblich' : 'privat',
+      verkaeufer_name: name, verkaeufer_email: email, verkaeufer_tel: telefon, verkaeufer_anschrift: ort,
+      marke, modell, variante: feld(b.variante, 80), fin: fin || null, erstzulassung,
+      km_stand: Math.round(kmRoh), kraftstoff: feld(b.kraftstoff, 40),
+      unfall_angabe: unfall, unfall_text: unfall === 'ja' ? feld(b.unfall_text, 300) : null,
+      notiz,
+    },
+  };
+}
+
+// --- Ankaufschein ----------------------------------------------------------------
+export type Firmenkopf = { name: string | null; strasse: string | null; plz: string | null; ort: string | null; telefon: string | null; email: string | null };
+
+export type AnkaufFuerSchein = AnkaufFuerBestand & {
+  verkaeufer_name: string | null; verkaeufer_firma: string | null; verkaeufer_anschrift: string | null; verkaeufer_tel: string | null; verkaeufer_email: string | null;
+  schluessel: number | null; serviceheft: string | null; angekauft_am: string | null;
+};
+
+export type ScheinInhalt = {
+  titel: string; nr: string; datum: string;
+  ankaeufer: string[]; verkaeufer: string[];
+  fahrzeug: [string, string][];
+  angaben: [string, string][];
+  maengel: string[];
+  preis: string[];
+  erklaerungen: string[];
+};
+
+const SERVICEHEFT: Record<string, string> = { lueckenlos: 'lückenlos', teilweise: 'teilweise', keins: 'keins', unbekannt: 'unbekannt' };
+const UNFALL: Record<string, string> = { keine_bekannt: 'Keine Unfälle oder Vorschäden bekannt', ja: 'Ja', unbekannt: 'Nicht bekannt' };
+
+function de(iso: string | null | undefined): string {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return '—';
+  return `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+}
+function geld(n: number): string {
+  return centRunden(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
+/**
+ * Inhalt des Ankaufscheins — reine Daten, das PDF zeichnet nur.
+ * Schäden erscheinen OHNE Beträge (die sind intern). Angaben, die nicht
+ * erfasst sind, stehen als „—" da und werden nie geschönt.
+ */
+export function ankaufscheinInhalt(a: AnkaufFuerSchein, firma: Firmenkopf | null, heuteIso: string): ScheinInhalt {
+  const ankaeufer = firma && firma.name
+    ? [firma.name, firma.strasse, [firma.plz, firma.ort].filter(Boolean).join(' '), [firma.telefon, firma.email].filter(Boolean).join(' · ')].filter((x): x is string => !!x && x.trim() !== '')
+    : ['______________________________'];
+  const verkaeufer = [a.verkaeufer_firma, a.verkaeufer_name, ...(a.verkaeufer_anschrift ?? '').split(/\n+/), [a.verkaeufer_tel, a.verkaeufer_email].filter(Boolean).join(' · ')]
+    .filter((x): x is string => !!x && x.trim() !== '');
+  const schaeden = schadenBereinigen(a.schaeden);
+  const art = (k: string) => SCHADEN_ARTEN.find((x) => x.key === k)?.name ?? k;
+  const preis: string[] = [];
+  const p = a.ankaufpreis;
+  if (p === null || !Number.isFinite(p)) preis.push('Kaufpreis: ______________ €');
+  else if (a.verkaeufer_art === 'gewerblich') {
+    preis.push(`Kaufpreis netto: ${geld(p)}`, `zuzüglich ${UST_SATZ} % Umsatzsteuer: ${geld(p * UST_SATZ / 100)}`, `Kaufpreis brutto: ${geld(p * (1 + UST_SATZ / 100))}`);
+  } else preis.push(`Kaufpreis: ${geld(p)}`);
+  return {
+    titel: 'Ankaufschein',
+    nr: a.nr ?? '—',
+    datum: de(a.angekauft_am ?? heuteIso),
+    ankaeufer,
+    verkaeufer: verkaeufer.length ? verkaeufer : ['______________________________'],
+    fahrzeug: [
+      ['Fahrzeug', [a.marke, a.modell, a.variante].filter(Boolean).join(' ') || '—'],
+      ['FIN', a.fin ?? '—'],
+      ['Kennzeichen', a.kennzeichen ?? '—'],
+      ['Erstzulassung', a.erstzulassung ? `${a.erstzulassung.slice(5, 7)}/${a.erstzulassung.slice(0, 4)}` : '—'],
+      ['Kilometerstand laut Tacho', a.km_stand !== null && a.km_stand !== undefined ? `${a.km_stand.toLocaleString('de-DE')} km` : '—'],
+      ['Leistung', a.leistung_kw ? `${a.leistung_kw} kW` : '—'],
+      ['Kraftstoff', a.kraftstoff ?? '—'],
+      ['Farbe', a.farbe ?? '—'],
+    ],
+    angaben: [
+      ['Unfälle / Vorschäden', a.unfall_angabe ? (UNFALL[a.unfall_angabe] ?? '—') + (a.unfall_angabe === 'ja' && a.unfall_text ? `: ${a.unfall_text}` : '') : '—'],
+      ['Anzahl Vorbesitzer', a.vorbesitzer !== null && a.vorbesitzer !== undefined ? String(a.vorbesitzer) : '—'],
+      ['Nächste HU', a.hu_bis ? de(a.hu_bis) : '—'],
+      ['Schlüssel übergeben', a.schluessel !== null && a.schluessel !== undefined ? String(a.schluessel) : '—'],
+      ['Serviceheft', a.serviceheft ? (SERVICEHEFT[a.serviceheft] ?? '—') : '—'],
+    ],
+    maengel: schaeden.map((s) => `${s.bereich}: ${art(s.art)} (${s.stufe})${s.notiz ? `, ${s.notiz}` : ''}`),
+    preis,
+    erklaerungen: [
+      'Der Verkäufer erklärt, Eigentümer des Fahrzeugs zu sein und dass es frei von Rechten Dritter ist.',
+      'Die Angaben des Verkäufers oben sind nach bestem Wissen gemacht.',
+      'Übergeben werden Fahrzeug, Zulassungsbescheinigung Teil I und II und die genannten Schlüssel.',
+      'Die oben genannten Mängel und Schäden wurden bei der Besichtigung festgestellt und sind im Kaufpreis berücksichtigt.',
+    ],
+  };
 }

@@ -7,7 +7,8 @@
 // Pfad: app/dashboard/kfz/ankauf/[id]/page.tsx — erbt die Freigabe von
 // /dashboard/kfz (Modul „kfz"). Schadenfotos im Speicherordner
 // „fahrzeug-medien" unter <Betrieb>/ankauf/<Ankauf>/ (Regeln aus Paket 262).
-// Andockpunkte Teil 2 (P264): Ankaufschein PDF, Online-Formular, Inzahlungnahme am Verkauf (K6).
+// Paket 264 (K4 Teil 2): „🖨 Ankaufschein (PDF)" im Reiter Abschluss; Anfragen aus dem
+// Online-Formular (Quelle „online") mit Hinweis. Andockpunkt K6: Inzahlungnahme am Verkauf.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -21,8 +22,9 @@ import { MEDIEN_BUCKET, pruefeMedium, endungFuer } from '@/lib/kfzMedien';
 import {
   ANKAUF_STATUS, QUELLEN, PRUEFPUNKTE, BEREICHE, SCHADEN_ARTEN, STUFEN, pruefBereinigen, pruefStand,
   richtwerteMit, schadenBereinigen, schadenKosten, schadenSumme, bewertung, angebotAmpel, zuBestand,
-  schadenFotoPfad, type Pruefstand, type Schaden, type Stufe, type Richtwerte,
+  schadenFotoPfad, ankaufscheinInhalt, type Pruefstand, type Schaden, type Stufe, type Richtwerte, type Firmenkopf,
 } from '@/lib/kfzAnkauf';
+import { ankaufscheinPdf } from '@/lib/kfzAnkaufPdf';
 import FotoMarkierung from '../../../bautagebuch/FotoMarkierung';
 
 const supabase = createBrowserClient(
@@ -263,6 +265,24 @@ export default function AnkaufAktePage() {
     } finally { setBusy(false); }
   }
 
+  async function scheinDrucken() {
+    if (!a) return;
+    setFehler(null);
+    let firma: Firmenkopf | null = null;
+    try {
+      const r = await fetch('/api/betrieb-firmendaten', { cache: 'no-store' });
+      if (r.ok) {
+        const j = (await r.json()) as { firma?: Record<string, string | null> };
+        const x = j.firma ?? {};
+        firma = { name: x.firma_name ?? null, strasse: x.firma_strasse ?? null, plz: x.firma_plz ?? null, ort: x.firma_ort ?? null, telefon: x.firma_telefon ?? null, email: x.firma_email ?? null };
+      }
+    } catch { firma = null; }
+    const preis = betrag(abs.ankaufpreis) ?? a.ankaufpreis;
+    const inhalt = ankaufscheinInhalt({ ...a, ankaufpreis: preis, schaeden }, firma, heute());
+    ankaufscheinPdf(inhalt, `Ankaufschein-${a.nr ?? 'Ankauf'}.pdf`);
+    if (!firma?.name) setOk('Ankaufschein erstellt. Ihre Firmendaten fehlen darin (Einstellungen → Firmendaten oder Recht für Rechnungen) — Ankäufer bitte von Hand eintragen.');
+  }
+
   async function ankaufLoeschen() {
     if (!a || !istChef) return;
     setLoeschFrage(null); setBusy(true);
@@ -299,6 +319,7 @@ export default function AnkaufAktePage() {
         </div>
       </div>
 
+      {a.quelle === 'online' && a.status === 'offen' && <div style={s.hinweis}>🌐 Über Ihr Online-Formular angeboten. Die Angaben stammen vom Verkäufer; Preisvorstellung und Beschreibung stehen unter „Notiz". Bitte bei der Besichtigung prüfen.</div>}
       {fehler && <div style={s.fehler} role="alert">{fehler}</div>}
       {ok && <div style={s.ok} role="status">{ok}</div>}
 
@@ -474,7 +495,8 @@ export default function AnkaufAktePage() {
               <dt>Angebot</dt><dd>{euro(a.angebot)}</dd>
               <dt>Angelegt</dt><dd>{a.erstellt_am.slice(0, 10).split('-').reverse().join('.')}</dd>
             </dl>
-            <div style={{ ...s.dim, marginTop: 10 }}>Ankaufschein zum Unterschreiben und Online-Ankaufformular folgen im nächsten Paket.</div>
+            <button style={{ ...s.btn, marginTop: 12 }} onClick={() => void scheinDrucken()}>🖨 Ankaufschein (PDF)</button>
+            <div style={{ ...s.dim, marginTop: 6 }}>Zum Ausdrucken und Unterschreiben: Verkäufer, Fahrzeug, Angaben des Verkäufers, festgestellte Schäden (ohne Beträge), Kaufpreis und Erklärungen. Vorher Preis im Feld links eintragen.</div>
             {istChef && (loeschFrage === 'akte'
               ? <div style={{ marginTop: 12 }}><button style={{ ...s.btn, color: C.bad }} onClick={() => void ankaufLoeschen()}>Ja, Ankauf und Schadenfotos löschen</button> <button style={s.btn} onClick={() => setLoeschFrage(null)}>Nein</button>{a.bestand_id && <div style={{ ...s.dim, marginTop: 6 }}>Das Fahrzeug im Bestand bleibt erhalten.</div>}</div>
               : <button style={{ ...s.btn, marginTop: 12 }} onClick={() => setLoeschFrage('akte')}>🗑 Ankauf löschen</button>)}
@@ -501,6 +523,7 @@ const s: Record<string, CSSProperties> = {
   pill: { display: 'inline-block', border: '1px solid currentColor', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' },
   btn: { background: C.navy2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 8, padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontSize: 14 },
   gold: { background: C.gold, border: `1px solid ${C.gold}`, color: C.navy, borderRadius: 8, padding: '8px 14px', fontWeight: 700, cursor: 'pointer', display: 'inline-block' },
+  hinweis: { background: 'rgba(95,168,232,0.08)', border: '1px solid rgba(95,168,232,0.35)', borderRadius: 10, padding: '8px 12px', fontSize: 13.5, margin: '6px 0' },
   fehler: { background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.bad}`, borderRadius: 8, padding: '8px 12px', margin: '10px 0' },
   ok: { background: 'rgba(76,175,125,0.12)', border: `1px solid ${C.ok}`, borderRadius: 8, padding: '8px 12px', margin: '10px 0' },
   reiter: { display: 'flex', gap: 6, flexWrap: 'wrap', margin: '12px 0' },

@@ -48,6 +48,8 @@ export const OFFENE_TUEREN: OffeneTuer[] = [
   { pfad: 'oeffentlich/chat', grund: 'Shop-Chat auf der Kundenwebseite (Herkunftsprüfung + Monatsdeckel)', schutz: 'deckel', geprueft: true },
   { pfad: 'oeffentlich/lp', grund: 'Landingpage des Betriebs anzeigen/zählen', schutz: 'seite', geprueft: true },
   { pfad: 'oeffentlich/web-anfrage', grund: 'Anfrage-Formular der Kundenwebseite -> CRM des Betriebs', schutz: 'formular', geprueft: true },
+  // Paket 264 (07.10.26): Online-Ankaufformular eines Kfz-Betriebs -> kfz_ankauf; Betrieb nur ueber geheime Kennung, vom Chef ein-/ausschaltbar.
+  { pfad: 'oeffentlich/kfz-ankauf', grund: 'Online-Ankaufformular eines Kfz-Betriebs (Fahrzeug anbieten) -> Ankauf und Bewertung des Betriebs', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/web-newsletter', grund: 'Newsletter-Anmeldung der Kundenwebseite (Double-Opt-in)', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/shop-produkte', grund: 'freigeschaltete Produkte eines Shops', schutz: 'seite', geprueft: true },
   { pfad: 'oeffentlich/shop-bestellung', grund: 'Bestellung im Shop des Betriebs', schutz: 'formular', geprueft: true },

@@ -6,7 +6,8 @@
 // Filter, Suche, Richtwerte für Schäden (nur Chef).
 // Pfad: app/dashboard/kfz/ankauf/page.tsx — erbt die Freigabe von
 // /dashboard/kfz (Modul „kfz"). Die Akte liegt unter ./[id].
-// Andockpunkte Teil 2 (P264): Ankaufschein PDF, Online-Ankaufformular.
+// Paket 264 (K4 Teil 2): Karte „🌐 Online-Ankaufformular" (nur Chef) —
+// ein-/ausschalten, geheime Kennung, Link für die eigene Webseite.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -15,7 +16,7 @@ import { leseZahl } from '@/lib/zahlen';
 import { euro } from '@/lib/kfzBestand';
 import {
   ANKAUF_STATUS, QUELLEN, SCHADEN_ARTEN, RICHTWERTE_START, richtwerteMit, schadenBereinigen, schadenSumme,
-  naechsteAnkaufNr, type Richtwerte,
+  naechsteAnkaufNr, onlineEinstellung, neueKennung, type Richtwerte,
 } from '@/lib/kfzAnkauf';
 
 const MODUL = 'kfz-ankauf';
@@ -52,6 +53,8 @@ export default function AnkaufPage() {
   const [rwOffen, setRwOffen] = useState(false);
   const [rwEntwurf, setRwEntwurf] = useState<Record<string, string[]>>({});
   const [rwRoh, setRwRoh] = useState<Record<string, unknown>>({});
+  const [onOffen, setOnOffen] = useState(false);
+  const [kopiert, setKopiert] = useState(false);
 
   const lade = useCallback(async (b: string) => {
     const [a, e] = await Promise.all([
@@ -118,9 +121,28 @@ export default function AnkaufPage() {
     } finally { setBusy(false); }
   }
 
+  async function onlineSetzen(aktiv: boolean) {
+    if (!betrieb || !istChef) return;
+    let kennung = onlineEinstellung(rwRoh).kennung;
+    if (!kennung) {
+      const b = new Uint8Array(16); crypto.getRandomValues(b);
+      kennung = neueKennung(Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(''));
+    }
+    if (!kennung) { setFehler('Kennung konnte nicht erzeugt werden.'); return; }
+    setBusy(true); setFehler(null);
+    try {
+      const { error } = await supabase.from('modul_einstellung').upsert({ owner_user_id: betrieb, modul: MODUL, einstellung: { ...rwRoh, online: { aktiv, kennung } }, aktualisiert_am: new Date().toISOString() }, { onConflict: 'owner_user_id,modul' });
+      if (error) { setFehler('Das Online-Formular ließ sich nicht umschalten.'); return; }
+      await lade(betrieb);
+    } finally { setBusy(false); }
+  }
+
   if (laden) return <div style={s.page}><p style={s.dim}>Lädt …</p></div>;
+  const online = onlineEinstellung(rwRoh);
+  const onlineLink = online.kennung && typeof window !== 'undefined' ? `${window.location.origin}/ankauf/${online.kennung}` : '';
 
   const zahl = (k: string) => liste.filter((z) => z.status === k).length;
+  const neuOnline = liste.filter((z) => z.quelle === 'online' && z.status === 'offen').length;
 
   return (
     <div style={s.page}>
@@ -132,12 +154,14 @@ export default function AnkaufPage() {
         </div>
         <div style={s.knopfReihe}>
           <a href="/dashboard/kfz/bestand" style={{ ...s.btn, textDecoration: 'none' }}>🚘 Zum Bestand</a>
+          {istChef && <button style={s.btn} onClick={() => setOnOffen(!onOffen)}>🌐 Online-Formular{online.aktiv ? ' (an)' : ''}</button>}
           {istChef && <button style={s.btn} onClick={rwOeffnen}>⚙ Richtwerte für Schäden</button>}
           <button style={s.gold} onClick={() => setNeu({ ...neu, offen: !neu.offen })}>＋ Neuer Ankauf</button>
         </div>
       </div>
 
       {fehler && <div style={s.fehler} role="alert">{fehler}</div>}
+      {neuOnline > 0 && <div style={s.hinweis}>🌐 {neuOnline} {neuOnline === 1 ? 'Fahrzeug wurde' : 'Fahrzeuge wurden'} über das Online-Formular angeboten und {neuOnline === 1 ? 'wartet' : 'warten'} auf Ihre Bewertung.</div>}
 
       {neu.offen && (
         <div style={s.karte}>
@@ -153,6 +177,27 @@ export default function AnkaufPage() {
           </div>
           <div style={{ ...s.dim, marginTop: 8 }}>Alles Weitere (Prüfprotokoll, Schäden, Bewertung) erfassen Sie danach in der Ankaufsakte.</div>
           <button style={{ ...s.gold, marginTop: 10, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => void anlegen()}>💾 Anlegen und öffnen</button>
+        </div>
+      )}
+
+      {onOffen && istChef && (
+        <div style={s.karte}>
+          <h3 style={s.h3}>🌐 Online-Ankaufformular</h3>
+          <div style={{ ...s.dim, marginBottom: 10 }}>Privatleute und Firmen bieten Ihnen ihr Fahrzeug über einen eigenen Link an. Jede Anfrage landet hier als Ankauf „In Bewertung" (Woher: Online-Formular); Sie bekommen eine E-Mail an die Adresse aus Ihren Firmendaten, der Verkäufer eine Eingangsbestätigung. Den Link setzen Sie auf Ihre Webseite oder in Inserate.</div>
+          <div style={{ ...s.knopfReihe, marginBottom: 10 }}>
+            <span style={{ ...s.pill, color: online.aktiv ? C.ok : C.dim }}>{online.aktiv ? 'eingeschaltet' : 'ausgeschaltet'}</span>
+            {online.aktiv
+              ? <button style={s.btn} disabled={busy} onClick={() => void onlineSetzen(false)}>Ausschalten</button>
+              : <button style={{ ...s.gold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => void onlineSetzen(true)}>Einschalten</button>}
+          </div>
+          {online.aktiv && onlineLink && (
+            <div style={s.knopfReihe}>
+              <input style={{ ...s.inp, flex: '1 1 320px' }} readOnly value={onlineLink} aria-label="Link zum Formular" onFocus={(e) => e.currentTarget.select()} />
+              <button style={s.btn} onClick={() => { void navigator.clipboard?.writeText(onlineLink).then(() => { setKopiert(true); setTimeout(() => setKopiert(false), 1800); }); }}>{kopiert ? '✓ Kopiert' : '📋 Kopieren'}</button>
+              <a href={onlineLink} target="_blank" rel="noopener noreferrer" style={{ ...s.btn, textDecoration: 'none' }}>Ansehen ↗</a>
+            </div>
+          )}
+          <div style={{ ...s.dim, marginTop: 10 }}>Ausschalten macht den Link sofort ungültig; beim Wiedereinschalten gilt derselbe Link. Fotos kann der Verkäufer im Formular noch nicht hochladen.</div>
         </div>
       )}
 
@@ -224,6 +269,7 @@ const s: Record<string, CSSProperties> = {
   pill: { display: 'inline-block', border: '1px solid currentColor', borderRadius: 999, padding: '2px 10px', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' },
   btn: { background: C.navy2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 8, padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontSize: 14, display: 'inline-block' },
   gold: { background: C.gold, border: `1px solid ${C.gold}`, color: C.navy, borderRadius: 8, padding: '8px 14px', fontWeight: 700, cursor: 'pointer' },
+  hinweis: { background: 'rgba(95,168,232,0.08)', border: '1px solid rgba(95,168,232,0.35)', borderRadius: 10, padding: '8px 12px', fontSize: 13.5, margin: '6px 0' },
   fehler: { background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.bad}`, borderRadius: 8, padding: '8px 12px', margin: '10px 0' },
   karte: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, margin: '10px 0', minWidth: 0 },
   feldRaster: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 },
