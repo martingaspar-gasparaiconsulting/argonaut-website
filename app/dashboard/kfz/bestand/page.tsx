@@ -9,8 +9,9 @@
 // in den Preisverlauf (kfz_bestand_preis).
 // Pfad: app/dashboard/kfz/bestand/page.tsx — Unterpfad von /dashboard/kfz,
 // erbt dessen Freigabe (Modul „kfz").
-// Andockpunkte: K1 Teil 2 (Listendruck, FIN-Verknüpfung zur Lebensakte,
-// Eigene Felder), K2 Handelsakte (Klick auf ein Fahrzeug).
+// Paket 260 (K1 Teil 2): Bestandsliste als PDF, Hinweis „aus der Werkstatt
+// bekannt" über die FIN (werkstatt_fahrzeuge), Eigene Felder je Fahrzeug.
+// Andockpunkt: K2 Handelsakte (Klick auf ein Fahrzeug).
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties, type ReactNode } from 'react';
@@ -19,10 +20,14 @@ import { leseZahl, centRunden } from '@/lib/zahlen';
 import { vorlageFuer, mitKunde, feinschliffName, standtageAmpel, type KundenEinstellung, type Vorlage } from '@/lib/branchenVorlage';
 import {
   standtage, finPruefen, ezText, ezAusEingabe, passtSuche, regelPasst, summen,
-  preisNachProzent, naechsteNr, euro, psAusKw, type Bestand,
+  preisNachProzent, naechsteNr, euro, psAusKw, finTreffer, listenZeilen, type Bestand, type FinTreffer,
 } from '@/lib/kfzBestand';
+import { bestandslistePdf } from '@/lib/kfzBestandPdf';
+import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../../_components/EigeneFelder';
+import type { EigenesFeld } from '@/lib/eigeneFelder';
 
 const MODUL = 'kfz-bestand';
+const FELD_MODUL = 'kfz_bestand'; // Eigene Felder (P260)
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
@@ -80,6 +85,10 @@ export default function FahrzeugbestandPage() {
   const [entwurf, setEntwurf] = useState<KundenEinstellung>({});
   const [loeschFrage, setLoeschFrage] = useState<string | null>(null);
   const [prozent, setProzent] = useState('-2');
+  const [treffer, setTreffer] = useState<Record<string, FinTreffer>>({});
+  const [felder, setFelder] = useState<EigenesFeld[]>([]);
+  const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
+  const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
 
   const vorlage = useMemo(() => {
     const v = vorlageFuer(MODUL, branche);
@@ -100,6 +109,18 @@ export default function FahrzeugbestandPage() {
     setStandorte(((s.data as unknown) as Standort[]) ?? []);
     setEinstellung(((e.data as { einstellung?: KundenEinstellung } | null)?.einstellung) ?? null);
     setBranche(((p.data as { branche?: string | null } | null)?.branche) ?? null);
+    const rows = ((b.data as unknown) as Bestand[]) ?? [];
+    // P260: Eigene Felder und Lebensakte über die FIN — beides optional, Fehler stören die Liste nie.
+    try { setFelder(await ladeFelder(FELD_MODUL)); setWerteMap(await ladeWerte(FELD_MODUL, rows.map((x) => x.id))); } catch { /* ohne Eigene Felder */ }
+    try {
+      const fins = Array.from(new Set(rows.map((x) => x.fin).filter((x): x is string => !!x)));
+      if (fins.length) {
+        const w = await supabase.from('werkstatt_fahrzeuge').select('id, fin').in('fin', fins);
+        const wf = ((w.data as unknown) as { id: string; fin: string | null }[]) ?? [];
+        const a = wf.length ? await supabase.from('werkstatt_auftraege').select('fahrzeug_id').in('fahrzeug_id', wf.map((x) => x.id)) : { data: [] };
+        setTreffer(finTreffer(rows, wf, ((a.data as unknown) as { fahrzeug_id: string | null }[]) ?? []));
+      } else setTreffer({});
+    } catch { setTreffer({}); }
   }, []);
 
   useEffect(() => {
@@ -130,8 +151,8 @@ export default function FahrzeugbestandPage() {
   const sum = useMemo(() => summen(gefiltert, tag), [gefiltert, tag]);
   const sichtbar = (k: string) => vorlage?.spalten.find((s) => s.key === k)?.sichtbar ?? false;
 
-  function neuOeffnen() { setBearbeite(null); setForm(leer(vorlage)); setFormOffen(true); setFehler(null); setOk(null); }
-  function bearbeiten(b: Bestand) { setBearbeite(b.id); setForm(ausBestand(b)); setFormOffen(true); setFehler(null); setOk(null); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function neuOeffnen() { setBearbeite(null); setNmExtra({}); setForm(leer(vorlage)); setFormOffen(true); setFehler(null); setOk(null); }
+  function bearbeiten(b: Bestand) { setBearbeite(b.id); setNmExtra({ ...(werteMap[b.id] ?? {}) }); setForm(ausBestand(b)); setFormOffen(true); setFehler(null); setOk(null); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
   async function speichern() {
     if (!uid || !besitzer) return;
@@ -154,11 +175,13 @@ export default function FahrzeugbestandPage() {
       if (bearbeite) {
         const { error } = await supabase.from('kfz_bestand').update(zeile).eq('id', bearbeite);
         if (error) { setFehler('Speichern fehlgeschlagen. Haben Sie das Schreibrecht für „KFZ"?'); return; }
+        try { await speichereWerte(FELD_MODUL, bearbeite, besitzer, nmExtra); } catch { /* Eigene Felder optional */ }
         setOk('Fahrzeug gespeichert.');
       } else {
         const nr = naechsteNr(liste.map((x) => x.interne_nr));
-        const { error } = await supabase.from('kfz_bestand').insert({ ...zeile, owner_user_id: besitzer, interne_nr: nr });
+        const { data: neu, error } = await supabase.from('kfz_bestand').insert({ ...zeile, owner_user_id: besitzer, interne_nr: nr }).select('id').single();
         if (error) { setFehler(/duplicate|unique/i.test(error.message) ? 'Diese interne Nummer gibt es schon. Bitte die Seite neu laden.' : 'Speichern fehlgeschlagen. Haben Sie das Schreibrecht für „KFZ"?'); return; }
+        try { if (neu) await speichereWerte(FELD_MODUL, (neu as { id: string }).id, besitzer, nmExtra); } catch { /* Eigene Felder optional */ }
         setOk(`Fahrzeug ${nr} aufgenommen.`);
       }
       setFormOffen(false); setBearbeite(null);
@@ -243,6 +266,22 @@ export default function FahrzeugbestandPage() {
     setEinstellung(e); setOk(`Suche „${neu.name}" gespeichert.`);
   }
 
+  function listeDrucken() {
+    if (!vorlage) return;
+    const filter = [
+      aktiveSuche ? vorlage.suchen.find((x) => x.key === aktiveSuche)?.name : null,
+      fStatus ? statusInfo(fStatus).label : 'Alle im Bestand',
+      fSparte ? `Sparte ${fSparte}` : null,
+      fStandort ? `Standort ${standortName(fStandort)}` : null,
+      suche.trim() ? `Suche „${suche.trim()}"` : null,
+    ].filter(Boolean).join(' · ');
+    bestandslistePdf({
+      titel: vorlage.titel, standIso: tag, filterText: filter, mitEk: sichtbar('ek'),
+      zeilen: listenZeilen(gefiltert, tag, standortName, (k) => statusInfo(k).label),
+      summeVk: euro(sum.vkSumme), summeEk: sum.ekSumme === null ? null : euro(sum.ekSumme),
+    });
+  }
+
   function umschalten(id: string) {
     setAuswahl((a) => { const n = new Set(a); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   }
@@ -260,6 +299,7 @@ export default function FahrzeugbestandPage() {
         </div>
         <div style={s.knopfReihe}>
           {istChef && <button style={s.btn} onClick={einstOeffnen}>⚙ Spalten und Einstellungen</button>}
+          <button style={s.btn} onClick={listeDrucken} disabled={gefiltert.length === 0}>🖨 Liste als PDF</button>
           <button style={s.gold} onClick={neuOeffnen}>＋ {vorlage.einheit} aufnehmen</button>
         </div>
       </div>
@@ -291,6 +331,8 @@ export default function FahrzeugbestandPage() {
             <Wahl l="Besteuerung" v={form.besteuerung} on={(v) => setForm({ ...form, besteuerung: v })} opt={[['25a', 'differenzbesteuert (§ 25a)'], ['regel', 'Regelsteuer'], ['', 'noch offen']]} />
           </div>
           <label style={{ ...s.lab, marginTop: 8 }}>Notiz<textarea style={{ ...s.inp, minHeight: 60 }} value={form.notiz} onChange={(e) => setForm({ ...form, notiz: e.target.value })} /></label>
+          {felder.length > 0 && <div style={{ ...s.raster, marginTop: 8 }}><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((x) => ({ ...x, [fid]: w }))} inpStyle={s.inp} labStyle={s.lab} /></div>}
+          {bearbeite && treffer[bearbeite] && <div style={{ ...s.hinweis, marginTop: 8 }}>🔧 Diese FIN kennt Ihre Werkstatt: {treffer[bearbeite].auftraege} {treffer[bearbeite].auftraege === 1 ? 'Auftrag' : 'Aufträge'} in der <a href="/dashboard/fahrzeugakte" style={{ color: C.info }}>Fahrzeugakte</a>.</div>}
           <div style={{ ...s.knopfReihe, marginTop: 10 }}>
             <button style={{ ...s.gold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={speichern}>💾 Speichern</button>
             <button style={s.btn} onClick={() => { setFormOffen(false); setBearbeite(null); }}>Abbrechen</button>
@@ -343,6 +385,7 @@ export default function FahrzeugbestandPage() {
               ))}
             </div>
           )}
+          {besitzer && <div style={{ marginTop: 12 }}><div style={s.tag}>Eigene Felder je {vorlage.einheit}</div><EigeneFelderManager modul={FELD_MODUL} ownerId={besitzer} onChange={() => { void ladeAlles(besitzer); }} /></div>}
           <div style={{ ...s.knopfReihe, marginTop: 10 }}>
             <button style={{ ...s.gold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={einstSpeichern}>💾 Einstellungen speichern</button>
             <button style={s.btn} onClick={() => setEinstOffen(false)}>Abbrechen</button>
@@ -413,7 +456,9 @@ export default function FahrzeugbestandPage() {
                 const amp = standtageAmpel(t, vorlage.ampel);
                 const ps = psAusKw(b.leistung_kw);
                 const zelle: Record<string, ReactNode> = {
-                  fahrzeug: <div><b>{[b.marke, b.modell].filter(Boolean).join(' ') || '—'}</b><div style={s.klein}>{b.interne_nr ?? ''}{b.variante ? ` · ${b.variante}` : ''}{b.sparte ? ` · ${b.sparte}` : ''}{ps ? ` · ${ps} PS` : ''}</div></div>,
+                  fahrzeug: <div><b>{[b.marke, b.modell].filter(Boolean).join(' ') || '—'}</b><div style={s.klein}>{b.interne_nr ?? ''}{b.variante ? ` · ${b.variante}` : ''}{b.sparte ? ` · ${b.sparte}` : ''}{ps ? ` · ${ps} PS` : ''}</div>
+                    {treffer[b.id] && <div style={{ ...s.klein, color: C.info }}>🔧 aus der Werkstatt bekannt · {treffer[b.id].auftraege} {treffer[b.id].auftraege === 1 ? 'Auftrag' : 'Aufträge'}</div>}
+                    <EigeneFelderAnzeige felder={felder} werte={werteMap[b.id]} /></div>,
                   status: <span style={{ ...s.pill, color: FARBE[st.farbe] }}>{st.label}</span>,
                   ez_km: <span>{ezText(b.erstzulassung)}<div style={s.klein}>{b.km_stand !== null ? `${b.km_stand.toLocaleString('de-DE')} km` : '—'}</div></span>,
                   kennzeichen: <span style={s.mono}>{b.kennzeichen ?? '—'}</span>,
@@ -507,4 +552,5 @@ const s: Record<string, CSSProperties> = {
   fzKarte: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer' },
   bild: { aspectRatio: '16 / 9', maxWidth: '100%', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg, #14294A, #2a3f63)', color: 'rgba(255,255,255,0.7)', fontWeight: 700, letterSpacing: '0.08em' },
   zeile: { display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' },
+  hinweis: { background: 'rgba(95,168,232,0.08)', border: '1px solid rgba(95,168,232,0.35)', borderRadius: 10, padding: '8px 12px', fontSize: 13.5 },
 };

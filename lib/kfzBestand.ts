@@ -188,3 +188,53 @@ export function psAusKw(kw: number | null | undefined): number | null {
   if (kw === null || kw === undefined || !Number.isFinite(kw) || kw <= 0) return null;
   return Math.round(kw * 1.35962);
 }
+
+// ============================================================================
+// Paket 260 · K1 Teil 2
+// ============================================================================
+
+export type WerkstattFz = { id: string; fin: string | null };
+export type WerkstattAuftrag = { fahrzeug_id: string | null };
+export type FinTreffer = { fahrzeugId: string; auftraege: number };
+
+/**
+ * Lebensakte über die FIN: Welche Bestandsfahrzeuge kennt die Werkstatt schon?
+ * Vergleich ohne Leerzeichen, Groß/Klein egal. Fahrzeuge ohne FIN bekommen nie
+ * einen Treffer (kein Raten über Kennzeichen — das wechselt beim Halterwechsel).
+ */
+export function finTreffer(bestand: Pick<Bestand, 'id' | 'fin'>[], werkstatt: WerkstattFz[], auftraege: WerkstattAuftrag[]): Record<string, FinTreffer> {
+  const norm = (f: string | null | undefined) => String(f ?? '').replace(/\s/g, '').toUpperCase();
+  const jeFin = new Map<string, string>();
+  for (const w of werkstatt) { const f = norm(w.fin); if (f.length === 17 && !jeFin.has(f)) jeFin.set(f, w.id); }
+  const zahl = new Map<string, number>();
+  for (const a of auftraege) if (a.fahrzeug_id) zahl.set(a.fahrzeug_id, (zahl.get(a.fahrzeug_id) ?? 0) + 1);
+  const aus: Record<string, FinTreffer> = {};
+  for (const b of bestand) {
+    const id = jeFin.get(norm(b.fin));
+    if (id) aus[b.id] = { fahrzeugId: id, auftraege: zahl.get(id) ?? 0 };
+  }
+  return aus;
+}
+
+export type ListenZeile = { nr: string; fahrzeug: string; ezKm: string; kennzeichen: string; standort: string; standtage: string; vk: string; ek: string; status: string };
+
+/** Zeilen für die Bestandsliste (PDF) — gleiche Reihenfolge wie am Bildschirm, nichts erfunden. */
+export function listenZeilen(
+  liste: Bestand[], heuteIso: string,
+  standortName: (id: string | null) => string, statusLabel: (key: string) => string,
+): ListenZeile[] {
+  return liste.map((b) => {
+    const t = standtage(b, heuteIso);
+    return {
+      nr: b.interne_nr ?? '—',
+      fahrzeug: [b.marke, b.modell, b.variante].filter(Boolean).join(' ') || '—',
+      ezKm: `${ezText(b.erstzulassung)} · ${b.km_stand !== null && b.km_stand !== undefined ? `${b.km_stand.toLocaleString('de-DE')} km` : '—'}`,
+      kennzeichen: b.kennzeichen ?? '—',
+      standort: standortName(b.standort_id),
+      standtage: t === null ? (b.status === 'zulauf' ? 'Zulauf' : '—') : `${t}`,
+      vk: euro(b.vk_brutto),
+      ek: euro(b.ek_netto),
+      status: statusLabel(b.status),
+    };
+  });
+}
