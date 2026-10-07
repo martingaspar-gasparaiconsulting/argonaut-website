@@ -1522,6 +1522,23 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Einen Ankauf „Test" mit Marke „Testmarke" über „＋ Neuer Ankauf", einen Schaden „Kratzer leicht" erfassen und einen Verkaufspreis von 10.000 € eintragen.', loeschen: 'Reiter „Abschluss", „🗑 Ankauf löschen", dann „Ja, …" — nur die Geschäftsleitung. Ein schon übernommenes Fahrzeug bleibt im Bestand.' },
     landetIn: [{ text: 'Fahrzeugbestand (nach dem Ankauf)', href: '/dashboard/kfz/bestand' }],
   },
+  '/dashboard/kfz/verkauf': {
+    zweck: 'Fahrzeuge verkaufen: Verkaufsvorgang je Fahrzeug mit Käufer (Privatperson oder Unternehmen), Preis, Zusatzleistungen, Inzahlungnahme aus dem Ankauf, Anzahlung, Zahlart, Sachmängelhaftung, Reservierung, Kaufvertrag und Übergabe. Sechs Unterlagen als PDF, Unterschrift über ARGONAUT-Sign, Hinweis zur GwG-Identifizierung ab 10.000 € Bargeld. Diese Seite zeigt alle Vorgänge auf einen Blick.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „KFZ" sehen die Verkäufe; mit Schreibrecht legen sie Vorgänge an, bearbeiten sie, drucken Unterlagen und verschicken Unterschrifts-Links. Löschen (nur im Status „Angebot") kann nur die Geschäftsleitung.',
+    schritte: [
+      'Fahrzeugbestand → Fahrzeug öffnen → Reiter „Verkauf" → „＋ Verkaufsvorgang anlegen". Nummer V-0001, V-0002 …; der Preis aus dem Inserat ist vorbelegt. Je Fahrzeug gibt es nur einen laufenden Vorgang — ein zweiter Verkauf desselben Autos ist gesperrt',
+      'Käufer: Privatperson oder Unternehmen, Name, Anschrift, Telefon, E-Mail, bei Unternehmen Firma und USt-IdNr. Haken „Ausweis geprüft" (die Nummer wird nicht gespeichert)',
+      'Preis und Zahlung: Fahrzeugpreis brutto, Zusatzleistungen (Zulassung, Überführung, neue HU, eigene), Anzahlung mit Datum und Zahlart, Zahlart für den Rest. Inzahlungnahme: ein Fahrzeug aus „Ankauf und Bewertung" wählen — die Anrechnung wird aus dem Ankauf vorgeschlagen und kann geändert werden',
+      'Ab 10.000 € Bargeld (Bar-Anzahlung und Bar-Restzahlung zusammen) erscheint ein roter Kasten: erst unter „GwG-Identifizierung" identifizieren, dann Haken „Identifizierung erledigt" — vorher lässt sich der Kaufvertrag nicht abschließen',
+      'Vertrag und Termine: Sachmängelhaftung (gesetzlich, auf ein Jahr verkürzt oder — nur bei Unternehmen — ausgeschlossen). Bei Privatpersonen braucht die Verkürzung den Haken „gesondert vereinbart"; der Kaufvertrag bekommt dafür einen eigenen Abschnitt mit eigener Unterschrift. Dazu Angebot gültig bis, reserviert bis, Vertragsdatum, geplante Übergabe und weitere Vereinbarungen',
+      '„💾 Verkauf speichern", dann oben den nächsten Schritt: „🔖 Reservieren" (setzt das Fahrzeug im Bestand auf „Reserviert"), „✓ Kaufvertrag abschließen" (Bestand „Verkauft", Verkaufsdatum, Erlös in die Kalkulation, falls dort noch leer), „🔑 Übergeben" (braucht den Kilometerstand). Fehlt etwas, steht in Rot, was',
+      'Unterlagen: Angebot, Reservierung, Quittung Anzahlung, Kaufvertrag, Zulassungsvollmacht und Empfangsbestätigung je als „🖨 PDF". „✍ Unterschrift" legt einen Link in ARGONAUT-Sign an und kopiert ihn; daneben steht, ob der Käufer schon unterschrieben hat. Die Unterlagen nutzen den gespeicherten Stand',
+      '„✕ Stornieren" mit Grund setzt den Vorgang auf „Storniert" und das Fahrzeug zurück in den Bestand; danach kann ein neuer Vorgang angelegt werden. Diese Seite „Verkäufe" zeigt alle Vorgänge mit abgelaufenen Reservierungen, offenen Beträgen und offener GwG-Identifizierung',
+    ],
+    probe: { anlegen: 'Am Testfahrzeug Reiter „Verkauf" → „＋ Verkaufsvorgang anlegen", Käufer „Test", Anschrift „Teststraße 1, 12345 Test", speichern, „🖨 PDF" beim Angebot.', loeschen: 'Im Status „Angebot" unten „🗑 Vorgang löschen", dann „Ja, löschen" — nur die Geschäftsleitung. Später: „✕ Stornieren".' },
+    landetIn: [{ text: 'Fahrzeugbestand (Status Reserviert/Verkauft)', href: '/dashboard/kfz/bestand' }, { text: 'Signaturen (unterschriebene Unterlagen)', href: '/dashboard/signaturen' }],
+  },
   '/dashboard/kfz/schaden': {
     zweck: 'Schadenfälle mit Versicherern abwickeln: Art (Haftpflicht, Kasko, Selbstzahler), Unterlagen-Checkliste, Gutachten/KVA, Freigabe, Ersatzwagen-Tage, Rechnung, Zahlungen von Versicherer und Kunde, Nachfassen nach Richtwert und fertige Schreiben. Keine Rechtsberatung — nur Abwicklung.',
     wer: 'beide',

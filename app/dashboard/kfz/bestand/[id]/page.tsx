@@ -9,8 +9,8 @@
 // („✎ Stammdaten"), die Akte pflegt die neuen Felder aus SQL 261.
 // Paket 262 (K3): Reiter „Fotos und Video" (KfzMedien), Foto-Zahl fließt in die Inserats-Ampel.
 // Paket 265 (K5): Reiter „Kalkulation" (KfzKalkulation) — Plan/Nach, Kosten, Provision.
-// Andockpunkte: K5 Kalkulation, K6 Verkaufsunterlagen,
-// K18 Partner (eigener Reiter).
+// Paket 266 (K6): Reiter „Verkauf" (KfzVerkauf) — Käufer, Preis, Inzahlungnahme, Unterlagen, Unterschrift.
+// Andockpunkte: K7 Rechnung (aus dem Verkauf), K18 Partner (eigener Reiter).
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -25,6 +25,7 @@ import {
 } from '@/lib/kfzAkte';
 import KfzMedien from '../KfzMedien';
 import KfzKalkulation from '../KfzKalkulation';
+import KfzVerkauf from '../KfzVerkauf';
 
 const MODUL = 'kfz-bestand';
 const supabase = createBrowserClient(
@@ -43,8 +44,8 @@ type Akte = Bestand & {
   verbrauch_komb: number | null; verbrauch_einheit: string | null; co2_g_km: number | null; co2_klasse: string | null;
   erstellt_am: string | null; aktualisiert_am: string | null;
 };
-type Reiter = 'uebersicht' | 'fotos' | 'ausstattung' | 'energie' | 'inserat' | 'kalk' | 'preis' | 'historie';
-const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['fotos', 'Fotos und Video'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['kalk', 'Kalkulation'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
+type Reiter = 'uebersicht' | 'fotos' | 'ausstattung' | 'energie' | 'inserat' | 'kalk' | 'verkauf' | 'preis' | 'historie';
+const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['fotos', 'Fotos und Video'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['kalk', 'Kalkulation'], ['verkauf', 'Verkauf'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
 
 function heute(): string { return new Date().toISOString().slice(0, 10); }
 function deDatum(iso: string | null | undefined): string { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
@@ -274,6 +275,18 @@ export default function HandelsaktePage() {
           id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, ek_netto: akte.ek_netto, vk_brutto: akte.vk_brutto,
           besteuerung: akte.besteuerung, standtageJetzt: t, standtagePlanStandard: vorlage.ampel.gruenBis, standkostenTag: vorlage.standkostenTag,
           verkauft: !!akte.verkauft_am || akte.status === 'verkauft',
+        }} />
+      )}
+
+      {reiter === 'verkauf' && (
+        <KfzVerkauf onGeaendert={() => void lade()} f={{
+          id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, bestandStatus: akte.status,
+          fz: {
+            interne_nr: akte.interne_nr, marke: akte.marke, modell: akte.modell, variante: akte.variante, fin: akte.fin, kennzeichen: akte.kennzeichen,
+            erstzulassung: akte.erstzulassung, km_stand: akte.km_stand, leistung_kw: akte.leistung_kw, kraftstoff: akte.kraftstoff, farbe: akte.farbe,
+            hu_bis: akte.hu_bis, vorbesitzer: akte.vorbesitzer, vorschaden: akte.vorschaden, vorschaden_text: akte.vorschaden_text,
+            besteuerung: akte.besteuerung, vk_brutto: akte.vk_brutto,
+          },
         }} />
       )}
 
