@@ -10,6 +10,7 @@
 // Sendet an /api/website-anfrage → eigenes CRM (website_anfragen) + Bestätigungsmail.
 // ============================================================================
 
+import Dreizack from '@/components/Dreizack';
 import { useState } from 'react'
 import TerminPicker from './TerminPicker'
 import { stufeFuerMitarbeiter, sitzPreis, monatspreis, laufzeitOptionen, LAUFZEIT_STANDARD } from '@/lib/tarif'
@@ -156,7 +157,7 @@ export default function AngebotAnfrage({ branche, rollen }: { branche?: string; 
       <section id="demo" style={{ padding: '30px 0 70px' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto', padding: '0 24px' }}>
           <div style={{ textAlign: 'center', background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '18px', padding: '48px 24px' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '.6rem' }} aria-hidden="true">🔱</div>
+            <Dreizack hoehe={36} style={{ margin: '0 auto .8rem' }} />
             <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: '1.5rem', color: '#EAF1F6', margin: '0 0 8px' }}>Anfrage erhalten!</p>
             <p style={{ color: '#b9cdd6', margin: 0, lineHeight: 1.6 }}>
               Danke, {f.name.split(' ')[0] || 'und bis gleich'}. Wir melden uns persönlich {kontaktLabel} — wie gewünscht{f.wunschtermin ? `, Wunschtermin ${f.wunschtermin} Uhr` : ''}. Eine Bestätigung ist unterwegs in Ihr Postfach.

@@ -6,6 +6,7 @@
 // branchen-chat (Haiku, günstig). Klar als KI gekennzeichnet (AI-Act).
 // ============================================================================
 
+import Dreizack from '@/components/Dreizack';
 import { useState, useRef, useEffect } from 'react'
 
 const GOLD = '#c9a84c'
@@ -79,7 +80,7 @@ export default function BranchenChat({ slug, name }: { slug: string; name: strin
       `}</style>
       <div className="bc-box">
         <div className="bc-head">
-          <span style={{ fontSize: '1.3rem' }} aria-hidden="true">🔱</span>
+          <Dreizack hoehe={18} />
           <span className="bc-title">Fragen Sie ARGONAUT für {name}</span>
           <span className="bc-badge">KI</span>
         </div>

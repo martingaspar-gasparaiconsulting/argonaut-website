@@ -137,7 +137,7 @@ export default function Uebersicht({
             ) : (
               treffer.map((t) => (
                 <Link key={t.slug} href={`/vorfuehrung/${t.slug}`} style={s.treffer}>
-                  <span style={s.trefferZeichen}>{ZEICHEN[t.kategorie] || '🔱'}</span>
+                  <span style={s.trefferZeichen}>{ZEICHEN[t.kategorie] || '🏢'}</span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <b style={s.trefferName}>{t.name}</b>
                     <span style={s.trefferKat}>{t.kategorie}</span>
@@ -156,7 +156,7 @@ export default function Uebersicht({
           <div style={s.gitter}>
             {kategorien.map((k) => (
               <Link key={k.kategorie} href={`/vorfuehrung/kategorie/${k.schluessel}`} style={s.kachel}>
-                <div style={s.zeichen}>{ZEICHEN[k.kategorie] || '🔱'}</div>
+                <div style={s.zeichen}>{ZEICHEN[k.kategorie] || '🏢'}</div>
                 <div style={s.katName}>{k.kategorie}</div>
                 <div style={s.katAnzahl}>{k.anzahl} Branchen</div>
                 <div style={s.katBeispiele}>{k.beispiele.join(' · ')}</div>

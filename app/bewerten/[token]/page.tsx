@@ -6,6 +6,7 @@
 // über /api/oeffentlich/bewertung (Service-Role, Token-basiert).
 // ============================================================
 
+import Dreizack from '@/components/Dreizack';
 import { useEffect, useState, CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
 
@@ -67,7 +68,7 @@ export default function BewertenSeite() {
   return (
     <main style={styles.page}>
       <div style={styles.wrap}>
-        <div style={styles.brand}>🔱 ARGONAUT OS</div>
+        <div style={styles.brand}><Dreizack hoehe={14} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 8 }} />ARGONAUT OS</div>
         <div style={styles.card}>
           {laden ? (
             <p style={styles.sub}>Lädt …</p>

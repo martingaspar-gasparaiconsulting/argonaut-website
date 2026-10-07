@@ -40,8 +40,13 @@ vektorisiert. Die Fugen sind echte Luecken, alles ist freigestellt.
 - Unter ca. 24 px nur das Zeichen, ohne Schriftzug
 - Kein Glow, kein Pulsieren, keine Schatten (siehe LOGO-NOTIZ-1)
 
+## Teil 2 (07.10.2026) – Emoji 🔱 ist komplett raus
+- Ueberschriften-Kicker und grosse Symbole: <Dreizack />
+- Dossier, E-Book, Abmeldeseite (HTML als Text): zeichenSvg() aus lib/argonautZeichen.ts
+- Angebot und Kundenportal: Betriebsname OHNE ARGONAUT-Zeichen (Seite des Betriebs);
+  nur ohne Namen erscheint "ARGONAUT OS" mit Zeichen
+- Ersatzsymbol fuer unbekannte Branchenkategorien: 🏢 statt Logo
+
 ## Noch offen
-- Teil 2: die ca. 27 Stellen mit dem Emoji 🔱 (Angebots-/Portal-/Buchungsseiten,
-  Dossier- und E-Book-HTML, Testen, Upgrade …) auf das neue Zeichen umstellen
 - Markenrecherche DPMA/EUIPO vor dem Einsatz (Anwalt-Checkliste)
 - Fuer die Eintragung beim DPMA: Vektor-Datei `argonaut-logo-schwarz.svg`

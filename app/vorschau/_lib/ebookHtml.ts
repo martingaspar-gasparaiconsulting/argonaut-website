@@ -21,6 +21,7 @@
 // womöglich verschiedene Branchen.
 // ============================================================================
 
+import { zeichenSvg } from '@/lib/argonautZeichen';
 import { brancheAufloesen } from './dossierHtml';
 import {
   ebookBauplan, ebookInhalt, ABSCHNITT_UEBERSCHRIFT,
@@ -177,7 +178,7 @@ export function ebookHtml(brancheInput: string, bausteine: BausteinZeile[]): str
 <body>
 
 <div class="cover"><div class="wrap">
-  <div style="font-size:30px">🔱</div>
+  <div>${zeichenSvg(44)}</div>
   <div class="kick" style="margin-top:10px">ARGONAUT OS · Das Handbuch</div>
   <h1>${esc(titel)}<br><span class="g">in einem System.</span></h1>
   <p class="sub">Was ARGONAUT OS für Ihren Betrieb übernimmt — Baustein für Baustein erklärt, ohne Fachchinesisch.</p>
@@ -205,6 +206,6 @@ ${kapitelHtml}
 </div>
 
 </div>
-<div class="foot">🔱 ARGONAUT OS — das KI-Betriebssystem für den deutschen Mittelstand · ${BASIS_URL.replace('https://', '')}${slug ? '/branchen/' + esc(slug) : ''}</div>
+<div class="foot">${zeichenSvg(10, '#C9A84C', 'vertical-align:-1px;margin-right:5px')}ARGONAUT OS — das KI-Betriebssystem für den deutschen Mittelstand · ${BASIS_URL.replace('https://', '')}${slug ? '/branchen/' + esc(slug) : ''}</div>
 </body></html>`;
 }

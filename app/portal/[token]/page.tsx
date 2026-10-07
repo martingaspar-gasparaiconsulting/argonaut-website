@@ -8,6 +8,7 @@
 // Kein Supabase im Browser, keine fremden Daten.
 // ============================================================
 
+import Dreizack from '@/components/Dreizack';
 import { useEffect, useState, CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
 import PortalBaustelle from './PortalBaustelle';
@@ -128,7 +129,8 @@ export default function PortalSeite() {
   return (
     <main style={styles.page}>
       <div style={styles.wrap}>
-        <div style={styles.brand}>🔱 {betrieb || 'ARGONAUT OS'}</div>
+        {/* L1: Auf der Seite des Betriebs steht SEIN Name ohne ARGONAUT-Zeichen; nur ohne Namen erscheint ARGONAUT OS. */}
+        <div style={styles.brand}>{betrieb ? betrieb : <><Dreizack hoehe={15} style={{ display: 'inline-block', verticalAlign: '-3px', marginRight: 8 }} />ARGONAUT OS</>}</div>
 
         {laden ? (
           <div style={styles.card}><p style={styles.sub}>Lädt …</p></div>

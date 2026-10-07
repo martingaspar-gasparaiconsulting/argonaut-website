@@ -1,3 +1,4 @@
+import Dreizack from '@/components/Dreizack';
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Navbar from '../_components/Navbar'
@@ -113,7 +114,7 @@ export default function RoadmapPage() {
       {/* Hero */}
       <section style={{ padding: '140px 0 10px', textAlign: 'center', background: 'radial-gradient(1000px 500px at 50% -10%, rgba(201,168,76,0.12), transparent 60%)' }}>
         <div className="rm-wrap">
-          <div style={{ color: GOLD, letterSpacing: '.24em', textTransform: 'uppercase', fontSize: '.8rem', marginBottom: '1.4rem' }}>🔱 Roadmap</div>
+          <div style={{ color: GOLD, letterSpacing: '.24em', textTransform: 'uppercase', fontSize: '.8rem', marginBottom: '1.4rem' }}><Dreizack hoehe={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 8 }} />Roadmap</div>
           <h1 className="rm-h1">Was ist da. Was <span style={{ color: GOLD }}>kommt</span>.</h1>
           <p style={{ fontSize: 'clamp(1.05rem, 2vw, 1.28rem)', color: '#b9cdd6', maxWidth: '58ch', margin: '0 auto', lineHeight: 1.6 }}>
             Wir legen offen, woran wir arbeiten. Was heute schon läuft, woran wir gerade bauen und was als Nächstes kommt — ehrlich, ohne leere Datumsversprechen. Und es wird laufend mehr.

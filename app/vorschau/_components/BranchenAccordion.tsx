@@ -109,7 +109,7 @@ export default function BranchenAccordion({ kategorien, total }: { kategorien: K
           return (
             <div key={k.kategorie} className={`ba-card${isOpen ? ' is-open' : ''}`}>
               <button className="ba-head" onClick={() => !q && toggle(k.kategorie)} aria-expanded={isOpen}>
-                <span className="ba-emoji" aria-hidden="true">{EMOJI[k.kategorie] ?? '🔱'}</span>
+                <span className="ba-emoji" aria-hidden="true">{EMOJI[k.kategorie] ?? '🏢'}</span>
                 <span className="ba-title">{k.kategorie}</span>
                 <span className="ba-count">{items.length}</span>
                 {!q && <span className="ba-chev" aria-hidden="true">▾</span>}

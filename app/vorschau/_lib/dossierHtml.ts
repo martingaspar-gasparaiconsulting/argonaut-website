@@ -5,6 +5,7 @@
 // keine KI-Agenten. „Was kann das System / Was müssen Sie tun" pro Bereich.
 // Rein — kein Fetch. Wird über den Gotenberg-Renderer aboRechnungPdf(html) zu PDF.
 
+import { zeichenSvg } from '@/lib/argonautZeichen';
 import { websiteBranchen, websiteBrancheBySlug, type WebBranche } from './branchen-web';
 import { baukastenFor, KERN, type Baustein } from './branchen-bausteine';
 import { verkaufPack, fuelleText } from './branchen-verkauf';
@@ -233,7 +234,7 @@ export function dossierHtml(input: string): string {
 </style></head>
 <body>
 <div class="cover"><div class="wrap">
-  <div style="font-size:26px">🔱</div>
+  <div>${zeichenSvg(40)}</div>
   <div class="kick" style="margin-top:8px">ARGONAUT OS · Branchen-Dossier</div>
   <h1>${esc(titel)}<br><span class="g">in einem System.</span></h1>
   <p class="sub">${esc(heroSub)}</p>
@@ -302,6 +303,6 @@ ${faq.length ? `<div class="sec">
 </div>
 
 </div>
-<div class="foot">🔱 ARGONAUT OS — das KI-Betriebssystem für den deutschen Mittelstand · ${BASIS_URL.replace('https://', '')}${slug ? '/branchen/' + esc(slug) : ''}</div>
+<div class="foot">${zeichenSvg(10, '#C9A84C', 'vertical-align:-1px;margin-right:5px')}ARGONAUT OS — das KI-Betriebssystem für den deutschen Mittelstand · ${BASIS_URL.replace('https://', '')}${slug ? '/branchen/' + esc(slug) : ''}</div>
 </body></html>`;
 }

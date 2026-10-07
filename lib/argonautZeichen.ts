@@ -191,3 +191,19 @@ export const ZEICHEN_PFAD =
   '305 0.4547 0.7295 0.4543C0.7284 0.4539 0.7251 0.4525 0.7222 0.4513C0.7192 0.45 0.7159 0.4486 0.7146 0.4481C0.7' +
   '134 0.4476 0.7118 0.4469 0.711 0.4465C0.7081 0.4452 0.7038 0.4433 0.7037 0.4433C0.7037 0.4433 0.7032 0.4436 0.' +
   '7027 0.444Z';
+
+/**
+ * Das Zeichen als fertiger SVG-Text — fuer Stellen, die HTML als Zeichenkette
+ * bauen (Dossier, E-Book, schlichte Antwortseiten). Hoehe in px.
+ * Farbe wird nur aus einer sicheren Hex-Angabe uebernommen.
+ */
+export function zeichenSvg(hoehe: number, farbe = '#C9A84C', stil = ''): string {
+  const h = Number.isFinite(hoehe) && hoehe > 0 ? Number(hoehe.toFixed(2)) : 24; // Anzeige-Mass, kein Geld
+  const f = /^#[0-9a-fA-F]{3,8}$/.test(farbe) ? farbe : '#C9A84C';
+  const b = Number((h * ZEICHEN_VERHAELTNIS).toFixed(2));
+  const s = stil.replace(/["<>]/g, '');
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ZEICHEN_VERHAELTNIS} 1" width="${b}" height="${h}"` +
+    ` role="img" aria-label="ARGONAUT"${s ? ` style="${s}"` : ''}><path fill="${f}" d="${ZEICHEN_PFAD}"/></svg>`
+  );
+}

@@ -1,3 +1,4 @@
+import Dreizack from '@/components/Dreizack';
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Navbar from '../vorschau/_components/Navbar'
@@ -152,7 +153,7 @@ export default function UberUns() {
         {/* CTA */}
         <section style={{ padding: '40px 24px 100px', textAlign: 'center', background: 'radial-gradient(900px 460px at 50% 130%, rgba(201,168,76,0.14), transparent 60%)' }}>
           <div className="uu-wrap" style={{ maxWidth: '700px' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '1rem' }} aria-hidden="true">🔱</div>
+            <Dreizack hoehe={40} style={{ margin: '0 auto 1.2rem' }} />
             <h2 className="uu-h2">Ihre Mission wartet.</h2>
             <p className="uu-p" style={{ color: '#b9cdd6', margin: '0 auto 2rem' }}>
               Lassen Sie uns gemeinsam Ihren Betrieb aufs nächste Level bringen — damit Sie wieder das tun können, wofür Sie ursprünglich angetreten sind.
@@ -160,7 +161,7 @@ export default function UberUns() {
             <a href="/#demo" style={{ background: GOLD, color: NAVY, fontWeight: 600, fontSize: '1rem', padding: '16px 34px', borderRadius: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(201,168,76,0.25)' }}>
               Demo buchen <span aria-hidden="true">→</span>
             </a>
-            <p style={{ fontSize: '.85rem', color: '#7f97a4', marginTop: '24px' }}>ARGONAUT OS — Ihre Crew. Ihr Weg. Ihr Goldenes Vlies. 🔱</p>
+            <p style={{ fontSize: '.85rem', color: '#7f97a4', marginTop: '24px' }}>ARGONAUT OS — Ihre Crew. Ihr Weg. Ihr Goldenes Vlies. <Dreizack hoehe={12} style={{ display: 'inline-block', verticalAlign: '-1px', marginLeft: 4 }} /></p>
           </div>
         </section>
 

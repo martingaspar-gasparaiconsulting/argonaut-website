@@ -11,6 +11,7 @@
 // späterer, eigener Schritt; hier sammeln wir erst die Interessenten.
 // ============================================================================
 
+import Dreizack from '@/components/Dreizack';
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Navbar from '../vorschau/_components/Navbar'
@@ -87,7 +88,7 @@ export default function TestenPage() {
       {/* Hero */}
       <section style={{ padding: '150px 0 30px', textAlign: 'center', background: 'radial-gradient(900px 500px at 50% -10%, rgba(201,168,76,0.14), transparent 60%)' }}>
         <div style={{ maxWidth: '760px', margin: '0 auto', padding: '0 24px' }}>
-          <div style={{ color: GOLD, letterSpacing: '.22em', textTransform: 'uppercase', fontSize: '.78rem', marginBottom: '1.2rem' }}>🔱 Kostenlos testen · Zugang anfordern</div>
+          <div style={{ color: GOLD, letterSpacing: '.22em', textTransform: 'uppercase', fontSize: '.78rem', marginBottom: '1.2rem' }}><Dreizack hoehe={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 8 }} />Kostenlos testen · Zugang anfordern</div>
           <h1 style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: 'clamp(2.2rem, 5.6vw, 3.6rem)', lineHeight: 1.08, margin: '0 0 1rem' }}>
             7 Tage <span style={{ color: GOLD }}>kostenlos</span> testen.
           </h1>
@@ -115,7 +116,7 @@ export default function TestenPage() {
         <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px' }}>
           {status === 'success' ? (
             <div style={{ textAlign: 'center', background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '18px', padding: '48px 24px' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '.6rem' }} aria-hidden="true">🔱</div>
+              <Dreizack hoehe={36} style={{ margin: '0 auto .8rem' }} />
               <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: '1.5rem', color: '#EAF1F6', margin: '0 0 8px' }}>Fast geschafft!</p>
               <p style={{ color: '#b9cdd6', margin: '0 auto', maxWidth: '46ch', lineHeight: 1.6 }}>
                 Danke, {f.name.split(' ')[0] || 'und willkommen'}. Ihre Anfrage ist bei uns. Wir richten Ihren 7-Tage-Testzugang persönlich ein und schicken Ihnen die Zugangsdaten per E-Mail. Eine Eingangsbestätigung ist schon unterwegs.

@@ -1,3 +1,4 @@
+import Dreizack from '@/components/Dreizack';
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Navbar from '../_components/Navbar'
@@ -172,7 +173,7 @@ export default function FunktionenPage() {
       <section style={{ padding: '140px 0 20px', textAlign: 'center', background: 'radial-gradient(1000px 500px at 50% -10%, rgba(201,168,76,0.12), transparent 60%)' }}>
         <div className="fk-wrap">
           <div style={{ color: GOLD, letterSpacing: '.24em', textTransform: 'uppercase', fontSize: '.8rem', marginBottom: '1.4rem' }}>
-            🔱 Funktionen
+            <Dreizack hoehe={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 8 }} />Funktionen
           </div>
           <h1 className="fk-h1">Das volle Spektrum. <span style={{ color: GOLD }}>Ein System.</span></h1>
           <p style={{ fontSize: 'clamp(1.05rem, 2vw, 1.28rem)', color: '#b9cdd6', maxWidth: '56ch', margin: '0 auto', lineHeight: 1.6 }}>

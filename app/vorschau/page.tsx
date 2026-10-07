@@ -311,7 +311,7 @@ export default function VorschauPage() {
               {/* Kopf: Assistent + Auge */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
                 <span style={{ fontSize: '0.72rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: TEAL }}>
-                  🔱 ARGONAUT · KI-Assistent
+                  <Dreizack hoehe={12} farbe={GOLD} style={{ display: 'inline-block', verticalAlign: '-1px', marginRight: 7 }} />ARGONAUT · KI-Assistent
                 </span>
                 <div className="arg-eye" style={{ position: 'relative', width: '52px', height: '52px' }}>
                   <span className="ring" />
@@ -902,7 +902,7 @@ export default function VorschauPage() {
       {/* ============== SCHRITT 11 · ABSCHLUSS + FOOTER ============== */}
       <section style={{ padding: '60px 0 0', textAlign: 'center', background: 'radial-gradient(900px 460px at 50% 130%, rgba(201,168,76,0.14), transparent 60%)' }}>
         <div className="arg-wrap">
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }} aria-hidden="true">🔱</div>
+          <Dreizack hoehe={40} style={{ margin: '0 auto 1.2rem' }} />
           <h2 className="arg-h2" style={{ fontSize: 'clamp(2rem, 5.2vw, 3.2rem)' }}>
             Werden Sie Teil der <span style={{ color: GOLD }}>Crew</span>.
           </h2>

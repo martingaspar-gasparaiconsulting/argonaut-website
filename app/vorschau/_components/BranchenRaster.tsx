@@ -44,7 +44,7 @@ const EMOJI: Record<string, string> = {
 function emojiFuer(name: string): string {
   if (EMOJI[name]) return EMOJI[name]
   const key = Object.keys(EMOJI).find((k) => name.startsWith(k)) // „Handwerk & Bau I/II"
-  return key ? EMOJI[key] : '🔱'
+  return key ? EMOJI[key] : '🏢'
 }
 
 const norm = (s: string) => s.toLowerCase()

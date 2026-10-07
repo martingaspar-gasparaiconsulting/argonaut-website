@@ -1,3 +1,4 @@
+import Dreizack from '@/components/Dreizack';
 import type { Metadata } from 'next'
 
 // ============================================================================
@@ -43,12 +44,7 @@ export default function BaustellePage() {
         @media (max-width: 560px){ .arg-wordmark{ letter-spacing:.16em } }
       `}</style>
 
-      <div
-        aria-hidden="true"
-        style={{ fontSize: 'clamp(2.4rem, 6vw, 3.6rem)', lineHeight: 1, marginBottom: '1.4rem' }}
-      >
-        🔱
-      </div>
+      <Dreizack hoehe="clamp(2.6rem, 6vw, 3.8rem)" style={{ margin: '0 auto 1.4rem' }} />
 
       <div
         className="arg-wordmark"

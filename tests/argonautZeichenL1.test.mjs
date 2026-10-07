@@ -58,3 +58,25 @@ test('Mittelfuge ist frei: keine Flaeche ueberquert die senkrechte Mitte', () =>
   }
   assert.deepEqual(seiten.sort(), ['L', 'L', 'R', 'R']);
 });
+
+// ---- L1 Teil 2: zeichenSvg fuer HTML-Texte (Dossier, E-Book, Abmeldeseite) ----
+import { zeichenSvg } from '../out/argonautZeichen.js';
+
+test('zeichenSvg: Breite folgt dem Verhaeltnis, Pfad ist drin', () => {
+  const s = zeichenSvg(20);
+  assert.match(s, /^<svg [^>]*width="27\.4" height="20"/);
+  assert.ok(s.includes(ZEICHEN_PFAD));
+  assert.match(s, /fill="#C9A84C"/);
+});
+
+test('zeichenSvg: unsichere Farbe/Stil werden nicht durchgereicht', () => {
+  const s = zeichenSvg(10, '"><script>x</script>', 'a"b<c>');
+  assert.equal(s.includes('<script'), false);
+  assert.match(s, /fill="#C9A84C"/);
+  assert.match(s, /style="abc"/);
+});
+
+test('zeichenSvg: Unsinns-Hoehe faellt auf 24 zurueck', () => {
+  assert.match(zeichenSvg(NaN), /height="24"/);
+  assert.match(zeichenSvg(-5), /height="24"/);
+});

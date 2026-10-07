@@ -8,6 +8,7 @@
 // nichts abgebucht, sondern das Abo gemeldet.
 // ============================================================================
 
+import Dreizack from '@/components/Dreizack';
 import { useState } from 'react'
 import { stufeFuerMitarbeiter, sitzPreis, monatspreis, euro } from '@/lib/tarif'
 import { ibanGueltig } from '@/lib/sepa'
@@ -75,7 +76,7 @@ export default function UpgradeForm({ userEmail, userName }: { userEmail: string
   if (success) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 24px', color: C.text, fontFamily: 'var(--font-dm-sans), sans-serif' }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>🔱</div>
+        <Dreizack hoehe={44} style={{ margin: '0 auto 14px' }} />
         <h2 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 10px' }}>Abo bestätigt — {success.stufe}</h2>
         <p style={{ color: C.textDim, maxWidth: 520, margin: '0 auto', lineHeight: 1.6 }}>
           Vielen Dank. Ihr Abo über <b style={{ color: C.gold }}>{euro(success.brutto)} brutto / Monat</b> ist hinterlegt und Ihr SEPA-Mandat erteilt.

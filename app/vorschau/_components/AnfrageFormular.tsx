@@ -8,6 +8,7 @@
 // Self-contained (unabhängig von den Start-Seiten-Klassen), auf jeder Seite nutzbar.
 // ============================================================================
 
+import Dreizack from '@/components/Dreizack';
 import { useState } from 'react'
 import TerminPicker from './TerminPicker'
 
@@ -90,7 +91,7 @@ export default function AnfrageFormular({ branche }: { branche?: string }) {
 
         {status === 'success' ? (
           <div style={{ marginTop: '32px', background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '16px', padding: '40px 24px' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '.6rem' }} aria-hidden="true">🔱</div>
+            <Dreizack hoehe={36} style={{ margin: '0 auto .8rem' }} />
             <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: '1.4rem', color: '#EAF1F6', margin: '0 0 8px' }}>Anfrage erhalten!</p>
             <p style={{ color: '#b9cdd6', margin: 0 }}>
               Danke, {f.name.split(' ')[0] || 'und bis gleich'}. Wir melden uns persönlich {kontaktLabel} — wie gewünscht. Eine Bestätigung ist unterwegs in Ihr Postfach.

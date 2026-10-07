@@ -1,3 +1,4 @@
+import { zeichenSvg } from '@/lib/argonautZeichen';
 import { createClient } from '@supabase/supabase-js';
 import { widerspruchEintragen, betreiberKennung } from '@/lib/werbeErlaubnisServer';
 
@@ -22,7 +23,7 @@ function seite(titel: string, text: string): Response {
   const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${titel} — ARGONAUT OS</title>
 <style>*{font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}body{margin:0;background:#0A1628;color:#EAF1F6;min-height:100dvh;display:flex;align-items:center;justify-content:center}
 .box{max-width:520px;padding:40px 28px;text-align:center}.t{font-size:26px}h1{font-weight:700;font-size:22px;margin:14px 0 10px}p{color:#b9cdd6;line-height:1.6}a{color:#C9A84C}</style></head>
-<body><div class="box"><div class="t">🔱</div><h1>${titel}</h1><p>${text}</p><p><a href="https://argonaut-os.com">← Zur Startseite</a></p></div></body></html>`;
+<body><div class="box"><div class="t">${zeichenSvg(34)}</div><h1>${titel}</h1><p>${text}</p><p><a href="https://argonaut-os.com">← Zur Startseite</a></p></div></body></html>`;
   return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 

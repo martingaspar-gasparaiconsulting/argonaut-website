@@ -1,3 +1,4 @@
+import Dreizack from '@/components/Dreizack';
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Navbar from '../_components/Navbar'
@@ -92,7 +93,7 @@ export default function BranchenPage() {
       {/* Hero */}
       <section style={{ padding: '130px 0 24px', textAlign: 'center', background: 'radial-gradient(1000px 500px at 50% -8%, rgba(201,168,76,0.12), transparent 60%)' }}>
         <div style={{ maxWidth: '820px', margin: '0 auto', padding: '0 24px' }}>
-          <div style={{ color: GOLD, letterSpacing: '.24em', textTransform: 'uppercase', fontSize: '.8rem', marginBottom: '1.4rem' }}>🔱 Branchen</div>
+          <div style={{ color: GOLD, letterSpacing: '.24em', textTransform: 'uppercase', fontSize: '.8rem', marginBottom: '1.4rem' }}><Dreizack hoehe={13} style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 8 }} />Branchen</div>
           <h1 style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 700, fontSize: 'clamp(2.2rem, 5.4vw, 3.6rem)', lineHeight: 1.08, paddingBottom: '2px', margin: '0 0 1rem' }}>
             Für Ihre Branche <span style={{ color: GOLD }}>gemacht</span>.
           </h1>
