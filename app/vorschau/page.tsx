@@ -27,6 +27,16 @@ export const metadata: Metadata = {
   title: 'ARGONAUT OS — Vorschau',
   description: 'Das Betriebssystem, das jedes Unternehmen haben wird.',
   robots: { index: true, follow: true },
+  // Logo-Tausch L1 (07.10.2026): Linkvorschau (WhatsApp, LinkedIn, Mail) mit
+  // dem neuen Logo. Bewusst NUR hier (gilt fuer / und /vorschau) und nicht
+  // global — Kundenseiten (Angebot, Buchung, Portal) sollen kein
+  // ARGONAUT-Vorschaubild erben.
+  openGraph: {
+    type: 'website',
+    siteName: 'ARGONAUT OS',
+    locale: 'de_DE',
+    images: [{ url: '/images/marke/argonaut-linkvorschau.png', width: 1200, height: 630, alt: 'ARGONAUT OS – Logo' }],
+  },
 }
 
 const NAVY = '#0A1628'
