@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
-import { limitBytes, passtNochRein, speicherStatus, formatBytes } from '@/lib/speicher';
+import { passtNochRein, speicherStatus, formatBytes } from '@/lib/speicher';
+import { speicherKontingent } from '@/lib/speicherKontingentServer';
 
 // ============================================================
 // ARGONAUT OS · Website-Bauer · app/api/webseite-foto/route.ts
@@ -56,9 +57,8 @@ export async function POST(req: Request) {
     const db = admin();
 
     // 3. Speicher-Wächter: aktuelle Belegung gegen das Tarif-Kontingent prüfen.
-    const { data: prof } = await db.from('profiles').select('plan, zusatz_speicher_gb').eq('id', user.id).maybeSingle();
-    const p = prof as { plan?: string | null; zusatz_speicher_gb?: number | null } | null;
-    const limit = limitBytes(p?.plan ?? null, p?.zusatz_speicher_gb ?? 0);
+    // P258: Kontingent nach AGB (100 GB je Mitarbeiter, gepoolt, nie unter der alten Grenze).
+    const { limit } = await speicherKontingent(db, user.id);
     const { data: genutztRaw } = await db.rpc('speicher_bytes_fuer', { owner_key: user.id });
     const genutzt = Number(genutztRaw) || 0;
     if (!passtNochRein(genutzt, limit, datei.size)) {

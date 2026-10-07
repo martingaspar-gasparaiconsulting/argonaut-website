@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase-server';
 import { pruefeVideo, pfadFuer, MAX_BYTES } from '@/lib/socialVideo';
 import { pfadImOrdner } from '@/lib/speicherPfad';
 import { betriebsOrdner } from '@/lib/speicherPfadServer';
-import { limitBytes, passtNochRein, formatBytes } from '@/lib/speicher';
+import { passtNochRein, formatBytes } from '@/lib/speicher';
+import { speicherKontingent } from '@/lib/speicherKontingentServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/marketing/social-video   (C5)
@@ -61,12 +62,10 @@ export async function POST(req: Request) {
     // Faellt die Messung aus, wird NICHT blockiert — ein kaputter Waechter
     // darf niemanden aussperren, aber die Grenze der Datei gilt trotzdem.
     try {
-      const [{ data: belegt }, { data: profil }] = await Promise.all([
+      const [{ data: belegt }, { limit }] = await Promise.all([
         db.rpc('speicher_bytes_fuer', { owner_key: user.id }),
-        db.from('profiles').select('stufe, zusatz_speicher_gb').eq('id', user.id).maybeSingle(),
+        speicherKontingent(db, user.id), // P258: AGB-Formel
       ]);
-      const p = (profil ?? {}) as { stufe?: string | null; zusatz_speicher_gb?: number | null };
-      const limit = limitBytes(p.stufe, p.zusatz_speicher_gb);
       const genutzt = Number(belegt) || 0;
       if (!passtNochRein(genutzt, limit, groesse)) {
         return NextResponse.json({

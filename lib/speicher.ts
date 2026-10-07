@@ -12,6 +12,12 @@
 
 const GB = 1024 * 1024 * 1024;
 
+// AGB § 9a.1 (Paket 258, 07.10.2026): 100 GB je Mitarbeiter, gepoolt im Betrieb,
+// dazu Zusatzbloecke. Gleicher Wert wie lib/tarif.ts SPEICHER_INKL_PRO_MA_GB —
+// tests/speicherAgbP258 wacht, dass beide gleich bleiben (hier kein Import,
+// damit die Datei ohne Abhaengigkeiten bleibt).
+export const AGB_GB_JE_NUTZER = 100;
+
 // Grundmenge je Tarif-Stufe in GB. Enterprise = 1 TB (1024 GB).
 export const SPEICHER_LIMIT_GB: Record<string, number> = {
   solo: 5,
@@ -58,4 +64,37 @@ export function formatBytes(bytes: number): string {
   if (b >= GB) return (b / GB).toFixed(b >= 10 * GB ? 0 : 1) + ' GB';
   if (b >= MB) return (b / MB).toFixed(0) + ' MB';
   return Math.max(0, Math.round(b / 1024)) + ' KB';
+}
+
+// ============================================================================
+// Paket 258 · Kontingent nach AGB-Formel
+//
+// Claude-Befund 07.10.2026: Die Upload-Routen lasen die Tarif-Stufe aus
+// profiles.stufe bzw. profiles.plan. Passt der Wert zu keiner Stufe (oder fehlt
+// die Spalte), griff STANDARD_LIMIT_GB = 25 GB — fuer praktisch jeden Betrieb.
+// Die AGB versprechen aber 100 GB je Mitarbeiter (gepoolt).
+//
+// Neue Regel:  Kontingent = max(alte Grenze der Stufe, Nutzer x 100 GB) + Zusatz
+//   · Nutzer = Chef + angelegte Mitarbeiter des Betriebs, mindestens 1.
+//   · NIE unter der alten Grenze — niemand bekommt weniger als vorher.
+//   · Kaputte Eingaben (NaN, negativ) zaehlen als 1 Nutzer bzw. 0 Zusatz.
+// ============================================================================
+
+/** Nutzerzahl sauber machen: ganze Zahl, mindestens 1. */
+export function nutzerZahl(n?: number | null): number {
+  const x = Math.floor(Number(n));
+  return Number.isFinite(x) && x >= 1 ? x : 1;
+}
+
+/** Kontingent in GB nach AGB-Formel (ohne Zusatz). */
+export function agbGrundGb(stufe: string | null | undefined, nutzer?: number | null): number {
+  const alt = SPEICHER_LIMIT_GB[(stufe || '').trim().toLowerCase()] ?? STANDARD_LIMIT_GB;
+  return Math.max(alt, nutzerZahl(nutzer) * AGB_GB_JE_NUTZER);
+}
+
+/** Kontingent in Bytes nach AGB-Formel: max(alte Grenze, Nutzer x 100 GB) + Zusatz. */
+export function limitBytesAgb(stufe: string | null | undefined, nutzer?: number | null, zusatzGb?: number | null): number {
+  const zusatzRaw = Number(zusatzGb);
+  const zusatz = Number.isFinite(zusatzRaw) && zusatzRaw > 0 ? zusatzRaw : 0;
+  return Math.round((agbGrundGb(stufe, nutzer) + zusatz) * GB);
 }
