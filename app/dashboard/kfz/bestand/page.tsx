@@ -11,7 +11,8 @@
 // erbt dessen Freigabe (Modul „kfz").
 // Paket 260 (K1 Teil 2): Bestandsliste als PDF, Hinweis „aus der Werkstatt
 // bekannt" über die FIN (werkstatt_fahrzeuge), Eigene Felder je Fahrzeug.
-// Andockpunkt: K2 Handelsakte (Klick auf ein Fahrzeug).
+// Paket 261 (K2): Klick auf ein Fahrzeug öffnet die Handelsakte
+// (/dashboard/kfz/bestand/[id]); „✎" bzw. ?bearbeiten=<id> öffnet das Formular.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties, type ReactNode } from 'react';
@@ -85,6 +86,7 @@ export default function FahrzeugbestandPage() {
   const [entwurf, setEntwurf] = useState<KundenEinstellung>({});
   const [loeschFrage, setLoeschFrage] = useState<string | null>(null);
   const [prozent, setProzent] = useState('-2');
+  const [oeffneId, setOeffneId] = useState<string | null>(null);
   const [treffer, setTreffer] = useState<Record<string, FinTreffer>>({});
   const [felder, setFelder] = useState<EigenesFeld[]>([]);
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
@@ -133,10 +135,17 @@ export default function FahrzeugbestandPage() {
       setUid(id); setBesitzer(betrieb); setIstChef(betrieb === id);
       await ladeAlles(betrieb);
       setLaden(false);
+      // P261: aus der Handelsakte „✎ Stammdaten" -> ?bearbeiten=<id>
+      try { const q = new URLSearchParams(window.location.search).get('bearbeiten'); if (q) setOeffneId(q); } catch { /* ohne Parameter */ }
     })();
   }, [ladeAlles]);
 
   useEffect(() => { if (vorlage && !formOffen) setForm(leer(vorlage)); }, [vorlage, formOffen]);
+  useEffect(() => {
+    if (!oeffneId || !vorlage) return;
+    const b = liste.find((x) => x.id === oeffneId);
+    if (b) { setOeffneId(null); bearbeiten(b); }
+  }, [oeffneId, liste, vorlage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const standortName = useCallback((id: string | null) => standorte.find((s) => s.id === id)?.name ?? '—', [standorte]);
   const statusInfo = useCallback((key: string) => vorlage?.status.find((s) => s.key === key) ?? { key, label: key, farbe: 'dim' as const }, [vorlage]);
@@ -152,6 +161,7 @@ export default function FahrzeugbestandPage() {
   const sichtbar = (k: string) => vorlage?.spalten.find((s) => s.key === k)?.sichtbar ?? false;
 
   function neuOeffnen() { setBearbeite(null); setNmExtra({}); setForm(leer(vorlage)); setFormOffen(true); setFehler(null); setOk(null); }
+  function akteOeffnen(b: Bestand) { if (typeof window !== 'undefined') window.location.href = `/dashboard/kfz/bestand/${b.id}`; }
   function bearbeiten(b: Bestand) { setBearbeite(b.id); setNmExtra({ ...(werteMap[b.id] ?? {}) }); setForm(ausBestand(b)); setFormOffen(true); setFehler(null); setOk(null); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
   async function speichern() {
@@ -471,8 +481,9 @@ export default function FahrzeugbestandPage() {
                   besteuerung: b.besteuerung === '25a' ? '§ 25a' : b.besteuerung === 'regel' ? 'Regelsteuer' : '—',
                 };
                 return (
-                  <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => bearbeiten(b)}>
-                    <td style={s.td} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={auswahl.has(b.id)} onChange={() => umschalten(b.id)} aria-label={`${b.marke ?? ''} ${b.modell ?? ''} auswählen`} /></td>
+                  <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => akteOeffnen(b)}>
+                    <td style={s.td} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={auswahl.has(b.id)} onChange={() => umschalten(b.id)} aria-label={`${b.marke ?? ''} ${b.modell ?? ''} auswählen`} />
+                      <button style={s.stift} title="Stammdaten bearbeiten" aria-label="Stammdaten bearbeiten" onClick={() => bearbeiten(b)}>✎</button></td>
                     {vorlage.spalten.filter((x) => x.sichtbar).map((x) => <td key={x.key} style={x.key === 'vk' || x.key === 'ek' ? s.tdR : s.td}>{zelle[x.key] ?? '—'}</td>)}
                   </tr>
                 );
@@ -486,7 +497,7 @@ export default function FahrzeugbestandPage() {
             const st = statusInfo(b.status);
             const t = standtage(b, tag);
             return (
-              <div key={b.id} style={s.fzKarte} onClick={() => bearbeiten(b)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') bearbeiten(b); }}>
+              <div key={b.id} style={s.fzKarte} onClick={() => akteOeffnen(b)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') akteOeffnen(b); }}>
                 <div style={s.bild}>{(b.marke ?? vorlage.einheit).toUpperCase()}</div>
                 <div style={{ padding: '10px 12px', display: 'grid', gap: 4 }}>
                   <b>{[b.marke, b.modell].filter(Boolean).join(' ') || '—'}</b>
@@ -551,6 +562,7 @@ const s: Record<string, CSSProperties> = {
   karten: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 },
   fzKarte: { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer' },
   bild: { aspectRatio: '16 / 9', maxWidth: '100%', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg, #14294A, #2a3f63)', color: 'rgba(255,255,255,0.7)', fontWeight: 700, letterSpacing: '0.08em' },
+  stift: { background: 'none', border: 0, color: C.dim, cursor: 'pointer', marginLeft: 6, fontSize: 14 },
   zeile: { display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' },
   hinweis: { background: 'rgba(95,168,232,0.08)', border: '1px solid rgba(95,168,232,0.35)', borderRadius: 10, padding: '8px 12px', fontSize: 13.5 },
 };

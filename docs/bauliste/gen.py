@@ -103,7 +103,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 07.10.2026 · _p260 unterwegs · Fahrzeugbestand K1 komplett (Vorlage, Liste, PDF, FIN-Hinweis)</div>
+<div class="eyebrow">ARGONAUT OS · Stand 07.10.2026 · _p261 unterwegs · K1 Fahrzeugbestand und K2 Handelsakte gebaut</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
