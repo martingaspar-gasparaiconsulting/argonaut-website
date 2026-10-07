@@ -26,6 +26,8 @@ import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
 import { istMitarbeiterKennung, RECHNUNG_NUR_CHEF, ZAHLUNG_NUR_CHEF, STORNO_NUR_CHEF, ZAHLUNG_LOESCHEN_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 // Paket 197 (GoBD): verschickte Rechnungen fest ablegen, danach festgeschrieben.
 import { stornoKnoepfe, stornoFrage, stornoFehlerText, grundBereinigen } from '@/lib/stornoRechnung';
+import { sonderfallLesen, sonderfallLabel } from '@/lib/steuerSonderfall';
+import { anschriftZerlegen } from '@/lib/rechnungAnschrift';
 import { ABLAGE_ANLASS_TEXT, FESTGESCHRIEBEN_HINWEIS, istFestgeschrieben, originalPdf, pruefsummeKurz, type AblageZeile } from '@/lib/rechnungAblage';
 
 // ============================================================
@@ -602,7 +604,12 @@ export default function RechnungDetail() {
     const ust = feldWert(q, "ust_id", "ust_idnr", "ust_id_nr", "umsatzsteuer_id", "vat");
     const email = feldWert(q, "email", "e_mail", "mail");
     const anschrift = [strasse, [plz, ort].filter(Boolean).join(" ")].filter(Boolean).join("\n");
-    return { name, adresse: { strasse, plz, ort, land }, ust_idnr: ust, email, anschrift };
+    // Paket 268: Freitext-Empfänger (z. B. Fahrzeugverkauf) — Anschrift und USt-IdNr. aus der Rechnung selbst
+    if (!firma && !kontakt && rechnung?.empfaenger_anschrift) {
+      const a = anschriftZerlegen(rechnung.empfaenger_anschrift);
+      return { name, adresse: a, ust_idnr: ust || rechnung?.ust_id_kunde || "", email, anschrift: String(rechnung.empfaenger_anschrift) };
+    }
+    return { name, adresse: { strasse, plz, ort, land }, ust_idnr: ust || rechnung?.ust_id_kunde || "", email, anschrift };
   }
 
   // P32: E-Rechnung (XRechnung-XML) erzeugen und herunterladen
@@ -761,6 +768,10 @@ export default function RechnungDetail() {
         // Paket 267: Stornorechnung -> Titel, Verweis, keine Zahlungsaufforderung
         storno_zu: rechnung?.storno_zu ?? null,
         storno_bezug: stornoBezug ? { nummer: stornoBezug.nummer, datum: stornoBezug.datum, bezahlt: stornoBezug.bezahlt } : null,
+        // Paket 268: § 25a / steuerfrei + vorab Verrechnetes (Anzahlung, Inzahlungnahme) — nur aus der gespeicherten Rechnung
+        steuer_sonderfall: rechnung?.steuer_sonderfall ?? null,
+        vorab_bezahlt: rechnung?.vorab_bezahlt ?? null,
+        zahlungsstatus: rechnung?.zahlungsstatus ?? null,
         // P54: Rechnungsart und Zahlungsbedingungen aus dem Formular —
         // NICHT aus rechnung, das ist der Stand vor dem letzten Speichern.
         ...zusatzFuerSpeichern(zusatz),
@@ -788,6 +799,9 @@ export default function RechnungDetail() {
         geschaeftsfuehrer: p.firma_geschaeftsfuehrer || "",
         registergericht: p.firma_registergericht || "",
         hrb: p.firma_hrb || "",
+        // Paket 268 (Claude-Befund): die Empfänger-Anschrift ging nie an die PDF-Route —
+        // § 14 Abs. 4 Nr. 1 UStG verlangt sie. Aus Kontakt/Firma, sonst aus der Rechnung (Freitext).
+        empfaenger_anschrift: baueEmpfaenger().anschrift || "",
       };
 
       const res = await fetch("/api/rechnung-pdf", {
@@ -1413,6 +1427,15 @@ export default function RechnungDetail() {
             <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "10px 2px 0", lineHeight: 1.5 }}>
               Auf der Rechnung wird keine Umsatzsteuer ausgewiesen. Es erscheint der Hinweis:
               „Gemäß §19 UStG wird keine Umsatzsteuer berechnet."
+            </p>
+          )}
+          {sonderfallLesen(rechnung?.steuer_sonderfall) && (
+            <p style={{ color: C.gold, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "10px 2px 0", lineHeight: 1.5 }}>
+              Steuerlicher Sonderfall: <b>{sonderfallLabel(sonderfallLesen(rechnung?.steuer_sonderfall))}</b>.
+              {sonderfallLesen(rechnung?.steuer_sonderfall) === "diff25a"
+                ? " Positionen mit 0 % sind differenzbesteuert und stehen ohne Steuerausweis auf der Rechnung, mit Pflichthinweis."
+                : " Positionen mit 0 % sind steuerfrei, der Pflichthinweis steht auf der Rechnung."}
+              {Number(rechnung?.vorab_bezahlt) > 0 ? ` Vorab verrechnet (Anzahlung, Inzahlungnahme): ${geld(Number(rechnung?.vorab_bezahlt), waehrung)}.` : ""}
             </p>
           )}
         </Karte>

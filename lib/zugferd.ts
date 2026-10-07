@@ -17,6 +17,8 @@
 
 import { steuerGruppen, rundungWieGespeichert, type SteuerPosten, type Rundung } from '../app/dashboard/_components/steuerLogik';
 import { leseZahlOder, centRunden } from './zahlen';
+// Paket 268: § 25a / steuerfreie EU-Lieferung / Ausfuhr — Kategorie und Befreiungsgrund je 0-%-Position
+import { sonderfallLesen, xmlKategorie } from './steuerSonderfall';
 
 // ─── Typen (bewusst tolerant — Daten kommen aus verschiedenen Quellen) ───
 
@@ -255,6 +257,15 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   // § 14a Abs. 5 UStG. Kleinunternehmer geht vor: wer keine Steuer ausweist,
   // kann sie auch nicht uebertragen.
   const reverseCharge = !klein && !!rechnung?.reverse_charge;
+  // Paket 268: Sonderfall nur ohne § 19 / § 13b. Positionen mit 0 % tragen dann
+  // E (VATEX-EU-F, § 25a), K (VATEX-EU-IC) oder G (VATEX-EU-G), alle anderen S.
+  const sonderfall = (!klein && !reverseCharge) ? sonderfallLesen(rechnung?.steuer_sonderfall) : null;
+  const sonderKat = sonderfall ? xmlKategorie(sonderfall) : null;
+  // Bei der EU-Lieferung steht das Land des Käufers in seiner USt-IdNr. (EL = Griechenland).
+  if (sonderfall === 'eu_ig' && buyer.adresse.land === 'DE') {
+    const pre = String(buyer.ust_idnr || '').replace(/\s/g, '').slice(0, 2).toUpperCase();
+    if (/^[A-Z]{2}$/.test(pre) && pre !== 'DE') buyer.adresse.land = pre === 'EL' ? 'GR' : pre === 'XI' ? 'GB' : pre;
+  }
   const waehrung = String(rechnung?.waehrung || 'EUR').toUpperCase().slice(0, 3) || 'EUR';
 
   // ── Steuer identisch zum PDF berechnen ──
@@ -289,6 +300,8 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   if (!buyer.adresse.ort) warnungen.push('Käufer-Ort fehlt');
   if (!rechnung?.rechnungsnummer) warnungen.push('Rechnungsnummer fehlt');
   if (istXR && !leitweg_id) warnungen.push('Leitweg-ID fehlt (bei XRechnung an Behörden Pflicht)');
+  if (sonderfall === 'eu_ig' && !buyer.ust_idnr) warnungen.push('Steuerfreie EU-Lieferung: USt-IdNr. des Käufers fehlt');
+  if ((sonderfall === 'eu_ig' || sonderfall === 'ausfuhr') && !seller.ust_idnr) warnungen.push('Steuerfreie Lieferung: Ihre USt-IdNr. fehlt');
 
   const ph = (wert: string, fallback: string) => wert ? x(wert) : x(fallback);
 
@@ -323,7 +336,7 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
     const einzel = leseZahlOder(p?.einzelpreis, 0);
     const netto = zeilenNetto(p, rundung);
     const satz = ohneSteuer ? 0 : leseZahlOder(p?.mwst_satz, 0);
-    const cat = taxCat;
+    const cat = sonderKat ? (satz === 0 ? sonderKat.kategorie : 'S') : taxCat;
     // Einheit: ZUGFeRD nutzt UN/ECE-Codes. "C62" = Stück (Default), "HUR" = Stunde.
     const einheitCode = mapEinheit(p?.einheit);
     return `
@@ -366,7 +379,16 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
         <ram:CategoryCode>${taxCat}</ram:CategoryCode>
         <ram:RateApplicablePercent>0</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>`
-    : s.gruppen.map((g) => `
+    : s.gruppen.map((g) => (sonderKat && g.satz === 0) ? `
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+        <ram:ExemptionReason>${x(sonderKat.grund)}</ram:ExemptionReason>
+        <ram:BasisAmount>${n2(g.netto)}</ram:BasisAmount>
+        <ram:CategoryCode>${sonderKat.kategorie}</ram:CategoryCode>
+        <ram:ExemptionReasonCode>${sonderKat.code}</ram:ExemptionReasonCode>
+        <ram:RateApplicablePercent>0</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>` : `
       <ram:ApplicableTradeTax>
         <ram:CalculatedAmount>${n2(g.steuer)}</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
@@ -522,7 +544,12 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
         ${buyerTaxReg}
       </ram:BuyerTradeParty>
     </ram:ApplicableHeaderTradeAgreement>
-    <ram:ApplicableHeaderTradeDelivery>
+    <ram:ApplicableHeaderTradeDelivery>${sonderfall === 'eu_ig' ? `
+      <ram:ShipToTradeParty>
+        <ram:PostalTradeAddress>
+          <ram:CountryID>${x(buyer.adresse.land)}</ram:CountryID>
+        </ram:PostalTradeAddress>
+      </ram:ShipToTradeParty>` : ''}
       <ram:ActualDeliverySupplyChainEvent>
         <ram:OccurrenceDateTime>
           <udt:DateTimeString format="102">${leistDatum}</udt:DateTimeString>

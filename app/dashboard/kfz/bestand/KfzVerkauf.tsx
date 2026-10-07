@@ -21,6 +21,10 @@ import {
   alsText, dateiName, geld, type Verkauf, type FahrzeugFuerVerkauf, type InzahlungFahrzeug, type Firmenkopf, type DokArt, type Zusatz,
 } from '@/lib/kfzVerkauf';
 import { verkaufPdf } from '@/lib/kfzVerkaufPdf';
+// Paket 268 (K7): Rechnung aus dem Verkauf — § 25a / Regelsteuer / EU / Ausfuhr
+import { LIEFERUNGEN, lieferungLesen, steuerfall, rechnungBauen, type Lieferung } from '@/lib/kfzRechnung';
+import { sonderfallLabel } from '@/lib/steuerSonderfall';
+import { useDarfAbrechnen } from '../../_components/useDarfAbrechnen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -29,7 +33,8 @@ const supabase = createBrowserClient(
 const C = { navy: '#0A1628', navy2: '#0F2036', navy3: '#14294A', gold: '#C9A84C', text: '#E8EDF4', dim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', ok: '#4CAF7D', warn: '#E0A24C', bad: '#E06666', info: '#5FA8E8' };
 const FARBE: Record<string, string> = { ok: C.ok, warn: C.warn, bad: C.bad, info: C.info, gold: C.gold, dim: C.dim };
 
-type Zeile = Verkauf & { id: string; owner_user_id: string; signaturen: Record<string, string> | null; storno_grund: string | null; erstellt_am: string };
+type Zeile = Verkauf & { id: string; owner_user_id: string; signaturen: Record<string, string> | null; storno_grund: string | null; erstellt_am: string; rechnung_id?: string | null; lieferung?: string | null };
+type RechnungKurz = { id: string; rechnungsnummer: string | null; zahlungsstatus: string | null; brutto_summe: number | null };
 type Ankauf = InzahlungFahrzeug & { id: string; status: string };
 type SigStand = { token: string; status: string; signiert_am: string | null };
 export type VerkaufFahrzeug = { id: string; owner_user_id: string; bestandStatus: string; fz: FahrzeugFuerVerkauf };
@@ -94,6 +99,12 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
   const [link, setLink] = useState<string | null>(null);
   const [storno, setStorno] = useState<string | null>(null);
   const [loeschFrage, setLoeschFrage] = useState(false);
+  // Paket 268 (K7)
+  const darfAbrechnen = useDarfAbrechnen();
+  const [lieferung, setLieferung] = useState<Lieferung>('inland');
+  const [eigeneUstId, setEigeneUstId] = useState<string | undefined>(undefined);
+  const [rechnung, setRechnung] = useState<RechnungKurz | null>(null);
+  const [rHinweise, setRHinweise] = useState<string[]>([]);
 
   const aktiv = liste.find((x) => x.status !== 'storniert') ?? null;
   const alte = liste.filter((x) => x.status === 'storniert');
@@ -107,6 +118,12 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
     setListe(zeilen);
     const a = zeilen.find((x) => x.status !== 'storniert') ?? null;
     setE(a ? ausZeile(a) : null);
+    // Paket 268: Lieferort und vorhandene Rechnung
+    setLieferung(lieferungLesen(a?.lieferung));
+    if (a?.rechnung_id) {
+      const rq = await supabase.from('rechnungen').select('id, rechnungsnummer, zahlungsstatus, brutto_summe').eq('id', a.rechnung_id).maybeSingle();
+      setRechnung(((rq.data as unknown) as RechnungKurz | null) ?? null);
+    } else setRechnung(null);
     const ak = await supabase.from('kfz_ankauf').select('id, nr, status, bestand_id, marke, modell, fin, kennzeichen, km_stand, verkaeufer_art, ankaufpreis, angebot')
       .in('status', ['offen', 'angeboten', 'angekauft']).order('erstellt_am', { ascending: false }).limit(200);
     // das eigene Fahrzeug (aus dessen Ankauf) kann nicht in Zahlung gehen
@@ -121,6 +138,35 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
   }, [f.id, f.owner_user_id]);
 
   useEffect(() => { void lade(); }, [lade]);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const r = await fetch('/api/betrieb-firmendaten', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = (await r.json()) as { firma?: Record<string, string | null> };
+        setEigeneUstId(j.firma?.firma_ust_id ?? '');
+      } catch { /* ohne Firmendaten prüft der Server */ }
+    })();
+  }, []);
+
+  async function rechnungErstellen() {
+    if (!aktiv) return;
+    setBusy(true); setFehler(null); setFehlerListe([]); setOk(null); setRHinweise([]);
+    try {
+      const res = await fetch('/api/rechnung-aus-kfz-verkauf', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verkaufId: aktiv.id, lieferung }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { rechnungId?: string; bereitsVorhanden?: boolean; error?: string; fehler?: string[]; hinweise?: string[] };
+      if (!res.ok || !j.rechnungId) {
+        if (Array.isArray(j.fehler) && j.fehler.length) setFehlerListe(j.fehler); else setFehler(j.error || 'Rechnung konnte nicht erstellt werden.');
+        return;
+      }
+      setRHinweise(Array.isArray(j.hinweise) ? j.hinweise : []);
+      setOk(j.bereitsVorhanden ? 'Zu diesem Verkauf gibt es schon eine Rechnung.' : 'Rechnung erstellt. Prüfen Sie sie und erzeugen Sie dort das PDF.');
+      await lade();
+    } finally { setBusy(false); }
+  }
 
   async function anlegen() {
     setBusy(true); setFehler(null); setOk(null);
@@ -400,6 +446,55 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
         </div>
         <div style={{ ...s.hinweis, marginTop: 10 }}>Die Vertragstexte sind Vorlagen von ARGONAUT. Bitte lassen Sie sie vor dem ersten Einsatz von Ihrem Anwalt prüfen. Unterschriebene Fassungen finden Sie unter <a href="/dashboard/signaturen" style={{ color: C.info }}>Signaturen</a>.</div>
       </div>
+
+      {(aktiv.status === 'vertrag' || aktiv.status === 'uebergeben') && (() => {
+        const gueltig = rechnung && rechnung.zahlungsstatus !== 'storniert';
+        const fall = steuerfall(f.fz.besteuerung, lieferung, aktiv, eigeneUstId === undefined ? 'vorhanden' : eigeneUstId, f.fz, heute());
+        const vorschau = fall.fehler.length ? null : rechnungBauen(aktiv, f.fz, fall.sonderfall, null, null);
+        return (
+          <div style={s.karte}>
+            <h3 style={s.h3}>Rechnung</h3>
+            {gueltig ? (
+              <div style={s.reihe}>
+                <span>Rechnung <b>{rechnung.rechnungsnummer ?? '—'}</b> · {geld(Number(rechnung.brutto_summe) || 0)} · {rechnung.zahlungsstatus}</span>
+                <a href={`/dashboard/rechnungen/${rechnung.id}`} style={{ ...s.btn, textDecoration: 'none' }}>🧾 Rechnung öffnen</a>
+              </div>
+            ) : darfAbrechnen === false ? (
+              <div style={s.dim}>Rechnungen erstellt die Geschäftsleitung oder wer „Darf abrechnen" hat.</div>
+            ) : (
+              <>
+                {rechnung && rechnung.zahlungsstatus === 'storniert' && <div style={{ ...s.dim, marginBottom: 8 }}>Die bisherige Rechnung {rechnung.rechnungsnummer ?? ''} ist storniert — Sie können eine neue erstellen.</div>}
+                <div style={{ ...s.tag }}>Wohin geht das Fahrzeug?</div>
+                <div style={{ ...s.reihe, marginBottom: 8 }}>
+                  {LIEFERUNGEN.map((l) => (
+                    <button key={l.key} title={l.text} style={{ ...s.chip, ...(lieferung === l.key ? { borderColor: C.gold, color: C.gold } : {}) }} onClick={() => setLieferung(l.key)}>{l.label}</button>
+                  ))}
+                </div>
+                <div style={s.dim}>{LIEFERUNGEN.find((l) => l.key === lieferung)?.text}</div>
+                {fall.fehler.length > 0 && <div style={s.fehler}>{fall.fehler.map((x) => <div key={x}>• {x}</div>)}</div>}
+                {vorschau && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ ...s.dim, marginBottom: 6 }}>Steuerfall: <b style={{ color: C.text }}>{fall.sonderfall ? sonderfallLabel(fall.sonderfall) : 'Regelbesteuerung, 19 % Umsatzsteuer'}</b></div>
+                    <table style={s.tab}><tbody>
+                      {vorschau.posten.map((p, i) => (
+                        <tr key={i}><td style={s.td}>{p.bezeichnung}</td><td style={s.tdR}>{p.mwst_satz === 0 ? (fall.sonderfall === 'diff25a' ? '§ 25a' : 'steuerfrei') : `${p.mwst_satz} %`}</td><td style={s.tdR}>{geld(p.gesamt_netto)}</td></tr>
+                      ))}
+                      {vorschau.steuer > 0 && <tr><td style={s.td}>Umsatzsteuer</td><td style={s.tdR}></td><td style={s.tdR}>{geld(vorschau.steuer)}</td></tr>}
+                      <tr><td style={{ ...s.td, fontWeight: 800 }}>Rechnungsbetrag</td><td style={s.tdR}></td><td style={{ ...s.tdR, fontWeight: 800 }}>{geld(vorschau.brutto)}</td></tr>
+                      {vorschau.vorab > 0 && <tr><td style={s.td}>Vorab verrechnet (Anzahlung, Inzahlungnahme)</td><td style={s.tdR}></td><td style={s.tdR}>− {geld(vorschau.vorab)}</td></tr>}
+                      {vorschau.vorab > 0 && <tr><td style={{ ...s.td, fontWeight: 700 }}>Noch zu zahlen</td><td style={s.tdR}></td><td style={{ ...s.tdR, fontWeight: 700 }}>{geld(vorschau.rest)}</td></tr>}
+                    </tbody></table>
+                    {[...fall.hinweise, ...vorschau.hinweise].length > 0 && <div style={s.hinweis}>{[...fall.hinweise, ...vorschau.hinweise].map((x) => <div key={x}>• {x}</div>)}</div>}
+                    <div style={{ ...s.dim, margin: '6px 0' }}>Die Inzahlungnahme mindert den Rechnungsbetrag nicht — sie steht als Zahlungshinweis auf der Rechnung. Grundlage ist der <b>gespeicherte</b> Stand des Verkaufs.</div>
+                    <button style={{ ...s.gold, opacity: busy || darfAbrechnen !== true ? 0.6 : 1 }} disabled={busy || darfAbrechnen !== true} onClick={() => void rechnungErstellen()}>🧾 Rechnung erstellen</button>
+                  </div>
+                )}
+              </>
+            )}
+            {rHinweise.length > 0 && <div style={s.hinweis}>{rHinweise.map((x) => <div key={x}>• {x}</div>)}</div>}
+          </div>
+        );
+      })()}
 
       {istChef && (aktiv.status === 'angebot') && (
         <div style={s.karte}>

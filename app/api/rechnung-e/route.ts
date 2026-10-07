@@ -78,6 +78,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Paket 268: vor der Rechnung Verrechnetes (Anzahlung, Inzahlungnahme beim
+    // Fahrzeugverkauf) ist BT-113 — sonst stuende im XML der volle Betrag als zahlbar.
+    if (!istSchluss) {
+      const vorab = Number(rechnung?.vorab_bezahlt);
+      if (Number.isFinite(vorab) && vorab > 0) vorausgezahlt += vorab;
+    }
+
     const ergebnis = baueZugferdXml({
       rechnung,
       positionen,

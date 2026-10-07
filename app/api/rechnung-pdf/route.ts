@@ -12,6 +12,8 @@ import { pflichtangabenFuss } from '@/lib/rechnungFuss';
 // getesteten Bibliothek; hier wird nur noch daraus HTML gemacht.
 import { baueSchlussrechnung, type AbschlagPosten } from '@/lib/abschlagsrechnung';
 import { dokumentTitel, stornoBezugText, stornoZahlungText } from '@/lib/stornoRechnung';
+// Paket 268: § 25a / steuerfreie EU-Lieferung / Ausfuhr und vorab Verrechnetes (Anzahlung, Inzahlungnahme)
+import { sonderfallLesen, spaltenText, gruppenLabel, pflichtHinweis, zahlNachVorab } from '@/lib/steuerSonderfall';
 
 export const runtime = 'nodejs';
 
@@ -81,6 +83,8 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
   const waehrung = rechnung?.waehrung || 'EUR';
   const klein = !!rechnung?.kleinunternehmer;
+  // Paket 268: steuerlicher Sonderfall — nur ohne § 19 und ohne § 13b wirksam.
+  const sonderfall = (!klein && !rechnung?.reverse_charge) ? sonderfallLesen(rechnung?.steuer_sonderfall) : null;
 
   // White-Label: Marke des Betriebs (Logo + Farben aus dem CI-Speicher web_ci).
   //
@@ -125,7 +129,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
       <td class="r">${zahl(p.menge)}</td>
       <td class="c">${esc(p.einheit) || 'Stk'}</td>
       <td class="r">${geld(p.einzelpreis, waehrung)}</td>
-      ${klein ? '' : `<td class="r">${zahl(p.mwst_satz)} %</td>`}
+      ${klein ? '' : `<td class="r">${esc(spaltenText(sonderfall, Number(p.mwst_satz) || 0) ?? (zahl(p.mwst_satz) + ' %'))}</td>`}
       <td class="r stark">${geld(netto, waehrung)}</td>
     </tr>`;
   }).join('');
@@ -135,7 +139,9 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   const empfaenger: string[] = [];
   if (firmaName) empfaenger.push(esc(firmaName));
   if (kontaktName) empfaenger.push(esc(kontaktName));
-  if (aussteller?.empfaenger_anschrift) empfaenger.push(esc(aussteller.empfaenger_anschrift));
+  if (aussteller?.empfaenger_anschrift) empfaenger.push(...String(aussteller.empfaenger_anschrift).split(/\n+/).map((z) => esc(z)));
+  // Paket 268: USt-IdNr. des Empfängers (Pflicht bei steuerfreier EU-Lieferung und § 13b)
+  if (rechnung?.ust_id_kunde && String(rechnung.ust_id_kunde).trim()) empfaenger.push('USt-IdNr.: ' + esc(rechnung.ust_id_kunde));
   const empfaengerHtml = empfaenger.length
     ? empfaenger.map((e) => `<div>${e}</div>`).join('')
     : '<div class="dim">— kein Empfänger zugeordnet —</div>';
@@ -168,6 +174,17 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
 
   if (klein) {
     summenHtml = `<div class="zeile brutto"><span>Rechnungsbetrag</span><span>${geld(rechnung?.brutto_summe ?? rechnung?.netto_summe, waehrung)}</span></div>`;
+  } else if (sonderfall && hatGruppen) {
+    // Paket 268: die 0-%-Gruppe ist der Sonderfall (§ 25a ohne Steuerausweis
+    // bzw. steuerfrei), Gruppen mit Steuersatz stehen normal daneben.
+    const zeilen = s.gruppen.map((g) => g.satz === 0
+      ? `<div class="zeile"><span class="label">${esc(gruppenLabel(sonderfall))}</span><span>${geld(g.netto, waehrung)}</span></div>`
+      : `<div class="zeile"><span class="label">Entgelt ${geld(g.netto, waehrung)} zzgl. ${satzText(g.satz)} % Umsatzsteuer</span><span>${geld(g.steuer, waehrung)}</span></div>`).join('');
+    const mitSteuer = s.gruppen.filter((g) => g.satz !== 0).reduce((a, g) => a + g.netto, 0);
+    summenHtml = `
+      ${zeilen}
+      ${mitSteuer !== 0 ? `<div class="zeile"><span class="label">Umsatzsteuer gesamt</span><span>${geld(s.steuer, waehrung)}</span></div>` : ''}
+      <div class="zeile brutto"><span>Gesamtbetrag</span><span>${geld(s.brutto, waehrung)}</span></div>`;
   } else if (!hatGruppen) {
     // Keine Positionen mitgeliefert — wir zeigen ehrlich die gespeicherten Werte.
     summenHtml = `
@@ -300,28 +317,43 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
     ? `<div class="hinweis">Abschlagsrechnung für die bis heute erbrachten Leistungen (§ 632a BGB). Die Aufstellung der Leistungen entnehmen Sie den Positionen.</div>`
     : '';
 
+  // Paket 268: Pflichthinweis zum Sonderfall (§ 14a Abs. 3 / Abs. 6 UStG)
+  const sonderHinweis = sonderfall
+    ? `<div class="hinweis"><strong>${esc(pflichtHinweis(sonderfall, aussteller?.ust_idnr, rechnung?.ust_id_kunde))}</strong></div>`
+    : '';
+
   const kleinHinweis = klein
     ? `<div class="hinweis">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</div>`
     : '';
 
   // Zahlungsangaben — der zu zahlende Betrag ist der ausgewiesene.
-  const zahlBetrag = klein
+  const zahlBetragGesamt = klein
     ? (rechnung?.brutto_summe ?? rechnung?.netto_summe)
     : (hatGruppen ? s.brutto : rechnung?.brutto_summe);
+  // Paket 268: vor der Rechnung Verrechnetes (Anzahlung, Inzahlungnahme) mindert den Zahlbetrag.
+  const vorab = zahlNachVorab(Number(zahlBetragGesamt) || 0, rechnung?.vorab_bezahlt);
+  const zahlBetrag = vorab.vorab > 0 ? vorab.rest : zahlBetragGesamt;
+  const vorabZeile = vorab.vorab > 0
+    ? `<div>Bereits erhalten bzw. verrechnet: <strong>${geld(vorab.vorab, waehrung)}</strong></div>`
+    : '';
 
   const bank = istStorno
     ? `<div>${esc(stornoZahlungText(rechnung?.storno_bezug?.bezahlt))}</div>`
+    : (vorab.vorab > 0 && vorab.rest <= 0)
+    ? `${vorabZeile}<div>Der Rechnungsbetrag ist damit vollständig beglichen.</div>`
     : aussteller?.bank_iban
-    ? `<div>Bitte überweisen Sie <strong>${geld(zahlBetrag, waehrung)}</strong> bis zum <strong>${datumDe(rechnung?.faelligkeitsdatum)}</strong> auf:</div>
+    ? `${vorabZeile}<div>Bitte überweisen Sie <strong>${geld(zahlBetrag, waehrung)}</strong> bis zum <strong>${datumDe(rechnung?.faelligkeitsdatum)}</strong> auf:</div>
+
        <div>IBAN: ${esc(aussteller.bank_iban)}${aussteller?.bank_bic ? ' &middot; BIC: ' + esc(aussteller.bank_bic) : ''}${aussteller?.bank_name ? ' (' + esc(aussteller.bank_name) + ')' : ''}</div>
        <div>Verwendungszweck: ${esc(rechnung?.rechnungsnummer) || ''}</div>`
-    : `<div>Zahlbar bis <strong>${datumDe(rechnung?.faelligkeitsdatum)}</strong> ohne Abzug.</div>
+    : `${vorabZeile}<div>Zahlbar bis <strong>${datumDe(rechnung?.faelligkeitsdatum)}</strong> ohne Abzug.</div>
        <div class="warn">⚠ Bankverbindung in den Einstellungen ergänzen</div>`;
 
   // GiroCode / EPC-QR: Kunde scannt mit Banking-App -> Überweisung vorausgefüllt.
   // Nur wenn IBAN + Betrag vorhanden UND die Rechnung noch nicht bezahlt ist.
   const bereitsBezahlt = !!rechnung?.bezahlt_am || rechnung?.zahlungsstatus === 'bezahlt';
-  const giroSvg = (bereitsBezahlt || istStorno) ? null : girocodeVonDaten({
+  // Paket 268: ist alles schon verrechnet (Rest 0), gibt es nichts zu überweisen.
+  const giroSvg = !(Number(zahlBetrag) > 0) ? null : (bereitsBezahlt || istStorno) ? null : girocodeVonDaten({
     empfaenger: String(aussteller?.name || '').trim(),
     iban: String(aussteller?.bank_iban || ''),
     bic: aussteller?.bank_bic ? String(aussteller.bank_bic) : undefined,
@@ -434,7 +466,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
         <th class="c">Einheit</th>
         <th class="r">Einzelpreis</th>
         ${klein ? '' : '<th class="r">MwSt</th>'}
-        <th class="r">Netto</th>
+        <th class="r">${sonderfall === 'diff25a' ? 'Betrag' : 'Netto'}</th>
       </tr>
     </thead>
     <tbody>
@@ -450,6 +482,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   ${abweichungHtml}
   ${stornoHinweis}
   ${rcHinweis}
+  ${sonderHinweis}
   ${abschlagHinweis}
   ${skontoHinweis}
   ${einbehaltHinweis}
