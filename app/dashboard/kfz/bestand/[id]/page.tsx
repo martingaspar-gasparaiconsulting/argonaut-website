@@ -10,7 +10,7 @@
 // Paket 262 (K3): Reiter „Fotos und Video" (KfzMedien), Foto-Zahl fließt in die Inserats-Ampel.
 // Paket 265 (K5): Reiter „Kalkulation" (KfzKalkulation) — Plan/Nach, Kosten, Provision.
 // Paket 266 (K6): Reiter „Verkauf" (KfzVerkauf) — Käufer, Preis, Inzahlungnahme, Unterlagen, Unterschrift.
-// Andockpunkte: K7 Rechnung (aus dem Verkauf), K18 Partner (eigener Reiter).
+// Andockpunkte: K7 Rechnung (aus dem Verkauf). Paket 278 (K18): Reiter „Partner" (KfzPartner).
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -31,6 +31,7 @@ import KfzAnfrageHinweis from '../KfzAnfrageHinweis';
 import KfzHistorie from '../KfzHistorie';
 import KfzMarkt from '../KfzMarkt';
 import KfzTresor from '../KfzTresor';
+import KfzPartner from '../KfzPartner';
 
 const MODUL = 'kfz-bestand';
 const supabase = createBrowserClient(
@@ -49,8 +50,8 @@ type Akte = Bestand & {
   verbrauch_komb: number | null; verbrauch_einheit: string | null; co2_g_km: number | null; co2_klasse: string | null;
   erstellt_am: string | null; aktualisiert_am: string | null;
 };
-type Reiter = 'uebersicht' | 'fotos' | 'ausstattung' | 'energie' | 'inserat' | 'kalk' | 'verkauf' | 'probefahrt' | 'tresor' | 'preis' | 'historie';
-const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['fotos', 'Fotos und Video'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['kalk', 'Kalkulation'], ['verkauf', 'Verkauf'], ['probefahrt', 'Probefahrt'], ['tresor', 'Brief und Schlüssel'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
+type Reiter = 'uebersicht' | 'fotos' | 'ausstattung' | 'energie' | 'inserat' | 'kalk' | 'verkauf' | 'probefahrt' | 'tresor' | 'partner' | 'preis' | 'historie';
+const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['fotos', 'Fotos und Video'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['kalk', 'Kalkulation'], ['verkauf', 'Verkauf'], ['probefahrt', 'Probefahrt'], ['tresor', 'Brief und Schlüssel'], ['partner', 'Partner'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
 
 function heute(): string { return new Date().toISOString().slice(0, 10); }
 function deDatum(iso: string | null | undefined): string { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
@@ -322,6 +323,14 @@ export default function HandelsaktePage() {
         <KfzTresor onGeaendert={() => void lade()} fz={{
           id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, status: akte.status,
           interne_nr: akte.interne_nr, marke: akte.marke, modell: akte.modell, kennzeichen: akte.kennzeichen, fin: akte.fin, km_stand: akte.km_stand,
+        }} />
+      )}
+
+      {/* Paket 278: K18 Partner-Netzwerk — Auftrag am Fahrzeug an einen verbundenen Betrieb */}
+      {reiter === 'partner' && (
+        <KfzPartner fz={{
+          id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id,
+          marke: akte.marke, modell: akte.modell, fin: akte.fin, km_stand: akte.km_stand,
         }} />
       )}
 
