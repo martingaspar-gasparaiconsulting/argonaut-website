@@ -1542,6 +1542,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Am Testfahrzeug Reiter „Verkauf" → „＋ Verkaufsvorgang anlegen", Käufer „Test", Anschrift „Teststraße 1, 12345 Test", speichern, „🖨 PDF" beim Angebot.', loeschen: 'Im Status „Angebot" unten „🗑 Vorgang löschen", dann „Ja, löschen" — nur die Geschäftsleitung. Später: „✕ Stornieren".' },
     landetIn: [{ text: 'Fahrzeugbestand (Status Reserviert/Verkauft)', href: '/dashboard/kfz/bestand' }, { text: 'Signaturen (unterschriebene Unterlagen)', href: '/dashboard/signaturen' }, { text: 'Rechnungen (Rechnung aus dem Verkauf)', href: '/dashboard/rechnungen' }],
   },
+  '/dashboard/kfz/anfragen': {
+    zweck: 'Anfragen von Kaufinteressenten erfassen — auf Wunsch am Fahrzeug —, einen Verantwortlichen per Klick zuteilen, den nächsten Kontakt festlegen und bis zum Abschluss verfolgen (gewonnen oder verloren mit Grund). Dazu Suchaufträge: Kundenwünsche mit Laufzeit, die passende Fahrzeuge aus dem Bestand anzeigen. Verschickt wird nichts automatisch.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „KFZ" sehen Anfragen und Suchaufträge; mit Schreibrecht legen sie an, ändern Stand, Verantwortlichen und Termin. Löschen kann nur die Geschäftsleitung.',
+    schritte: [
+      'Neue Anfrage: Fahrzeug wählen (oder ohne), Quelle (Telefon, E-Mail, Autohaus, Webseite, Börse, Empfehlung), Name und Telefon oder E-Mail, Verantwortlicher, Nachricht. Nummer A-0001 …; der nächste Kontakt steht bei E-Mail, Webseite und Börse auf heute, sonst auf morgen. Aus der Fahrzeugakte geht es mit „＋ Anfrage zu diesem Fahrzeug" direkt hierher',
+      'Liste: Offen, Heute fällig, Meine (mir zugeteilt), Abgeschlossen, Alle. Rot = überfällig, gelb = heute. Anklicken klappt die Anfrage auf: Verantwortlichen umstellen, nächsten Kontakt setzen oder „+2 Tage", Stand In Arbeit / Termin vereinbart / Angebot gemacht',
+      'Abschluss: „✓ Gewonnen" oder Grund wählen und „✕ Verloren". Die Auswertung unten zeigt, warum Anfragen verloren gehen und welche Quelle wie oft zum Kauf führt; oben die Abschlussquote',
+      'Suchaufträge: Kunde mit Kontakt und Wünschen (Marke, Modell, Preis von–bis, Erstzulassung ab, Kilometer bis, Kraftstoff). Läuft 90 Tage, verlängern per Knopf. Passende Fahrzeuge im Bestand stehen darunter; neu dazugekommene sind gold markiert, bis „✓ Treffer gesehen" geklickt wird. Nur mit Einverständnis des Kunden anlegen, dass Sie sich bei Treffern melden',
+      'In der Fahrzeugakte (Übersicht) steht, wie viele offene Anfragen es zum Fahrzeug gibt und welche Suchaufträge passen',
+    ],
+    probe: { anlegen: 'Anfrage „Test" mit Telefon 0170 1 zum Testfahrzeug anlegen, aufklappen, Verantwortlichen ändern, „Termin vereinbart", dann Grund „Preis zu hoch" und „✕ Verloren". Suchauftrag mit der Marke des Testfahrzeugs anlegen — es erscheint als Treffer.', loeschen: '„🗑 Anfrage löschen" bzw. beim Suchauftrag „🗑 Löschen" — nur die Geschäftsleitung. Sonst „■ Beenden".' },
+    landetIn: [{ text: 'Fahrzeugbestand (Hinweis in der Akte)', href: '/dashboard/kfz/bestand' }],
+  },
   '/dashboard/kfz/probefahrt': {
     zweck: 'Probefahrten, Vorführwagen, Ersatzwagen und Überführungen mit Bestandsfahrzeugen: Fahrer, Führerschein-Prüfung (nur Haken, Klasse und Gültigkeit — keine Nummer), Kennzeichen (eigenes, rotes 06er oder Kurzzeit), Übergabe und Rückgabe mit Kilometern, Tank und Schäden, Vereinbarung und Rückgabeprotokoll als PDF und über ARGONAUT-Sign, Nachfass nach der Probefahrt. Diese Seite zeigt alle Fahrten und verwaltet die roten Kennzeichen.',
     wer: 'beide',

@@ -27,6 +27,7 @@ import KfzMedien from '../KfzMedien';
 import KfzKalkulation from '../KfzKalkulation';
 import KfzVerkauf from '../KfzVerkauf';
 import KfzProbefahrt from '../KfzProbefahrt';
+import KfzAnfrageHinweis from '../KfzAnfrageHinweis';
 
 const MODUL = 'kfz-bestand';
 const supabase = createBrowserClient(
@@ -179,6 +180,8 @@ export default function HandelsaktePage() {
 
       {reiter === 'uebersicht' && (
         <div style={s.raster}>
+          {/* Paket 271 (K10): offene Anfragen und passende Suchaufträge */}
+          <KfzAnfrageHinweis fz={{ id: akte.id, status: akte.status, marke: akte.marke, modell: akte.modell, vk_brutto: akte.vk_brutto, erstzulassung: akte.erstzulassung, km_stand: akte.km_stand, kraftstoff: akte.kraftstoff, sparte: akte.sparte }} />
           <div style={s.karte}><h3 style={s.h3}>Fahrzeug</h3>
             <dl style={s.kv}>
               <dt>FIN</dt><dd style={s.mono}>{akte.fin ?? '—'}</dd><dt>Kennzeichen</dt><dd style={s.mono}>{akte.kennzeichen ?? '—'}</dd>
