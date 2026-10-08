@@ -53,6 +53,8 @@ export const OFFENE_TUEREN: OffeneTuer[] = [
   // Paket 272 (08.10.26): eigene Fahrzeugboerse eines Kfz-Betriebs — Betrieb nur ueber Kennung, vom Chef ein-/ausschaltbar; nur inserierte Fahrzeuge, Positivliste der Felder.
   { pfad: 'oeffentlich/kfz-boerse-anfrage', grund: 'Anfrage-Formular der Fahrzeugbörse eines Kfz-Betriebs -> Anfragen und Suchaufträge des Betriebs (Quelle Webseite)', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/kfz-boerse-bild', grund: 'Fotos inserierter Fahrzeuge der Fahrzeugbörse (Weiterleitung auf signierten Link, nur Fotos, nur sichtbare Fahrzeuge)', schutz: 'nur-lesen', geprueft: true },
+  { pfad: 'oeffentlich/partner-gast', grund: 'Gast-Link eines Partner-Auftrags (Partner ohne ARGONAUT): ein Auftrag, Positivliste des Fahrzeugs, Status, Einträge, Fotos, Rechnung — Datenbank prüft Prüfwert, Ablauf, Sperre (nur Dienst-Rolle)', schutz: 'token', geprueft: true },
+  { pfad: 'oeffentlich/partner-gast/bild', grund: 'Fotos zum Gast-Link (Eintrags-Fotos, freigegebene Fahrzeugfotos), signierter Link 5 Minuten', schutz: 'token', geprueft: true },
   { pfad: 'oeffentlich/web-newsletter', grund: 'Newsletter-Anmeldung der Kundenwebseite (Double-Opt-in)', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/shop-produkte', grund: 'freigeschaltete Produkte eines Shops', schutz: 'seite', geprueft: true },
   { pfad: 'oeffentlich/shop-bestellung', grund: 'Bestellung im Shop des Betriebs', schutz: 'formular', geprueft: true },

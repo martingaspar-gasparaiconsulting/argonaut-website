@@ -21,6 +21,7 @@ import {
   type Aktion, type PartnerFahrzeug, type Verbindung,
 } from '@/lib/partnerNetzwerk';
 import PartnerVerlauf, { type VerlaufEintrag } from './PartnerVerlauf';
+import RechnungEinreichen, { type EingereichteRechnung } from './RechnungEinreichen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -47,6 +48,8 @@ export default function PartnerNetzwerkSeite() {
   const [ausgang, setAusgang] = useState<Ausgang[]>([]);
   const [offen, setOffen] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
+  // Paket 279: Rechnungen zum geöffneten Auftrag (null = SQL 279 fehlt)
+  const [rech, setRech] = useState<{ erlaubt: boolean; rechnungen: EingereichteRechnung[] } | null>(null);
   const [fehltSql, setFehltSql] = useState(false);
   const [geladen, setGeladen] = useState(false);
   const [notiz, setNotiz] = useState('');
@@ -88,7 +91,11 @@ export default function PartnerNetzwerkSeite() {
   }, []);
 
   const ladeDetail = useCallback(async (id: string) => {
-    const { data, error } = await supabase.rpc('p278_eingang_detail', { p_auftrag: id });
+    const [{ data, error }, r] = await Promise.all([
+      supabase.rpc('p278_eingang_detail', { p_auftrag: id }),
+      supabase.rpc('p279_meine_rechnungen', { p_auftrag: id }),
+    ]);
+    setRech(r.error || !r.data ? null : (r.data as { erlaubt: boolean; rechnungen: EingereichteRechnung[] }));
     if (error) { setMeldung({ ok: false, text: fehlerText(error) }); setDetail(null); return; }
     setDetail((data as Detail | null) ?? null);
   }, []);
@@ -172,8 +179,8 @@ export default function PartnerNetzwerkSeite() {
       <h1 style={s.h1}>🤝 Partner-Netzwerk</h1>
       <div style={s.sogehts}>
         <b>So geht&apos;s:</b> Die Geschäftsleitung erstellt unter „Verbindungen" einen Einladungs-Code und gibt ihn dem Partner-Betrieb (Lackierer, Aufbereiter, Gutachter …).
-        Der Partner gibt den Code in seinem ARGONAUT ein — fertig. Danach vergeben Sie in der Handelsakte (Reiter „Partner") Aufträge am Fahrzeug.
-        Der Partner sieht nur dieses Fahrzeug, nie Preise oder Kunden, und nur solange der Auftrag läuft. Beide Seiten schreiben Einträge mit Fotos — nicht änderbar.
+        Der Partner gibt den Code in seinem ARGONAUT ein — fertig. Danach vergeben Sie in der Handelsakte (Reiter „Partner") Aufträge am Fahrzeug — Partner ohne ARGONAUT bekommen einen Gast-Link.
+        Der Partner sieht nur dieses Fahrzeug, nie Preise oder Kunden, und nur solange der Auftrag läuft. Beide Seiten schreiben Einträge mit Fotos — nicht änderbar. Ihre Rechnung reichen Sie im Auftrag ein; der Auftraggeber übernimmt sie in Belegeingang und Kalkulation.
         Trennen ist jederzeit möglich.
       </div>
 
@@ -242,6 +249,15 @@ export default function PartnerNetzwerkSeite() {
                       <PartnerVerlauf auftragId={detail.id} eintraege={detail.eintraege ?? []} eigeneSeite="partner"
                         darfSchreiben={detail.darf_schreiben} onNeu={() => void ladeDetail(detail.id)} />
                     </>
+                  )}
+                  {rech && (rech.erlaubt || rech.rechnungen.length > 0) && (
+                    <RechnungEinreichen rechnungen={rech.rechnungen} erlaubt={rech.erlaubt} onNeu={() => void ladeDetail(detail.id)}
+                      senden={async (fd) => {
+                        fd.append('auftrag', detail.id);
+                        const res = await fetch('/api/partner/rechnung', { method: 'POST', body: fd });
+                        const j = await res.json().catch(() => ({}));
+                        return res.ok ? { ok: true, text: 'Rechnung eingereicht. Der Auftraggeber prüft sie und übernimmt sie in seine Buchhaltung.' } : { ok: false, text: j?.error || 'Die Rechnung wurde nicht angenommen.' };
+                      }} />
                   )}
                 </div>
               )}

@@ -27,9 +27,17 @@ function zeit(iso: string): string {
   return d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
 }
 
-export default function PartnerVerlauf({ auftragId, eintraege, eigeneSeite, darfSchreiben, onNeu }: {
-  auftragId: string; eintraege: VerlaufEintrag[]; eigeneSeite: 'auftraggeber' | 'partner'; darfSchreiben: boolean; onNeu: () => void;
+// Paket 279: Gast-Link nutzt dieselbe Ansicht mit eigener Tür (bildUrl, hochladen, speichern).
+type GastWeg = {
+  bildUrl: (eintrag: string, nr: number) => string;
+  hochladen: (datei: Blob, name: string) => Promise<string>;
+  speichern: (text: string | null, pfade: string[]) => Promise<void>;
+};
+
+export default function PartnerVerlauf({ auftragId, eintraege, eigeneSeite, darfSchreiben, onNeu, gast }: {
+  auftragId: string; eintraege: VerlaufEintrag[]; eigeneSeite: 'auftraggeber' | 'partner'; darfSchreiben: boolean; onNeu: () => void; gast?: GastWeg;
 }) {
+  const bild = (e: string, i: number) => (gast ? gast.bildUrl(e, i) : `/api/partner/foto?e=${e}&i=${i}`);
   const [text, setText] = useState('');
   const [dateien, setDateien] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -45,6 +53,7 @@ export default function PartnerVerlauf({ auftragId, eintraege, eigeneSeite, darf
       for (const d of dateien) {
         const klein = await verkleinereBild(d, 1600, 0.82);
         if (klein.size > FOTO_MAX_BYTES) throw new Error(`„${d.name}" ist zu groß (höchstens 4 MB).`);
+        if (gast) { pfade.push(await gast.hochladen(klein, d.name)); continue; }
         const fd = new FormData();
         fd.append('auftrag', auftragId);
         fd.append('datei', klein, d.name);
@@ -53,8 +62,11 @@ export default function PartnerVerlauf({ auftragId, eintraege, eigeneSeite, darf
         if (!r.ok || typeof j?.pfad !== 'string') throw new Error(j?.error || 'Foto konnte nicht hochgeladen werden.');
         pfade.push(j.pfad);
       }
-      const { error } = await supabase.rpc('p278_eintrag', { p_auftrag: auftragId, p_text: p.text, p_fotos: pfade });
-      if (error) throw new Error(fehlerText(error));
+      if (gast) await gast.speichern(p.text, pfade);
+      else {
+        const { error } = await supabase.rpc('p278_eintrag', { p_auftrag: auftragId, p_text: p.text, p_fotos: pfade });
+        if (error) throw new Error(fehlerText(error));
+      }
       setText(''); setDateien([]); setSchluessel((x) => x + 1);
       setMeldung({ ok: true, text: 'Eintrag gespeichert. Er kann nicht mehr geändert werden.' });
       onNeu();
@@ -82,9 +94,9 @@ export default function PartnerVerlauf({ auftragId, eintraege, eigeneSeite, darf
               {e.fotos > 0 && (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                   {Array.from({ length: e.fotos }, (_, i) => (
-                    <a key={i} href={`/api/partner/foto?e=${e.id}&i=${i + 1}`} target="_blank" rel="noopener noreferrer">
+                    <a key={i} href={bild(e.id, i + 1)} target="_blank" rel="noopener noreferrer">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`/api/partner/foto?e=${e.id}&i=${i + 1}`} alt={`Foto ${i + 1}`} style={v.bild} loading="lazy" />
+                      <img src={bild(e.id, i + 1)} alt={`Foto ${i + 1}`} style={v.bild} loading="lazy" />
                     </a>
                   ))}
                 </div>

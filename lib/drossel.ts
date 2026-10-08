@@ -76,6 +76,15 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },
   ],
+  // Paket 279: Gast-Link Partner-Auftrag (je IP und je Link)
+  'oeffentlich/partner-gast': [
+    { art: 'ip', max: 120, fensterSek: STUNDE },
+    { art: 'ziel', max: 400, fensterSek: TAG },
+  ],
+  'oeffentlich/partner-gast/bild': [
+    { art: 'ip', max: 300, fensterSek: STUNDE },
+    { art: 'ziel', max: 1000, fensterSek: TAG },
+  ],
   'oeffentlich/web-newsletter': [
     { art: 'ip', max: 10, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },
