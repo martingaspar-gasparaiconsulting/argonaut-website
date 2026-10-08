@@ -1542,6 +1542,21 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Am Testfahrzeug Reiter „Verkauf" → „＋ Verkaufsvorgang anlegen", Käufer „Test", Anschrift „Teststraße 1, 12345 Test", speichern, „🖨 PDF" beim Angebot.', loeschen: 'Im Status „Angebot" unten „🗑 Vorgang löschen", dann „Ja, löschen" — nur die Geschäftsleitung. Später: „✕ Stornieren".' },
     landetIn: [{ text: 'Fahrzeugbestand (Status Reserviert/Verkauft)', href: '/dashboard/kfz/bestand' }, { text: 'Signaturen (unterschriebene Unterlagen)', href: '/dashboard/signaturen' }, { text: 'Rechnungen (Rechnung aus dem Verkauf)', href: '/dashboard/rechnungen' }],
   },
+  '/dashboard/kfz/probefahrt': {
+    zweck: 'Probefahrten, Vorführwagen, Ersatzwagen und Überführungen mit Bestandsfahrzeugen: Fahrer, Führerschein-Prüfung (nur Haken, Klasse und Gültigkeit — keine Nummer), Kennzeichen (eigenes, rotes 06er oder Kurzzeit), Übergabe und Rückgabe mit Kilometern, Tank und Schäden, Vereinbarung und Rückgabeprotokoll als PDF und über ARGONAUT-Sign, Nachfass nach der Probefahrt. Diese Seite zeigt alle Fahrten und verwaltet die roten Kennzeichen.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „KFZ" sehen die Fahrten; mit Schreibrecht legen sie Fahrten an, übergeben und nehmen zurück. Rote und Kurzzeitkennzeichen hinterlegt und legt still nur die Geschäftsleitung; löschen (nur geplante Fahrten) ebenfalls.',
+    schritte: [
+      'Rote Kennzeichen einmalig hier unten hinterlegen (Kennzeichen, Art, bei Kurzzeit das Ablaufdatum). Ein Kennzeichen hängt nie an zwei laufenden Fahrten gleichzeitig',
+      'Fahrzeugbestand → Fahrzeug öffnen → Reiter „Probefahrt" → Art wählen (Probefahrt, Vorführwagen, Ersatzwagen, Überführung) → anlegen. Nummer P-0001, P-0002 …; Kilometerstand aus der Akte vorbelegt. Je Fahrzeug läuft höchstens eine Fahrt',
+      'Fahrer mit Name und Anschrift, Führerschein „vorgelegt und geprüft" anhaken, Klasse und ggf. Ablaufdatum — die Nummer wird bewusst nicht gespeichert. Kennzeichen wählen, Rückgabezeit, km, Tank und vorhandene Schäden, optional freie Kilometer und die Selbstbeteiligung Ihrer Versicherung',
+      '„🖨 PDF" bzw. „✍ Unterschrift" für die Vereinbarung, dann „▶ Übergeben". Fehlt etwas, steht in Rot, was (z. B. Führerschein abgelaufen, Kennzeichen nicht gültig)',
+      'Bei Rückgabe km, Tank und neue Schäden eintragen und „■ Zurücknehmen": der Kilometerstand der Akte wird nachgezogen, bei Probefahrt und Vorführwagen steht der Nachfass zwei Tage später an (hier und unter Erinnerungen). Rückgabeprotokoll unter „Frühere Fahrten"',
+      'Diese Seite: Kacheln Unterwegs, Überfällig, Nachfass fällig; Klick auf eine Zeile öffnet die Akte im Reiter „Probefahrt". „🖨 Fahrtenliste" je rotem Kennzeichen für das Fahrzeugscheinheft',
+    ],
+    probe: { anlegen: 'Rotes Kennzeichen „BB-06999" hinterlegen, am Testfahrzeug Reiter „Probefahrt" → Probefahrt anlegen, Fahrer „Test", Anschrift, Führerschein anhaken, Tank voll, „▶ Übergeben", dann km +20 und „■ Zurücknehmen".', loeschen: 'Geplante Fahrt: „🗑 Fahrt löschen" (nur Geschäftsleitung) oder „✕ Stornieren". Kennzeichen: „Stilllegen".' },
+    landetIn: [{ text: 'Fahrzeugbestand (Kilometerstand)', href: '/dashboard/kfz/bestand' }, { text: 'Erinnerungen (Nachfass)', href: '/dashboard/erinnerungen' }, { text: 'Signaturen', href: '/dashboard/signaturen' }],
+  },
   '/dashboard/kfz/schaden': {
     zweck: 'Schadenfälle mit Versicherern abwickeln: Art (Haftpflicht, Kasko, Selbstzahler), Unterlagen-Checkliste, Gutachten/KVA, Freigabe, Ersatzwagen-Tage, Rechnung, Zahlungen von Versicherer und Kunde, Nachfassen nach Richtwert und fertige Schreiben. Keine Rechtsberatung — nur Abwicklung.',
     wer: 'beide',
