@@ -1558,6 +1558,21 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Anfrage „Test" mit Telefon 0170 1 zum Testfahrzeug anlegen, aufklappen, Verantwortlichen ändern, „Termin vereinbart", dann Grund „Preis zu hoch" und „✕ Verloren". Suchauftrag mit der Marke des Testfahrzeugs anlegen — es erscheint als Treffer.', loeschen: '„🗑 Anfrage löschen" bzw. beim Suchauftrag „🗑 Löschen" — nur die Geschäftsleitung. Sonst „■ Beenden".' },
     landetIn: [{ text: 'Fahrzeugbestand (Hinweis in der Akte)', href: '/dashboard/kfz/bestand' }],
   },
+  '/dashboard/kfz/preise': {
+    zweck: 'Preise und Standzeit des ganzen Fahrzeugbestands auf einen Blick: Standtage, Untergrenze je Fahrzeug (Einkauf + Kosten + Standkosten + Mindest-Rohertrag), Aufrufe der eigenen Fahrzeugbörse, Anfragen der letzten 30 Tage, Inserats-Ampel und ein Preisvorschlag nach der eigenen Preis-Treppe. ARGONAUT schätzt keine Marktpreise; geändert wird nur per Knopf.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „KFZ" sehen die Übersicht; mit Schreibrecht „KFZ" können sie Vorschläge übernehmen. Die Preis-Treppe (Stufen, Abstand, Mindest-Rohertrag) stellt nur die Geschäftsleitung ein.',
+    schritte: [
+      'Oben: Fahrzeuge im Bestand, durchschnittliche Standtage (Farbe nach der Standzeit-Ampel), Zahl der empfohlenen Senkungen, Fahrzeuge an der Untergrenze, Aufrufe und Anfragen der letzten 30 Tage. Darunter die Standzeit-Verteilung mit dem jeweils gebundenen Einkauf',
+      'Je Fahrzeug: Preis, Untergrenze („Einkauf fehlt", wenn kein Einkaufspreis eingetragen ist), letzte Preisänderung, Aufrufe, Anfragen, Inserat in Prozent und eine Einschätzung in Klartext (z. B. „viele Aufrufe, keine Anfrage — Preis oder Inserat schreckt ab")',
+      'Vorschlag: Erreicht ein Fahrzeug eine Stufe der Preis-Treppe und liegt die letzte Änderung lange genug zurück, steht dort der neue Preis (auf volle 10 € gerundet, nie unter der Untergrenze). „Übernehmen" ändert den Preis; „Alle … Vorschläge übernehmen" fragt einmal nach und ändert alle. Jede Änderung steht im Preisverlauf der Akte',
+      'Filter: Senkung empfohlen, Nachfrage prüfen, Untergrenze. Ein Klick auf das Fahrzeug öffnet die Handelsakte',
+      'Preis-Treppe (Geschäftsleitung): bis zu 6 Stufen „ab X Standtagen um Y % senken", Abstand zwischen zwei Senkungen, Mindest-Rohertrag je Fahrzeug und ab wie vielen Aufrufen ein Fahrzeug als „viel gesehen" gilt. Vorbelegt aus der Standzeit-Ampel Ihres Bestands. Die Standkosten je Tag stellen Sie im Bestand ein',
+      'Aufrufe zählt die eigene Fahrzeugbörse ohne Cookies: nur eine Zahl je Fahrzeug und Tag, Suchmaschinen und Link-Vorschauen zählen nicht',
+    ],
+    probe: { anlegen: 'Testfahrzeug mit Einkauf, Preis und Eingang vor 70 Tagen anlegen — hier erscheint ein Vorschlag; „Übernehmen" drücken und den Preisverlauf in der Akte prüfen. Danach Preis in der Akte zurücksetzen.', loeschen: 'Nichts zu löschen — Preise werden in der Akte geändert.' },
+    landetIn: [{ text: 'Fahrzeugbestand (Preisverlauf in der Akte)', href: '/dashboard/kfz/bestand' }],
+  },
   '/dashboard/kfz/probefahrt': {
     zweck: 'Probefahrten, Vorführwagen, Ersatzwagen und Überführungen mit Bestandsfahrzeugen: Fahrer, Führerschein-Prüfung (nur Haken, Klasse und Gültigkeit — keine Nummer), Kennzeichen (eigenes, rotes 06er oder Kurzzeit), Übergabe und Rückgabe mit Kilometern, Tank und Schäden, Vereinbarung und Rückgabeprotokoll als PDF und über ARGONAUT-Sign, Nachfass nach der Probefahrt. Diese Seite zeigt alle Fahrten und verwaltet die roten Kennzeichen.',
     wer: 'beide',

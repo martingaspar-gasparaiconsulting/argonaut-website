@@ -6,9 +6,10 @@
 
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { cache } from 'react';
 import { domainPfad, hostSauber } from '@/lib/kfzBoerse';
-import { betriebZuDomain, boerseDb, firmaZu, sichtbaresFahrzeug } from '@/lib/kfzBoerseLaden';
+import { aufrufZaehlen, betriebZuDomain, boerseDb, firmaZu, sichtbaresFahrzeug } from '@/lib/kfzBoerseLaden';
 import { DetailAnsicht, detailMeta, NICHT_GEFUNDEN_META, type BoerseKontext } from '../../../fahrzeuge/BoerseAnsichten';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ const lade = cache(async (hostRoh: string, id: string) => {
   if (!fz) return null;
   const basis = `https://${b.domain}`;
   const ctx: BoerseKontext = { kennung: b.kennung, einst: b.einst, firma, basis, pfad: domainPfad, kanon: (fid) => basis + domainPfad(fid) };
-  return { ctx, ...fz };
+  return { ctx, betrieb: b.betrieb, ...fz };
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -38,5 +39,6 @@ export default async function FahrzeugDomainPage({ params }: Props) {
   const { host, id } = await params;
   const d = await lade(host, id);
   if (!d) notFound();
+  await aufrufZaehlen(boerseDb(), d.betrieb, d.f.id, await headers());   // Paket 275: nur die Seite selbst, nicht die Metadaten
   return <DetailAnsicht ctx={d.ctx} f={d.f} bilder={d.bilder} />;
 }

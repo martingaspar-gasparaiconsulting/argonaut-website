@@ -197,6 +197,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🛣 Probefahrten', href: '/dashboard/kfz/probefahrt', ebene: 3, gruppe: 'betrieb' },
   // Paket 271 (08.10.26): K10 Anfragen und Suchaufträge — Unterpfad von /dashboard/kfz, erbt dessen Freigabe.
   { label: '📨 Kfz-Anfragen', href: '/dashboard/kfz/anfragen', ebene: 3, gruppe: 'betrieb' },
+  // Paket 275 (08.10.26): K12a Preise und Standzeit — Unterpfad von /dashboard/kfz, erbt dessen Freigabe.
+  { label: '💶 Preise und Standzeit', href: '/dashboard/kfz/preise', ebene: 3, gruppe: 'betrieb' },
   { label: '🍽 Gastro & Hotel', href: '/dashboard/gastro', modul: 'gastro', ebene: 3, gruppe: 'betrieb' },
   // Paket PS5 (25.09.26): Trinkgeld-Verteilung — Unterpfad von /dashboard/gastro, erbt dessen Freigabe.
   { label: '🪙 Trinkgeld-Verteilung', href: '/dashboard/gastro/trinkgeld', ebene: 3, gruppe: 'betrieb' },

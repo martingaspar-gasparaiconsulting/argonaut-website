@@ -13,6 +13,7 @@
 // ============================================================================
 
 import { createClient } from '@supabase/supabase-js';
+import { istBot } from './kfzPreis';
 import { BOERSE_MODUL, BOERSE_SPALTEN, BOERSE_SPALTEN_OHNE_HISTORIE, BOERSE_STATUS, boerseEinstellung, kennungGueltig, idGueltig, oeffentlich, hostSauber, type BoerseEinstellung, type BoerseFahrzeug } from './kfzBoerse';
 
 export function boerseDb() {
@@ -135,4 +136,24 @@ export async function sichtbaresFahrzeug(db: BoerseDb, betrieb: string, id: stri
 /** Basis-Adresse für absolute Links (Strukturdaten, Mails). */
 export function basisAdresse(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com').trim().replace(/\/+$/, '');
+}
+
+// --- Paket 275: Aufrufe je Fahrzeug zählen (K12a Markt und Preis) ---------------------------
+
+/**
+ * Zählt einen Aufruf der Detailseite (+1 für heute). Nur eine Tageszahl — keine IP,
+ * kein Cookie, kein Besucher. Bots, Link-Vorschauen und Vorab-Abrufe zählen nicht.
+ * Die Funktion p275_aufruf_zaehlen darf nur die Server-Rolle ausführen und zählt nur
+ * inserierte Fahrzeuge dieses Betriebs. Fehlt das SQL oder hakt es: still weiter —
+ * die Seite darf am Zähler nie scheitern.
+ */
+export async function aufrufZaehlen(db: BoerseDb, betrieb: string, id: string, kopf: Headers | null): Promise<void> {
+  try {
+    if (!kopf || istBot(kopf.get('user-agent'))) return;
+    const zweck = `${kopf.get('purpose') ?? ''} ${kopf.get('sec-purpose') ?? ''} ${kopf.get('next-router-prefetch') ?? ''}`;
+    if (/prefetch|prerender|1/i.test(zweck.trim())) return;
+    await db.rpc('p275_aufruf_zaehlen', { p_owner: betrieb, p_bestand: id });
+  } catch {
+    /* Zähler ist Nebensache */
+  }
 }
