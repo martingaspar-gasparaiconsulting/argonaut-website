@@ -22,6 +22,7 @@ import {
   PREIS_MODUL, standardRegeln, regelnLesen, untergrenze, tageSeitPreis, vorschlag, aufrufeJe, anfragenJe, diagnose,
   standzeitVerteilung, uebernahmeListe, type PreisRegeln, type Vorschlag, type Diagnose, type Aufruf, type AnfrageMini,
 } from '@/lib/kfzPreis';
+import { marktLage, type Vergleich, type Lage } from '@/lib/kfzMarkt';
 import Leerzustand from '../../_components/Leerzustand';
 
 const supabase = createBrowserClient(
@@ -30,16 +31,18 @@ const supabase = createBrowserClient(
 );
 const C = { navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', text: '#E8EDF4', dim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', ok: '#4CAF7D', warn: '#E0A24C', bad: '#E06666', info: '#5FA8E8' };
 const FARBE: Record<string, string> = { ok: C.ok, warn: C.warn, bad: C.bad, dim: C.dim };
+const MARKT_FARBE: Record<string, string> = { ...FARBE, info: C.info };
 
-const SPALTEN = 'id, owner_user_id, interne_nr, status, marke, modell, variante, eingang_am, verkauft_am, ek_netto, vk_brutto, besteuerung, inseriert, kraftstoff, verbrauch_komb, verbrauch_einheit, co2_g_km, co2_klasse, vorschaden, inserat_titel, inserat_text, ausstattung';
+const SPALTEN = 'id, owner_user_id, interne_nr, status, marke, modell, variante, erstzulassung, km_stand, eingang_am, verkauft_am, ek_netto, vk_brutto, besteuerung, inseriert, kraftstoff, verbrauch_komb, verbrauch_einheit, co2_g_km, co2_klasse, vorschaden, inserat_titel, inserat_text, ausstattung';
 
 type Fz = AkteFelder & {
   id: string; owner_user_id: string; interne_nr: string | null; variante: string | null;
   eingang_am: string | null; verkauft_am: string | null; ek_netto: number | null; besteuerung: string | null;
+  erstzulassung: string | null; km_stand: number | null;
 };
 type Zeile = {
   f: Fz; tage: number | null; grenze: number | null; seit: number | null; aufrufe: number; anfragen: number;
-  ampel: number; v: Vorschlag; d: Diagnose;
+  ampel: number; v: Vorschlag; d: Diagnose; markt: Lage;
 };
 type Filter = 'alle' | 'senken' | 'nachfrage' | 'grenze';
 
@@ -54,6 +57,7 @@ export default function PreisePage() {
   const [aufrufe, setAufrufe] = useState<Aufruf[]>([]);
   const [anfragen, setAnfragen] = useState<AnfrageMini[]>([]);
   const [fotos, setFotos] = useState<Record<string, number>>({});
+  const [vergleiche, setVergleiche] = useState<(Vergleich & { bestand_id: string })[]>([]);
   const [standkostenTag, setStandkostenTag] = useState(0);
   const [ampelGrenzen, setAmpelGrenzen] = useState({ gruenBis: 60, gelbBis: 90 });
   const [regeln, setRegeln] = useState<PreisRegeln>(standardRegeln());
@@ -78,7 +82,7 @@ export default function PreisePage() {
     const b = typeof chef === 'string' && chef ? chef : uid;
     setBetrieb(b); setIstChef(b === uid);
     const ab = vorTagen(40);
-    const [f, k, pr, au, an, me, e, p] = await Promise.all([
+    const [f, k, pr, au, an, me, e, p, mv] = await Promise.all([
       supabase.from('kfz_bestand').select(SPALTEN).not('status', 'in', '("verkauft","archiv")').limit(2000),
       supabase.from('kfz_bestand_kosten').select('bestand_id, art, betrag_netto, plan').limit(10000),
       supabase.from('kfz_bestand_preis').select('bestand_id, geaendert_am').order('geaendert_am', { ascending: false }).limit(10000),
@@ -87,6 +91,7 @@ export default function PreisePage() {
       supabase.from('kfz_bestand_medien').select('bestand_id').eq('art', 'foto').limit(20000),
       supabase.from('modul_einstellung').select('modul, einstellung').eq('owner_user_id', b).in('modul', ['kfz-bestand', PREIS_MODUL]),
       supabase.from('profiles').select('branche').eq('id', b).maybeSingle(),
+      supabase.from('kfz_marktvergleich').select('bestand_id, preis, km, erstzulassung, erfasst_am').gte('erfasst_am', ab).limit(20000),
     ]);
     if (f.error) { setFehler('Der Fahrzeugbestand lässt sich nicht laden. Ist SQL Paket 259 ausgeführt und haben Sie das Recht „KFZ"?'); setLaden(false); return; }
     setFz((((f.data as unknown) as Fz[]) ?? []).filter((x) => imBestand(x.status)));
@@ -100,6 +105,7 @@ export default function PreisePage() {
     const fm: Record<string, number> = {};
     for (const z of ((me.data as unknown) as { bestand_id: string }[]) ?? []) fm[z.bestand_id] = (fm[z.bestand_id] ?? 0) + 1;
     setFotos(fm);
+    setVergleiche(mv.error ? [] : (((mv.data as unknown) as (Vergleich & { bestand_id: string })[]) ?? []).map((z) => ({ ...z, preis: z.preis === null ? null : Number(z.preis) })));
     const einst = ((e.data as unknown) as { modul: string; einstellung: Record<string, unknown> }[]) ?? [];
     const v = vorlageFuer('kfz-bestand', ((p.data as { branche?: string | null } | null)?.branche) ?? null);
     const vk = v ? mitKunde(v, (einst.find((x) => x.modul === 'kfz-bestand')?.einstellung as KundenEinstellung | undefined) ?? null) : null;
@@ -119,6 +125,8 @@ export default function PreisePage() {
     const anf = anfragenJe(anfragen, tag);
     const kostenJe: Record<string, Kosten[]> = {};
     for (const k of kosten) (kostenJe[k.bestand_id] ??= []).push(k);
+    const mvJe: Record<string, Vergleich[]> = {};
+    for (const v of vergleiche) (mvJe[v.bestand_id] ??= []).push(v);
     return fz.map((f) => {
       const tage = standtageVon(f, tag);
       const plan = kostenSummen(kostenJe[f.id] ?? []).plan;
@@ -130,9 +138,10 @@ export default function PreisePage() {
         f, tage, grenze, seit, aufrufe: a, anfragen: q, ampel,
         v: vorschlag({ vk: f.vk_brutto, standtage: tage, seitPreis: seit, untergrenze: grenze, regeln }),
         d: diagnose({ inseriert: !!f.inseriert, ampel, aufrufe: a, anfragen: q, standtage: tage, aufrufeViel: regeln.aufrufeViel }),
+        markt: marktLage({ vk: f.vk_brutto, km: f.km_stand, erstzulassung: f.erstzulassung }, mvJe[f.id] ?? [], tag),
       };
     }).sort((x, y) => (y.tage ?? -1) - (x.tage ?? -1));
-  }, [fz, kosten, preisAm, aufrufe, anfragen, fotos, standkostenTag, regeln, tag]);
+  }, [fz, kosten, preisAm, aufrufe, anfragen, fotos, vergleiche, standkostenTag, regeln, tag]);
 
   const gezeigt = zeilen.filter((z) => filter === 'alle' ? true
     : filter === 'senken' ? z.v.art === 'senken'
@@ -260,6 +269,7 @@ export default function PreisePage() {
                 <span><span style={s.dim}>Inserat</span> <b style={{ color: z.ampel >= 80 ? C.ok : z.ampel >= 55 ? C.warn : C.bad }}>{z.ampel} %</b></span>
               </div>
               <div style={{ fontSize: 13, color: FARBE[z.d.stufe], marginTop: 4 }}>{z.d.text}</div>
+              <div style={{ fontSize: 13, color: MARKT_FARBE[z.markt.stufe], marginTop: 2 }}>Markt: {z.markt.basis === 'zu_wenig' ? `${z.markt.aktuell} aktuelle Vergleiche — in der Akte erfassen (ab 3 gibt es eine Aussage).` : z.markt.text}</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
                 <span style={{ fontSize: 13, color: z.v.art === 'senken' ? C.warn : z.v.art === 'grenze' || z.v.art === 'unter_grenze' ? C.bad : C.dim }}>
                   {z.v.art === 'senken' && z.v.neu !== null ? <>Vorschlag <b>{euro(z.v.neu)}</b> (−{String(z.v.prozent).replace('.', ',')} %) · </> : null}{z.v.grund}
@@ -304,7 +314,7 @@ export default function PreisePage() {
           </div>
         )}
       </div>
-      <p style={{ ...s.dim, marginTop: 12 }}>Marktvergleich mit Preisen anderer Anbieter folgt als eigener Baustein (nur mit lizenzierten Daten oder Ihren eigenen Einträgen).</p>
+      <p style={{ ...s.dim, marginTop: 12 }}>Marktvergleich: Vergleichsangebote erfassen Sie in der Handelsakte (Übersicht). Gerechnet wird nur mit Ihren eigenen Einträgen der letzten 30 Tage — ARGONAUT liest keine Börsen aus und schätzt keine Marktpreise.</p>
     </div>
   );
 }

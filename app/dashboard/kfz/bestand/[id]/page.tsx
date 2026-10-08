@@ -29,6 +29,7 @@ import KfzVerkauf from '../KfzVerkauf';
 import KfzProbefahrt from '../KfzProbefahrt';
 import KfzAnfrageHinweis from '../KfzAnfrageHinweis';
 import KfzHistorie from '../KfzHistorie';
+import KfzMarkt from '../KfzMarkt';
 
 const MODUL = 'kfz-bestand';
 const supabase = createBrowserClient(
@@ -203,6 +204,8 @@ export default function HandelsaktePage() {
               void speichern({ vorbesitzer: vb === null ? null : Math.max(0, Math.round(vb)), hu_bis: zust.hu_bis || null, vorschaden: zust.vorschaden || null, vorschaden_text: zust.vorschaden === 'ja' ? (zust.vorschaden_text.trim() || null) : null }, 'Zustand gespeichert.');
             }}>💾 Speichern</button>
           </div>
+          {/* Paket 276: Marktvergleich (eigene Vergleichsangebote, keine fremden Marktdaten) */}
+          <KfzMarkt fz={{ id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, vk_brutto: akte.vk_brutto, km_stand: akte.km_stand, erstzulassung: akte.erstzulassung }} />
           {/* Paket 274: Fahrzeughistorie (carVertical u. a.) am Fahrzeug */}
           <KfzHistorie id={akte.id} fin={akte.fin} werte={akte as unknown as { historie_url?: string | null; historie_anbieter?: string | null; historie_am?: string | null; historie_oeffentlich?: boolean | null }} onGespeichert={() => void lade()} />
           <div style={s.karte}><h3 style={s.h3}>Inserat auf einen Blick</h3>
