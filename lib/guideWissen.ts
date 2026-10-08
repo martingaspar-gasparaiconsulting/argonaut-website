@@ -1575,6 +1575,21 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Testfahrzeug mit Einkauf, Preis und Eingang vor 70 Tagen anlegen — hier erscheint ein Vorschlag; „Übernehmen" drücken und den Preisverlauf in der Akte prüfen. Danach Preis in der Akte zurücksetzen.', loeschen: 'Nichts zu löschen — Preise werden in der Akte geändert.' },
     landetIn: [{ text: 'Fahrzeugbestand (Preisverlauf in der Akte)', href: '/dashboard/kfz/bestand' }],
   },
+  '/dashboard/kfz/tresor': {
+    zweck: 'Brief-Tresor, Zulassung und Aufbereitung auf einen Blick: Was ist gerade ausgegeben und an wen (überfällig rot), bei welchen Fahrzeugen im Bestand liegt der Fahrzeugbrief nicht im Haus, welche Zulassungsaufträge laufen und welche Fahrzeuge stehen in der Aufbereitung. Erfasst wird in der Handelsakte, Reiter „Brief und Schlüssel".',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „KFZ" sehen alles; mit Schreibrecht „KFZ" erfassen und geben sie Unterlagen aus, legen Zulassungsaufträge an und übernehmen Kosten. Eine Aufbereitung beauftragen braucht zusätzlich das Recht „Werkstatt". Löschen kann nur die Geschäftsleitung; der Verlauf ist nicht änderbar.',
+    schritte: [
+      'Akte → „Brief und Schlüssel" → „In den Tresor": Art (Brief, Schein, Schlüssel, CoC, Serviceheft, HU-Bericht), Anzahl, Ort (z. B. „Tresor Fach 3", „Schlüsselbrett 17") und wo es liegt (im Haus, fehlt noch, bei der Bank, bei der Zulassungsstelle)',
+      '„Ausgeben": an wen (Pflicht) und optional bis wann — „Zurück im Haus" bucht es zurück. Jede Bewegung steht im Verlauf (wer, wann, an wen) und lässt sich nicht nachträglich ändern',
+      'Brief an den Käufer: Solange aus dem Verkauf noch Geld offen ist, sperrt ARGONAUT „An den Käufer übergeben" für den Brief. Ohne erfassten Verkauf erscheint ein Hinweis',
+      'Zulassungsauftrag: Zulassung, Ummeldung, Abmeldung, Ausfuhr oder Kurzzeit; Halter, eVB-Nummer (7 Zeichen), Wunschkennzeichen, Termin. Unterlagen abhaken (Richtwerte — die Zulassungsstelle kann mehr verlangen). „Zur Zulassungsstelle" und „Erledigt" gehen erst mit allen Pflicht-Unterlagen; das neue Kennzeichen geht bei „Erledigt" in die Akte',
+      'Aufbereitung: „Aufbereitung beauftragen" legt einen internen Auftrag im Werkstatt-Board an („Intern · Fahrzeughandel") und stellt das Fahrzeug auf „In Aufbereitung". Für interne Aufträge gibt es keine Kundenrechnung. Ist er fertig, übernehmen Sie die Kosten (Betrag änderbar, z. B. interner Verrechnungssatz) mit „In Kalkulation" — nie doppelt. Danach „Aufbereitung fertig → Im Bestand"',
+      'Diese Seite: Kacheln (ausgegeben, überfällig, Brief nicht im Haus, Zulassungen, Aufbereitung) und Listen; ein Klick öffnet die Akte direkt im richtigen Reiter',
+    ],
+    probe: { anlegen: 'Im Testfahrzeug Brief mit Ort „Tresor 1" erfassen, an „Test Zulassungsdienst" bis gestern ausgeben — hier erscheint er rot als überfällig. Zulassungsauftrag „Ummeldung" anlegen und Unterlagen abhaken. Aufbereitung beauftragen, im Werkstatt-Board auf „Fertig" setzen und Kosten übernehmen.', loeschen: 'Tresor-Einträge und Zulassungen löscht nur die Geschäftsleitung (Fahrzeug löschen entfernt alles); den Werkstattauftrag im Werkstatt-Board archivieren.' },
+    landetIn: [{ text: 'Fahrzeugbestand (Reiter „Brief und Schlüssel" in der Akte)', href: '/dashboard/kfz/bestand' }, { text: 'Werkstatt-Board', href: '/dashboard/werkstatt' }],
+  },
   '/dashboard/kfz/probefahrt': {
     zweck: 'Probefahrten, Vorführwagen, Ersatzwagen und Überführungen mit Bestandsfahrzeugen: Fahrer, Führerschein-Prüfung (nur Haken, Klasse und Gültigkeit — keine Nummer), Kennzeichen (eigenes, rotes 06er oder Kurzzeit), Übergabe und Rückgabe mit Kilometern, Tank und Schäden, Vereinbarung und Rückgabeprotokoll als PDF und über ARGONAUT-Sign, Nachfass nach der Probefahrt. Diese Seite zeigt alle Fahrten und verwaltet die roten Kennzeichen.',
     wer: 'beide',

@@ -8,6 +8,7 @@ import {
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { istInternerAuftrag } from "@/lib/kfzTresor";
 
 export const runtime = "nodejs";
 
@@ -83,6 +84,14 @@ export async function POST(req: Request) {
 
     if (auftragErr || !auftrag) {
       return NextResponse.json({ error: "Werkstatt-Auftrag nicht gefunden." }, { status: 404 });
+    }
+
+    // ---------- 1b) Paket 277: interner Auftrag (Aufbereitung eines Bestandsfahrzeugs) ----------
+    // Kosten gehen in die Kalkulation des Fahrzeugs, nie als Kundenrechnung. Eigene Abfrage,
+    // damit die Route auch ohne SQL 277 (Spalte fehlt -> Fehler -> ignoriert) weiterläuft.
+    const intern = await supabase.from("werkstatt_auftraege").select("kfz_bestand_id").eq("id", auftragId).maybeSingle();
+    if (!intern.error && istInternerAuftrag(intern.data as { kfz_bestand_id?: string | null } | null)) {
+      return NextResponse.json({ error: "Interner Auftrag aus dem Fahrzeughandel — keine Kundenrechnung. Die Kosten übernehmen Sie in der Handelsakte (Brief und Schlüssel → Aufbereitung) in die Kalkulation." }, { status: 409 });
     }
 
     // ---------- 2) Doppel-Schutz: bereits fakturiert? ----------

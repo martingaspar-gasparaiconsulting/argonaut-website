@@ -30,6 +30,7 @@ import KfzProbefahrt from '../KfzProbefahrt';
 import KfzAnfrageHinweis from '../KfzAnfrageHinweis';
 import KfzHistorie from '../KfzHistorie';
 import KfzMarkt from '../KfzMarkt';
+import KfzTresor from '../KfzTresor';
 
 const MODUL = 'kfz-bestand';
 const supabase = createBrowserClient(
@@ -48,8 +49,8 @@ type Akte = Bestand & {
   verbrauch_komb: number | null; verbrauch_einheit: string | null; co2_g_km: number | null; co2_klasse: string | null;
   erstellt_am: string | null; aktualisiert_am: string | null;
 };
-type Reiter = 'uebersicht' | 'fotos' | 'ausstattung' | 'energie' | 'inserat' | 'kalk' | 'verkauf' | 'probefahrt' | 'preis' | 'historie';
-const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['fotos', 'Fotos und Video'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['kalk', 'Kalkulation'], ['verkauf', 'Verkauf'], ['probefahrt', 'Probefahrt'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
+type Reiter = 'uebersicht' | 'fotos' | 'ausstattung' | 'energie' | 'inserat' | 'kalk' | 'verkauf' | 'probefahrt' | 'tresor' | 'preis' | 'historie';
+const REITER: [Reiter, string][] = [['uebersicht', 'Übersicht'], ['fotos', 'Fotos und Video'], ['ausstattung', 'Ausstattung'], ['energie', 'Energie und CO₂'], ['inserat', 'Inserat'], ['kalk', 'Kalkulation'], ['verkauf', 'Verkauf'], ['probefahrt', 'Probefahrt'], ['tresor', 'Brief und Schlüssel'], ['preis', 'Preisverlauf'], ['historie', 'Historie']];
 
 function heute(): string { return new Date().toISOString().slice(0, 10); }
 function deDatum(iso: string | null | undefined): string { if (!iso) return '—'; const p = iso.slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
@@ -313,6 +314,14 @@ export default function HandelsaktePage() {
         <KfzProbefahrt onGeaendert={() => void lade()} f={{
           id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id,
           fz: { interne_nr: akte.interne_nr, marke: akte.marke, modell: akte.modell, fin: akte.fin, kennzeichen: akte.kennzeichen, km_stand: akte.km_stand },
+        }} />
+      )}
+
+      {/* Paket 277: Brief-Tresor, Zulassung, Aufbereitung */}
+      {reiter === 'tresor' && (
+        <KfzTresor onGeaendert={() => void lade()} fz={{
+          id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, status: akte.status,
+          interne_nr: akte.interne_nr, marke: akte.marke, modell: akte.modell, kennzeichen: akte.kennzeichen, fin: akte.fin, km_stand: akte.km_stand,
         }} />
       )}
 
