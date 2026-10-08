@@ -160,6 +160,14 @@ function BereichKarte({
         <span style={{ ...styles.badge, color: badge.farbe, borderColor: badge.farbe }}>{badge.text}</span>
       </div>
       <p style={styles.beschr}>{b.beschreibung}</p>
+      {/* Paket 274: zweiter Weg — noch kein Konto beim Partner? Abschluss direkt beim Partner. */}
+      {(b.abschluss || []).map((x) => (
+        <div key={x.anbieter} style={styles.hinweis}>
+          <a href={x.url} target="_blank" rel="noopener" style={{ color: C.gold, fontWeight: 700, textDecoration: 'none' }}>{x.text} ↗</a>
+          {x.partnerlink ? <span style={{ color: C.textDim }}> · Partnerlink von ARGONAUT</span> : null}
+          <span style={{ color: C.textDim }}> · Ihr Vertrag besteht direkt mit dem Anbieter.</span>
+        </div>
+      ))}
 
       {b.einrichten.modus === 'inline' && (
         <>

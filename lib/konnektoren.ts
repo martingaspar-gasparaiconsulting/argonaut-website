@@ -18,10 +18,12 @@
 // KEINE Supabase-Aufrufe, KEINE React-Hooks — Client UND Server importierbar.
 // ============================================================
 
+import { PARTNER } from './partnerAnbindung';
+
 export type IntegrationTyp =
   | 'tse' | 'shop' | 'datev' | 'zahlung'
   | 'bank' | 'elster' | 'meta' | 'google-ads' | 'linkedin' | 'whatsapp'
-  | 'versand' | 'mail' | 'marktplatz';
+  | 'versand' | 'mail' | 'marktplatz' | 'fahrzeughistorie';
 
 export type KategorieId = 'geldfluss' | 'marketing' | 'betrieb';
 
@@ -50,7 +52,12 @@ export type Einrichten =
   | { modus: 'verweis'; link: string; anleitung: string }
   | { modus: 'geplant'; anleitung?: string };
 
+/** Paket 274: „Noch kein Konto?" — Abschluss direkt beim Partner (Vertrag zwischen Betrieb und Partner). */
+export type KonnektorAbschluss = { anbieter: string; text: string; url: string; partnerlink: boolean };
+
 export type KonnektorBereich = {
+  /** Paket 274: Abschluss-Links je Partner (zweiter Weg neben „eigenes Konto verbinden"). */
+  abschluss?: KonnektorAbschluss[];
   typ: IntegrationTyp;
   name: string;
   icon: string;
@@ -62,6 +69,20 @@ export type KonnektorBereich = {
 
 // --- Der Katalog. Neue Anbieter hier ergänzen — Seite + Module ziehen automatisch nach. ---
 export const KONNEKTOR_KATALOG: KonnektorBereich[] = [
+  // ============================ BETRIEB: FAHRZEUGHISTORIE (Paket 274) ============================
+  {
+    typ: 'fahrzeughistorie', name: 'Fahrzeughistorie (Kfz-Handel)', icon: '🔎', kategorie: 'betrieb',
+    einrichten: { modus: 'inline' },
+    beschreibung: 'Historienberichte zur FIN (Unfälle, Kilometerstand, Diebstahl) für Ihre Fahrzeuge. ARGONAUT vermittelt nur: Berichte kaufen Sie in Ihrem eigenen Konto beim Anbieter, der Vertrag besteht direkt mit ihm. Den Link zum Bericht tragen Sie in der Fahrzeugakte ein; auf Wunsch zeigt Ihre Fahrzeugbörse „Fahrzeughistorie geprüft".',
+    abschluss: (PARTNER.filter((p) => p.key === 'carvertical')).map((p) => ({ anbieter: p.key, text: `Noch kein ${p.name}-Konto? Hier abschließen`, url: p.abschlussUrl, partnerlink: p.partnerlink })),
+    anbieter: [
+      { key: 'manuell', name: 'Ohne Konto-Verbindung (Bericht-Link je Fahrzeug von Hand)', demo: true, felder: [], hinweis: 'Berichte bei einem Anbieter Ihrer Wahl kaufen und den Link in der Fahrzeugakte (Reiter „Übersicht" → Fahrzeughistorie) einfügen.' },
+      { key: 'carvertical', name: 'carVertical (eigenes Händler-Konto)', felder: [
+        { key: 'konto', label: 'Ihr carVertical-Konto (E-Mail oder Kundennummer)', typ: 'text' },
+        { key: 'api_key', label: 'API-Schlüssel (falls von carVertical freigeschaltet)', typ: 'password', hinweis: 'Für den späteren Abruf per Knopf. Ohne Schlüssel: Bericht im carVertical-Konto kaufen und den Link in der Akte einfügen.' },
+      ], hinweis: '① Bei carVertical mit Ihrem Händler-Konto anmelden → ② Berichte zur FIN kaufen → ③ den Bericht-Link in der Fahrzeugakte einfügen. Der Abruf direkt aus ARGONAUT folgt, sobald die Partner-Schnittstelle freigeschaltet ist.' },
+    ],
+  },
   // ============================ GELDFLUSS & STEUERN ============================
   {
     typ: 'zahlung', name: 'Zahlungsanbieter / Bezahllink', icon: '💳', kategorie: 'geldfluss',

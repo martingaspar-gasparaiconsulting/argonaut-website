@@ -13,7 +13,7 @@
 // ============================================================================
 
 import { createClient } from '@supabase/supabase-js';
-import { BOERSE_MODUL, BOERSE_SPALTEN, BOERSE_STATUS, boerseEinstellung, kennungGueltig, idGueltig, oeffentlich, hostSauber, type BoerseEinstellung, type BoerseFahrzeug } from './kfzBoerse';
+import { BOERSE_MODUL, BOERSE_SPALTEN, BOERSE_SPALTEN_OHNE_HISTORIE, BOERSE_STATUS, boerseEinstellung, kennungGueltig, idGueltig, oeffentlich, hostSauber, type BoerseEinstellung, type BoerseFahrzeug } from './kfzBoerse';
 
 export function boerseDb() {
   return createClient(
@@ -101,8 +101,13 @@ type MedienZeile = { id: string; bestand_id: string; position: number | null };
 
 /** Alle sichtbaren Fahrzeuge des Betriebs mit Titelbild-ID (erstes Foto nach Reihenfolge). */
 export async function sichtbareFahrzeuge(db: BoerseDb, betrieb: string): Promise<{ f: BoerseFahrzeug; bild: string | null }[]> {
-  const { data } = await db.from('kfz_bestand').select(BOERSE_SPALTEN)
+  const voll = await db.from('kfz_bestand').select(BOERSE_SPALTEN)
     .eq('owner_user_id', betrieb).eq('inseriert', true).in('status', BOERSE_STATUS).limit(500);
+  // Paket 274: SQL noch nicht gelaufen -> ohne Historie-Spalten weiter
+  const data: unknown = voll.error
+    ? (await db.from('kfz_bestand').select(BOERSE_SPALTEN_OHNE_HISTORIE)
+      .eq('owner_user_id', betrieb).eq('inseriert', true).in('status', BOERSE_STATUS).limit(500)).data
+    : voll.data;
   const liste = (((data as unknown) as unknown[]) ?? []).map(oeffentlich).filter((x): x is BoerseFahrzeug => x !== null);
   if (!liste.length) return [];
   const { data: m } = await db.from('kfz_bestand_medien').select('id, bestand_id, position')
@@ -116,7 +121,10 @@ export async function sichtbareFahrzeuge(db: BoerseDb, betrieb: string): Promise
 /** Ein sichtbares Fahrzeug mit allen Foto-IDs (Reihenfolge der Akte). Nicht sichtbar -> null. */
 export async function sichtbaresFahrzeug(db: BoerseDb, betrieb: string, id: string): Promise<{ f: BoerseFahrzeug; bilder: string[] } | null> {
   if (!idGueltig(id)) return null;
-  const { data } = await db.from('kfz_bestand').select(BOERSE_SPALTEN).eq('owner_user_id', betrieb).eq('id', id).maybeSingle();
+  const voll = await db.from('kfz_bestand').select(BOERSE_SPALTEN).eq('owner_user_id', betrieb).eq('id', id).maybeSingle();
+  const data: unknown = voll.error
+    ? (await db.from('kfz_bestand').select(BOERSE_SPALTEN_OHNE_HISTORIE).eq('owner_user_id', betrieb).eq('id', id).maybeSingle()).data
+    : voll.data;
   const f = oeffentlich(data);
   if (!f) return null;
   const { data: m } = await db.from('kfz_bestand_medien').select('id, bestand_id, position')

@@ -28,6 +28,7 @@ import KfzKalkulation from '../KfzKalkulation';
 import KfzVerkauf from '../KfzVerkauf';
 import KfzProbefahrt from '../KfzProbefahrt';
 import KfzAnfrageHinweis from '../KfzAnfrageHinweis';
+import KfzHistorie from '../KfzHistorie';
 
 const MODUL = 'kfz-bestand';
 const supabase = createBrowserClient(
@@ -202,6 +203,8 @@ export default function HandelsaktePage() {
               void speichern({ vorbesitzer: vb === null ? null : Math.max(0, Math.round(vb)), hu_bis: zust.hu_bis || null, vorschaden: zust.vorschaden || null, vorschaden_text: zust.vorschaden === 'ja' ? (zust.vorschaden_text.trim() || null) : null }, 'Zustand gespeichert.');
             }}>💾 Speichern</button>
           </div>
+          {/* Paket 274: Fahrzeughistorie (carVertical u. a.) am Fahrzeug */}
+          <KfzHistorie id={akte.id} fin={akte.fin} werte={akte as unknown as { historie_url?: string | null; historie_anbieter?: string | null; historie_am?: string | null; historie_oeffentlich?: boolean | null }} onGespeichert={() => void lade()} />
           <div style={s.karte}><h3 style={s.h3}>Inserat auf einen Blick</h3>
             {ampel.punkte.map((p) => <div key={p.name} style={s.ampelZeile}><span>{p.name}</span><span style={{ color: p.ok ? C.ok : C.warn, textAlign: 'right' }}>{p.hinweis}</span></div>)}
           </div>

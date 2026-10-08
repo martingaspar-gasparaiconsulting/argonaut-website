@@ -14,6 +14,7 @@ import {
   preisText, preisZusatz, statusHinweis, strukturDaten, textAuf, titel, type BoerseEinstellung, type BoerseFahrzeug, type Filter,
 } from '@/lib/kfzBoerse';
 import type { Firma } from '@/lib/kfzBoerseLaden';
+import { historieText } from '@/lib/partnerAnbindung';
 import { BoerseSeite, F, st } from './BoerseTeile';
 import AnfrageFormular from './[kennung]/[id]/AnfrageFormular';
 
@@ -97,6 +98,7 @@ export function ListeAnsicht({ ctx, liste, filter }: { ctx: BoerseKontext; liste
                 {hinweis && <span style={{ ...st.pill, justifySelf: 'start' }}>{hinweis}</span>}
                 <div style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.3 }}>{titel(f)}</div>
                 <div style={st.klein}>{kurzZeile(f)}</div>
+                {f.historie && <div style={{ ...st.klein, color: '#1F7A4D', fontWeight: 700 }}>✓ Fahrzeughistorie geprüft</div>}
                 {energie.length > 0 && <div style={{ ...st.klein, fontSize: 11.5 }}>{energie.map(([a, b2]) => `${a}: ${b2}`).join(' · ')}</div>}
                 <div style={{ marginTop: 'auto' }}>
                   <div style={st.preis}>{preisText(f.vk_brutto)}</div>
@@ -175,6 +177,11 @@ export function DetailAnsicht({ ctx, f, bilder }: { ctx: BoerseKontext; f: Boers
               <table style={{ ...st.tab, marginTop: 12, fontSize: 13 }}><tbody>
                 {energie.map(([a, b]) => <tr key={a}><th style={{ ...st.th, whiteSpace: 'normal' }}>{a}</th><td style={st.td}>{b}</td></tr>)}
               </tbody></table>
+            )}
+            {f.historie && (
+              <a href={f.historie.url} target="_blank" rel="noopener nofollow" style={{ display: 'block', marginTop: 12, background: '#E9F7EF', border: '1px solid #4CAF7D', borderRadius: 10, padding: '9px 12px', color: '#14532D', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>
+                ✓ {historieText(f.historie)} · Bericht ansehen ↗
+              </a>
             )}
             {(ctx.firma.telefon || ctx.firma.email) && (
               <div style={{ marginTop: 12, display: 'grid', gap: 4, fontSize: 14 }}>

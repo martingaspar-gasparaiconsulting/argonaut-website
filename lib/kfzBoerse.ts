@@ -25,6 +25,7 @@
 import { leseZahl, centRunden } from './zahlen';
 import { psAusKw, ezText } from './kfzBestand';
 import { istElektro } from './kfzAkte';
+import { historieFuerBoerse, type HistorieOeffentlich } from './partnerAnbindung';
 
 /** Paket 273: offener Hinweis „Präsentiert mit ARGONAUT OS" — nur die Marke, keine Suchbegriffe im Linktext. */
 export const ARGONAUT_LINK = 'https://argonaut-os.com';
@@ -40,7 +41,10 @@ export const BOERSE_STATUS = ['bestand', 'aufbereitung', 'zulauf'];
  * Eine Zeichenkette (der Supabase-Client liest die Liste auf Typ-Ebene).
  * NIE hinzufügen: ek_netto, fin, kennzeichen, notiz, standort_id, farbcode, erstellt_von.
  */
-export const BOERSE_SPALTEN = 'id, interne_nr, status, sparte, marke, modell, variante, erstzulassung, km_stand, leistung_kw, kraftstoff, farbe, vk_brutto, besteuerung, inseriert, ausstattung, polster, vorbesitzer, hu_bis, vorschaden, vorschaden_text, inserat_titel, inserat_text, verbrauch_komb, verbrauch_einheit, co2_g_km, co2_klasse, aktualisiert_am';
+export const BOERSE_SPALTEN = 'id, interne_nr, status, sparte, marke, modell, variante, erstzulassung, km_stand, leistung_kw, kraftstoff, farbe, vk_brutto, besteuerung, inseriert, ausstattung, polster, vorbesitzer, hu_bis, vorschaden, vorschaden_text, inserat_titel, inserat_text, verbrauch_komb, verbrauch_einheit, co2_g_km, co2_klasse, aktualisiert_am, historie_url, historie_anbieter, historie_am, historie_oeffentlich';
+
+/** Paket 274: dieselbe Liste ohne die Historie-Spalten — Rückfall, solange SQL 274 noch nicht gelaufen ist. */
+export const BOERSE_SPALTEN_OHNE_HISTORIE = 'id, interne_nr, status, sparte, marke, modell, variante, erstzulassung, km_stand, leistung_kw, kraftstoff, farbe, vk_brutto, besteuerung, inseriert, ausstattung, polster, vorbesitzer, hu_bis, vorschaden, vorschaden_text, inserat_titel, inserat_text, verbrauch_komb, verbrauch_einheit, co2_g_km, co2_klasse, aktualisiert_am';
 
 /** Felder, die verboten sind — Wächter für Tests und für oeffentlich(). */
 export const NIE_OEFFENTLICH = ['ek_netto', 'fin', 'kennzeichen', 'notiz', 'standort_id', 'farbcode', 'erstellt_von', 'owner_user_id'];
@@ -84,6 +88,8 @@ export type BoerseFahrzeug = {
   inserat_titel: string | null; inserat_text: string | null;
   verbrauch_komb: number | null; verbrauch_einheit: string | null; co2_g_km: number | null; co2_klasse: string | null;
   aktualisiert_am: string | null;
+  /** Paket 274: Bericht zur Fahrzeughistorie, nur mit Freigabe des Betriebs. */
+  historie: HistorieOeffentlich | null;
 };
 
 function txt(v: unknown, max: number): string | null {
@@ -123,6 +129,7 @@ export function oeffentlich(roh: unknown): BoerseFahrzeug | null {
     inserat_titel: txt(r.inserat_titel, 120), inserat_text: txt(r.inserat_text, 6000),
     verbrauch_komb: zahl(r.verbrauch_komb), verbrauch_einheit: einheit, co2_g_km: zahl(r.co2_g_km), co2_klasse: klasse,
     aktualisiert_am: typeof r.aktualisiert_am === 'string' ? r.aktualisiert_am : null,
+    historie: historieFuerBoerse(r),
   };
 }
 
