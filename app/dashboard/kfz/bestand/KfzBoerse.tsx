@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { BOERSE_MODUL, boerseEinstellung, boersePfad, firmaFehlt, neueKennung, sichtbar } from '@/lib/kfzBoerse';
+import { BOERSE_MODUL, boerseEinstellung, boersePfad, domainPfad, firmaFehlt, hostSauber, neueKennung, sichtbar } from '@/lib/kfzBoerse';
 import { pflichtFehlt } from '@/lib/kfzAkte';
 
 const supabase = createBrowserClient(
@@ -33,13 +33,22 @@ export default function KfzBoerse({ betrieb, istChef }: { betrieb: string | null
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [kopiert, setKopiert] = useState(false);
+  const [domains, setDomains] = useState<{ domain: string; live: boolean }[]>([]);
 
   const lade = useCallback(async (b: string) => {
-    const [e, f, ci] = await Promise.all([
+    const [e, f, ci, ws] = await Promise.all([
       supabase.from('modul_einstellung').select('einstellung').eq('owner_user_id', b).eq('modul', BOERSE_MODUL).maybeSingle(),
       supabase.from('kfz_bestand').select('status, inseriert, vk_brutto, kraftstoff, verbrauch_komb, co2_g_km, co2_klasse').eq('owner_user_id', b).eq('inseriert', true).limit(2000),
       supabase.from('web_ci').select('firma, strasse, plz, ort, email, telefon').eq('owner_user_id', b).maybeSingle(),
+      supabase.from('web_seiten').select('domain, status').eq('owner_user_id', b).limit(20),
     ]);
+    // Paket 273: eigene Domain(s) aus dem Website-Bauer — dort läuft die Börse unter /fahrzeuge.
+    const ds = new Map<string, boolean>();
+    for (const z of (((ws.data as unknown) as { domain: string | null; status: string | null }[]) ?? [])) {
+      const d = hostSauber(z.domain);
+      if (d) ds.set(d, (ds.get(d) ?? false) || z.status === 'live');
+    }
+    setDomains([...ds].map(([domain, live]) => ({ domain, live })));
     const einst = (e.data as { einstellung?: unknown } | null)?.einstellung;
     setRoh(einst && typeof einst === 'object' ? (einst as Record<string, unknown>) : {});
     const liste = ((f.data as unknown) as Zeile[]) ?? [];
@@ -115,6 +124,17 @@ export default function KfzBoerse({ betrieb, istChef }: { betrieb: string | null
               <button style={k.btn} onClick={() => { void navigator.clipboard?.writeText(link).then(() => { setKopiert(true); setTimeout(() => setKopiert(false), 1800); }); }}>{kopiert ? '✓ Kopiert' : '📋 Kopieren'}</button>
             </div>
           )}
+
+          {einst.aktiv && domains.length > 0 && (
+            <div style={{ display: 'grid', gap: 4, fontSize: 13.5 }}>
+              {domains.map((d) => (
+                <div key={d.domain}>Auf Ihrer Domain: <a href={`https://${d.domain}${domainPfad()}`} target="_blank" rel="noopener noreferrer" style={k.link}>{d.domain}{domainPfad()} ↗</a>
+                  {d.live && domains.length === 1 ? <span style={k.dim}> · Google führt die Fahrzeuge unter dieser Adresse</span> : null}</div>
+              ))}
+              <div style={k.dim}>Voraussetzung: die Domain ist im Website-Bauer eingetragen und mit ARGONAUT verbunden (DNS). Ihre Webseite zeigt dann oben den Menüpunkt „Fahrzeuge".</div>
+            </div>
+          )}
+          {einst.aktiv && domains.length === 0 && <div style={k.dim}>Tipp: Tragen Sie im Website-Bauer Ihre eigene Domain ein (auch eine Subdomain wie fahrzeuge.ihr-autohaus.de) — dann läuft die Börse unter ihre-domain/fahrzeuge und Google führt die Fahrzeuge unter Ihrer Adresse.</div>}
 
           {zahlen && (
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5, lineHeight: 1.6 }}>

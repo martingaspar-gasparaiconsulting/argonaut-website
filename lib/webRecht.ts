@@ -180,6 +180,8 @@ export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean; 
     opts.widerruf ? '      <a href="#widerruf" class="ao-fuss-widerruf"><b>Vertrag widerrufen</b></a>' : '',
     opts.barrierefreiheit ? '      <a href="#barrierefreiheit">Barrierefreiheit</a>' : '',
     '    </nav>',
+    // Paket 273: offener Hinweis auf ARGONAUT — nur die Marke, keine Suchbegriffe im Linktext.
+    '    <a class="ao-fuss-ao" href="https://argonaut-os.com" rel="noopener">Präsentiert mit ARGONAUT OS</a>',
     '  </div>',
     '</footer>',
   ].filter(Boolean).join('\n');

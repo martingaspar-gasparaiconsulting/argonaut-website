@@ -7,7 +7,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { impressumText } from '@/lib/webRecht';
-import { textAuf } from '@/lib/kfzBoerse';
+import { textAuf, ARGONAUT_LINK } from '@/lib/kfzBoerse';
 import type { Firma } from '@/lib/kfzBoerseLaden';
 
 export const F = { bg: '#F4F6F9', karte: '#FFFFFF', text: '#111827', dim: '#5B6676', linie: '#E2E7EE' };
@@ -75,6 +75,8 @@ function BoerseFuss({ firma }: { firma: Firma }) {
           <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: '8px 0 0' }}>{imp}</pre>
         </details>
         {firma.web && /^https?:\/\//.test(firma.web) && <a href={firma.web} rel="noopener" style={{ color: F.text }}>Zur Webseite von {firma.name || 'uns'} ↗</a>}
+        {/* Paket 273: offener Hinweis auf ARGONAUT (nur Marke, keine Suchbegriffe) */}
+        <div style={{ fontSize: 12 }}><a href={ARGONAUT_LINK} rel="noopener" style={{ color: F.dim }}>Präsentiert mit ARGONAUT OS</a></div>
       </div>
     </footer>
   );

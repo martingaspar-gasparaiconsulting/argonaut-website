@@ -13,7 +13,7 @@
 // ============================================================================
 
 import { createClient } from '@supabase/supabase-js';
-import { BOERSE_MODUL, BOERSE_SPALTEN, BOERSE_STATUS, boerseEinstellung, kennungGueltig, idGueltig, oeffentlich, type BoerseEinstellung, type BoerseFahrzeug } from './kfzBoerse';
+import { BOERSE_MODUL, BOERSE_SPALTEN, BOERSE_STATUS, boerseEinstellung, kennungGueltig, idGueltig, oeffentlich, hostSauber, type BoerseEinstellung, type BoerseFahrzeug } from './kfzBoerse';
 
 export function boerseDb() {
   return createClient(
@@ -39,6 +39,40 @@ export async function betriebZuKennung(db: BoerseDb, k: string): Promise<{ betri
   if (rows.length !== 1) return null;
   const einst = boerseEinstellung(rows[0].einstellung);
   return einst.aktiv && einst.kennung === k ? { betrieb: rows[0].owner_user_id, einst } : null;
+}
+
+// --- Paket 273: Börse auf der eigenen Domain des Betriebs ----------------------------------
+
+type DomainZeile = { owner_user_id: string; domain: string | null; status: string | null };
+
+/**
+ * Betrieb zur Domain (Aufruf über autohaus-muster.de/fahrzeuge): die Domain steht
+ * in web_seiten (Website-Bauer, eindeutig je Seite). Gehört sie mehr als einem
+ * Betrieb, wird nie geraten. Die Börse muss eingeschaltet sein.
+ */
+export async function betriebZuDomain(db: BoerseDb, host: string): Promise<{ betrieb: string; einst: BoerseEinstellung; kennung: string; domain: string } | null> {
+  const d = hostSauber(host);
+  if (!d) return null;
+  const { data } = await db.from('web_seiten').select('owner_user_id, domain, status').in('domain', [d, `www.${d}`]).limit(10);
+  const besitzer = [...new Set((((data as unknown) as DomainZeile[]) ?? []).map((z) => z.owner_user_id))];
+  if (besitzer.length !== 1) return null;
+  const { data: e } = await db.from('modul_einstellung').select('einstellung').eq('owner_user_id', besitzer[0]).eq('modul', BOERSE_MODUL).maybeSingle();
+  const einst = boerseEinstellung((e as { einstellung?: unknown } | null)?.einstellung);
+  return einst.aktiv && einst.kennung ? { betrieb: besitzer[0], einst, kennung: einst.kennung, domain: d } : null;
+}
+
+/** Kennung der eingeschalteten Börse eines Betriebs (für den Menüpunkt „Fahrzeuge" der Webseite), sonst null. */
+export async function aktiveBoerseKennung(betrieb: string, db: BoerseDb = boerseDb()): Promise<string | null> {
+  const { data } = await db.from('modul_einstellung').select('einstellung').eq('owner_user_id', betrieb).eq('modul', BOERSE_MODUL).maybeSingle();
+  const e = boerseEinstellung((data as { einstellung?: unknown } | null)?.einstellung);
+  return e.aktiv ? e.kennung : null;
+}
+
+/** Verbundene Domain des Betriebs (veröffentlichte Webseite mit eingetragener Domain) — für die Google-Adresse. */
+export async function verbundeneDomain(db: BoerseDb, betrieb: string): Promise<string | null> {
+  const { data } = await db.from('web_seiten').select('owner_user_id, domain, status').eq('owner_user_id', betrieb).eq('status', 'live').limit(20);
+  const domains = [...new Set((((data as unknown) as DomainZeile[]) ?? []).map((z) => hostSauber(z.domain)).filter((x): x is string => !!x))];
+  return domains.length === 1 ? domains[0] : null;   // mehrere Domains: keine raten, Börse bleibt unter argonaut-os.com
 }
 
 const s = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');

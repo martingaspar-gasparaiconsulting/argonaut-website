@@ -75,6 +75,14 @@ export async function proxy(req: NextRequest) {
   // Fremder Host -> die veroeffentlichte Seite dieses Kunden ausliefern.
   // Reservierte App-Pfade (/dashboard, /auth) werden NIE umgeschrieben.
   const reserviert = RESERVIERT.some((pre) => pfad === pre || pfad.startsWith(pre + '/'))
+  // Paket 273: /fahrzeuge auf der Domain eines Kunden -> seine Fahrzeugbörse
+  // (/fahrzeuge-domain/<host>/<rest>). Welcher Betrieb, entscheidet die Seite
+  // allein anhand der Domain im Website-Bauer; ohne eingeschaltete Börse 404.
+  if (host && !istEigeneDomain(host) && (pfad === '/fahrzeuge' || pfad.startsWith('/fahrzeuge/'))) {
+    const url = req.nextUrl.clone()
+    url.pathname = `/fahrzeuge-domain/${encodeURIComponent(host.split(':')[0])}${pfad.slice('/fahrzeuge'.length)}`
+    return NextResponse.rewrite(url)
+  }
   if (host && !istEigeneDomain(host) && !reserviert) {
     const url = req.nextUrl.clone()
     url.pathname = `/p-domain/${encodeURIComponent(host.split(':')[0])}`

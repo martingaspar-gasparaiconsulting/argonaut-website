@@ -133,7 +133,7 @@ test('Anfrage-Eingabe: Pflichtfelder, Kopfzeile, Längen', () => {
 
 test('Strukturdaten: absolut, ohne Interna, sicher eingebettet', () => {
   const f = oeffentlich(zeile({ inserat_text: 'Text </script><script>alert(1)</script>' }));
-  const d = strukturDaten(f, { basis: 'https://argonaut-os.com/', kennung: K, bilder: ['/api/oeffentlich/kfz-boerse-bild?k=x&m=y'], firma: 'Autohaus Test', ort: 'Böblingen' });
+  const d = strukturDaten(f, { basis: 'https://argonaut-os.com/', url: `https://argonaut-os.com/fahrzeuge/${K}/${ID}`, bilder: ['/api/oeffentlich/kfz-boerse-bild?k=x&m=y'], firma: 'Autohaus Test', ort: 'Böblingen' });
   assert.equal(d['@type'], 'Car');
   assert.equal(d.url, `https://argonaut-os.com/fahrzeuge/${K}/${ID}`);
   assert.equal(d.image[0], 'https://argonaut-os.com/api/oeffentlich/kfz-boerse-bild?k=x&m=y');
@@ -145,8 +145,8 @@ test('Strukturdaten: absolut, ohne Interna, sicher eingebettet', () => {
   const sicher = jsonSicher(d);
   assert.ok(!sicher.includes('</script>') && !sicher.includes('<'));
   assert.deepEqual(JSON.parse(sicher), d);
-  assert.equal(strukturDaten(oeffentlich(zeile({ status: 'zulauf' })), { basis: 'https://x.de', kennung: K, bilder: [], firma: null, ort: null }).offers.availability, 'https://schema.org/PreOrder');
-  assert.equal(strukturDaten(oeffentlich(zeile({ vk_brutto: null })), { basis: 'https://x.de', kennung: K, bilder: [], firma: null, ort: null }).offers, undefined);
+  assert.equal(strukturDaten(oeffentlich(zeile({ status: 'zulauf' })), { basis: 'https://x.de', url: 'https://x.de/fahrzeuge/1', bilder: [], firma: null, ort: null }).offers.availability, 'https://schema.org/PreOrder');
+  assert.equal(strukturDaten(oeffentlich(zeile({ vk_brutto: null })), { basis: 'https://x.de', url: 'https://x.de/fahrzeuge/1', bilder: [], firma: null, ort: null }).offers, undefined);
 });
 
 test('Darstellung und Rechtstexte', () => {
@@ -186,11 +186,12 @@ test('Quelltext-Wächter: Laden nur über Positivliste, Bild nur Foto, Route pr�
   assert.match(anf, /owner_user_id: bt\.betrieb, bestand_id: id/);
   assert.match(anf, /quelle: 'website'/);
   assert.match(anf, /firma_hp/);
-  for (const seite of ['app/fahrzeuge/[kennung]/page.tsx', 'app/fahrzeuge/[kennung]/[id]/page.tsx']) {
-    const s = lies(seite);
-    assert.ok(!/from\('kfz_bestand'\)/.test(s), `${seite} liest nie selbst`);
-    assert.match(s, /index: false, follow: false/);
-    assert.match(s, /einst\.google \? \{ index: true/);
+  // Paket 273: Seiten sind dünn, die Ansicht steht in BoerseAnsichten.tsx.
+  for (const seite of ['app/fahrzeuge/[kennung]/page.tsx', 'app/fahrzeuge/[kennung]/[id]/page.tsx', 'app/fahrzeuge/BoerseAnsichten.tsx']) {
+    assert.ok(!/from\('kfz_bestand'\)/.test(lies(seite)), `${seite} liest nie selbst`);
   }
-  assert.ok(!/ek_netto|kfz_kalkulation/.test(lies('app/fahrzeuge/[kennung]/[id]/page.tsx')));
+  const ans = lies('app/fahrzeuge/BoerseAnsichten.tsx');
+  assert.match(ans, /index: false, follow: false/);
+  assert.match(ans, /einst\.google \? \{ index: true/);
+  assert.ok(!/ek_netto|kfz_kalkulation/.test(ans));
 });

@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
+import { aktiveBoerseKennung, betriebZuDomain, boerseDb } from '@/lib/kfzBoerseLaden';
 
 // ============================================================
 // ARGONAUT OS · W7 · app/p-domain/[host]/route.ts
@@ -33,7 +34,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ host: s
       .eq('status', 'live')
       .maybeSingle();
 
-    if (!seite) return seite404();
+    if (!seite) {
+      // Paket 273: Domain nur für die Fahrzeugbörse verbunden (z. B. fahrzeuge.autohaus.de,
+      // Webseite nicht veröffentlicht) -> Startseite der Domain ist die Börse.
+      const boerse = await betriebZuDomain(boerseDb(), domain).catch(() => null);
+      if (boerse) return new Response(null, { status: 302, headers: { location: '/fahrzeuge', 'cache-control': 'no-store' } });
+      return seite404();
+    }
 
     const { data: ci } = await db
       .from('web_ci')
@@ -42,7 +49,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ host: s
       .maybeSingle();
 
     const bloecke = Array.isArray((seite as { bloecke?: unknown }).bloecke) ? ((seite as { bloecke: Block[] }).bloecke) : [];
-    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: (seite as { oeffentlich_id?: string }).oeffentlich_id });
+    // Paket 273: Menüpunkt „Fahrzeuge" -> /fahrzeuge auf derselben Domain, wenn die Börse eingeschaltet ist.
+    const boerse = await aktiveBoerseKennung((seite as { owner_user_id: string }).owner_user_id).catch(() => null);
+    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: (seite as { oeffentlich_id?: string }).oeffentlich_id, ...(boerse ? { fahrzeugeLink: '/fahrzeuge' } : {}) });
 
     return new Response(html, {
       status: 200,

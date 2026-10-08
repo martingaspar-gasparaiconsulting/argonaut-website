@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
+import { aktiveBoerseKennung } from '@/lib/kfzBoerseLaden';
 
 // ============================================================
 // ARGONAUT OS · W7 · app/p/[id]/route.ts — Öffentliche Auslieferung
@@ -41,7 +42,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .maybeSingle();
 
     const bloecke = Array.isArray((seite as { bloecke?: unknown }).bloecke) ? ((seite as { bloecke: Block[] }).bloecke) : [];
-    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: kennung });
+    // Paket 273: Menüpunkt „Fahrzeuge" auf die Börse unter argonaut-os.com, wenn sie eingeschaltet ist.
+    const boerse = await aktiveBoerseKennung((seite as { owner_user_id: string }).owner_user_id).catch(() => null);
+    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: kennung, ...(boerse ? { fahrzeugeLink: `/fahrzeuge/${boerse}` } : {}) });
 
     return new Response(html, {
       status: 200,

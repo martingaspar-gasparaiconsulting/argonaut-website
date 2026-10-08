@@ -913,6 +913,8 @@ function seiteCss(ci: CiWeb): string {
     '.ao-fuss-links{display:flex;gap:20px}',
     '.ao-fuss-links a{color:#fff;text-decoration:none;opacity:.85}',
     '.ao-fuss-links a:hover{opacity:1}',
+    '.ao-fuss-ao{flex-basis:100%;font-size:12px;color:rgba(255,255,255,.55);text-decoration:none}',
+    '.ao-fuss-ao:hover{color:#fff}',
   ].join('');
 }
 
@@ -1004,9 +1006,13 @@ export function seiteHtml(
   seite: { titel?: string; bloecke: Block[] },
   ci: CiWeb,
   jahr: number,
-  opts: { oeffentlichId?: string; editor?: boolean } = {},
+  opts: { oeffentlichId?: string; editor?: boolean; fahrzeugeLink?: string } = {},
 ): string {
   const firma = esc(z(ci.firma) || 'Ihr Firmenname');
+  // Paket 273: Menüpunkt „Fahrzeuge", wenn der Betrieb seine Fahrzeugbörse eingeschaltet hat.
+  // Nur relative Pfade (/fahrzeuge …) — nie eine fremde Adresse ins Menü.
+  const fahrzeuge = opts.fahrzeugeLink && /^\/fahrzeuge(\/[a-z0-9]{24})?$/.test(opts.fahrzeugeLink)
+    ? '<a href="' + opts.fahrzeugeLink + '">Fahrzeuge</a>' : '';
   const slogan = esc(z(ci.slogan));
   const logo = safeUrl(ci.logo_url)
     ? '<span class="logo"><img src="' + safeUrl(ci.logo_url) + '" alt="Logo"></span>'
@@ -1037,7 +1043,7 @@ export function seiteHtml(
     '<header class="top"><div class="trow">',
     logo,
     '<div><div class="fn">' + firma + '</div>' + (slogan ? '<div class="cl">' + slogan + '</div>' : '') + '</div>',
-    '<nav class="mainnav"><a href="#leistungen">Leistungen</a><a href="#ueber">Über uns</a><a href="#kontakt">Kontakt</a></nav>',
+    '<nav class="mainnav"><a href="#leistungen">Leistungen</a>' + fahrzeuge + '<a href="#ueber">Über uns</a><a href="#kontakt">Kontakt</a></nav>',
     '</div></header>',
     koerper,
     rechtsSektionen(ci, webDiensteDerSeite(seite.bloecke || [])),

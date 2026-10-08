@@ -26,6 +26,9 @@ import { leseZahl, centRunden } from './zahlen';
 import { psAusKw, ezText } from './kfzBestand';
 import { istElektro } from './kfzAkte';
 
+/** Paket 273: offener Hinweis „Präsentiert mit ARGONAUT OS" — nur die Marke, keine Suchbegriffe im Linktext. */
+export const ARGONAUT_LINK = 'https://argonaut-os.com';
+
 /** Einstellungs-Modul (modul_einstellung) der Börse. */
 export const BOERSE_MODUL = 'kfz-boerse';
 
@@ -321,6 +324,30 @@ export function bildPfad(kennung: string, medienId: string): string {
   return `/api/oeffentlich/kfz-boerse-bild?k=${encodeURIComponent(kennung)}&m=${encodeURIComponent(medienId)}`;
 }
 
+// --- Paket 273: Börse auf der eigenen Domain des Betriebs -------------------------------
+
+/** Pfad auf der Domain des Betriebs: /fahrzeuge bzw. /fahrzeuge/<id> (ohne Kennung). */
+export function domainPfad(fahrzeugId?: string): string {
+  return '/fahrzeuge' + (fahrzeugId ? `/${fahrzeugId}` : '');
+}
+
+/** Host aus Proxy/Adresszeile säubern: klein, ohne Port, ohne „www."; Unsinn -> null. */
+export function hostSauber(roh: unknown): string | null {
+  const h = String(roh ?? '').trim().toLowerCase().split(':')[0].replace(/^www\./, '').replace(/\.$/, '');
+  return /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/.test(h) ? h : null;
+}
+
+/**
+ * Die eine Adresse, unter der Google ein Fahrzeug führen soll: auf der Domain
+ * des Betriebs, wenn er eine verbundene (veröffentlichte) Webseite hat — sonst
+ * unter argonaut-os.com mit Kennung. So zahlt die Sichtbarkeit auf den Händler ein.
+ */
+export function kanonisch(o: { kennung: string; fahrzeugId?: string; domain: string | null; basis: string }): string {
+  const d = hostSauber(o.domain);
+  if (d) return `https://${d}${domainPfad(o.fahrzeugId)}`;
+  return o.basis.replace(/\/+$/, '') + boersePfad(o.kennung, o.fahrzeugId);
+}
+
 export function boersePfad(kennung: string, fahrzeugId?: string): string {
   return `/fahrzeuge/${kennung}` + (fahrzeugId ? `/${fahrzeugId}` : '');
 }
@@ -340,9 +367,9 @@ function kraftstoffSchema(k: string | null): string | null {
  * schema.org/Car für Google (nur, wenn der Betrieb Google eingeschaltet hat).
  * Absolute Adressen; keine FIN, kein Kennzeichen.
  */
-export function strukturDaten(f: BoerseFahrzeug, o: { basis: string; kennung: string; bilder: string[]; firma: string | null; ort: string | null }): Record<string, unknown> {
+export function strukturDaten(f: BoerseFahrzeug, o: { basis: string; url: string; bilder: string[]; firma: string | null; ort: string | null }): Record<string, unknown> {
   const basis = o.basis.replace(/\/+$/, '');
-  const url = basis + boersePfad(o.kennung, f.id);
+  const url = o.url;
   const d: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Car',
