@@ -270,6 +270,8 @@ export default function HandelsaktePage() {
             <label style={s.lab}>Beschreibung<textarea style={{ ...s.inp, minHeight: 140 }} value={ins.text} onChange={(e) => setIns({ ...ins, text: e.target.value })} /></label>
             <div style={s.dim}>{ins.text.trim().length} Zeichen</div>
             <label style={{ ...s.haken, marginTop: 8 }}><input type="checkbox" checked={ins.inseriert} onChange={(e) => setIns({ ...ins, inseriert: e.target.checked })} /> Inserat ist online</label>
+            {/* Paket 272: Hinweis auf die eigene Fahrzeugbörse */}
+            <div style={s.dim}>Erscheint in Ihrer Fahrzeugbörse, sobald diese eingeschaltet ist (Fahrzeugbestand → 🌐 Fahrzeugbörse) und das Fahrzeug im Bestand, in der Aufbereitung oder im Zulauf steht.</div>
             <button style={{ ...s.gold, marginTop: 10, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => void speichern({ inserat_titel: ins.titel.trim() || null, inserat_text: ins.text.trim() || null, inseriert: ins.inseriert }, 'Inserat gespeichert.')}>💾 Speichern</button>
           </div>
           <div style={s.karte}>

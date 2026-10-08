@@ -50,6 +50,9 @@ export const OFFENE_TUEREN: OffeneTuer[] = [
   { pfad: 'oeffentlich/web-anfrage', grund: 'Anfrage-Formular der Kundenwebseite -> CRM des Betriebs', schutz: 'formular', geprueft: true },
   // Paket 264 (07.10.26): Online-Ankaufformular eines Kfz-Betriebs -> kfz_ankauf; Betrieb nur ueber geheime Kennung, vom Chef ein-/ausschaltbar.
   { pfad: 'oeffentlich/kfz-ankauf', grund: 'Online-Ankaufformular eines Kfz-Betriebs (Fahrzeug anbieten) -> Ankauf und Bewertung des Betriebs', schutz: 'formular', geprueft: true },
+  // Paket 272 (08.10.26): eigene Fahrzeugboerse eines Kfz-Betriebs — Betrieb nur ueber Kennung, vom Chef ein-/ausschaltbar; nur inserierte Fahrzeuge, Positivliste der Felder.
+  { pfad: 'oeffentlich/kfz-boerse-anfrage', grund: 'Anfrage-Formular der Fahrzeugbörse eines Kfz-Betriebs -> Anfragen und Suchaufträge des Betriebs (Quelle Webseite)', schutz: 'formular', geprueft: true },
+  { pfad: 'oeffentlich/kfz-boerse-bild', grund: 'Fotos inserierter Fahrzeuge der Fahrzeugbörse (Weiterleitung auf signierten Link, nur Fotos, nur sichtbare Fahrzeuge)', schutz: 'nur-lesen', geprueft: true },
   { pfad: 'oeffentlich/web-newsletter', grund: 'Newsletter-Anmeldung der Kundenwebseite (Double-Opt-in)', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/shop-produkte', grund: 'freigeschaltete Produkte eines Shops', schutz: 'seite', geprueft: true },
   { pfad: 'oeffentlich/shop-bestellung', grund: 'Bestellung im Shop des Betriebs', schutz: 'formular', geprueft: true },

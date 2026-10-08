@@ -71,6 +71,11 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },
   ],
+  // Paket 272: Anfrage-Formular der eigenen Fahrzeugboerse (Kfz) — je Absender und je Interessent+Fahrzeug.
+  'oeffentlich/kfz-boerse-anfrage': [
+    { art: 'ip', max: 5, fensterSek: STUNDE },
+    { art: 'ziel', max: 3, fensterSek: TAG },
+  ],
   'oeffentlich/web-newsletter': [
     { art: 'ip', max: 10, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },

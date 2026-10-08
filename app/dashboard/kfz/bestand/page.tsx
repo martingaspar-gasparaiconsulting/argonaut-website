@@ -25,6 +25,7 @@ import {
   preisNachProzent, naechsteNr, euro, psAusKw, finTreffer, listenZeilen, type Bestand, type FinTreffer,
 } from '@/lib/kfzBestand';
 import { bestandslistePdf } from '@/lib/kfzBestandPdf';
+import KfzBoerse from './KfzBoerse';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 
@@ -329,6 +330,9 @@ export default function FahrzeugbestandPage() {
 
       {fehler && <div style={s.fehler} role="alert">{fehler}</div>}
       {ok && <div style={s.ok} role="status">{ok}</div>}
+
+      {/* Paket 272: eigene Fahrzeugbörse (an/aus nur Geschäftsleitung) */}
+      <KfzBoerse betrieb={besitzer} istChef={istChef} />
 
       {formOffen && (
         <div style={s.karte}>
