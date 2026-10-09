@@ -5,7 +5,7 @@ esc=html.escape
 WER={"G":("gemeinsam","g"),"C":("Claude","c"),"M":("Martin","m")}
 def st_cls(s):
     return {"live":"ok","läuft":"run","nächster":"next"}.get(s,"wait" if "wartet" in s else "open")
-tot_bis_test=0; tot_s3=0; tot_kfz=0; tot_ext=0; done=0
+tot_bis_test=0; tot_s3=0; tot_kfz=0; tot_mob=0; tot_alle=0; tot_ext=0; done=0
 for sid,_,_,rows in S:
     for r in rows:
         p=int(r[5])
@@ -13,8 +13,10 @@ for sid,_,_,rows in S:
         if sid in("s0","s1","s2"): tot_bis_test+=p
         elif sid in ("s3","s5"): tot_s3+=p
         elif sid=="kfz": tot_kfz+=p
+        elif sid=="mob": tot_mob+=p
+        elif sid=="alle": tot_alle+=p
         else: tot_ext+=p
-gesamt=tot_bis_test+tot_s3+tot_kfz+tot_ext
+gesamt=tot_bis_test+tot_s3+tot_kfz+tot_mob+tot_alle+tot_ext
 alle=gesamt+done
 proz=round(done*100/alle)
 secs=[]
@@ -103,19 +105,19 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 09.10.2026 · _p284 unterwegs · K16b DATEV für Kfz-Sonderfälle</div>
+<div class="eyebrow">ARGONAUT OS · Stand 09.10.2026 · _p285 unterwegs · K17a Musterbetrieb mit Handelsbestand</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
 <div class="zahl gold"><b>{tot_bis_test}</b><span>Pushes Stufe 0–2 (Rest wartet)</span></div>
 <div class="zahl"><b>{tot_s3}</b><span>Pushes Stufe 3 + Dossiers</span></div>
-<div class="zahl"><b>{tot_kfz}</b><span>Pushes Kfz-Pilot</span></div><div class="zahl"><b>{tot_ext}</b><span>Pushes externe Partner</span></div>
+<div class="zahl"><b>{tot_kfz}</b><span>Pushes Kfz-Pilot</span></div><div class="zahl"><b>{tot_alle}</b><span>Pushes für alle Branchen</span></div><div class="zahl"><b>{tot_mob}</b><span>Pushes Mobilität</span></div><div class="zahl"><b>{tot_ext}</b><span>Pushes externe Partner</span></div>
 <div class="zahl"><b>{gesamt}</b><span>Pushes gesamt offen</span></div>
 <div class="zahl"><b>≈ {round(gesamt/2)}</b><span>Blöcke à 2 Std. + 1 Testtag</span></div>
 </div>
 <div class="fort"><span>{done} von {alle} Pushes erledigt · {proz} %</span><div class="balken" role="progressbar" aria-valuenow="{proz}" aria-valuemin="0" aria-valuemax="100"><i style="width:{proz}%"></i></div></div>
 <div class="leg">Wer: <span class="w w-g">gemeinsam</span><span class="w w-c">Claude</span><span class="w w-m">Martin</span> · Status: <span class="st st-ok">✓ erledigt</span><span class="st st-run">läuft</span><span class="st st-next">nächster</span><span class="st st-open">offen</span><span class="st st-wait">wartet</span></div>
-<nav class="sprung" aria-label="Abschnitte"><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
+<nav class="sprung" aria-label="Abschnitte"><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#alle">Für alle</a><a href="#mob">Mobilität</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
 </div>
 {secs[0]}{secs[1]}{secs[2]}
 {"".join(secs[3:])}

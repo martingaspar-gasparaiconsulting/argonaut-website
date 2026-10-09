@@ -61,6 +61,112 @@ function kfzFahrzeuge(ctx: XxlKontext): SeedZeile[] {
   }));
 }
 
+// ---------------------------------------------------------------------------
+// Paket 285 (K17): Kfz-Handel — Handelsbestand mit allem, was die Kfz-Seiten
+// zeigen: Status vom Zulauf bis verkauft (auch Vorjahr fuer den Chef-Blick),
+// Kosten, Marktvergleich, Anfragen, Suchauftrag, Probefahrt, Brief-Tresor,
+// DAT-Bewertung. KEIN Kaufvertrag und KEINE Rechnung (Kern-Geld bleibt leer);
+// die Boerse bleibt aus — der Musterbetrieb ist nie oeffentlich.
+// Werte halten die Pruefregeln aus p259/p261/p265/p270/p271/p276/p277/p283.
+// ---------------------------------------------------------------------------
+/** [Marke, Modell, Variante, Sparte, Status, Kraftstoff, kW, km, EZ vor Tagen, Eingang vor Tagen (null = Zulauf), EK, VK, Besteuerung, verkauft vor Tagen, FIN-Praefix] */
+const HANDEL_FZ = [
+  ['Volkswagen', 'Golf', '1.5 eTSI Life', 'Pkw', 'bestand', 'Benzin', 110, 38500, 1150, 45, 17800, 23490, '25a', null, 'WVW'],
+  ['BMW', '320d Touring', 'M Sport', 'Pkw', 'aufbereitung', 'Diesel', 140, 112000, 2400, 10, 19500, 25990, 'regel', null, 'WBA'],
+  ['Skoda', 'Octavia Combi', '2.0 TDI Style', 'Pkw', 'zulauf', 'Diesel', 110, 15, 30, null, 26100, 31900, 'regel', null, 'TMB'],
+  ['Opel', 'Astra', '1.2 Turbo Edition', 'Pkw', 'bestand', 'Benzin', 96, 67000, 1900, 130, 9800, 12990, '25a', null, 'W0V'],
+  ['Mercedes-Benz', 'C 220 d', 'Avantgarde', 'Pkw', 'reserviert', 'Diesel', 147, 54000, 1400, 35, 27400, 33900, 'regel', null, 'W1K'],
+  ['Audi', 'A3 Sportback', '35 TFSI', 'Pkw', 'verkauft', 'Benzin', 110, 61000, 1800, 70, 15200, 18990, '25a', 20, 'WAU'],
+  ['Ford', 'Focus Turnier', '1.0 EcoBoost', 'Pkw', 'verkauft', 'Benzin', 92, 88000, 2600, 420, 8900, 11490, '25a', 380, 'WF0'],
+  ['BMW', 'R 1250 GS', 'Adventure', 'Motorrad', 'bestand', 'Benzin', 100, 21000, 1300, 25, 12900, 15990, '25a', null, 'WB1'],
+] as const;
+
+/** Gueltige Beispiel-FIN (17 Zeichen, ohne I/O/Q), je Fahrzeug eindeutig. */
+export function handelFin(praefix: string, i: number): string {
+  return `${praefix}ZZZXXLK${1000001 + i}`;
+}
+
+function kfzBestand(ctx: XxlKontext): SeedZeile[] {
+  return HANDEL_FZ.map((f, i) => ({
+    ...O(ctx), interne_nr: `F-${String(i + 1).padStart(4, '0')}`, status: f[4], sparte: f[3],
+    marke: f[0], modell: f[1], variante: f[2], fin: handelFin(f[14], i),
+    kennzeichen: i === 0 ? 'BB-XL 101' : i === 4 ? 'BB-XL 105' : null,
+    erstzulassung: tagPlus(ctx.heute, -f[8]).slice(0, 8) + '01', km_stand: f[7], leistung_kw: f[6], kraftstoff: f[5],
+    farbe: ['Mondsteingrau', 'Schwarz', 'Weiß', 'Silber', 'Obsidianschwarz', 'Blau', 'Grau', 'Weiß/Blau'][i],
+    eingang_am: f[9] === null ? null : tagPlus(ctx.heute, -f[9]),
+    verkauft_am: f[13] === null ? null : tagPlus(ctx.heute, -f[13]),
+    ek_netto: f[10], vk_brutto: f[11], besteuerung: f[12],
+    inseriert: f[4] === 'bestand' || f[4] === 'reserviert',
+    hu_bis: f[4] === 'zulauf' ? null : tagPlus(ctx.heute, 200 + i * 60),
+    vorbesitzer: f[4] === 'zulauf' ? 0 : 1 + (i % 2), vorschaden: i === 3 ? 'ja' : 'keine_bekannt',
+    vorschaden_text: i === 3 ? 'Parkrempler hinten links, fachgerecht repariert (Beispiel)' : null,
+    ausstattung: i === 7 ? ['ABS', 'Navigationssystem', 'Sitzheizung'] : ['Klimaautomatik', 'Navigationssystem', 'Sitzheizung', 'Einparkhilfe hinten', 'LED-Scheinwerfer'],
+    bewertung_anbieter: i === 0 ? 'dat' : null, bewertung_ek: i === 0 ? 18200 : null, bewertung_vk: i === 0 ? 22900 : null,
+    bewertung_am: i === 0 ? tagPlus(ctx.heute, -10) : null,
+    notiz: XXL_NOTIZ,
+  }));
+}
+
+function kfzKosten(ctx: XxlKontext): SeedZeile[] {
+  const b = (i: number) => erstes(ctx, 'kfz_bestand', i);
+  if (!b(0)) return [];
+  return [
+    { ...O(ctx), bestand_id: b(0), art: 'aufbereitung', bezeichnung: 'Innen- und Außenaufbereitung', betrag_netto: 380, plan: false, datum: tagPlus(ctx.heute, -40) },
+    { ...O(ctx), bestand_id: b(0), art: 'hu', bezeichnung: 'HU/AU neu', betrag_netto: 129, plan: false, datum: tagPlus(ctx.heute, -38) },
+    { ...O(ctx), bestand_id: b(1), art: 'aufbereitung', bezeichnung: 'Aufbereitung geplant', betrag_netto: 420, plan: true, datum: ctx.heute },
+    { ...O(ctx), bestand_id: b(1), art: 'reifen', bezeichnung: 'Satz Sommerreifen', betrag_netto: 560, plan: true, datum: ctx.heute },
+    { ...O(ctx), bestand_id: b(3), art: 'lack', bezeichnung: 'Smart-Repair Stoßfänger', betrag_netto: 650, plan: false, datum: tagPlus(ctx.heute, -120) },
+    { ...O(ctx), bestand_id: b(5), art: 'aufbereitung', bezeichnung: 'Aufbereitung', betrag_netto: 350, plan: false, datum: tagPlus(ctx.heute, -60) },
+  ];
+}
+
+function kfzMarktvergleich(ctx: XxlKontext): SeedZeile[] {
+  const b = erstes(ctx, 'kfz_bestand', 0);
+  if (!b) return [];
+  const ez = tagPlus(ctx.heute, -1150).slice(0, 8) + '01';
+  return [[22990, 41000, 'mobile.de'], [23900, 35000, 'AutoScout24'], [24490, 29500, 'mobile.de'], [22500, 52000, 'Händlerseite']].map(([preis, km, quelle], i) => ({
+    ...O(ctx), bestand_id: b, preis, km, erstzulassung: ez, quelle, link: null, notiz: 'Beispiel-Vergleich', erfasst_am: tagPlus(ctx.heute, -2 - i * 3),
+  }));
+}
+
+function kfzAnfragen(ctx: XxlKontext): SeedZeile[] {
+  const b = (i: number) => erstes(ctx, 'kfz_bestand', i);
+  return [
+    { ...O(ctx), nr: 'A-0001', bestand_id: b(0), quelle: 'website', name: 'Lena Beispiel', email: 'lena.beispiel@example.com', nachricht: 'Ist der Golf noch da? Probefahrt am Samstag möglich?', status: 'neu', faellig_am: ctx.heute, notiz: XXL_NOTIZ },
+    { ...O(ctx), nr: 'A-0002', bestand_id: b(4), quelle: 'telefon', name: 'Jonas Muster', tel: '0151 0000000', kontakt_id: erstes(ctx, 'kontakte', 1), status: 'termin', faellig_am: tagPlus(ctx.heute, 2), notiz: XXL_NOTIZ },
+    { ...O(ctx), nr: 'A-0003', bestand_id: b(3), quelle: 'boerse', name: 'Erika Probe', status: 'verloren', abschluss_grund: 'preis', abschluss_notiz: 'Wollte 11.000 €', abgeschlossen_am: berlinZeit(tagPlus(ctx.heute, -5), '16:30'), notiz: XXL_NOTIZ },
+  ];
+}
+
+function kfzSuchauftraege(ctx: XxlKontext): SeedZeile[] {
+  return [{ ...O(ctx), nr: 'S-0001', name: 'Paul Vorlage', email: 'paul.vorlage@example.com', kriterien: { marke: 'Skoda', modell: 'Octavia', preis_max: 33000, km_max: 30000 }, aktiv: true, gueltig_bis: tagPlus(ctx.heute, 90), notiz: XXL_NOTIZ }];
+}
+
+function kfzProbefahrten(ctx: XxlKontext): SeedZeile[] {
+  const b = erstes(ctx, 'kfz_bestand', 0);
+  if (!b) return [];
+  const tag = tagPlus(ctx.heute, -1);
+  return [{
+    ...O(ctx), bestand_id: b, nr: 'P-0001', art: 'probefahrt', status: 'zurueck', fahrer_name: 'Lena Beispiel', fahrer_email: 'lena.beispiel@example.com',
+    fs_geprueft: true, fs_klasse: 'B', fs_gueltig_bis: tagPlus(ctx.heute, 3000), kennzeichen_art: 'eigen', kennzeichen: 'BB-XL 101',
+    start_am: berlinZeit(tag, '10:00'), ende_geplant: berlinZeit(tag, '11:00'), rueck_am: berlinZeit(tag, '10:50'),
+    km_start: 38480, km_ende: 38500, km_frei: 50, tank_start: '3/4', tank_ende: '3/4', selbstbeteiligung: 1000,
+    nachfass_am: tagPlus(ctx.heute, 1), ergebnis: 'interesse', notiz: XXL_NOTIZ,
+  }];
+}
+
+function kfzTresor(ctx: XxlKontext): SeedZeile[] {
+  const z: SeedZeile[] = [];
+  HANDEL_FZ.forEach((f, i) => {
+    const b = erstes(ctx, 'kfz_bestand', i);
+    if (!b || f[4] === 'zulauf') return;
+    const verkauft = f[4] === 'verkauft';
+    z.push({ ...O(ctx), bestand_id: b, art: 'zb2', ort: verkauft ? null : 'Tresor Fach ' + (i + 1), status: verkauft ? 'beim_kaeufer' : 'im_haus', notiz: XXL_NOTIZ });
+    if (!verkauft) z.push({ ...O(ctx), bestand_id: b, art: 'schluessel', anzahl: 2, ort: 'Schlüsselkasten ' + (i + 1), status: 'im_haus', notiz: XXL_NOTIZ });
+  });
+  return z;
+}
+
 const WERKSTATT_AUFTRAEGE = [
   { t: 'Inspektion mit Ölwechsel', a: 'Service fällig laut Anzeige', km: 48210, pos: [['Inspektion nach Herstellervorgabe', 'leistung', 1.5, 95], ['Motoröl 5W-30', 'material', 5, 14.9]] },
   { t: 'Bremsen vorne erneuern', a: 'Quietscht beim Bremsen', km: 79340, pos: [['Bremsscheiben und Beläge wechseln', 'leistung', 1.2, 95], ['Bremsscheiben-Satz', 'material', 1, 142]] },
@@ -501,6 +607,14 @@ export const XXL_BRANCHEN_SEEDER: XxlSeeder[] = [
   B('kfz_fahrzeuge', 'kfz_fahrzeuge', kfzFahrzeuge),
   B('werkstatt_auftraege', 'werkstatt_auftraege', werkstattAuftraege),
   B('werkstatt_positionen', 'werkstatt_positionen', werkstattPositionen),
+  // Paket 285: Kfz-Handel
+  B('kfz_bestand', 'kfz_bestand', kfzBestand),
+  B('kfz_bestand_kosten', 'kfz_bestand_kosten', kfzKosten),
+  B('kfz_marktvergleich', 'kfz_marktvergleich', kfzMarktvergleich),
+  B('kfz_anfrage', 'kfz_anfrage', kfzAnfragen),
+  B('kfz_suchauftrag', 'kfz_suchauftrag', kfzSuchauftraege),
+  B('kfz_probefahrt', 'kfz_probefahrt', kfzProbefahrten),
+  B('kfz_tresor', 'kfz_tresor', kfzTresor),
   B('menu_gericht', 'menu_gericht', menuGerichte),
   B('gastro_reservierungen', 'gastro_reservierungen', gastroReservierungen),
   B('hotel_zimmer', 'hotel_zimmer', hotelZimmer),
@@ -553,6 +667,7 @@ export const XXL_BRANCHEN_SEEDER: XxlSeeder[] = [
 /** Kinder vor Eltern; Branchen-Tabellen VOR den Kern-Tabellen (sie verweisen auf Kontakte, Mitarbeiter, Projekte, Artikel). */
 export const XXL_BRANCHEN_LOESCH_ORDER: string[] = [
   'werkstatt_positionen', 'werkstatt_auftraege', 'werkstatt_fahrzeuge', 'kfz_fahrzeuge',
+  'kfz_tresor', 'kfz_probefahrt', 'kfz_suchauftrag', 'kfz_anfrage', 'kfz_marktvergleich', 'kfz_bestand_kosten', 'kfz_bestand',
   'gastro_reservierungen', 'menu_gericht', 'hotel_belegungen', 'hotel_zimmer',
   'lm_haccp', 'lm_chargen', 'rezeptur_zutaten', 'rezepturen',
   'logistik_sendungen', 'logistik_touren', 'tour_stopp', 'tour',
