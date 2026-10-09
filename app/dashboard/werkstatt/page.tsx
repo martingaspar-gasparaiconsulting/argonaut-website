@@ -846,7 +846,11 @@ export default function WerkstattPage() {
           <h1 style={styles.h1}>Werkstatt-Durchlauf</h1>
           <p style={styles.sub}>Aufträge führen, Leistungen erfassen, Fahrzeughistorie aufbauen — mit automatischer Durchlaufzeit.</p>
         </div>
-        <button onClick={neu} style={styles.primaerBtn}>+ Neuer Auftrag</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Paket 295: Rad-Akten (Zweirad, E-Bike, Dienstrad) — Reparatur-Annahme legt Aufträge hier an */}
+          <a href="/dashboard/werkstatt/zweirad" style={{ color: C.gold, textDecoration: 'none', fontSize: 14, fontWeight: 600 }}>🚲 Zweirad &amp; E-Bike</a>
+          <button onClick={neu} style={styles.primaerBtn}>+ Neuer Auftrag</button>
+        </div>
       </div>
 
       {!laden && (

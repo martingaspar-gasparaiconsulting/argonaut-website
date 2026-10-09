@@ -181,6 +181,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🔧 Wartung', href: '/dashboard/wartung', modul: 'wartung', ebene: 3, gruppe: 'betrieb' },
   { label: '📋 Prüfprotokolle', href: '/dashboard/pruefprotokolle', modul: 'pruefprotokolle', ebene: 3, gruppe: 'betrieb' },
   { label: '🔨 Werkstatt', href: '/dashboard/werkstatt', modul: 'werkstatt', ebene: 3, gruppe: 'betrieb' },
+  // Paket 295 (09.10.26): Z1 Zweirad, E-Bike und Dienstrad-Leasing — Unterpfade von /dashboard/werkstatt, erben dessen Freigabe.
+  { label: '🚲 Zweirad & E-Bike', href: '/dashboard/werkstatt/zweirad', ebene: 3, gruppe: 'betrieb' },
+  { label: '💼 Dienstrad-Leasing', href: '/dashboard/werkstatt/zweirad/dienstrad', ebene: 3, gruppe: 'betrieb' },
   { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog', ebene: 3, gruppe: 'betrieb' },
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte', ebene: 3, gruppe: 'betrieb' },
   { label: '🚗 KFZ-Fachpaket', href: '/dashboard/kfz', modul: 'kfz', ebene: 3, gruppe: 'betrieb' },
