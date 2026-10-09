@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { baueExtf, extfHinweise, extfDefaults, type ExtfKonfig, type RechnungRoh, type BelegRoh } from '@/lib/datevExtf';
 import { datevVorschlag, DATEV_FALLBACK } from '@/lib/datevKonten';
+import { leseZahlOder, centRunden } from '@/lib/zahlen';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,13 +39,45 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Nicht eingeloggt.' }, { status: 401 });
 
     // --- Ausgangsrechnungen ---
-    let q = supabase.from('rechnungen')
-      .select('rechnungsnummer, rechnungsdatum, empfaenger_name, netto_summe, mwst_summe, brutto_summe, zahlungsstatus')
-      .eq('owner_user_id', user.id).neq('zahlungsstatus', 'storniert').order('rechnungsdatum', { ascending: true });
-    if (von) q = q.gte('rechnungsdatum', von);
-    if (bis) q = q.lte('rechnungsdatum', bis);
-    const { data: rData } = await q;
-    const rechnungen = (rData || []) as RechnungRoh[];
+    // Paket 284: mit Kfz-Sonderfall (Spalten aus SQL p268). Fehlen die Spalten,
+    // laeuft der Export wie bisher ohne sie.
+    const BASIS = 'rechnungsnummer, rechnungsdatum, empfaenger_name, netto_summe, mwst_summe, brutto_summe, zahlungsstatus';
+    const ladeRechnungen = async (spalten: string) => {
+      let q = supabase.from('rechnungen').select(spalten)
+        .eq('owner_user_id', user.id).neq('zahlungsstatus', 'storniert').order('rechnungsdatum', { ascending: true });
+      if (von) q = q.gte('rechnungsdatum', von);
+      if (bis) q = q.lte('rechnungsdatum', bis);
+      return q;
+    };
+    let rRes = await ladeRechnungen(`id, ${BASIS}, steuer_sonderfall, diff_bemessung, diff_steuer`);
+    if (rRes.error) rRes = await ladeRechnungen(BASIS);
+    const rechnungen = ((rRes.data as unknown) || []) as (RechnungRoh & { id?: string })[];
+
+    // Paket 284: 0-%-Anteil (Fahrzeug) aus den Positionen und Fahrzeugnummer aus dem Verkauf
+    const sonderIds = rechnungen.filter((r) => typeof r.steuer_sonderfall === 'string' && r.steuer_sonderfall && r.id).map((r) => String(r.id));
+    if (sonderIds.length > 0) {
+      const p = await supabase.from('rechnung_positionen').select('rechnung_id, mwst_satz, gesamt_netto').in('rechnung_id', sonderIds).limit(20000);
+      if (!p.error) {
+        const summe = new Map<string, number>();
+        for (const z of ((p.data as unknown) as Array<Record<string, unknown>>) ?? []) {
+          if (leseZahlOder(z.mwst_satz, -1) !== 0) continue;
+          summe.set(String(z.rechnung_id), centRunden((summe.get(String(z.rechnung_id)) ?? 0) + leseZahlOder(z.gesamt_netto, 0)));
+        }
+        for (const r of rechnungen) if (r.id && sonderIds.includes(String(r.id))) r.netto0 = summe.get(String(r.id)) ?? 0;
+      }
+    }
+    const rIds = rechnungen.map((r) => r.id).filter((x): x is string => typeof x === 'string');
+    if (rIds.length > 0) {
+      const v = await supabase.from('kfz_verkauf').select('rechnung_id, kfz_bestand(interne_nr)').in('rechnung_id', rIds).limit(5000);
+      if (!v.error) {
+        const nr = new Map<string, string>();
+        for (const z of ((v.data as unknown) as Array<{ rechnung_id: string | null; kfz_bestand: { interne_nr: string | null } | { interne_nr: string | null }[] | null }>) ?? []) {
+          const b = Array.isArray(z.kfz_bestand) ? z.kfz_bestand[0] : z.kfz_bestand;
+          if (z.rechnung_id && b?.interne_nr) nr.set(z.rechnung_id, b.interne_nr);
+        }
+        for (const r of rechnungen) if (r.id && nr.has(r.id)) r.fahrzeug_nr = nr.get(r.id);
+      }
+    }
 
     // --- Eingangsbelege (OCR) — defensiv: fehlt die Tabelle/Spalte, bleibt es leer ---
     let belege: BelegRoh[] = [];
@@ -72,6 +105,11 @@ export async function GET(req: NextRequest) {
       skr,
       erloeskonto19: cfg.erloeskonto || std.erloeskonto19,
       erloeskonto7: cfg.erloeskonto_7 || std.erloeskonto7,
+      // Paket 284: Kfz-Sonderfaelle (leer = Vorbelegung aus kfzKontenStandard)
+      erloeskontoDiff19: cfg.erloeskonto_diff19 || undefined,
+      erloeskontoDiff0: cfg.erloeskonto_diff0 || undefined,
+      erloeskontoAusfuhr: cfg.erloeskonto_ausfuhr || undefined,
+      erloeskontoEu: cfg.erloeskonto_eu || undefined,
       debitorSammel: cfg.debitor_sammel || std.debitorSammel,
       kreditorSammel: cfg.kreditor_sammel || std.kreditorSammel,
       bezeichnung: `ARGONAUT ${von} bis ${bis}`,

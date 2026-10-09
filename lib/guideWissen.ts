@@ -1096,6 +1096,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       '„⬇ DATEV-EXTF-Buchungsstapel“ lädt die Datei herunter. Sie geht an die Kanzlei',
       '„USt-Voranmeldung · Vorschau“: Rechnungen, Netto-Umsatz, Umsatzsteuer und Brutto des Zeitraums, ohne stornierte Rechnungen und OHNE Vorsteuer. Die Zahllast mit Vorsteuer steht unter USt-Voranmeldung',
       'Erscheint der Tipp zu „🔌 Schnittstellen → DATEV“, dort Kontenrahmen und Beraternummern hinterlegen. Ohne sie entsteht ein neutraler Stapel',
+      'Kfz-Handel: Rechnungen aus dem Fahrzeugverkauf werden aufgeteilt gebucht — bei § 25a die Marge auf das Konto „§§ 25, 25a mit 19 % USt“ (SKR03 8191 / SKR04 4136) und der Rest des Fahrzeugpreises auf „ohne USt“ (8193 / 4138), EU-Lieferung auf 8125 / 4125, Ausfuhr auf 8120 / 4120, Zulassung und andere Zusatzleistungen wie üblich. Die Fahrzeugnummer steht im Buchungstext. Andere Konten tragen Sie unter Schnittstellen → DATEV ein; die Hinweise vor dem Export zählen die Kfz-Rechnungen und nennen die, die von Hand gebucht werden müssen',
     ],
     vorher: [{ text: 'Ausgangsrechnungen', href: '/dashboard/rechnungen' }, { text: 'Erfasste Eingangsbelege', href: '/dashboard/eingangsbelege' }, { text: 'DATEV-Angaben unter Schnittstellen', href: '/dashboard/schnittstellen' }],
     landetIn: [{ text: 'Zahllast mit Vorsteuer: USt-Voranmeldung', href: '/dashboard/elster' }],

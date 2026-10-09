@@ -69,7 +69,7 @@
 // ein". Ein Waechter-Test haelt das fest.
 // ============================================================================
 
-import { leseZahlOder, centRunden } from './zahlen';
+import { leseZahlOder, centRunden, inCent } from './zahlen';
 
 export type ExtfKonfig = {
   beraterNr: string;      // DATEV-Beraternummer (Pflicht für echten Import)
@@ -85,6 +85,14 @@ export type ExtfKonfig = {
    * NIE auf ein Automatikkonto zeigen lassen, sonst erfindet DATEV Steuer.
    */
   erloeskonto0?: string;
+  /**
+   * Paket 284 (K16b): Erlöskonten für Kfz-Sonderfälle. Optional — fehlt ein
+   * Wert, greift kfzKontenStandard(). Vorbelegt, vom Steuerberater zu bestätigen.
+   */
+  erloeskontoDiff19?: string;  // § 25a: Marge (brutto), 19 % USt darin
+  erloeskontoDiff0?: string;   // § 25a: Rest des Verkaufspreises ohne USt
+  erloeskontoAusfuhr?: string; // § 4 Nr. 1a UStG
+  erloeskontoEu?: string;      // § 4 Nr. 1b UStG (innergemeinschaftliche Lieferung)
   debitorSammel: string;  // Debitoren-Sammelkonto (Ausgangsrechnungen)
   kreditorSammel: string; // Kreditoren-Sammelkonto (Eingangsbelege)
   bezeichnung: string;    // Name des Buchungsstapels
@@ -236,6 +244,14 @@ export function buchungZeile(b: Buchung): string {
 export type RechnungRoh = {
   rechnungsnummer?: unknown; rechnungsdatum?: unknown; empfaenger_name?: unknown;
   netto_summe?: unknown; mwst_summe?: unknown; brutto_summe?: unknown;
+  /** Paket 284: Kfz-Sonderfall aus Paket 268 (diff25a | eu_ig | ausfuhr), sonst leer. */
+  steuer_sonderfall?: unknown;
+  /** Paket 284: § 25a — Marge netto und Differenzsteuer (rechnungen.diff_*). */
+  diff_bemessung?: unknown; diff_steuer?: unknown;
+  /** Paket 284: Summe der 0-%-Positionen (der Teil, den der Sonderfall betrifft); null = unbekannt. */
+  netto0?: unknown;
+  /** Paket 284: interne Fahrzeugnummer (F-0001) — steht im Buchungstext. */
+  fahrzeug_nr?: unknown;
 };
 export type BelegRoh = {
   belegnummer?: unknown; belegdatum?: unknown; lieferant?: unknown;
@@ -286,6 +302,100 @@ export function buchungAusBeleg(b: BelegRoh, k: ExtfKonfig, aufwandFallback: str
   };
 }
 
+// ---------------------------------------------------------------------------
+// Paket 284 (09.10.2026) · K16b — Kfz-Sonderfaelle richtig buchen
+//
+// BEFUND (am Code nachgerechnet): Eine § 25a-Rechnung (Fahrzeug 0 % zum vollen
+// Preis + Zulassung 19 %) hat eine winzige ausgewiesene Steuer im Verhaeltnis
+// zum Netto. satzAus() machte daraus 7 % — 20.595 EUR landeten auf dem 7-%-
+// Automatikkonto, DATEV haette rund 1.347 EUR Umsatzsteuer erfunden. Ohne
+// Zusatzleistung ging alles steuerfrei auf das Sammelkonto, die geschuldete
+// Differenzsteuer fehlte. EU-Lieferung und Ausfuhr hatten kein eigenes Konto.
+//
+// JETZT: Rechnungen mit Sonderfall werden aufgeteilt —
+//   · 0-%-Teil (Fahrzeug) je Sonderfall:
+//       § 25a   -> Marge brutto (Bemessung + Differenzsteuer) auf das
+//                  19-%-Konto nach §§ 25, 25a, Rest ohne USt auf das Konto
+//                  „ohne USt" (so rechnet DATEV die Steuer nur aus der Marge)
+//       EU      -> Konto § 4 Nr. 1b, Ausfuhr -> Konto § 4 Nr. 1a
+//   · Rest (Zulassung, Ueberfuehrung …) wie jede normale Rechnung.
+// Alle Teile zusammen ergeben auf den Cent den Rechnungsbetrag.
+// Ist der 0-%-Teil unbekannt (Positionen fehlen) und Steuer ausgewiesen, wird
+// NICHT geraten: die Rechnung geht wie bisher in EINE Zeile und extfHinweise
+// meldet sie. Die Fahrzeugnummer steht im Buchungstext; eine Kostenstelle
+// (KOST1) wird nicht gesetzt, solange ihre Feldposition nicht belegt ist.
+// KEINE STEUERBERATUNG: Konten vorbelegt nach SKR 03/04, frei einstellbar.
+// ---------------------------------------------------------------------------
+
+export type KfzSonderfall = 'diff25a' | 'eu_ig' | 'ausfuhr';
+
+/** Vorbelegte Kfz-Erlöskonten je Kontenrahmen (Bezeichnungen laut SKR 03 Klasse 8 / SKR 04 Klasse 4). */
+export function kfzKontenStandard(skr: '03' | '04'): { diff19: string; diff0: string; ausfuhr: string; eu: string } {
+  return skr === '04'
+    ? { diff19: '4136', diff0: '4138', ausfuhr: '4120', eu: '4125' }
+    : { diff19: '8191', diff0: '8193', ausfuhr: '8120', eu: '8125' };
+}
+
+function kfzKonten(k: ExtfKonfig) {
+  const std = kfzKontenStandard(k.skr === '04' ? '04' : '03');
+  const w = (v: unknown, e: string) => (String(v ?? '').trim() !== '' ? String(v).trim() : e);
+  return { diff19: w(k.erloeskontoDiff19, std.diff19), diff0: w(k.erloeskontoDiff0, std.diff0), ausfuhr: w(k.erloeskontoAusfuhr, std.ausfuhr), eu: w(k.erloeskontoEu, std.eu) };
+}
+
+/** Sonderfall einer Rechnung oder null. */
+export function kfzSonderfall(r: RechnungRoh): KfzSonderfall | null {
+  const s = String(r.steuer_sonderfall ?? '').trim();
+  return s === 'diff25a' || s === 'eu_ig' || s === 'ausfuhr' ? s : null;
+}
+
+function leer(v: unknown): boolean {
+  return v === null || v === undefined || String(v).trim() === '';
+}
+
+/** Den 0-%-Teil kennen wir: aus den Positionen oder weil gar keine Steuer ausgewiesen ist. */
+export function kfzTeilBekannt(r: RechnungRoh): boolean {
+  if (!kfzSonderfall(r)) return false;
+  return !leer(r.netto0) || n(r.mwst_summe) === 0;
+}
+
+/**
+ * Alle Buchungszeilen einer Ausgangsrechnung. Ohne Sonderfall genau eine
+ * (unverändert buchungAusRechnung), mit Sonderfall die Aufteilung.
+ */
+export function buchungenAusRechnung(r: RechnungRoh, k: ExtfKonfig): Buchung[] {
+  const sf = kfzSonderfall(r);
+  const basis = buchungAusRechnung(r, k);
+  const nr = String(r.fahrzeug_nr ?? '').trim();
+  if (nr) basis.buchungstext = `Fzg ${nr} ${basis.buchungstext}`;
+  if (!sf || !kfzTeilBekannt(r)) return [basis];
+
+  const bruttoC = inCent(n(r.brutto_summe));
+  if (bruttoC === 0) return [basis];
+  const vz = bruttoC < 0 ? -1 : 1;
+  const gesamt = Math.abs(bruttoC);
+  const mwstC = Math.abs(inCent(n(r.mwst_summe)));
+  // 0-%-Teil: aus den Positionen; ohne ausgewiesene Steuer ist es die ganze Rechnung.
+  let teil0 = leer(r.netto0) ? gesamt : Math.abs(inCent(n(r.netto0)));
+  teil0 = Math.min(Math.max(teil0, 0), gesamt);
+  const rest = gesamt - teil0;
+  const kk = kfzKonten(k);
+  const zeilen: { cent: number; konto: string; bu: string }[] = [];
+
+  if (rest > 0) {
+    const satz = mwstC > 0 ? satzAus((rest - mwstC) / 100, mwstC / 100) : 0;
+    zeilen.push({ cent: rest, konto: satz === 19 ? k.erloeskonto19 : satz === 7 ? k.erloeskonto7 : erloeskontoSteuerfrei(k), bu: satz === 19 ? '3' : satz === 7 ? '2' : '' });
+  }
+  if (sf === 'diff25a') {
+    const marge = Math.min(Math.max(Math.abs(inCent(n(r.diff_bemessung))) + Math.abs(inCent(n(r.diff_steuer))), 0), teil0);
+    if (marge > 0) zeilen.push({ cent: marge, konto: kk.diff19, bu: '3' });
+    if (teil0 - marge > 0) zeilen.push({ cent: teil0 - marge, konto: kk.diff0, bu: '' });
+  } else if (teil0 > 0) {
+    zeilen.push({ cent: teil0, konto: sf === 'eu_ig' ? kk.eu : kk.ausfuhr, bu: '' });
+  }
+  if (zeilen.length === 0) return [basis];
+  return zeilen.map((z) => ({ ...basis, umsatz: (vz * z.cent) / 100, gegenkonto: z.konto, bu: z.bu }));
+}
+
 /** EXTF-Kopfzeile (31 Felder, Format 700 / Kategorie 21 / Version 13). */
 export function baueExtfKopf(k: ExtfKonfig, datumVon: string, datumBis: string, erzeugtAm: string): string {
   const felder: string[] = [
@@ -332,7 +442,7 @@ export function baueExtf(e: ExtfEingabe): string {
   const zeilen: string[] = [];
   zeilen.push(baueExtfKopf(e.konfig, e.datumVon, e.datumBis, e.erzeugtAm));
   zeilen.push(EXTF_SPALTEN.join(';'));
-  for (const r of e.rechnungen || []) zeilen.push(buchungZeile(buchungAusRechnung(r, e.konfig)));
+  for (const r of e.rechnungen || []) for (const b of buchungenAusRechnung(r, e.konfig)) zeilen.push(buchungZeile(b));
   for (const b of e.belege || []) zeilen.push(buchungZeile(buchungAusBeleg(b, e.konfig, e.aufwandFallback)));
   return '﻿' + zeilen.join('\r\n') + '\r\n';
 }
@@ -357,7 +467,7 @@ export function extfHinweise(e: ExtfEingabe): string[] {
   }
 
   const steuerfrei = (e.rechnungen || []).filter(
-    (r) => satzAus(r.netto_summe, r.mwst_summe) === 0 && n(r.brutto_summe) !== 0,
+    (r) => !kfzSonderfall(r) && satzAus(r.netto_summe, r.mwst_summe) === 0 && n(r.brutto_summe) !== 0,
   ).length;
   if (steuerfrei > 0) {
     raus.push(
@@ -366,6 +476,21 @@ export function extfHinweise(e: ExtfEingabe): string[] {
         `Bitte vom Steuerberater bestätigen lassen, ob das für Ihren Fall das richtige Konto ist ` +
         `(innergemeinschaftliche Lieferung, § 4 UStG oder Kleinunternehmer § 19 sind verschiedene Konten).`,
     );
+  }
+
+  // Paket 284: Kfz-Sonderfaelle
+  const sonder = (e.rechnungen || []).filter((r) => kfzSonderfall(r) && n(r.brutto_summe) !== 0);
+  if (sonder.length > 0) {
+    const kk = kfzKonten(k);
+    const zahl = (f: KfzSonderfall) => sonder.filter((r) => kfzSonderfall(r) === f && kfzTeilBekannt(r)).length;
+    const d = zahl('diff25a'), eu = zahl('eu_ig'), au = zahl('ausfuhr');
+    if (d > 0) raus.push(`${d} ${d === 1 ? 'Rechnung' : 'Rechnungen'} nach § 25a (Differenzbesteuerung): Marge auf ${kk.diff19}, Rest des Fahrzeugpreises ohne Umsatzsteuer auf ${kk.diff0}, Zusatzleistungen wie üblich. Konten bitte vom Steuerberater bestätigen lassen.`);
+    if (eu > 0) raus.push(`${eu} innergemeinschaftliche ${eu === 1 ? 'Lieferung' : 'Lieferungen'} auf ${kk.eu}. Die USt-IdNr. des Käufers steht nicht im Stapel; die Zusammenfassende Meldung macht ARGONAUT nicht.`);
+    if (au > 0) raus.push(`${au} ${au === 1 ? 'Ausfuhr' : 'Ausfuhren'} auf ${kk.ausfuhr}. Den Ausfuhrnachweis (Ausgangsvermerk) bitte beim Beleg aufbewahren.`);
+    const unklar = sonder.filter((r) => !kfzTeilBekannt(r));
+    if (unklar.length > 0) raus.push(`${unklar.length} Kfz-${unklar.length === 1 ? 'Rechnung' : 'Rechnungen'} (${unklar.slice(0, 5).map((r) => String(r.rechnungsnummer ?? '?')).join(', ')}) konnte${unklar.length === 1 ? '' : 'n'} nicht aufgeteilt werden, weil die Positionen fehlen — bitte von Hand buchen lassen.`);
+    const offen = sonder.filter((r) => kfzSonderfall(r) === 'diff25a' && kfzTeilBekannt(r) && leer(r.diff_bemessung)).length;
+    if (offen > 0) raus.push(`${offen} § 25a-${offen === 1 ? 'Rechnung hat' : 'Rechnungen haben'} keine Differenz-Berechnung (Einkaufspreis fehlte) — der ganze Fahrzeugpreis steht ohne Umsatzsteuer auf ${kk.diff0}. Marge bitte ergänzen.`);
   }
 
   const gutschriften =

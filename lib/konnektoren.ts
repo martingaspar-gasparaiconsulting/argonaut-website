@@ -139,6 +139,11 @@ export const KONNEKTOR_KATALOG: KonnektorBereich[] = [
         { key: 'erloeskonto', label: 'Erlöskonto 19 %', typ: 'text', hinweis: 'z. B. 8400 (SKR03) / 4400 (SKR04)' },
         { key: 'erloeskonto_7', label: 'Erlöskonto 7 %', typ: 'text', hinweis: 'z. B. 8300 / 4300' },
         { key: 'debitor_sammel', label: 'Debitor-Sammelkonto', typ: 'text', hinweis: 'z. B. 10000' },
+        // Paket 284: Kfz-Handel (leer = Vorbelegung)
+        { key: 'erloeskonto_diff19', label: 'Kfz § 25a: Konto Marge (19 %)', typ: 'text', hinweis: 'Leer = 8191 (SKR03) / 4136 (SKR04). Vom Steuerberater bestätigen lassen.' },
+        { key: 'erloeskonto_diff0', label: 'Kfz § 25a: Konto Rest ohne USt', typ: 'text', hinweis: 'Leer = 8193 / 4138' },
+        { key: 'erloeskonto_eu', label: 'Kfz: innergemeinschaftliche Lieferung', typ: 'text', hinweis: 'Leer = 8125 / 4125' },
+        { key: 'erloeskonto_ausfuhr', label: 'Kfz: Ausfuhr (Drittland)', typ: 'text', hinweis: 'Leer = 8120 / 4120' },
         { key: 'berater_nr', label: 'Beraternummer', typ: 'text', hinweis: 'Bekommen Sie von Ihrem Steuerberater.' },
         { key: 'mandant_nr', label: 'Mandantennummer', typ: 'text', hinweis: 'Bekommen Sie von Ihrem Steuerberater.' },
       ], hinweis: '① Kontenrahmen + Berater-/Mandantennummer beim Steuerberater erfragen → ② hier eintragen → ③ im Modul „DATEV" den EXTF-Buchungsstapel exportieren.' },
