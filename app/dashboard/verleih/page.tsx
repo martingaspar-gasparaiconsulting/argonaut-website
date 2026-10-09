@@ -211,6 +211,8 @@ export default function VerleihPage() {
       <div style={styles.eyebrow}>ARGONAUT OS · Verleih</div>
       <h1 style={styles.h1}>🔑 Verleih & Vermietung</h1>
       <p style={styles.sub}>Mietgegenstände, Verfügbarkeit und Ausleih-Vorgänge an einem Ort — mit Tages-/Wochenpreis, Kaution und Überfälligkeits-Ampel.</p>
+      {/* Paket 291 (09.10.26): Fahrzeuge mit Mietvertrag, Fahrer-Prüfung, Übergabe/Rückgabe */}
+      <a href="/dashboard/verleih/fahrzeuge" style={{ display: 'block', margin: '0 0 14px', padding: '10px 14px', border: `1px solid ${C.gold}`, borderRadius: 10, color: C.gold, textDecoration: 'none', fontSize: 14, fontWeight: 700 }}>🚗 Sie vermieten Fahrzeuge? Zur Fahrzeugvermietung — Kalender ohne Doppelbuchung, Mietvertrag, Fahrer-Prüfung, Übergabe und Rückgabe →</a>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}

@@ -1822,6 +1822,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }],
     vorher: [{ text: 'Gäste als Kontakt im CRM (optional, sonst Freitext)', href: '/dashboard/crm' }],
   },
+  '/dashboard/verleih/fahrzeuge': {
+    zweck: 'Fahrzeugvermietung für Autovermietung, Luxus-, Wohnmobil-, Transporter-, Motorrad- und E-Bike-Verleih: Mietflotte mit Preisen und Bedingungen, Kalender je Fahrzeug, Buchungen als Mietverträge. Doppelt vergeben geht nicht — das sperrt die Datenbank. Preise werden bei der Buchung eingefroren. Im Mietvertrag folgen Fahrer-Prüfung (ohne Führerscheinnummer), Kaution (ohne Kartendaten), Übergabe und Rückgabe mit km, Tank und Fotos, Schäden und Rechnung.',
+    wer: 'beide',
+    werText: 'Der Chef pflegt Mietflotte, Preise und Mietbedingungen. Mitarbeiter mit Recht „Verleih & Vermietung“ sehen Kalender und Buchungen; mit Schreibrecht buchen, stornieren, übergeben und nehmen sie zurück.',
+    schritte: [
+      'Chef: Reiter „🚗 Mietflotte“ → „＋ Fahrzeug aufnehmen“: Bezeichnung, Kennzeichen, Art, Führerscheinklasse, Tagessatz und Wochensatz (netto), Frei-km je Tag und Preis je Mehr-km, Kaution, Mindestalter, Führerschein seit mindestens (Jahre), Zusatzfahrer je Tag, Nachtanken je Achtel, km-Stand. „💾 Speichern“. Nicht mehr vermietete Fahrzeuge: Haken „in der Mietflotte“ entfernen',
+      'Chef: Reiter „⚙ Mietbedingungen“: eigene Mietbedingungen eintragen und die Kulanz-Minuten bei der Rückgabe. Bei jeder Übergabe wird die gültige Fassung in den Vertrag übernommen',
+      'Reiter „📅 Kalender“: 14 Tage je Fahrzeug, blau reserviert, gold unterwegs. Ein Klick auf einen freien Tag startet die Buchung, ein Klick auf eine Buchung öffnet den Mietvertrag',
+      '„＋ Neue Buchung“: Fahrzeug, Abholung und Rückgabe (Datum und Uhrzeit), Mieter aus den Kontakten oder neu, Anschrift. Die Vorschau zeigt Miettage, Mietpreis, Frei-km, Kaution und die Fahrer-Bedingungen. „📅 Reservieren“ vergibt die Vertragsnummer MV-Jahr-Nummer',
+      'Reiter „📋 Buchungen“: offene oder alle Buchungen mit Status und Kaution, „öffnen“ führt in den Mietvertrag, „stornieren“ gibt den Zeitraum wieder frei (nur Reservierungen)',
+    ],
+    probe: { anlegen: 'Ein Testfahrzeug „Golf Test“ mit 49 € Tagessatz aufnehmen und für morgen 9 bis übermorgen 9 Uhr reservieren.', loeschen: 'Die Reservierung „stornieren“ und beim Fahrzeug den Haken „in der Mietflotte“ entfernen.' },
+    landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Kontakte', href: '/dashboard/crm' }],
+  },
   '/dashboard/verleih': {
     zweck: 'Mietgegenstände mit Tages- und Wochenpreis, Kaution und Stückzahl verwalten und Ausleihen von der Reservierung über die Ausgabe bis zur Rückgabe führen — mit Überfälligkeits-Ampel.',
     wer: 'beide',

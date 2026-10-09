@@ -285,6 +285,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🏛 Objekt-Register', href: '/dashboard/objekte', modul: 'objekte', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
   { label: '🔑 Verleih & Vermietung', href: '/dashboard/verleih', modul: 'verleih', ebene: 3, gruppe: 'betrieb' },
+  // Paket 291 (09.10.26): V1 Fahrzeugvermietung — Unterpfad von /dashboard/verleih, erbt dessen Freigabe.
+  { label: '🚗 Fahrzeugvermietung', href: '/dashboard/verleih/fahrzeuge', ebene: 3, gruppe: 'betrieb' },
   { label: '🗓 Belegung', href: '/dashboard/belegung', modul: 'belegung', ebene: 3, gruppe: 'betrieb' },
   { label: '🪑 Reservierung & Platz', href: '/dashboard/reservierung', modul: 'reservierung', ebene: 3, gruppe: 'betrieb' },
   { label: '🎁 Gutscheine & Pakete', href: '/dashboard/gutscheine', modul: 'gutscheine', ebene: 3, sensibel: true, gruppe: 'vertrieb' },
