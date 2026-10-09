@@ -31,13 +31,14 @@ type Fz = {
   id: string; bezeichnung: string; kennzeichen: string | null; art: string; fs_klasse: string | null;
   tagessatz_cent: number; wochensatz_cent: number | null; frei_km_tag: number | null; mehr_km_cent: number; kaution_cent: number;
   mindestalter: number; fs_jahre_min: number; zusatzfahrer_tag_cent: number; tank_achtel_cent: number; km_stand: number | null; aktiv: boolean; notiz: string | null;
+  fahrzeug_id: string | null;
 };
 type Bu = BuchungKurz & { nummer: string | null; mieter_name: string; kaution_status: string; kaution_cent: number; rechnung_id: string | null };
 type Kontakt = { id: string; name: string; email: string | null; anschrift: string | null; telefon: string | null };
-type FzForm = { id: string | null; bezeichnung: string; kennzeichen: string; art: string; fsKlasse: string; tagessatz: string; wochensatz: string; freiKmTag: string; mehrKm: string; kaution: string; mindestalter: string; fsJahre: string; zusatzfahrer: string; tankAchtel: string; kmStand: string; notiz: string; aktiv: boolean };
+type FzForm = { id: string | null; bezeichnung: string; kennzeichen: string; art: string; fsKlasse: string; tagessatz: string; wochensatz: string; freiKmTag: string; mehrKm: string; kaution: string; mindestalter: string; fsJahre: string; zusatzfahrer: string; tankAchtel: string; kmStand: string; notiz: string; aktiv: boolean; fuhrparkId: string };
 type BuForm = { fahrzeugId: string; kontaktId: string; mieterName: string; anschrift: string; email: string; telefon: string; abholung: string; rueckgabe: string; notiz: string };
 
-const LEER_FZ: FzForm = { id: null, bezeichnung: '', kennzeichen: '', art: 'pkw', fsKlasse: 'B', tagessatz: '', wochensatz: '', freiKmTag: '', mehrKm: '', kaution: '', mindestalter: '18', fsJahre: '1', zusatzfahrer: '', tankAchtel: '', kmStand: '', notiz: '', aktiv: true };
+const LEER_FZ: FzForm = { id: null, bezeichnung: '', kennzeichen: '', art: 'pkw', fsKlasse: 'B', tagessatz: '', wochensatz: '', freiKmTag: '', mehrKm: '', kaution: '', mindestalter: '18', fsJahre: '1', zusatzfahrer: '', tankAchtel: '', kmStand: '', notiz: '', aktiv: true, fuhrparkId: '' };
 const ART_NAME: Record<string, string> = Object.fromEntries(ARTEN.map((a) => [a.key, a.label]));
 
 function heute(): string { return berlinTag(Date.now()); }
@@ -69,6 +70,7 @@ export default function FahrzeugvermietungPage() {
   const [fz, setFz] = useState<Fz[]>([]);
   const [bu, setBu] = useState<Bu[]>([]);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
+  const [fuhrpark, setFuhrpark] = useState<{ id: string; bezeichnung: string; kennzeichen: string | null }[]>([]);
   const [bedingungen, setBedingungen] = useState('');
   const [kulanz, setKulanz] = useState('0');
   const [laden, setLaden] = useState(true);
@@ -91,7 +93,7 @@ export default function FahrzeugvermietungPage() {
     try { chef = (await supabase.rpc('mein_chef_id')).data; } catch { chef = null; }
     setIstChef(!(typeof chef === 'string' && chef && chef !== id));
     const [f, b, e, k] = await Promise.all([
-      supabase.from('miet_fahrzeug').select('id, bezeichnung, kennzeichen, art, fs_klasse, tagessatz_cent, wochensatz_cent, frei_km_tag, mehr_km_cent, kaution_cent, mindestalter, fs_jahre_min, zusatzfahrer_tag_cent, tank_achtel_cent, km_stand, aktiv, notiz').order('aktiv', { ascending: false }).order('bezeichnung').limit(1000),
+      supabase.from('miet_fahrzeug').select('id, bezeichnung, kennzeichen, art, fs_klasse, tagessatz_cent, wochensatz_cent, frei_km_tag, mehr_km_cent, kaution_cent, mindestalter, fs_jahre_min, zusatzfahrer_tag_cent, tank_achtel_cent, km_stand, aktiv, notiz, fahrzeug_id').order('aktiv', { ascending: false }).order('bezeichnung').limit(1000),
       supabase.from('miet_buchung').select('id, nummer, fahrzeug_id, mieter_name, abholung, rueckgabe_plan, status, kaution_status, kaution_cent, rechnung_id').order('abholung', { ascending: false }).limit(1000),
       supabase.from('miet_einstellung').select('mietbedingungen, kulanz_minuten').maybeSingle(),
       supabase.from('kontakte').select('*').limit(1000),
@@ -102,6 +104,9 @@ export default function FahrzeugvermietungPage() {
     setBedingungen(String(e.data?.mietbedingungen ?? ''));
     setKulanz(String(e.data?.kulanz_minuten ?? 0));
     setKontakte(((k.data ?? []) as Record<string, unknown>[]).map(kontaktLesen).sort((x, y) => x.name.localeCompare(y.name, 'de')));
+    // P293: Fuhrpark-Fahrzeuge zum Verknüpfen (HU-, Wartungs-, Versicherungsfristen) — sieht nur, wer den Fuhrpark sehen darf
+    const fp = await supabase.from('fahrzeuge').select('id, bezeichnung, kennzeichen').order('bezeichnung').limit(1000);
+    setFuhrpark(fp.error ? [] : ((fp.data ?? []) as { id: string; bezeichnung: string; kennzeichen: string | null }[]));
     setJetzt(Date.now());
     setLaden(false);
   }, []);
@@ -165,7 +170,7 @@ export default function FahrzeugvermietungPage() {
     setFzForm({
       id: f.id, bezeichnung: f.bezeichnung, kennzeichen: f.kennzeichen ?? '', art: f.art, fsKlasse: f.fs_klasse ?? '', tagessatz: e(f.tagessatz_cent), wochensatz: e(f.wochensatz_cent),
       freiKmTag: f.frei_km_tag === null ? '' : String(f.frei_km_tag), mehrKm: e(f.mehr_km_cent), kaution: e(f.kaution_cent), mindestalter: String(f.mindestalter), fsJahre: String(f.fs_jahre_min),
-      zusatzfahrer: e(f.zusatzfahrer_tag_cent), tankAchtel: e(f.tank_achtel_cent), kmStand: f.km_stand === null ? '' : String(f.km_stand), notiz: f.notiz ?? '', aktiv: f.aktiv,
+      zusatzfahrer: e(f.zusatzfahrer_tag_cent), tankAchtel: e(f.tank_achtel_cent), kmStand: f.km_stand === null ? '' : String(f.km_stand), notiz: f.notiz ?? '', aktiv: f.aktiv, fuhrparkId: f.fahrzeug_id ?? '',
     });
   }
 
@@ -174,9 +179,10 @@ export default function FahrzeugvermietungPage() {
     const p = fahrzeugPruefen(fzForm);
     if (!p.ok) { setFehler(p.grund); return; }
     setBusy(true); setFehler(null);
+    const zeile = { ...p.zeile, fahrzeug_id: fzForm.fuhrparkId || null };
     const res = fzForm.id
-      ? await supabase.from('miet_fahrzeug').update(p.zeile).eq('id', fzForm.id).select('id')
-      : await supabase.from('miet_fahrzeug').insert(p.zeile).select('id');
+      ? await supabase.from('miet_fahrzeug').update(zeile).eq('id', fzForm.id).select('id')
+      : await supabase.from('miet_fahrzeug').insert(zeile).select('id');
     setBusy(false);
     if (res.error || !res.data || res.data.length === 0) { setFehler('Das Fahrzeug wurde nicht gespeichert — die Mietflotte pflegt nur der Chef.'); return; }
     setFzForm(null); setOk(fzForm.id ? 'Fahrzeug geändert. Bestehende Buchungen behalten ihre Preise.' : 'Fahrzeug in die Mietflotte aufgenommen.');
@@ -223,6 +229,8 @@ export default function FahrzeugvermietungPage() {
             {([['kalender', '📅 Kalender'], ['buchungen', '📋 Buchungen'], ['flotte', '🚗 Mietflotte'], ...(istChef ? [['einstellungen', '⚙ Mietbedingungen']] : [])] as [typeof tab, string][]).map(([k, l]) => (
               <button key={k} type="button" style={tab === k ? s.tabAn : s.tab} onClick={() => setTab(k)}>{l}</button>
             ))}
+            <a href="/dashboard/verleih/fahrzeuge/bussgelder" style={{ ...s.tab, textDecoration: 'none' }}>🚨 Bußgelder</a>
+            <a href="/dashboard/verleih/fahrzeuge/auslastung" style={{ ...s.tab, textDecoration: 'none' }}>📊 Auslastung &amp; Fristen</a>
             {aktive.length > 0 && <button type="button" style={{ ...s.btnGold, marginLeft: 'auto' }} onClick={() => neueBuchung()}>＋ Neue Buchung</button>}
           </div>
 
@@ -367,6 +375,12 @@ export default function FahrzeugvermietungPage() {
                     <label style={s.feld}>Zusatzfahrer € je Tag<input inputMode="decimal" value={fzForm.zusatzfahrer} style={s.eingabe} onChange={(e) => setFzForm({ ...fzForm, zusatzfahrer: e.target.value })} /></label>
                     <label style={s.feld}>Nachtanken/-laden € je Achtel<input inputMode="decimal" value={fzForm.tankAchtel} style={s.eingabe} onChange={(e) => setFzForm({ ...fzForm, tankAchtel: e.target.value })} /></label>
                     <label style={s.feld}>km-Stand<input inputMode="numeric" value={fzForm.kmStand} style={s.eingabe} onChange={(e) => setFzForm({ ...fzForm, kmStand: e.target.value })} /></label>
+                    <label style={s.feld}>Fuhrpark-Fahrzeug (für HU/Wartung)
+                      <select value={fzForm.fuhrparkId} style={s.eingabe} onChange={(e) => setFzForm({ ...fzForm, fuhrparkId: e.target.value })}>
+                        <option value="">— nicht verknüpft —</option>
+                        {fuhrpark.map((x) => <option key={x.id} value={x.id}>{x.kennzeichen ? `${x.kennzeichen} · ` : ''}{x.bezeichnung}</option>)}
+                      </select>
+                    </label>
                     <label style={s.feld}>Notiz<input value={fzForm.notiz} maxLength={500} style={s.eingabe} onChange={(e) => setFzForm({ ...fzForm, notiz: e.target.value })} /></label>
                     <label style={{ ...s.feld, gridAutoFlow: 'column', justifyContent: 'start', alignItems: 'center' }}><input type="checkbox" checked={fzForm.aktiv} onChange={(e) => setFzForm({ ...fzForm, aktiv: e.target.checked })} /> in der Mietflotte (buchbar)</label>
                   </div>
