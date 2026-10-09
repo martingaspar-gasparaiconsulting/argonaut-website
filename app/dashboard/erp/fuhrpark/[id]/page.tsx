@@ -193,6 +193,7 @@ export default function FahrzeugAkte() {
             {kmJetzt != null ? `${kmJetzt.toLocaleString('de-DE')} km` : 'km-Stand unbekannt'}
             {fahrer ? ` · Fahrer: ${fahrer}` : ''}
           </div>
+          <a href={`/dashboard/erp/fuhrpark/fahrtenbuch?fahrzeug=${id}`} style={{ ...s.dim, color: '#C9A84C', textDecoration: 'none' }}>📒 Fahrtenbuch dieses Fahrzeugs</a>
         </div>
         {qr && (
           <div style={{ textAlign: 'center' }}>

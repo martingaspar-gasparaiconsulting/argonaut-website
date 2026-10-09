@@ -599,6 +599,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Artikel „Test".', loeschen: 'Löschen-Knopf am Artikel.' },
     landetIn: [{ text: 'Kasse', href: '/dashboard/kasse' }, { text: 'Einkauf', href: '/dashboard/einkauf' }],
   },
+  '/dashboard/erp/fuhrpark/fahrtenbuch': {
+    zweck: 'Elektronisches Fahrtenbuch je Fahrzeug und Ladestrom-Erstattung: jede Fahrt mit Datum, Kilometerstand bei Beginn und Ende, Art (dienstlich, privat, Arbeitsweg), bei Dienstfahrten Reiseziel, Zweck und Geschäftspartner. Lücken und Überschneidungen werden angezeigt, spät eingetragene Fahrten gekennzeichnet, Änderungen nur mit Grund (der alte Stand bleibt im Protokoll), abgeschlossene Monate sind gesperrt. Ob ein Fahrtenbuch steuerlich anerkannt wird, entscheidet das Finanzamt.',
+    wer: 'beide',
+    werText: 'Der Chef und Mitarbeiter mit Schreibrecht für Fuhrpark bzw. Lager/Logistik sehen das Fahrtenbuch, tragen Fahrten ein und ändern sie mit Grund. Löschen, Monat abschließen und Ladestrom „erstattet“ setzen nur der Chef.',
+    schritte: [
+      'Oben Fahrzeug und Monat wählen (aus der Fahrzeug-Akte führt „📒 Fahrtenbuch dieses Fahrzeugs“ direkt hierher). Die Kacheln zeigen km des Monats nach Art und den Anteil privat im Jahr',
+      '„＋ Fahrt eintragen“: Datum, km Beginn (vorgeschlagen ist der letzte Endstand), km Ende, Art; bei Dienstfahrten Reiseziel und Zweck (Pflicht) und Geschäftspartner. „💾 Speichern“. Wer später als 7 Tage nach der Fahrt einträgt, sieht „nachgetragen“',
+      'Fehlen Kilometer zwischen zwei Fahrten oder überschneiden sie sich, steht oben „Kilometer-Kette prüfen“ mit den Stellen',
+      '„ändern“ an einer Fahrt: Werte korrigieren und einen Grund angeben (mindestens 5 Zeichen). Die Datenbank legt den alten Stand mit Grund, wer und wann im Protokoll ab; die Fahrt zeigt „geändert“',
+      'Nur der Chef: „löschen“ (der alte Stand bleibt im Protokoll) und „🔒 Monat abschließen …“ für vergangene Monate — danach ist im Monat nichts mehr änderbar, auch nicht für den Chef',
+      '„⚡ Ladestrom zu Hause“: Mitarbeiter, Monat, Zählerstand Anfang und Ende in kWh, Preis je kWh in Cent laut Stromvertrag, Beleg. ARGONAUT rechnet kWh × Preis auf den Cent. Der Chef setzt „als erstattet markieren“, wenn ausgezahlt ist',
+    ],
+    probe: { anlegen: 'Für ein Testfahrzeug eine Privatfahrt von 1.000 bis 1.010 km eintragen.', loeschen: 'Als Chef „löschen“, „Ja, löschen“ — nur in nicht abgeschlossenen Monaten; der Protokolleintrag bleibt.' },
+  },
   '/dashboard/erp/fuhrpark/fuehrerschein': {
     zweck: 'Führerscheinkontrolle für alle, die Firmenfahrzeuge fahren: Prüfvermerk je Kontrolle (Datum, Klassen, Ablauf der Karte, Ergebnis), nächste Fälligkeit mit Ampel und Verlauf je Fahrer. Gespeichert wird nur der Vermerk — keine Führerscheinnummer, keine Kopie. Die Seite ist gesperrt, bis die Geschäftsleitung unter „Rechtliche Freigaben“ die Freigabe „Führerscheinkontrolle“ bestätigt hat.',
     wer: 'beide',
