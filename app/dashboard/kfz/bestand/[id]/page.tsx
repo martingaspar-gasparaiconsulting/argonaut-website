@@ -29,6 +29,8 @@ import KfzVerkauf from '../KfzVerkauf';
 import KfzProbefahrt from '../KfzProbefahrt';
 import KfzAnfrageHinweis from '../KfzAnfrageHinweis';
 import KfzHistorie from '../KfzHistorie';
+import KfzBewertung from '../KfzBewertung';
+import type { Bewertung } from '@/lib/kfzBewertung';
 import KfzMarkt from '../KfzMarkt';
 import KfzTresor from '../KfzTresor';
 import KfzPartner from '../KfzPartner';
@@ -210,6 +212,8 @@ export default function HandelsaktePage() {
           <KfzMarkt fz={{ id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, vk_brutto: akte.vk_brutto, km_stand: akte.km_stand, erstzulassung: akte.erstzulassung }} />
           {/* Paket 274: Fahrzeughistorie (carVertical u. a.) am Fahrzeug */}
           <KfzHistorie id={akte.id} fin={akte.fin} werte={akte as unknown as { historie_url?: string | null; historie_anbieter?: string | null; historie_am?: string | null; historie_oeffentlich?: boolean | null }} onGespeichert={() => void lade()} />
+          {/* Paket 283: Bewertung DAT/Schwacke (im eigenen Konto abgefragt, Werte von Hand übernommen) */}
+          <KfzBewertung id={akte.id} fin={akte.fin} vkBrutto={akte.vk_brutto} werte={akte as unknown as Partial<Bewertung>} onGespeichert={() => void lade()} />
           <div style={s.karte}><h3 style={s.h3}>Inserat auf einen Blick</h3>
             {ampel.punkte.map((p) => <div key={p.name} style={s.ampelZeile}><span>{p.name}</span><span style={{ color: p.ok ? C.ok : C.warn, textAlign: 'right' }}>{p.hinweis}</span></div>)}
           </div>

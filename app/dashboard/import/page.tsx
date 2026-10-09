@@ -38,6 +38,7 @@ import {
   nachschlagIndex, fehlendeNamen, loeseNachschlag, elternZeilen, positionenJeEintrag, nachschlagPflichtGrund,
   type KatalogSpalte, type DatevKopf, type SpaltenBilanz, type EigeneSpalte,
 } from '@/lib/importMotor';
+import { istMobileDe, mobileDeTabelle } from '@/lib/kfzImport';
 import { gemappteFelder, werteFuerAktualisierung, werteFuerNeuanlage, bestandVerworfen, ARTIKEL_BESTAND_HINWEIS } from '@/lib/importAktualisieren';
 import {
   ALTSYSTEME, altsystem, anleitung, sperrText, sucheAltsysteme, gruppiereAltsysteme, sichtbareAltsysteme,
@@ -693,6 +694,7 @@ export default function ImportCenterPage() {
 
     try {
       let neu: Datei;
+      let mobilErkannt = false;
       const leseHinweise: string[] = [];
       if (weg.weg === 'browser') {
         const bytes = await ladeImBrowser(f, (geladen) => ladeFortschritt(geladen, f.size));
@@ -745,6 +747,15 @@ export default function ImportCenterPage() {
           // der Formatkopf, die Spaltennamen stehen in der zweiten.
           const dv = leseDatev(text);
           if (dv?.fehler) throw new Error(dv.fehler);
+          // Paket 283: mobile.de-Upload-Datei (ohne Kopfzeile, feste Feldreihenfolge) -> Spalten
+          const rohMobil = dv ? null : leseCsv(text, ';');
+          const mobil = rohMobil && istMobileDe([rohMobil.kopf, ...rohMobil.zeilen]) ? mobileDeTabelle([rohMobil.kopf, ...rohMobil.zeilen]) : null;
+          if (mobil) {
+            leseHinweise.push(...mobil.hinweise);
+            if (zielKey !== 'kfz_bestand') leseHinweise.push('Tipp: Die mobile.de-Datei gehört zum Ziel „Fahrzeugbestand (Kfz-Handel)".');
+            mobilErkannt = true;
+            neu = { dateiname: f.name, blatt: null, trennzeichen: ';', kopf: eindeutigeKoepfe(mobil.kopf), zeilen: mobil.zeilen, abgeschnitten: 0, groesse: f.size };
+          } else {
           const tab = dv ? dv.tabelle : leseCsv(text);
           leseHinweise.push(...tab.hinweise);
           neu = {
@@ -753,6 +764,7 @@ export default function ImportCenterPage() {
             zeilen: tab.zeilen, abgeschnitten: 0, groesse: f.size,
             datev: dv ? dv.kopf : null,
           };
+          }
           }
           }
         }
@@ -786,7 +798,7 @@ export default function ImportCenterPage() {
       );
 
       // Schritt 2: aus welchem Altsystem? (erkannt oder vorher angeklickt)
-      const erkannt = erkenneAltsystem(neu.kopf);
+      const erkannt = mobilErkannt ? { key: 'mobilede', name: 'mobile.de (CSV-Schnittstelle)' } : erkenneAltsystem(neu.kopf);
       const system = dateiSystem || erkannt?.key || '';
       if (!dateiSystem && erkannt) setDateiSystem(erkannt.key);
       const zielJetzt = katalogFuerZiel(zielKey, dbSpalten)?.ziel;
@@ -2712,7 +2724,7 @@ function AltsystemKarte(p: {
   const sichtbar = sucheAltsysteme(sichtbareAltsysteme(ALTSYSTEME, p.wahl, p.wahl.nur_meine), p.suche);
   const gruppen = gruppiereAltsysteme(sichtbar);
   const kpi = zaehleAltsysteme();
-  const zielName: Record<string, string> = { kontakte: 'Kunden', lieferanten: 'Lieferanten', artikel: 'Artikel', rechnungen: 'Offene Posten' };
+  const zielName: Record<string, string> = { kontakte: 'Kunden', lieferanten: 'Lieferanten', artikel: 'Artikel', rechnungen: 'Offene Posten', kfz_bestand: 'Fahrzeugbestand' };
 
   return (
     <div style={{ ...styles.stufe, borderColor: meine.length > 0 ? 'rgba(0,229,255,0.35)' : C.border }}>

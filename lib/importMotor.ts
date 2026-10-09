@@ -77,6 +77,8 @@ export const MOTOR_TABELLEN = [
   'wellness_kunden', 'wellness_behandlungen', 'tier_tiere', 'tier_behandlungen',
   // Paket 154: Anwalt-Block Teil 2 (gesperrt bis zur Freigabe)
   'hilfsmittel_versorgung', 'hilfsmittel_position', 'kanzlei_akte', 'kanzlei_frist',
+  // Paket 283: K16 Umzug Kfz-Handel — Fahrzeugbestand
+  'kfz_bestand',
 ] as const;
 
 // ---------------------------------------------------------------------------

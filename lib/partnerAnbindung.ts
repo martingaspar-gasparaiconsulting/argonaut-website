@@ -30,6 +30,9 @@ export type Partner = {
 };
 
 const ENV_CARVERTICAL = (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_PARTNERLINK_CARVERTICAL) || '';
+// Paket 283: Fahrzeugbewertung (DAT, Schwacke) — Partnerlink nur, wenn vereinbart und gesetzt
+const ENV_DAT = (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_PARTNERLINK_DAT) || '';
+const ENV_SCHWACKE = (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_PARTNERLINK_SCHWACKE) || '';
 
 export const PARTNER: Partner[] = [
   {
@@ -39,6 +42,21 @@ export const PARTNER: Partner[] = [
     abschlussUrl: /^https:\/\//.test(ENV_CARVERTICAL) ? ENV_CARVERTICAL : 'https://www.carvertical.com/de/business',
     partnerlink: /^https:\/\//.test(ENV_CARVERTICAL),
     einzelUrl: 'https://www.carvertical.com/de',
+  },
+  // Paket 283 (K16): Fahrzeugbewertung und FIN-Abfrage im eigenen Konto des Händlers
+  {
+    key: 'dat',
+    name: 'DAT',
+    wofuer: 'FIN-Abfrage (Ausstattung ab Werk) und Fahrzeugbewertung mit Händler-Einkaufs- und -Verkaufswert in Ihrem DAT-Konto (SilverDAT).',
+    abschlussUrl: /^https:\/\//.test(ENV_DAT) ? ENV_DAT : 'https://www.dat.de',
+    partnerlink: /^https:\/\//.test(ENV_DAT),
+  },
+  {
+    key: 'schwacke',
+    name: 'Schwacke',
+    wofuer: 'FIN-Abfrage und Fahrzeugbewertung mit Händler-Einkaufs- und -Verkaufswert in Ihrem Schwacke-Konto.',
+    abschlussUrl: /^https:\/\//.test(ENV_SCHWACKE) ? ENV_SCHWACKE : 'https://www.schwacke.de',
+    partnerlink: /^https:\/\//.test(ENV_SCHWACKE),
   },
 ];
 

@@ -23,7 +23,7 @@ import { PARTNER } from './partnerAnbindung';
 export type IntegrationTyp =
   | 'tse' | 'shop' | 'datev' | 'zahlung'
   | 'bank' | 'elster' | 'meta' | 'google-ads' | 'linkedin' | 'whatsapp'
-  | 'versand' | 'mail' | 'marktplatz' | 'fahrzeughistorie';
+  | 'versand' | 'mail' | 'marktplatz' | 'fahrzeughistorie' | 'fahrzeugbewertung';
 
 export type KategorieId = 'geldfluss' | 'marketing' | 'betrieb';
 
@@ -81,6 +81,24 @@ export const KONNEKTOR_KATALOG: KonnektorBereich[] = [
         { key: 'konto', label: 'Ihr carVertical-Konto (E-Mail oder Kundennummer)', typ: 'text' },
         { key: 'api_key', label: 'API-Schlüssel (falls von carVertical freigeschaltet)', typ: 'password', hinweis: 'Für den späteren Abruf per Knopf. Ohne Schlüssel: Bericht im carVertical-Konto kaufen und den Link in der Akte einfügen.' },
       ], hinweis: '① Bei carVertical mit Ihrem Händler-Konto anmelden → ② Berichte zur FIN kaufen → ③ den Bericht-Link in der Fahrzeugakte einfügen. Der Abruf direkt aus ARGONAUT folgt, sobald die Partner-Schnittstelle freigeschaltet ist.' },
+    ],
+  },
+  // ============================ BETRIEB: FAHRZEUGBEWERTUNG (Paket 283) ============================
+  {
+    typ: 'fahrzeugbewertung', name: 'Fahrzeugbewertung und FIN-Abfrage (DAT, Schwacke)', icon: '🏷️', kategorie: 'betrieb',
+    einrichten: { modus: 'inline' },
+    beschreibung: 'FIN-Abfrage (Ausstattung ab Werk) und Händler-Einkaufs- und -Verkaufswerte für Ihre Fahrzeuge. ARGONAUT vermittelt nur: Sie fragen in Ihrem eigenen Konto bei DAT oder Schwacke ab, der Vertrag besteht direkt mit dem Anbieter. In der Fahrzeugakte kopiert ARGONAUT die FIN für die Abfrage und speichert die Werte, die Sie aus dem Bericht übernehmen; das Preis-Cockpit vergleicht sie mit Ihrem Verkaufspreis.',
+    abschluss: (PARTNER.filter((p) => p.key === 'dat' || p.key === 'schwacke')).map((p) => ({ anbieter: p.key, text: `Noch kein ${p.name}-Konto? Hier abschließen`, url: p.abschlussUrl, partnerlink: p.partnerlink })),
+    anbieter: [
+      { key: 'manuell', name: 'Ohne Konto-Verbindung (Werte je Fahrzeug von Hand übernehmen)', demo: true, felder: [], hinweis: 'In der Fahrzeugakte (Reiter „Übersicht" → Bewertung) die FIN kopieren, im Konto beim Anbieter abfragen und die beiden Händlerwerte eintragen.' },
+      { key: 'dat', name: 'DAT (eigenes Händler-Konto, z. B. SilverDAT)', felder: [
+        { key: 'konto', label: 'Ihre DAT-Kundennummer', typ: 'text' },
+        { key: 'api_key', label: 'Schnittstellen-Zugang (falls von DAT freigeschaltet)', typ: 'password', hinweis: 'Für den späteren Abruf per Knopf. Ohne Zugang: in SilverDAT abfragen und die Werte in der Akte eintragen.' },
+      ], hinweis: '① In Ihrem DAT-Konto anmelden → ② FIN aus der Fahrzeugakte einfügen (Knopf „FIN kopieren") → ③ Händler-Einkaufs- und -Verkaufswert in der Akte eintragen. Der Abruf direkt aus ARGONAUT folgt, sobald DAT die Schnittstelle für Ihren Betrieb freischaltet.' },
+      { key: 'schwacke', name: 'Schwacke (eigenes Händler-Konto)', felder: [
+        { key: 'konto', label: 'Ihre Schwacke-Kundennummer', typ: 'text' },
+        { key: 'api_key', label: 'Schnittstellen-Zugang (falls von Schwacke freigeschaltet)', typ: 'password', hinweis: 'Für den späteren Abruf per Knopf. Ohne Zugang: im Schwacke-Konto abfragen und die Werte in der Akte eintragen.' },
+      ], hinweis: '① In Ihrem Schwacke-Konto anmelden → ② FIN aus der Fahrzeugakte einfügen (Knopf „FIN kopieren") → ③ Händler-Einkaufs- und -Verkaufswert in der Akte eintragen. Der Abruf direkt aus ARGONAUT folgt, sobald Schwacke die Schnittstelle für Ihren Betrieb freischaltet.' },
     ],
   },
   // ============================ GELDFLUSS & STEUERN ============================

@@ -80,6 +80,7 @@ import { leseZahl as leseZahlGemeinsam, leseZahlMitTrenner, centRunden } from '.
 import { spendeAltBestaetigt } from './spenden';
 import { FOERDER_PROGRAMME } from '../app/dashboard/foerdermittel/programme';
 import { datumPlusMonate } from './wiederkehr';
+import { kfzBestandNacharbeit } from './kfzImport';
 
 // ---------------------------------------------------------------------------
 // 1) CSV zerlegen
@@ -1171,6 +1172,59 @@ export const ZIELE: ImportZiel[] = [
       { key: 'fahrer_name', label: 'Fester Fahrer', typ: 'text', alias: ['fahrer', 'fester fahrer', 'fahrer name', 'nutzer'] },
       { key: 'notizen', label: 'Notizen', typ: 'text', alias: ['notizen', 'notiz', 'bemerkung'] },
       { key: 'aktiv', label: 'Aktiv', typ: 'jaNein', standard: true, alias: ['aktiv'] },
+    ],
+  },
+  // --- Paket 283: K16 Umzug Kfz-Handel — Fahrzeugbestand aus dem Haendlerprogramm ---
+  {
+    key: 'kfz_bestand',
+    label: 'Fahrzeugbestand (Handel)',
+    icon: '🚗',
+    tabelle: 'kfz_bestand',
+    beschreibung: 'Handelsfahrzeuge aus Ihrem bisherigen Händlerprogramm oder der mobile.de-Datei — mit FIN, Erstzulassung, Kilometerstand, Preisen und Besteuerung (§ 25a oder Regel).',
+    schluessel: 'interne_nr',
+    schluesselFelder: ['interne_nr', 'fin'],
+    eigeneFelderModul: 'kfz_bestand',
+    nurMitKatalog: true,
+    ergebnisHref: '/dashboard/kfz/bestand',
+    // Werte, die ARGONAUT selbst fuehrt oder die nur mit Freigabe gelten
+    ausblenden: ['ausstattung', 'besteuerung', 'historie_url', 'historie_anbieter', 'historie_am', 'historie_oeffentlich',
+      'bewertung_anbieter', 'bewertung_ek', 'bewertung_vk', 'bewertung_am', 'bewertung_url', 'inseriert'],
+    listen: [{ feld: 'status', label: 'Status', standard: 'bestand', textFeld: 'notiz', liste: liste(['zulauf', 'aufbereitung', 'bestand', 'reserviert', 'verkauft', 'archiv'], {
+      'im zulauf': 'zulauf', bestellt: 'zulauf', unterwegs: 'zulauf', 'in zulauf': 'zulauf', vorlauf: 'zulauf',
+      'in aufbereitung': 'aufbereitung', werkstatt: 'aufbereitung', 'in arbeit': 'aufbereitung', 'in vorbereitung': 'aufbereitung',
+      'im bestand': 'bestand', lager: 'bestand', 'auf lager': 'bestand', verfuegbar: 'bestand', 'verfügbar': 'bestand', aktiv: 'bestand', frei: 'bestand', online: 'bestand',
+      reserviert: 'reserviert', reservierung: 'reserviert', angezahlt: 'reserviert',
+      verkauft: 'verkauft', ausgeliefert: 'verkauft', abgegeben: 'verkauft', sold: 'verkauft',
+      archiviert: 'archiv', inaktiv: 'archiv', abgemeldet: 'archiv',
+    }) }],
+    felder: [
+      { key: 'interne_nr', label: 'Interne Nummer', typ: 'text', alias: ['interne nummer', 'interne nr', 'fahrzeugnummer', 'fahrzeug nr', 'fz nr', 'fznr', 'bestandsnummer', 'kommissionsnummer', 'komm nr', 'lagernummer', 'internal number', 'stock number', 'nummer'] },
+      { key: 'marke', label: 'Marke', typ: 'text', pflicht: true, alias: ['marke', 'hersteller', 'fabrikat', 'make', 'brand'] },
+      { key: 'modell', label: 'Modell', typ: 'text', alias: ['modell', 'typ', 'model', 'modellbezeichnung', 'handelsbezeichnung'] },
+      { key: 'variante', label: 'Variante / Ausführung', typ: 'text', alias: ['variante', 'ausfuehrung', 'version', 'motorisierung', 'modellvariante', 'ausstattungslinie'] },
+      { key: 'sparte', label: 'Sparte / Kategorie', typ: 'text', alias: ['sparte', 'kategorie', 'fahrzeugart', 'aufbau', 'category', 'karosserie'] },
+      { key: 'status', label: 'Status', typ: 'text', standard: 'bestand', hinweis: 'zulauf · aufbereitung · bestand · reserviert · verkauft · archiv', alias: ['status', 'fahrzeugstatus', 'bestandsstatus', 'zustand bestand'] },
+      { key: 'fin', label: 'FIN', typ: 'text', alias: ['fin', 'vin', 'fahrgestellnummer', 'fahrzeugidentnummer', 'fahrzeug ident nr', 'fahrzeugidentifikationsnummer', 'chassisnummer'] },
+      { key: 'kennzeichen', label: 'Kennzeichen', typ: 'text', alias: ['kennzeichen', 'amtliches kennzeichen', 'kfz kennzeichen', 'plate'] },
+      { key: 'erstzulassung', label: 'Erstzulassung', typ: 'text', hinweis: 'Monat/Jahr genügt, z. B. 03.2019', alias: ['erstzulassung', 'ez', 'erstzul', 'zulassung', 'reg date', 'first registration', 'baujahr ez'] },
+      { key: 'km_stand', label: 'Kilometerstand', typ: 'zahl', alias: ['kilometerstand', 'km stand', 'km', 'laufleistung', 'kilometer', 'tachostand', 'kilometre', 'mileage'] },
+      { key: 'leistung_kw', label: 'Leistung kW', typ: 'zahl', alias: ['leistung kw', 'kw', 'leistung', 'performance', 'power kw'] },
+      { key: 'leistung_ps', label: 'Leistung PS (wird in kW umgerechnet)', typ: 'zahl', virtuell: 'rechnen', nichtInVorlage: true, alias: ['ps', 'leistung ps', 'hp'] },
+      { key: 'kraftstoff', label: 'Kraftstoff', typ: 'text', alias: ['kraftstoff', 'kraftstoffart', 'antrieb', 'treibstoff', 'fuel', 'fuel type', 'energietraeger'] },
+      { key: 'farbe', label: 'Farbe', typ: 'text', alias: ['farbe', 'aussenfarbe', 'lackierung', 'colour', 'color'] },
+      { key: 'farbcode', label: 'Farbcode', typ: 'text', alias: ['farbcode', 'lackcode', 'farbnummer', 'paint code'] },
+      { key: 'eingang_am', label: 'Eingang am', typ: 'datum', alias: ['eingang am', 'eingang', 'eingangsdatum', 'hereinnahme', 'hereinnahmedatum', 'zugang', 'zugangsdatum', 'ankaufsdatum', 'lagereingang'] },
+      { key: 'standtage', label: 'Standtage (ergibt das Eingangsdatum)', typ: 'zahl', virtuell: 'rechnen', nichtInVorlage: true, alias: ['standtage', 'standzeit', 'tage im bestand', 'lagertage'] },
+      { key: 'verkauft_am', label: 'Verkauft am', typ: 'datum', alias: ['verkauft am', 'verkaufsdatum', 'auslieferung', 'auslieferungsdatum'] },
+      { key: 'ek_netto', label: 'Einkaufspreis netto', typ: 'zahl', alias: ['ek netto', 'einkaufspreis netto', 'einkaufspreis', 'ek', 'ek preis', 'hereinnahmepreis', 'ankaufspreis', 'einstandspreis'] },
+      { key: 'vk_brutto', label: 'Verkaufspreis brutto', typ: 'zahl', alias: ['vk brutto', 'verkaufspreis brutto', 'verkaufspreis', 'vk', 'vk preis', 'preis', 'endpreis', 'angebotspreis', 'price'] },
+      { key: 'besteuerung_text', label: 'Besteuerung (§ 25a oder Regel)', typ: 'text', virtuell: 'rechnen', alias: ['besteuerung', 'steuerart', 'mwst ausweisbar', 'differenzbesteuerung', 'besteuerungsart', '25a'] },
+      { key: 'hu_bis', label: 'HU bis', typ: 'text', hinweis: 'Monat/Jahr genügt, z. B. 08.2027', alias: ['hu bis', 'hu', 'tuev', 'tüv', 'tuev bis', 'hauptuntersuchung', 'naechste hu', 'mot'] },
+      { key: 'vorbesitzer', label: 'Vorbesitzer', typ: 'zahl', alias: ['vorbesitzer', 'anzahl vorbesitzer', 'halter', 'anzahl halter', 'previous owners'] },
+      { key: 'vorschaden', label: 'Vorschaden / Unfall', typ: 'text', alias: ['vorschaden', 'unfall', 'unfallfrei', 'unfallschaden', 'beschaedigtes fahrzeug', 'unfallfahrzeug', 'schaden'] },
+      { key: 'ausstattung_text', label: 'Ausstattung (durch Komma getrennt)', typ: 'text', virtuell: 'rechnen', alias: ['ausstattung', 'sonderausstattung', 'extras', 'merkmale', 'features', 'equipment'] },
+      { key: 'zustand', label: 'Zustand (Neu/Jahreswagen)', typ: 'text', virtuell: 'rechnen', nichtInVorlage: true, alias: ['zustand', 'fahrzeugzustand', 'neu gebraucht'] },
+      { key: 'notiz', label: 'Notiz', typ: 'text', alias: ['notiz', 'notizen', 'bemerkung', 'bemerkungen', 'interne notiz', 'remarks', 'kommentar'] },
     ],
   },
   {
@@ -3314,6 +3368,32 @@ Object.assign(BEISPIELE, {
     bestand: '24|6|16',
     notiz: '|Inventur 30.09.|',
   },
+  // Paket 283: Fahrzeugbestand (Kfz-Handel)
+  kfz_bestand: {
+    interne_nr: 'F-1001|F-1002|F-1003',
+    marke: 'Volkswagen|BMW|Skoda',
+    modell: 'Golf|320d Touring|Octavia Combi',
+    variante: '1.5 TSI Life|M Sport|2.0 TDI Style',
+    sparte: 'Pkw|Pkw|Pkw',
+    status: 'bestand|aufbereitung|zulauf',
+    fin: 'WVWZZZCDZMW123456|WBA8E1105KB123456|',
+    kennzeichen: 'BB-AH 101||',
+    erstzulassung: '03.2021|07.2019|',
+    km_stand: '38500|112000|15',
+    leistung_kw: '96|140|110',
+    kraftstoff: 'Benzin|Diesel|Diesel',
+    farbe: 'Mondsteingrau|Schwarz|',
+    farbcode: 'LH7X||',
+    eingang_am: '12.08.2026|01.10.2026|',
+    ek_netto: '17.800,00|19.500,00|',
+    vk_brutto: '23.490,00|25.990,00|31.900,00',
+    besteuerung_text: '§ 25a|Regelbesteuerung|Regelbesteuerung',
+    hu_bis: '03.2027|07.2027|',
+    vorbesitzer: '1|2|0',
+    vorschaden: 'unfallfrei|unbekannt|',
+    ausstattung_text: 'Klimaautomatik, Navigationssystem, Sitzheizung|Anhängerkupplung, Head-up-Display|',
+    notiz: '|Zahnriemen neu|Kundenbestellung',
+  },
 } as Record<string, Record<string, string>>);
 
 /**
@@ -3496,6 +3576,8 @@ export const GELDFELDER: readonly string[] = [
   'stundensatz',
   // Paket 143: Kaution (Soll, ausgezahlt)
   'soll', 'ausgezahlt',
+  // Paket 283: Einkaufspreis eines Handelsfahrzeugs
+  'ek_netto',
 ];
 
 export type ZeilenOptionen = {
@@ -3652,6 +3734,11 @@ export function pruefeZeile(
   // Paket 155: Artikel mit Brutto-Ladenpreis -> netto (Satz aus der MwSt-Spalte der Zeile, sonst Standard mit Warnung)
   if (zielKey === 'artikel') artikelBruttoZuNetto(werte, kopf, zeile, mapping, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD);
   nachbereiten(zielKey, werte, nummer, warnungen, opt.steuersatz ?? STEUERSATZ_STANDARD, ziel);
+  // Paket 283: Fahrzeugbestand — FIN, Monat/Jahr, Besteuerung, Pruefregeln der Tabelle (vor dem Entfernen der Rechenfelder)
+  if (zielKey === 'kfz_bestand') {
+    const tag = `${heute.getFullYear()}-${String(heute.getMonth() + 1).padStart(2, '0')}-${String(heute.getDate()).padStart(2, '0')}`;
+    for (const x of kfzBestandNacharbeit(werte, tag)) warnungen.push({ zeile: nummer, feld: x.feld, meldung: x.meldung });
+  }
   // Paket 138: Rechenfelder sind nur Zwischenwerte — nie in die Datenbank.
   for (const f of ziel.felder) if (f.virtuell === 'rechnen') delete werte[f.key];
   // Paket 134: Grenzen der Datenbank (check-Regeln) vorher pruefen

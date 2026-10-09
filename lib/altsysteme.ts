@@ -19,11 +19,11 @@
 // ============================================================================
 
 export type AltsystemGruppe =
-  | 'crm' | 'buchhaltung' | 'handwerk' | 'handel' | 'gastro'
+  | 'crm' | 'buchhaltung' | 'handwerk' | 'handel' | 'kfz' | 'gastro'
   | 'gesundheit' | 'verein' | 'immobilien' | 'allgemein';
 
 /** Die Ziele des Import-Motors, die ein Altsystem beliefern kann. */
-export type MotorZiel = 'kontakte' | 'lieferanten' | 'artikel' | 'rechnungen';
+export type MotorZiel = 'kontakte' | 'lieferanten' | 'artikel' | 'rechnungen' | 'kfz_bestand';
 
 export type Altsystem = {
   key: string;
@@ -57,6 +57,7 @@ export const ALTSYSTEM_GRUPPEN: { key: AltsystemGruppe; label: string; icon: str
   { key: 'buchhaltung', label: 'Buchhaltung & Rechnung', icon: '🧾' },
   { key: 'handwerk', label: 'Handwerk & Bau', icon: '🔧' },
   { key: 'handel', label: 'Handel, Shop & Kasse', icon: '🛒' },
+  { key: 'kfz', label: 'Autohaus & Kfz-Handel', icon: '🚗' },
   { key: 'gastro', label: 'Gastro & Hotel', icon: '🍽' },
   { key: 'gesundheit', label: 'Gesundheit & Tier', icon: '🩺' },
   { key: 'verein', label: 'Verein & Bildung', icon: '🎓' },
@@ -489,6 +490,47 @@ export const ALTSYSTEME: Altsystem[] = [
     key: 'orderbird', name: 'orderbird', gruppe: 'handel',
     daten: 'Nur Umsatz- und Prüfer-Exporte, keine Stammdaten belegt', formate: [], schritte: null,
     quelle: 'support.orderbird.com', datev: true, ziele: [],
+  },
+
+  // ------------------------------------------------- Autohaus & Kfz-Handel --
+  // Paket 283 (K16). Belegt ist nur das mobile.de-Upload-Format (Handbuch von
+  // mobile.de). Fuer die Haendlerprogramme selbst ist kein Exportweg
+  // oeffentlich beschrieben -> ehrlich „beim Hersteller erfragen".
+  {
+    key: 'mobilede', name: 'mobile.de-Datei (CSV-Schnittstelle)', gruppe: 'kfz',
+    daten: 'Fahrzeugbestand im Upload-Format von mobile.de (Semikolon, feste Feldreihenfolge)', formate: ['CSV'],
+    schritte: [
+      'Fragen Sie in Ihrem Händlerprogramm oder bei Ihrem Börsen-Dienstleister nach der Bestandsdatei, die an mobile.de übertragen wird (CSV-Schnittstelle).',
+      'Laden Sie diese Datei hier unverändert hoch — ohne sie in Excel zu öffnen und neu zu speichern.',
+      'ARGONAUT erkennt den mobile.de-Aufbau selbst und setzt die festen Felder (Marke, Modell, Erstzulassung, Kilometer, Preis, FIN …) in Spalten um.',
+    ],
+    hinweise: [
+      'Die mobile.de-Datei kennt keinen Einkaufspreis — den tragen Sie danach in der Kalkulation je Fahrzeug ein oder importieren ihn aus Ihrem Händlerprogramm.',
+      'Beim Speichern in Excel gehen führende Nullen und das Format verloren — deshalb die Datei direkt hochladen.',
+    ],
+    quelle: 'services.mobile.de/manual/upload-interface-csv_en.html', ziele: ['kfz_bestand'],
+  },
+  {
+    key: 'autoscout24', name: 'AutoScout24 (Händlerbereich)', gruppe: 'kfz',
+    daten: 'Fahrzeugbestand und Anfragen', formate: [], schritte: null,
+    hinweise: ['Viele Händlerprogramme übertragen an AutoScout24 und mobile.de dieselben Daten — liegt die mobile.de-Datei vor, ist sie der schnellere Weg.'],
+    ziele: ['kfz_bestand'],
+  },
+  {
+    key: 'locosoft', name: 'Loco-Soft', gruppe: 'kfz',
+    daten: 'Kunden, Fahrzeuge, Werkstatt und Handel', formate: [], schritte: null, ziele: ['kontakte', 'kfz_bestand'],
+  },
+  {
+    key: 'werbas', name: 'WERBAS', gruppe: 'kfz',
+    daten: 'Kunden, Fahrzeuge, Werkstatt und Handel', formate: [], schritte: null, ziele: ['kontakte', 'kfz_bestand'],
+  },
+  {
+    key: 'keyloop', name: 'Keyloop (Autoline)', gruppe: 'kfz',
+    daten: 'Kunden, Fahrzeuge, Werkstatt und Handel', formate: [], schritte: null, ziele: ['kontakte', 'kfz_bestand'],
+  },
+  {
+    key: 'incadea', name: 'incadea', gruppe: 'kfz',
+    daten: 'Kunden, Fahrzeuge, Werkstatt und Handel', formate: [], schritte: null, ziele: ['kontakte', 'kfz_bestand'],
   },
 
   // ---------------------------------------------------------------- Gastro --

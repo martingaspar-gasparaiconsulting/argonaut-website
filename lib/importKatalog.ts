@@ -107,6 +107,8 @@ export const IMPORT_QUELLEN: ImportQuelle[] = [
   // Paket 132: Umzug Schritt 4 — Handwerk & Handel (Vorlage aus dem Feld-Katalog)
   { key: 'einsaetze', label: 'Einsätze / Plantafel', icon: '🗓', beschreibung: 'Geplante Einsätze mit Mitarbeiter, Zeit und Einsatzort für die Dispo.', musterZiel: 'einsaetze', zielHref: '/dashboard/dispo', motor: 'einsaetze', gruppe: 'betrieb' },
   { key: 'tickets', label: 'Service-Tickets', icon: '🎫', beschreibung: 'Offene und alte Tickets mit Nummer, Status und Priorität.', musterZiel: 'tickets', zielHref: '/dashboard/service', motor: 'tickets', gruppe: 'betrieb' },
+  // Paket 283: K16 — Handelsbestand aus dem Händlerprogramm oder der mobile.de-Datei
+  { key: 'kfz_bestand', label: 'Fahrzeugbestand (Kfz-Handel)', icon: '🚗', beschreibung: 'Handelsfahrzeuge aus Ihrem Händlerprogramm oder der mobile.de-Upload-Datei übernehmen.', musterZiel: 'kfz_bestand', zielHref: '/dashboard/kfz/bestand', motor: 'kfz_bestand', gruppe: 'betrieb' },
   { key: 'inventar', label: 'Inventar & Geräte', icon: '🧰', beschreibung: 'Werkzeuge und Geräte mit Inventarnummer und nächster Prüfung.', musterZiel: 'inventar', zielHref: '/dashboard/erp/inventar', motor: 'inventar', gruppe: 'betrieb' },
   { key: 'verleih', label: 'Mietgegenstände (Verleih)', icon: '🔑', beschreibung: 'Vermietbare Geräte mit Tages-/Wochensatz und Kaution.', musterZiel: 'verleih', zielHref: '/dashboard/verleih', motor: 'verleih', gruppe: 'betrieb' },
   // Paket 133: Umzug Schritt 4 Teil 2

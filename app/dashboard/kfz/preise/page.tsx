@@ -23,6 +23,7 @@ import {
   standzeitVerteilung, uebernahmeListe, type PreisRegeln, type Vorschlag, type Diagnose, type Aufruf, type AnfrageMini,
 } from '@/lib/kfzPreis';
 import { marktLage, type Vergleich, type Lage } from '@/lib/kfzMarkt';
+import { bewertungLage, type Bewertung, type BewertungLage } from '@/lib/kfzBewertung';
 import Leerzustand from '../../_components/Leerzustand';
 
 const supabase = createBrowserClient(
@@ -42,7 +43,7 @@ type Fz = AkteFelder & {
 };
 type Zeile = {
   f: Fz; tage: number | null; grenze: number | null; seit: number | null; aufrufe: number; anfragen: number;
-  ampel: number; v: Vorschlag; d: Diagnose; markt: Lage;
+  ampel: number; v: Vorschlag; d: Diagnose; markt: Lage; bewertung: BewertungLage | null;
 };
 type Filter = 'alle' | 'senken' | 'nachfrage' | 'grenze';
 
@@ -58,6 +59,8 @@ export default function PreisePage() {
   const [anfragen, setAnfragen] = useState<AnfrageMini[]>([]);
   const [fotos, setFotos] = useState<Record<string, number>>({});
   const [vergleiche, setVergleiche] = useState<(Vergleich & { bestand_id: string })[]>([]);
+  // Paket 283: Bewertung DAT/Schwacke (eigene Abfrage — ohne SQL 283 einfach leer)
+  const [bewertungen, setBewertungen] = useState<Record<string, Partial<Bewertung>>>({});
   const [standkostenTag, setStandkostenTag] = useState(0);
   const [ampelGrenzen, setAmpelGrenzen] = useState({ gruenBis: 60, gelbBis: 90 });
   const [regeln, setRegeln] = useState<PreisRegeln>(standardRegeln());
@@ -82,7 +85,7 @@ export default function PreisePage() {
     const b = typeof chef === 'string' && chef ? chef : uid;
     setBetrieb(b); setIstChef(b === uid);
     const ab = vorTagen(40);
-    const [f, k, pr, au, an, me, e, p, mv] = await Promise.all([
+    const [f, k, pr, au, an, me, e, p, mv, bw] = await Promise.all([
       supabase.from('kfz_bestand').select(SPALTEN).not('status', 'in', '("verkauft","archiv")').limit(2000),
       supabase.from('kfz_bestand_kosten').select('bestand_id, art, betrag_netto, plan').limit(10000),
       supabase.from('kfz_bestand_preis').select('bestand_id, geaendert_am').order('geaendert_am', { ascending: false }).limit(10000),
@@ -92,6 +95,7 @@ export default function PreisePage() {
       supabase.from('modul_einstellung').select('modul, einstellung').eq('owner_user_id', b).in('modul', ['kfz-bestand', PREIS_MODUL]),
       supabase.from('profiles').select('branche').eq('id', b).maybeSingle(),
       supabase.from('kfz_marktvergleich').select('bestand_id, preis, km, erstzulassung, erfasst_am').gte('erfasst_am', ab).limit(20000),
+      supabase.from('kfz_bestand').select('id, bewertung_anbieter, bewertung_ek, bewertung_vk, bewertung_am').not('status', 'in', '("verkauft","archiv")').not('bewertung_am', 'is', null).limit(2000),
     ]);
     if (f.error) { setFehler('Der Fahrzeugbestand lässt sich nicht laden. Ist SQL Paket 259 ausgeführt und haben Sie das Recht „KFZ"?'); setLaden(false); return; }
     setFz((((f.data as unknown) as Fz[]) ?? []).filter((x) => imBestand(x.status)));
@@ -106,6 +110,11 @@ export default function PreisePage() {
     for (const z of ((me.data as unknown) as { bestand_id: string }[]) ?? []) fm[z.bestand_id] = (fm[z.bestand_id] ?? 0) + 1;
     setFotos(fm);
     setVergleiche(mv.error ? [] : (((mv.data as unknown) as (Vergleich & { bestand_id: string })[]) ?? []).map((z) => ({ ...z, preis: z.preis === null ? null : Number(z.preis) })));
+    const bwJe: Record<string, Partial<Bewertung>> = {};
+    for (const z of bw.error ? [] : (((bw.data as unknown) as (Bewertung & { id: string })[]) ?? [])) {
+      bwJe[z.id] = { ...z, bewertung_ek: z.bewertung_ek === null ? null : Number(z.bewertung_ek), bewertung_vk: z.bewertung_vk === null ? null : Number(z.bewertung_vk) };
+    }
+    setBewertungen(bwJe);
     const einst = ((e.data as unknown) as { modul: string; einstellung: Record<string, unknown> }[]) ?? [];
     const v = vorlageFuer('kfz-bestand', ((p.data as { branche?: string | null } | null)?.branche) ?? null);
     const vk = v ? mitKunde(v, (einst.find((x) => x.modul === 'kfz-bestand')?.einstellung as KundenEinstellung | undefined) ?? null) : null;
@@ -139,9 +148,10 @@ export default function PreisePage() {
         v: vorschlag({ vk: f.vk_brutto, standtage: tage, seitPreis: seit, untergrenze: grenze, regeln }),
         d: diagnose({ inseriert: !!f.inseriert, ampel, aufrufe: a, anfragen: q, standtage: tage, aufrufeViel: regeln.aufrufeViel }),
         markt: marktLage({ vk: f.vk_brutto, km: f.km_stand, erstzulassung: f.erstzulassung }, mvJe[f.id] ?? [], tag),
+        bewertung: bewertungLage(bewertungen[f.id], f.vk_brutto, tag),
       };
     }).sort((x, y) => (y.tage ?? -1) - (x.tage ?? -1));
-  }, [fz, kosten, preisAm, aufrufe, anfragen, fotos, vergleiche, standkostenTag, regeln, tag]);
+  }, [fz, kosten, preisAm, aufrufe, anfragen, fotos, vergleiche, bewertungen, standkostenTag, regeln, tag]);
 
   const gezeigt = zeilen.filter((z) => filter === 'alle' ? true
     : filter === 'senken' ? z.v.art === 'senken'
@@ -270,6 +280,7 @@ export default function PreisePage() {
               </div>
               <div style={{ fontSize: 13, color: FARBE[z.d.stufe], marginTop: 4 }}>{z.d.text}</div>
               <div style={{ fontSize: 13, color: MARKT_FARBE[z.markt.stufe], marginTop: 2 }}>Markt: {z.markt.basis === 'zu_wenig' ? `${z.markt.aktuell} aktuelle Vergleiche — in der Akte erfassen (ab 3 gibt es eine Aussage).` : z.markt.text}</div>
+              {z.bewertung && <div style={{ fontSize: 13, color: z.bewertung.stufe === 'warn' ? C.warn : z.bewertung.stufe === 'ok' ? C.ok : C.dim, marginTop: 2 }}>Bewertung: {z.bewertung.text}</div>}
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
                 <span style={{ fontSize: 13, color: z.v.art === 'senken' ? C.warn : z.v.art === 'grenze' || z.v.art === 'unter_grenze' ? C.bad : C.dim }}>
                   {z.v.art === 'senken' && z.v.neu !== null ? <>Vorschlag <b>{euro(z.v.neu)}</b> (−{String(z.v.prozent).replace('.', ',')} %) · </> : null}{z.v.grund}

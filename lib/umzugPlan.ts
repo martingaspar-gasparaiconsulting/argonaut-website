@@ -123,6 +123,8 @@ const NAMEN_EXTRA: Record<string, string[]> = {
   eingangsbelege: ['eingangsrechnungen', 'eingangsbelege', 'belege', 'kreditorenrechnungen'],
   vertraege: ['vertraege', 'laufende', 'kosten', 'abos', 'fixkosten'],
   fahrzeuge: ['fahrzeuge', 'fuhrpark', 'kfz'],
+  // Paket 283: Handelsbestand eines Autohauses (nicht der eigene Fuhrpark)
+  kfz_bestand: ['fahrzeugbestand', 'handelsbestand', 'bestandsliste', 'gebrauchtwagen', 'lagerfahrzeuge', 'mobilede', 'autoscout', 'boerse', 'verkaufsfahrzeuge'],
   projekte: ['projekte', 'projects'],
   angebote: ['angebote', 'angebot', 'kva', 'quotes'],
   shop: ['shop', 'shopify', 'woocommerce', 'shopware', 'bestellungen online'],

@@ -61,7 +61,8 @@ test('SQL p154: Feldkatalog = MOTOR_TABELLEN (81), nichts sonst geaendert', () =
   const sql = lies('supabase-sql/p154-import-anwaltblock-2.sql');
   const block = sql.match(/c\.table_name = any \(array\[([\s\S]*?)\]\)/)[1];
   const whitelist = [...block.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].sort());
+  // Paket 283 hat danach kfz_bestand ergaenzt (eigener Test kfzUmzugP283) — der Stand von p154 bleibt 81
+  assert.deepEqual(whitelist, [...MOTOR_TABELLEN].filter((t) => t !== 'kfz_bestand').sort());
   assert.equal(whitelist.length, 81);
   assert.ok(!/\b(drop table|delete from|truncate|alter table|create table|create policy)\b/i.test(sql));
   assert.match(sql, /revoke all on function public\.import_feldkatalog\(text\[\]\) from anon/);
