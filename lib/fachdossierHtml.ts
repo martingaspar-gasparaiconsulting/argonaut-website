@@ -109,6 +109,10 @@ h3{font-size:12.5pt;margin:10mm 0 3mm}
 .luft{flex:1 1 0;min-height:4mm}
 .band{margin-top:6mm;background:#0A1628;color:#E8EDF4;border-radius:3mm;padding:5mm 6mm;font-size:9.5pt;line-height:1.55}
 .band b{color:#C9A84C;display:block;margin-bottom:1.5mm;font-size:10.5pt}
+.fach{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin:2mm 0 5mm}
+.fach div{border:1px solid #e3e6ec;border-top:3px solid #C9A84C;border-radius:3mm;padding:4mm 5mm;font-size:8.8pt;line-height:1.5}
+.fach div b{display:block;margin-bottom:1.5mm;font-size:10pt}
+.fach ul{margin:0;padding-left:4mm}.fach li{margin-bottom:1mm}
 .luecke{border:2px dashed #E0A24C;border-radius:3mm;padding:6mm;color:#8a5a00;background:#fff8ea;font-size:10pt;line-height:1.55}
 .wz{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5}
 .wz span{transform:rotate(-32deg);font-size:32pt;font-weight:700;color:rgba(178,58,58,.13);letter-spacing:.08em;white-space:nowrap}
@@ -213,6 +217,21 @@ export async function fachdossierHtml(d: Dossier): Promise<string> {
       <h3>Was Ihr Team davon hat</h3>
       <div class="drei">${TEAM.map((k) => `<div><small>${esc(k.wer)}</small><b>${esc(k.titel)}</b>${esc(k.text)}</div>`).join('')}</div>
       <div class="band"><b>Ihr Wissen bleibt im Betrieb.</b>Kundengeschichte, Anlagen, Fotos und Protokolle hängen am Kunden. Wer neu im Team ist, findet alles an einer Stelle.</div>
+      ${fusszeile(d, nr)}</section>`);
+  }
+
+  // 4b · Paket 286: Fachpaket im Detail (nur Pilot-Branchen mit fachseite) — nur Gebautes und Partner über das eigene Konto
+  if (t?.fachseite) {
+    const f = t.fachseite;
+    nr++;
+    seiten.push(`<section class="seite">${wz}
+      <div class="eyebrow">Ihr Fachpaket</div>
+      <h2>${esc(f.titel)}</h2>
+      <p class="sub">${esc(f.text)}</p>
+      <div class="fach">${f.gruppen.map((g) => `<div><b>${esc(g.titel)}</b><ul>${g.punkte.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('')}</div>
+      ${f.partner.length ? `<h3 style="margin-top:0">Partner über Ihr eigenes Konto</h3>
+      <div class="drei">${f.partner.map((p) => `<div><b>${esc(p.name)}</b>${esc(p.text)}</div>`).join('')}</div>` : ''}
+      <div class="band"><b>${esc(f.band.titel)}</b>${esc(f.band.text)}</div>
       ${fusszeile(d, nr)}</section>`);
   }
 

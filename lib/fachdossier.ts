@@ -76,6 +76,17 @@ export type FachText = {
   schwerpunkt?: { titel: string; text: string; punkte: { titel: string; text: string }[] };
   zielgruppe: string;       // „Elektrobetriebe" (für „Fachdossier für …")
   geprueftAm: string;       // ISO-Datum der Prüfung
+  /** Paket 286: zusätzliche Seite für Pilot-Branchen mit eigenem Fachpaket (zuerst Kfz-Handel). */
+  fachseite?: FachSeite;
+};
+
+/** Paket 286: „Ihr Fachpaket" — Gruppen mit Gebautem und Partner über das eigene Konto. Nur Gebautes (Regel aus Paket 217). */
+export type FachSeite = {
+  titel: string;
+  text: string;
+  gruppen: { titel: string; punkte: string[] }[];
+  partner: { name: string; text: string }[];
+  band: { titel: string; text: string };
 };
 
 export const FACH_TEXTE: Record<string, FachText> = {
@@ -2496,39 +2507,56 @@ export const FACH_TEXTE: Record<string, FachText> = {
     },
     geprueftAm: '2026-10-06',
   },
+  // Paket 286 (09.10.2026): K17b — Kfz-Handel nach dem Kfz-Pilot K1–K18 neu geschrieben (nur Gebautes).
   'kfz-handel': {
     zielgruppe: 'Autohäuser und Kfz-Händler',
     titel: 'Ihr Autohaus. Ein System.',
-    lead: 'Von der Anfrage zum Fahrzeug bis zum Service nach dem Kauf: Anfragen, Verkaufschancen, Angebote, Fahrzeugakte, Aufbereitung in der Werkstatt und Rechnung laufen in einer Software zusammen.',
-    vorteile: ['Anfragen mit Ampel', 'Verkaufschancen mit Prognose', 'Angebote, die Kunden online annehmen', 'Fahrzeugakte mit Halter-Historie', 'Aufbereitung im Werkstatt-Board', 'E-Rechnung nach XRechnung und ZUGFeRD'],
+    lead: 'Vom Ankauf bis zur Übergabe und zur ersten Inspektion: Fahrzeugbestand, Börse, Anfragen, Probefahrt, Kaufvertrag, Rechnung und Kalkulation je Fahrzeug laufen in einer Software zusammen.',
+    vorteile: ['Fahrzeugbestand mit Standtage-Ampel', 'Ankauf mit Prüfprotokoll und Höchstpreis', 'Eigene Fahrzeugbörse auf Ihrer Domain', 'Kaufvertrag mit digitaler Unterschrift', 'Kalkulation je Fahrzeug, Plan und Ist', 'E-Rechnung nach XRechnung und ZUGFeRD'],
     rolle: 'Sie verkaufen Fahrzeuge. Nicht Formulare.',
     alltag: [
-      { titel: 'Anfragen aus vielen Quellen', text: 'Website, Telefon, Besuch am Hof. Wer hat sich wann für welches Fahrzeug interessiert, steht verstreut.' },
-      { titel: 'Nachfassen vergessen', text: 'Ein Interessent war zur Probefahrt da und hat sich nicht mehr gemeldet. Niemand hat nachgehakt.' },
-      { titel: 'Fahrzeug vor dem Verkauf', text: 'Aufbereitung, kleine Reparaturen, HU. Was ist am Fahrzeug schon gemacht, was steht noch aus?' },
-      { titel: 'Papiere und Unterlagen', text: 'Fahrzeugbrief, HU-Bericht, Serviceheft. Die Unterlagen liegen in verschiedenen Ordnern.' },
-      { titel: 'Kunde nach dem Kauf', text: 'Der Käufer kommt zur ersten Inspektion. Ist seine Kaufgeschichte gleich zur Hand?' },
+      { titel: 'Wie lange steht der schon?', text: 'Ein Fahrzeug steht seit Monaten auf dem Hof. Was es seitdem an Standkosten gefressen hat und ob der Preis noch zum Markt passt, rechnet niemand nach.' },
+      { titel: 'Anfragen aus vielen Quellen', text: 'Webseite, Telefon, Besuch am Hof. Wer sich wann für welches Fahrzeug interessiert hat und wer sich darum kümmert, steht verstreut.' },
+      { titel: 'Der Ankauf auf dem Block', text: 'Zustand, Mängel und Preisvorstellung landen auf Papier. Ob der gebotene Preis nach Aufbereitung und Standzeit noch Geld bringt, zeigt sich erst beim Verkauf.' },
+      { titel: 'Brief, Schlüssel, Zulassung', text: 'Wo liegt der Fahrzeugbrief? Wer hat den Zweitschlüssel? Ist die Zulassung schon beim Amt? Die Antworten stecken in Köpfen und Schubladen.' },
+      { titel: 'Was hat das Auto verdient?', text: 'Einkauf, Aufbereitung, Lackierer, Provision. Ob ein verkauftes Fahrzeug wirklich Geld gebracht hat, weiß man oft erst nach dem Jahresabschluss.' },
       { titel: 'Die E-Rechnung kommt', text: 'Seit 2025 müssen Betriebe E-Rechnungen empfangen können. Ab 2027 beziehungsweise 2028 müssen sie diese an Geschäftskunden auch selbst ausstellen.' },
     ],
-    ablaufTitel: 'Ein Interessent fragt über die Website nach einem gebrauchten Kompaktwagen.',
+    ablaufTitel: 'Ein Interessent entdeckt einen gebrauchten Kombi in Ihrer Fahrzeugbörse.',
     ablauf: [
-      { titel: 'Die Anfrage landet bei den Anfragen', text: 'Mit Herkunft und Stufe. Die Ampel zeigt, wie lange sie wartet.' },
-      { titel: 'Probefahrt als Termin', text: 'Den Termin bucht der Kunde selbst über Ihren Buchungs-Link oder Sie tragen ihn ein.' },
-      { titel: 'Verkaufschance mit Stand', text: 'Das Geschäft steht in der Pipeline, mit Wert und Wahrscheinlichkeit.' },
-      { titel: 'Angebot per Link', text: 'Der Kunde nimmt das Angebot online an, Sie sehen die Zusage sofort.' },
-      { titel: 'Halterwechsel in der Fahrzeugakte', text: 'Der neue Halter wird zum Datum eingetragen, die Rechnung geht als E-Rechnung hinaus.' },
+      { titel: 'Die Anfrage kommt aus Ihrer Börse', text: 'Mit Fahrzeug, gewünschten Zusatzleistungen und Kontakt. Sie landet bei den Anfragen, ein Verkäufer wird zugeteilt, der nächste Kontakt steht auf heute.' },
+      { titel: 'Probefahrt mit Vereinbarung', text: 'Fahrer, Führerschein-Prüfung, Kilometer und Tank bei Abfahrt und Rückgabe. Zwei Tage später erinnert das System an den Anruf danach.' },
+      { titel: 'Kaufvertrag mit Inzahlungnahme', text: 'Der Ankauf des alten Wagens wird angerechnet, die Anzahlung erfasst. Kaufvertrag und Unterlagen unterschreibt der Käufer digital.' },
+      { titel: 'Rechnung, Brief und Zulassung', text: 'Die Rechnung entsteht aus dem Verkauf, auch mit Differenzbesteuerung. Der Zulassungsauftrag läuft, und der Tresor gibt den Fahrzeugbrief erst heraus, wenn nichts mehr offen ist.' },
+      { titel: 'Übergabe und Nachkalkulation', text: 'Der Käufer verfolgt den Stand über seinen Kaufstatus-Link. Nach der Übergabe zeigt die Kalkulation, was das Fahrzeug verdient hat.' },
     ],
     schwerpunkt: {
-      titel: 'Vom Interessenten zum Stammkunden.',
-      text: 'Verkauf und Werkstatt teilen dieselben Daten. ARGONAUT OS führt den Kunden vom ersten Kontakt bis zur nächsten Inspektion.',
+      titel: 'Jedes Fahrzeug mit eigener Rechnung.',
+      text: 'Vom Ankauf bis zum Verkauf sammelt die Handelsakte alles, was ein Fahrzeug kostet und bringt. So sehen Sie früh, wo Sie handeln müssen.',
       punkte: [
-        { titel: 'Anfragen und Pipeline', text: 'Herkunft, Stufe und Verkaufschancen mit gewichteter Prognose.' },
-        { titel: 'Fahrzeugakte', text: 'FIN, Kennzeichen, Halter-Historie und Anhänge an einer Stelle.' },
-        { titel: 'Werkstatt-Board', text: 'Aufbereitung und Reparaturen vor dem Verkauf mit Durchlaufzeit.' },
-        { titel: 'Kundenakte', text: 'Angebote, Aufträge, Rechnungen und Termine eines Kunden zusammen.' },
+        { titel: 'Kalkulation Plan und Ist', text: 'Einkauf, Kosten am Fahrzeug, Standkosten, Rohertrag, Gemeinkosten und Provisionen, mit Ampel für die Marge.' },
+        { titel: 'Preise und Standzeit', text: 'Das Preis-Cockpit schlägt nach Ihren Regeln Preisschritte vor und hält eine Preisuntergrenze. Marktvergleiche aus ähnlichen Angeboten zeigen, wo Ihr Preis liegt.' },
+        { titel: 'Chef-Blick Fahrzeughandel', text: 'Verkäufe, Rohertrag und Standzeiten nach Monat, Marke und Preisklasse, mit Vergleich zum Vorjahr.' },
+        { titel: 'Fremdleistungen am Fahrzeug', text: 'Partner-Betriebe wie Lackierer und Aufbereiter bekommen Aufträge mit Fotos und reichen ihre Rechnung ein. Die Kosten landen direkt am Fahrzeug.' },
       ],
     },
-    geprueftAm: '2026-10-06',
+    fachseite: {
+      titel: 'Ihr Fahrzeughandel im Detail.',
+      text: 'Das Fachpaket für den Handel ist gebaut und greift in Rechnungen, Kundenportal, Werkstatt-Board und DATEV-Export. Das steckt drin:',
+      gruppen: [
+        { titel: 'Einkauf und Bestand', punkte: ['Ankauf mit Prüfprotokoll, Mängeln mit Foto und Höchstpreis-Rechnung', 'Ankaufschein zum Unterschreiben und Online-Formular für Verkäufer', 'Bestand vom Zulauf bis Verkauft, Standtage-Ampel, 14 Foto-Ansichten', 'Umzug aus Ihrer bisherigen Liste oder einer mobile.de-Datei'] },
+        { titel: 'Vermarktung und Anfragen', punkte: ['Eigene Fahrzeugbörse, auf Wunsch unter Ihrer Domain und bei Google', 'Finanzierungs-Beispiel mit den Konditionen Ihrer Bank', 'Zusatzleistungen zum Ankreuzen im Inserat', 'Anfragen mit Verantwortlichem und Suchaufträge für Kundenwünsche'] },
+        { titel: 'Verkauf und Übergabe', punkte: ['Probefahrten mit roten Kennzeichen und Fahrtenliste', 'Verkaufsvorgang mit Reservierung, Kaufvertrag und sechs Unterlagen als PDF', 'Rechnung aus dem Verkauf: Inland, EU-Lieferung, Ausfuhr, Differenzbesteuerung', 'Kaufstatus für den Käufer im Kundenportal'] },
+        { titel: 'Papiere, Werkstatt, Zahlen', punkte: ['Tresor für Fahrzeugbrief, Schlüssel und Unterlagen mit Ausgabe-Protokoll', 'Zulassungsaufträge und Aufbereitung als interner Werkstattauftrag', 'Umsatzsteuer-Werte und DATEV-Export mit eigenen Konten für den Fahrzeughandel', 'Vorführung an einem Musterbetrieb mit acht Beispielfahrzeugen'] },
+      ],
+      partner: [
+        { name: 'carVertical', text: 'Historienbericht in Ihrem eigenen Händler-Konto kaufen, Link am Fahrzeug hinterlegen und auf Wunsch in der Börse zeigen.' },
+        { name: 'DAT und Schwacke', text: 'Bewertung in Ihrem eigenen Konto abfragen, Werte am Fahrzeug eintragen. ARGONAUT OS vergleicht sie mit Ihrem Preis.' },
+        { name: 'Noch kein Konto?', text: 'Ein Link führt direkt zum Abschluss beim Anbieter. Den Vertrag schließen Sie selbst mit dem Anbieter.' },
+      ],
+      band: { titel: 'Ein Fahrzeug. Eine Akte.', text: 'Ankauf, Fotos, Preise, Anfragen, Probefahrten, Verkauf, Papiere und Kosten hängen am Fahrzeug. Wer im Team das Auto öffnet, sieht den ganzen Stand.' },
+    },
+    geprueftAm: '2026-10-09',
   },
   'autolackiererei-karosseriebau': {
     zielgruppe: 'Lackierereien und Karosseriebetriebe',
