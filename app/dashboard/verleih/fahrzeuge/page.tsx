@@ -15,11 +15,13 @@ import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react'
 import { createBrowserClient } from '@supabase/ssr';
 import {
   ARTEN, STATUS, KAUTION_STATUS, fahrzeugPruefen, buchungPruefen, kalenderZeile, tageAb, berlinTag, kennzahlen, ueberfaellig,
-  abrechnung, zeit, type BuchungKurz,
+  abrechnung, zeit, kollision, type BuchungKurz,
 } from '@/lib/fahrzeugMiete';
 import { euro } from '@/lib/geld';
 import { zahlFeld, leseZahl } from '@/lib/zahlen';
 import Leerzustand from '../../_components/Leerzustand';
+import MietOnlineEinstellung from './MietOnlineEinstellung';
+import { ANFRAGE_STATUS, reservierungsNotiz } from '@/lib/mietOnline';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -36,7 +38,9 @@ type Fz = {
 type Bu = BuchungKurz & { nummer: string | null; mieter_name: string; kaution_status: string; kaution_cent: number; rechnung_id: string | null };
 type Kontakt = { id: string; name: string; email: string | null; anschrift: string | null; telefon: string | null };
 type FzForm = { id: string | null; bezeichnung: string; kennzeichen: string; art: string; fsKlasse: string; tagessatz: string; wochensatz: string; freiKmTag: string; mehrKm: string; kaution: string; mindestalter: string; fsJahre: string; zusatzfahrer: string; tankAchtel: string; kmStand: string; notiz: string; aktiv: boolean; fuhrparkId: string };
-type BuForm = { fahrzeugId: string; kontaktId: string; mieterName: string; anschrift: string; email: string; telefon: string; abholung: string; rueckgabe: string; notiz: string };
+type BuForm = { fahrzeugId: string; kontaktId: string; mieterName: string; anschrift: string; email: string; telefon: string; abholung: string; rueckgabe: string; notiz: string; anfrageId?: string };
+// Paket 294: unverbindliche Online-Anfrage (öffentliche Seite /mieten/<kennung>)
+type Anfrage = { id: string; nr: string | null; fahrzeug_id: string; von: string; bis: string; name: string; email: string | null; telefon: string | null; nachricht: string | null; vorschau_cent: number | null; status: string; buchung_id: string | null; erstellt_am: string };
 
 const LEER_FZ: FzForm = { id: null, bezeichnung: '', kennzeichen: '', art: 'pkw', fsKlasse: 'B', tagessatz: '', wochensatz: '', freiKmTag: '', mehrKm: '', kaution: '', mindestalter: '18', fsJahre: '1', zusatzfahrer: '', tankAchtel: '', kmStand: '', notiz: '', aktiv: true, fuhrparkId: '' };
 const ART_NAME: Record<string, string> = Object.fromEntries(ARTEN.map((a) => [a.key, a.label]));
@@ -66,7 +70,8 @@ function kontaktLesen(k: Record<string, unknown>): Kontakt {
 export default function FahrzeugvermietungPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [istChef, setIstChef] = useState(false);
-  const [tab, setTab] = useState<'kalender' | 'buchungen' | 'flotte' | 'einstellungen'>('kalender');
+  const [tab, setTab] = useState<'kalender' | 'buchungen' | 'anfragen' | 'flotte' | 'einstellungen'>('kalender');
+  const [anfragen, setAnfragen] = useState<Anfrage[]>([]);
   const [fz, setFz] = useState<Fz[]>([]);
   const [bu, setBu] = useState<Bu[]>([]);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
@@ -106,6 +111,9 @@ export default function FahrzeugvermietungPage() {
     setKontakte(((k.data ?? []) as Record<string, unknown>[]).map(kontaktLesen).sort((x, y) => x.name.localeCompare(y.name, 'de')));
     // P293: Fuhrpark-Fahrzeuge zum Verknüpfen (HU-, Wartungs-, Versicherungsfristen) — sieht nur, wer den Fuhrpark sehen darf
     const fp = await supabase.from('fahrzeuge').select('id, bezeichnung, kennzeichen').order('bezeichnung').limit(1000);
+    // P294: Online-Anfragen (ohne SQL 294 still leer)
+    const an = await supabase.from('miet_anfrage').select('id, nr, fahrzeug_id, von, bis, name, email, telefon, nachricht, vorschau_cent, status, buchung_id, erstellt_am').order('erstellt_am', { ascending: false }).limit(500);
+    setAnfragen(an.error ? [] : ((an.data ?? []) as Anfrage[]));
     setFuhrpark(fp.error ? [] : ((fp.data ?? []) as { id: string; bezeichnung: string; kennzeichen: string | null }[]));
     setJetzt(Date.now());
     setLaden(false);
@@ -152,8 +160,29 @@ export default function FahrzeugvermietungPage() {
       await lade();
       return;
     }
-    setBuForm(null); setOk(`Reserviert: ${data[0].nummer}. Fahrer, Kaution und Übergabe tragen Sie im Mietvertrag ein.`);
+    let anfrageText = '';
+    if (buForm.anfrageId) {
+      const u = await supabase.from('miet_anfrage').update({ status: 'reserviert', buchung_id: data[0].id }).eq('id', buForm.anfrageId).eq('status', 'neu').select('id');
+      anfrageText = u.error || !u.data || u.data.length === 0 ? ' Die Anfrage konnte nicht als „reserviert" markiert werden — bitte im Reiter „📨 Anfragen" prüfen.' : ' Die Online-Anfrage ist als „reserviert" markiert — bitte melden Sie sich beim Interessenten.';
+    }
+    setBuForm(null); setOk(`Reserviert: ${data[0].nummer}. Fahrer, Kaution und Übergabe tragen Sie im Mietvertrag ein.${anfrageText}`);
     await lade();
+  }
+
+  function ausAnfrage(a: Anfrage) {
+    setOk(null); setFehler(null); setTab('buchungen');
+    setBuForm({
+      fahrzeugId: a.fahrzeug_id, kontaktId: '', mieterName: a.name, anschrift: '', email: a.email ?? '', telefon: a.telefon ?? '',
+      abholung: lokal(Date.parse(a.von)), rueckgabe: lokal(Date.parse(a.bis)), notiz: reservierungsNotiz(a), anfrageId: a.id,
+    });
+  }
+
+  async function anfrageStatus(a: Anfrage, status: 'abgelehnt' | 'erledigt') {
+    setBusy(true); setFehler(null);
+    const { data, error } = await supabase.from('miet_anfrage').update({ status }).eq('id', a.id).eq('status', a.status).select('id');
+    setBusy(false); setFrage(null);
+    if (error || !data || data.length === 0) { setFehler('Nicht gespeichert — dafür braucht es das Schreibrecht „Verleih & Vermietung".'); return; }
+    setOk(status === 'abgelehnt' ? 'Anfrage abgelehnt. Bitte geben Sie dem Interessenten Bescheid.' : 'Anfrage erledigt.'); await lade();
   }
 
   async function stornieren(id: string) {
@@ -201,6 +230,7 @@ export default function FahrzeugvermietungPage() {
   }
 
   const STATUS_FARBE: Record<string, string> = { reserviert: C.cyan, uebergeben: C.gold, zurueck: C.ok, storniert: C.dim };
+  const anfragenNeu = anfragen.filter((a) => a.status === 'neu').length;
 
   return (
     <div style={s.page}>
@@ -226,7 +256,7 @@ export default function FahrzeugvermietungPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '4px 0 12px' }}>
-            {([['kalender', '📅 Kalender'], ['buchungen', '📋 Buchungen'], ['flotte', '🚗 Mietflotte'], ...(istChef ? [['einstellungen', '⚙ Mietbedingungen']] : [])] as [typeof tab, string][]).map(([k, l]) => (
+            {([['kalender', '📅 Kalender'], ['buchungen', '📋 Buchungen'], ['anfragen', `📨 Anfragen${anfragenNeu ? ` (${anfragenNeu})` : ''}`], ['flotte', '🚗 Mietflotte'], ...(istChef ? [['einstellungen', '⚙ Mietbedingungen']] : [])] as [typeof tab, string][]).map(([k, l]) => (
               <button key={k} type="button" style={tab === k ? s.tabAn : s.tab} onClick={() => setTab(k)}>{l}</button>
             ))}
             <a href="/dashboard/verleih/fahrzeuge/bussgelder" style={{ ...s.tab, textDecoration: 'none' }}>🚨 Bußgelder</a>
@@ -277,7 +307,7 @@ export default function FahrzeugvermietungPage() {
             <>
               {buForm && (
                 <div style={s.box}>
-                  <b style={{ color: C.gold }}>Neue Buchung (Reservierung)</b>
+                  <b style={{ color: C.gold }}>Neue Buchung (Reservierung){buForm.anfrageId ? ' aus Online-Anfrage' : ''}</b>
                   <div style={s.raster}>
                     <label style={s.feld}>Fahrzeug
                       <select value={buForm.fahrzeugId} style={s.eingabe} onChange={(e) => setBuForm({ ...buForm, fahrzeugId: e.target.value })}>
@@ -341,6 +371,51 @@ export default function FahrzeugvermietungPage() {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ---------------------------------------------------- Anfragen (P294) --- */}
+          {tab === 'anfragen' && (
+            <>
+              <p style={{ ...s.dim, fontSize: 13 }}>Unverbindliche Anfragen von Ihrer Seite „Fahrzeuge mieten" (einschalten unter „⚙ Mietbedingungen"). „Als Reservierung übernehmen" öffnet die Buchung mit allen Angaben — erst dann ist das Fahrzeug reserviert. Melden Sie sich danach beim Interessenten.</p>
+              {anfragen.length === 0 ? <p style={s.dim}>Noch keine Online-Anfragen.</p> : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={s.tabelle}>
+                    <thead><tr><th style={s.th}>Anfrage</th><th style={{ ...s.th, textAlign: 'left' }}>Fahrzeug · Zeitraum</th><th style={{ ...s.th, textAlign: 'left' }}>Interessent</th><th style={s.th}>Vorschau</th><th style={s.th}>Status</th><th style={s.th}></th></tr></thead>
+                    <tbody>
+                      {anfragen.map((a) => {
+                        const von = Date.parse(a.von), bis = Date.parse(a.bis);
+                        const belegt = a.status === 'neu' ? kollision(bu, a.fahrzeug_id, von, bis) : null;
+                        return (
+                          <tr key={a.id} style={{ opacity: a.status === 'neu' || a.status === 'reserviert' ? 1 : 0.55 }}>
+                            <td style={s.td}><b style={{ color: C.gold }}>{a.nr ?? '—'}</b><div style={{ color: C.dim, fontSize: 11.5 }}>{wann(a.erstellt_am)}</div></td>
+                            <td style={{ ...s.td, textAlign: 'left' }}>{fzName(a.fahrzeug_id)}<div style={{ color: C.dim, fontSize: 12 }}>{wann(a.von)} – {wann(a.bis)}</div>{belegt && <div style={{ color: C.bad, fontSize: 11.5, fontWeight: 700 }}>inzwischen vergeben ({belegt.nummer ?? 'Buchung'})</div>}</td>
+                            <td style={{ ...s.td, textAlign: 'left' }}>{a.name}<div style={{ color: C.dim, fontSize: 12 }}>{[a.email, a.telefon].filter(Boolean).join(' · ')}</div>{a.nachricht && <div style={{ color: C.dim, fontSize: 12, maxWidth: 320 }}>„{a.nachricht}“</div>}</td>
+                            <td style={s.td}>{a.vorschau_cent === null ? '—' : cent(a.vorschau_cent)}<div style={{ color: C.dim, fontSize: 11 }}>Endpreis</div></td>
+                            <td style={{ ...s.td, fontWeight: 700, color: a.status === 'neu' ? C.cyan : a.status === 'reserviert' ? C.ok : C.dim }}>{ANFRAGE_STATUS[a.status] ?? a.status}</td>
+                            <td style={s.td}>
+                              {a.status === 'neu' && (
+                                <>
+                                  {!belegt && <button type="button" style={s.link} onClick={() => ausAnfrage(a)}>Als Reservierung übernehmen</button>}
+                                  {frage === `ab-${a.id}`
+                                    ? <div><button type="button" style={s.link} disabled={busy} onClick={() => void anfrageStatus(a, 'abgelehnt')}>Ja, ablehnen</button> <button type="button" style={s.link} onClick={() => setFrage(null)}>nein</button></div>
+                                    : <div><button type="button" style={s.link} onClick={() => setFrage(`ab-${a.id}`)}>ablehnen</button></div>}
+                                </>
+                              )}
+                              {a.status === 'reserviert' && (
+                                <>
+                                  {a.buchung_id && <a href={`/dashboard/verleih/fahrzeuge/${a.buchung_id}`} style={s.link}>zum Mietvertrag</a>}
+                                  <div><button type="button" style={s.link} disabled={busy} onClick={() => void anfrageStatus(a, 'erledigt')}>erledigt</button></div>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -430,6 +505,7 @@ export default function FahrzeugvermietungPage() {
               <button type="button" style={s.btnGold} disabled={busy} onClick={() => void einstellungSpeichern()}>💾 Speichern</button>
             </div>
           )}
+          {tab === 'einstellungen' && istChef && uid && <MietOnlineEinstellung betrieb={uid} />}
         </>
       )}
     </div>

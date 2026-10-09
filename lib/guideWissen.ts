@@ -1833,6 +1833,8 @@ export const WISSEN: Record<string, SeitenWissen> = {
       '„＋ Neue Buchung“: Fahrzeug, Abholung und Rückgabe (Datum und Uhrzeit), Mieter aus den Kontakten oder neu, Anschrift. Die Vorschau zeigt Miettage, Mietpreis, Frei-km, Kaution und die Fahrer-Bedingungen. „📅 Reservieren“ vergibt die Vertragsnummer MV-Jahr-Nummer',
       'Reiter „📋 Buchungen“: offene oder alle Buchungen mit Status und Kaution, „öffnen“ führt in den Mietvertrag, „stornieren“ gibt den Zeitraum wieder frei (nur Reservierungen)',
       '„🚨 Bußgelder“ führt zu Halteranfragen und Bußgeldern, „📊 Auslastung & Fristen“ zur Auswertung je Fahrzeug',
+      'Chef: unter „⚙ Mietbedingungen“ → „🌐 Online-Anfrage einschalten“ entsteht die Seite „Fahrzeuge mieten“ mit Ihrer Mietflotte, Endpreisen inkl. MwSt. und Formular „Unverbindlich anfragen“ (keine Buchung, keine Zahlung; „Bei Google finden lassen“ ist aus, bis Sie es anhaken). Den Link teilen Sie auf Webseite, in Mails oder sozialen Netzwerken',
+      'Reiter „📨 Anfragen“: neue Online-Anfragen mit Zeitraum, Kontakt und Preis-Vorschau. „Als Reservierung übernehmen“ öffnet die Buchung mit allen Angaben, „📅 Reservieren“ markiert die Anfrage als reserviert; ist das Fahrzeug inzwischen vergeben, steht es rot da. „ablehnen“ oder „erledigt“ schließt die Anfrage — melden Sie sich in jedem Fall beim Interessenten',
     ],
     probe: { anlegen: 'Ein Testfahrzeug „Golf Test“ mit 49 € Tagessatz aufnehmen und für morgen 9 bis übermorgen 9 Uhr reservieren.', loeschen: 'Die Reservierung „stornieren“ und beim Fahrzeug den Haken „in der Mietflotte“ entfernen.' },
     landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Kontakte', href: '/dashboard/crm' }],

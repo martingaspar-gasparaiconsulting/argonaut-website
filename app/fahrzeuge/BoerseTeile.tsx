@@ -27,13 +27,13 @@ export const BOERSE_CSS = `
 .bx-filter select,.bx-filter input{border:1px solid ${F.linie};border-radius:8px;padding:9px 10px;font-size:14px;background:#fff;color:${F.text};min-width:0}
 `;
 
-export function BoerseSeite({ firma, children }: { firma: Firma; children: ReactNode }) {
+export function BoerseSeite({ firma, children, fussHinweis }: { firma: Firma; children: ReactNode; fussHinweis?: string }) {
   return (
     <main style={{ minHeight: '100vh', background: F.bg, color: F.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}>
       <style>{BOERSE_CSS}</style>
       <BoerseKopf firma={firma} />
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '20px 16px 40px' }}>{children}</div>
-      <BoerseFuss firma={firma} />
+      <BoerseFuss firma={firma} hinweis={fussHinweis} />
     </main>
   );
 }
@@ -60,7 +60,8 @@ function BoerseKopf({ firma }: { firma: Firma }) {
   );
 }
 
-function BoerseFuss({ firma }: { firma: Firma }) {
+// Paket 294: eigener Fuß-Hinweis für die Mietseite (sonst Kauf-Hinweis wie bisher)
+function BoerseFuss({ firma, hinweis }: { firma: Firma; hinweis?: string }) {
   const imp = impressumText({
     firma: firma.name, impressum_inhaber: firma.inhaber, strasse: firma.strasse, plz: firma.plz, ort: firma.ort,
     telefon: firma.telefon, email: firma.email, impressum_ustid: firma.ustid, impressum_register: firma.register, impressum_aufsicht: firma.aufsicht,
@@ -69,7 +70,7 @@ function BoerseFuss({ firma }: { firma: Firma }) {
     <footer style={{ borderTop: `1px solid ${F.linie}`, background: '#fff' }}>
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '18px 16px 28px', fontSize: 13, color: F.dim, display: 'grid', gap: 10 }}>
         {firma.oeffnungszeiten && <div><b style={{ color: F.text }}>Öffnungszeiten:</b> {firma.oeffnungszeiten}</div>}
-        <div>Alle Angaben nach bestem Wissen. Irrtümer und Zwischenverkauf vorbehalten. Maßgeblich ist der Kaufvertrag.</div>
+        <div>{hinweis ?? 'Alle Angaben nach bestem Wissen. Irrtümer und Zwischenverkauf vorbehalten. Maßgeblich ist der Kaufvertrag.'}</div>
         <details>
           <summary style={{ cursor: 'pointer', color: F.text, fontWeight: 700 }}>Impressum</summary>
           <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', margin: '8px 0 0' }}>{imp}</pre>

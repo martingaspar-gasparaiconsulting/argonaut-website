@@ -85,6 +85,11 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 300, fensterSek: STUNDE },
     { art: 'ziel', max: 1000, fensterSek: TAG },
   ],
+  // Paket 294: unverbindliche Mietanfrage (Fahrzeugvermietung) — je Absender und je Interessent+Betrieb.
+  'oeffentlich/miet-anfrage': [
+    { art: 'ip', max: 5, fensterSek: STUNDE },
+    { art: 'ziel', max: 3, fensterSek: TAG },
+  ],
   'oeffentlich/web-newsletter': [
     { art: 'ip', max: 10, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },
