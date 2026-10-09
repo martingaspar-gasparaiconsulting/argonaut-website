@@ -392,6 +392,7 @@ export default function FuhrparkCockpit() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {/* Paket PJ (24.09.26): QR-Etiketten fuer Geraete und Fahrzeuge */}
           <a href="/dashboard/erp/etiketten" style={{ ...btnGhost, textDecoration: "none" }}>🏷 QR-Etiketten</a>
+          <a href="/dashboard/erp/fuhrpark/fuehrerschein" style={{ ...btnGhost, textDecoration: "none" }}>🪪 Führerscheinkontrolle</a>
           <button style={btnGold} onClick={oeffneNeu}>
             + Fahrzeug anlegen
           </button>

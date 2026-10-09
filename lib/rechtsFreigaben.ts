@@ -82,8 +82,8 @@ export const FREIGABEN: FreigabeFunktion[] = [
     titel: 'Führerscheinkontrolle',
     wofuer: 'Regelmäßige Prüfung der Führerscheine von Fahrern mit Prüfvermerk und Erinnerung.',
     warum: 'Dabei werden Angaben aus dem Führerschein der Mitarbeiter festgehalten. Gespeichert wird nur der Prüfvermerk, keine Kopie.',
-    wo: 'Folgt mit den Fuhrpark-Pflichten',
-    verfuegbar: false,
+    wo: 'Fuhrpark → Führerscheinkontrolle',
+    verfuegbar: true,
     fassung: 'rf1-2026-10',
     haken: [
       { key: 'informiert', text: 'Die Fahrer sind über die Kontrolle und ihren Ablauf informiert.', vorlage: INFO },

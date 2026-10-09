@@ -12,7 +12,7 @@ const lies = (p) => fs.readFileSync(path.join(WURZEL, p), 'utf8');
 const jetzt = new Date('2026-10-09T10:00:00Z');
 const alleHaken = (f) => f.haken.map((h) => h.key);
 
-test('Katalog: sechs Funktionen, eindeutige Schl체ssel passend zur Datenbank-Pr체fung, nur Leistungsauswertung schon verf체gbar', () => {
+test('Katalog: sechs Funktionen, eindeutige Schl체ssel passend zur Datenbank-Pr체fung, verf체gbare Funktionen', () => {
   assert.equal(FREIGABEN.length, 6);
   const keys = FREIGABEN.map((f) => f.key);
   assert.equal(new Set(keys).size, keys.length);
@@ -24,7 +24,8 @@ test('Katalog: sechs Funktionen, eindeutige Schl체ssel passend zur Datenbank-Pr�
     for (const t of [f.titel, f.wofuer, f.warum, ...f.haken.map((h) => h.text)])
       assert.ok(!/\b(du|dein|dir|dich)\b/i.test(t) && !/KI-Agent|inklusive|rechtssicher|garantiert/i.test(t), f.key + ': ' + t);
   }
-  assert.deepEqual(FREIGABEN.filter((f) => f.verfuegbar).map((f) => f.key), ['leistungsauswertung']);
+  // P289: F체hrerscheinkontrolle ist dazugekommen
+  assert.deepEqual(FREIGABEN.filter((f) => f.verfuegbar).map((f) => f.key), ['leistungsauswertung', 'fuehrerschein']);
   assert.equal(funktion('ortung')?.dienstleister, true);
   assert.equal(funktion('quatsch'), null);
 });

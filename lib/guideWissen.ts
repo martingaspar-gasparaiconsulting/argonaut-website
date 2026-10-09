@@ -599,6 +599,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Artikel „Test".', loeschen: 'Löschen-Knopf am Artikel.' },
     landetIn: [{ text: 'Kasse', href: '/dashboard/kasse' }, { text: 'Einkauf', href: '/dashboard/einkauf' }],
   },
+  '/dashboard/erp/fuhrpark/fuehrerschein': {
+    zweck: 'Führerscheinkontrolle für alle, die Firmenfahrzeuge fahren: Prüfvermerk je Kontrolle (Datum, Klassen, Ablauf der Karte, Ergebnis), nächste Fälligkeit mit Ampel und Verlauf je Fahrer. Gespeichert wird nur der Vermerk — keine Führerscheinnummer, keine Kopie. Die Seite ist gesperrt, bis die Geschäftsleitung unter „Rechtliche Freigaben“ die Freigabe „Führerscheinkontrolle“ bestätigt hat.',
+    wer: 'beide',
+    werText: 'Der Chef und Mitarbeiter mit Schreibrecht für Fuhrpark bzw. Lager/Logistik sehen die Fahrer und tragen Kontrollen ein. Löschen, Fahrerliste und Intervall nur der Chef. Ein eingetragener Vermerk lässt sich nicht ändern.',
+    schritte: [
+      'Ohne Freigabe steht oben ein Hinweis mit Link zu „Rechtliche Freigaben“; erst danach erscheint „＋ Kontrolle eintragen“',
+      'Den Führerschein im Original ansehen. „＋ Kontrolle eintragen“: Mitarbeiter wählen (oder einen Namen eintragen), Datum, Klassen (z. B. B, BE), „Karte gültig bis“ (Feld 4b auf der Karte) und Ergebnis. „💾 Prüfvermerk speichern“',
+      'Die nächste Kontrolle rechnet ARGONAUT aus: nach dem Intervall (Standard 6 Monate), früher, wenn die Karte vorher abläuft; bei „Mangel“ sofort. Eine Bemerkung, die wie eine Führerscheinnummer aussieht, wird abgelehnt',
+      'Oben die Ampel: Mangel oder überfällig (rot), noch nie kontrolliert, in 30 Tagen fällig (gelb), in Ordnung. Jede Karte zeigt die letzte Kontrolle; „Verlauf“ zeigt alle',
+      'Nur der Chef: „Einstellungen“ unten — Mitarbeiter als Fahrer hinzufügen bzw. „Aus der Fahrerliste nehmen“ und das Intervall wählen. Falsche Einträge im Verlauf „löschen“ und neu eintragen',
+    ],
+    probe: { anlegen: 'Freigabe „Führerscheinkontrolle“ bestätigen, dann eine Kontrolle für „Test Fahrer“ mit Klasse B eintragen.', loeschen: 'Bei „Test Fahrer“ „Verlauf“ öffnen, „löschen“, „Ja, löschen“ — nur der Chef.' },
+    vorher: [{ text: 'Freigabe „Führerscheinkontrolle“ bestätigen', href: '/dashboard/rechtliche-freigaben' }],
+  },
   '/dashboard/erp/lager': {
     zweck: 'Bestand je Filiale: Zugänge und Abgänge buchen, zwischen Filialen umlagern, jeder Schritt steht im Verlauf. Der Gesamtbestand ist die Summe der Filialen.',
     wer: 'beide',
