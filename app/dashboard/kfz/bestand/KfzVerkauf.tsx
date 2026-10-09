@@ -25,6 +25,7 @@ import { verkaufPdf } from '@/lib/kfzVerkaufPdf';
 import { LIEFERUNGEN, lieferungLesen, steuerfall, rechnungBauen, type Lieferung } from '@/lib/kfzRechnung';
 import { sonderfallLabel } from '@/lib/steuerSonderfall';
 import { useDarfAbrechnen } from '../../_components/useDarfAbrechnen';
+import KfzKaufstatus from './KfzKaufstatus';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -33,7 +34,7 @@ const supabase = createBrowserClient(
 const C = { navy: '#0A1628', navy2: '#0F2036', navy3: '#14294A', gold: '#C9A84C', text: '#E8EDF4', dim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', ok: '#4CAF7D', warn: '#E0A24C', bad: '#E06666', info: '#5FA8E8' };
 const FARBE: Record<string, string> = { ok: C.ok, warn: C.warn, bad: C.bad, info: C.info, gold: C.gold, dim: C.dim };
 
-type Zeile = Verkauf & { id: string; owner_user_id: string; signaturen: Record<string, string> | null; storno_grund: string | null; erstellt_am: string; rechnung_id?: string | null; lieferung?: string | null };
+type Zeile = Verkauf & { id: string; owner_user_id: string; signaturen: Record<string, string> | null; storno_grund: string | null; erstellt_am: string; rechnung_id?: string | null; lieferung?: string | null; kontakt_id?: string | null };
 type RechnungKurz = { id: string; rechnungsnummer: string | null; zahlungsstatus: string | null; brutto_summe: number | null };
 type Ankauf = InzahlungFahrzeug & { id: string; status: string };
 type SigStand = { token: string; status: string; signiert_am: string | null };
@@ -495,6 +496,9 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
           </div>
         );
       })()}
+
+      {/* Paket 281 (K15a): Käufer als Kontakt + Kaufstatus-Link fürs Kundenportal */}
+      <KfzKaufstatus v={aktiv} onGeaendert={() => { void lade(); }} />
 
       {istChef && (aktiv.status === 'angebot') && (
         <div style={s.karte}>

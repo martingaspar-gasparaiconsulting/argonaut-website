@@ -4,6 +4,7 @@
 // ARGONAUT OS · Bündel 11 · Öffentliches Kunden-Portal (ohne Login)
 // /portal/<token> — der Kunde sieht seine eigenen Rechnungen und Termine.
 // Paket PN (24.09.26): + Baufortschritt, Fotos, Dokumente, Freigaben, Monteur-Status (PortalBaustelle).
+// Paket 281 (09.10.26): + Fahrzeugkauf mit Schritten (PortalKauf).
 // Liest ausschließlich über /api/oeffentlich/portal (Service-Role, Token).
 // Kein Supabase im Browser, keine fremden Daten.
 // ============================================================
@@ -12,6 +13,8 @@ import Dreizack from '@/components/Dreizack';
 import { useEffect, useState, CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
 import PortalBaustelle from './PortalBaustelle';
+import PortalKauf from './PortalKauf';
+import type { PortalKauf as Kauf } from '@/lib/kfzKaufstatus';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#c9a84c', text: '#EAF1F6',
@@ -90,6 +93,7 @@ export default function PortalSeite() {
   const [termine, setTermine] = useState<Termin[]>([]);
   const [angebote, setAngebote] = useState<Angebot[]>([]);
   const [sendungen, setSendungen] = useState<Sendung[]>([]);
+  const [kaeufe, setKaeufe] = useState<Kauf[]>([]);
   const [meldeStatus, setMeldeStatus] = useState<Record<string, 'busy' | 'ok' | 'err'>>({});
 
   async function bezahltMelden(id: string) {
@@ -118,6 +122,7 @@ export default function PortalSeite() {
         setTermine(Array.isArray(j.termine) ? j.termine : []);
         setAngebote(Array.isArray(j.angebote) ? j.angebote : []);
         setSendungen(Array.isArray(j.sendungen) ? j.sendungen : []);
+        setKaeufe(Array.isArray(j.kaeufe) ? j.kaeufe : []);
       } catch {
         setFehler('Verbindung fehlgeschlagen.');
       } finally { setLaden(false); }
@@ -147,6 +152,9 @@ export default function PortalSeite() {
             </div>
 
             {/* --- Paket PN: Monteur, Freigaben, Baufortschritt, Dokumente (eigener Endpunkt) --- */}
+            {/* --- Paket 281: Fahrzeugkauf --- */}
+            <PortalKauf kaeufe={kaeufe} />
+
             <PortalBaustelle token={token} />
 
             {/* --- Rechnungen --- */}

@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { trackingLink, carrierName, statusInfo } from '@/lib/versand';
+import { portalKauf, type PortalKauf, type KaufVorgang, type KaufFahrzeug, type KaufZulassung } from '@/lib/kfzKaufstatus';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -139,13 +140,44 @@ export async function GET(req: NextRequest) {
       datum: s.erstellt_am || null,
     }));
 
+    // 6b) Paket 281: Fahrzeugkauf dieses Kunden (hart: Betrieb + kontakt_id), ab „reserviert".
+    //     Positivliste aus lib/kfzKaufstatus — nie FIN, Einkauf, Kalkulation, Notizen.
+    //     Fail-open: ohne Kfz-Tabellen bleibt die Liste leer.
+    const kaeufe: PortalKauf[] = [];
+    try {
+      const { data: vRaw, error: vErr } = await db.from('kfz_verkauf')
+        .select('bestand_id, nr, status, reserviert_bis, vertrag_am, liefertermin, uebergabe_am, preis_brutto, zusatz, inzahlung_ankauf_id, inzahlung_betrag, anzahlung')
+        .eq('owner_user_id', ownerId).eq('kontakt_id', kontaktId)
+        .in('status', ['reserviert', 'vertrag', 'uebergeben'])
+        .order('erstellt_am', { ascending: false })
+        .limit(20);
+      const vListe = vErr ? [] : ((vRaw ?? []) as unknown as (KaufVorgang & { bestand_id: string })[]);
+      const ids = vListe.map((v) => v.bestand_id);
+      if (ids.length) {
+        const [fz, zul, tr] = await Promise.all([
+          db.from('kfz_bestand').select('id, marke, modell, variante, erstzulassung, farbe').eq('owner_user_id', ownerId).in('id', ids),
+          db.from('kfz_zulassung').select('bestand_id, art, status, termin, kennzeichen_neu, erstellt_am').eq('owner_user_id', ownerId).in('bestand_id', ids).neq('status', 'storniert').order('erstellt_am', { ascending: false }),
+          db.from('kfz_tresor').select('bestand_id, status').eq('owner_user_id', ownerId).eq('art', 'zb2').in('bestand_id', ids),
+        ]);
+        const fzJe = new Map(((fz.data ?? []) as unknown as (KaufFahrzeug & { id: string })[]).map((x) => [x.id, x]));
+        const zulJe = new Map<string, KaufZulassung>();
+        for (const z of ((zul.error ? [] : zul.data ?? []) as unknown as (NonNullable<KaufZulassung> & { bestand_id: string })[])) if (!zulJe.has(z.bestand_id)) zulJe.set(z.bestand_id, z);
+        const briefJe = new Map(((tr.error ? [] : tr.data ?? []) as unknown as { bestand_id: string; status: string }[]).map((x) => [x.bestand_id, x.status]));
+        const heute = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        for (const v of vListe) {
+          const k = portalKauf(v, fzJe.get(v.bestand_id) ?? null, zulJe.get(v.bestand_id) ?? null, briefJe.get(v.bestand_id) ?? null, heute);
+          if (k) kaeufe.push(k);
+        }
+      }
+    } catch { /* ohne Fahrzeughandel keine Käufe */ }
+
     // 7) Zugriffszeit vermerken (rein informativ, best effort).
     await db.from('portal_zugaenge')
       .update({ letzter_zugriff_am: new Date().toISOString() })
       .eq('id', zugang.id);
 
     const betrieb = await betriebName(db, ownerId);
-    return NextResponse.json({ betrieb, kunde: kundeName, rechnungen, termine, angebote, sendungen });
+    return NextResponse.json({ betrieb, kunde: kundeName, rechnungen, termine, angebote, sendungen, kaeufe });
   } catch (e: unknown) {
     console.error('Portal GET:', e instanceof Error ? e.message : 'unbekannt');
     return NextResponse.json({ error: 'Fehler beim Laden.' }, { status: 500 });
