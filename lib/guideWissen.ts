@@ -1286,6 +1286,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     ],
     vorher: [{ text: 'Rechte je Mitarbeiter vergeben', href: '/dashboard/rechte' }, { text: 'Sitz-Typ festgelegt', href: '/dashboard/nutzer-tarif' }],
   },
+  '/dashboard/rechtliche-freigaben': {
+    zweck: 'Die Rechts-Freigaben-Zentrale: Funktionen, die Rechte von Mitarbeitern oder Kunden berühren (Auswertungen je Mitarbeiter, Ortung von Fahrzeugen, Führerscheinkontrolle, Bonitätsprüfung, Kameras, Gesprächsaufzeichnung), sind gesperrt, bis die Geschäftsleitung hier die Voraussetzungen bestätigt. Festgehalten werden wer, wann, welche Fassung, Häkchen, Betriebsrat, Zweck und Anbieter. Eine Freigabe gilt 12 Monate. ARGONAUT OS prüft nicht, ob die Unterlagen ausreichen.',
+    wer: 'chef',
+    werText: 'Nur der Chef (Geschäftsleitung) bestätigt und widerruft. Mitarbeiter sehen an der gesperrten Funktion, warum sie gesperrt ist und dass die Geschäftsleitung sie freigeben kann.',
+    schritte: [
+      'Jede Karte zeigt, was die Funktion tut, wo sie im System sitzt und warum sie eine Freigabe braucht. Rechts steht der Stand: gesperrt, freigegeben, abgelaufen, neu bestätigen oder widerrufen',
+      '„Voraussetzungen bestätigen“: alle Häkchen setzen, wo verlangt den Betriebsrat angeben (einbezogen oder kein Betriebsrat vorhanden), den Zweck kurz beschreiben und den Anbieter nennen. „Bestätigen und für 12 Monate freigeben“ — fehlt etwas, steht in Rot, was',
+      'Steht an einem Häkchen „Vorlage folgt nach rechtlicher Prüfung“, gibt es dafür noch keinen Mustertext von ARGONAUT. Bis dahin nutzen Sie Ihre eigenen Unterlagen',
+      'Funktionen, die noch folgen (z. B. Ortung), lassen sich schon vorab freigeben',
+      'Ab 30 Tagen vor Ablauf steht die Karte gelb mit „bitte neu bestätigen“; nach Ablauf ist die Funktion gesperrt, bis Sie neu bestätigen. Werden die Voraussetzungen von ARGONAUT überarbeitet (neue Fassung), ist ebenfalls neu zu bestätigen',
+      '„Widerrufen“ mit Rückfrage sperrt die Funktion sofort. Jede Freigabe und jeder Widerruf steht unveränderbar im Protokoll',
+    ],
+    probe: { anlegen: 'Bei „Kameras und Videoaufnahmen“ alle Häkchen setzen, Betriebsrat „kein Betriebsrat vorhanden“, Zweck „Test“, bestätigen.', loeschen: '„Widerrufen“ und „Ja, widerrufen“. Der Protokoll-Eintrag bleibt als Nachweis.' },
+  },
   '/dashboard/schnittstellen': {
     zweck: 'Die Zentrale für externe Anbindungen, sortiert nach Geldfluss & Steuern, Marketing & Kanäle sowie Betrieb & Waren. Für Bezahllink, DATEV, Kasse/TSE, Shop, Versand und Marktplätze wählen Sie hier Anbieter und Zugangsdaten; die übrigen führen mit Anleitung ins eigene Modul.',
     wer: 'chef',
