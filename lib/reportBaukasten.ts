@@ -44,6 +44,17 @@ export const QUELLEN: Quelle[] = [
       { key: 'richtung', label: 'Richtung', typ: 'text' },
       { key: 'erstellt_am', label: 'Erstellt am', typ: 'datum' },
     ] },
+  // Paket 280 (09.10.2026): Fahrzeughandel. Zeitraum = Verkaufsdatum; ohne Zeitraum zählt der ganze Bestand.
+  // Ertrag (mit Kosten, Provision, § 25a) steht im Chef-Blick Fahrzeughandel — hier nur Listenwerte.
+  { key: 'kfz_handel', name: 'Fahrzeughandel', icon: '🚘', table: 'kfz_bestand', datumFeld: 'verkauft_am',
+    felder: [
+      { key: 'vk_brutto', label: 'Listenpreis brutto', typ: 'zahl' },
+      { key: 'ek_netto', label: 'Einkauf netto', typ: 'zahl' },
+      { key: 'marke', label: 'Marke', typ: 'text' },
+      { key: 'status', label: 'Status', typ: 'text' },
+      { key: 'besteuerung', label: 'Besteuerung', typ: 'text' },
+      { key: 'verkauft_am', label: 'Verkauft am', typ: 'datum' },
+    ] },
 ];
 
 export function quelle(key: string | null | undefined): Quelle | undefined {

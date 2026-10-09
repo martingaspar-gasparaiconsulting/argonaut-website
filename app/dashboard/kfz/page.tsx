@@ -153,6 +153,7 @@ export default function KfzPage() {
       <a href="/dashboard/kfz/tresor" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🔐 Brief-Tresor und Zulassung</a>
       {/* Paket 278 (08.10.26): K18 Partner-Netzwerk */}
       <a href="/dashboard/kfz/partner" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🤝 Partner-Netzwerk</a>
+      {uid && besitzer === uid && <a href="/dashboard/kfz/chef" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>📈 Chef-Blick Fahrzeughandel</a>}
       {/* Paket PS3 (25.09.26): Schadenabwicklung mit Versicherern */}
       <a href="/dashboard/kfz/schaden" style={{ display: 'inline-block', marginTop: 10, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🛡 Schadenabwicklung mit Versicherern</a>
       {/* Paket PS6 (25.09.26): GwG-Identifizierung bei Barzahlung ab 10.000 EUR */}

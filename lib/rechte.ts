@@ -203,6 +203,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🔐 Brief-Tresor', href: '/dashboard/kfz/tresor', ebene: 3, gruppe: 'betrieb' },
   // Paket 278 (08.10.26): K18 Partner-Netzwerk — Unterpfad von /dashboard/kfz, erbt dessen Freigabe.
   { label: '🤝 Partner-Netzwerk', href: '/dashboard/kfz/partner', ebene: 3, gruppe: 'betrieb' },
+  // Paket 280 (09.10.26): K14 Chef-Blick Fahrzeughandel — Zahlen der Geschäftsleitung, nur Chef (Rangliste = Leistungskontrolle).
+  { label: '📈 Chef-Blick Fahrzeughandel', href: '/dashboard/kfz/chef', nurChef: true, ebene: 3, gruppe: 'betrieb' },
   { label: '🍽 Gastro & Hotel', href: '/dashboard/gastro', modul: 'gastro', ebene: 3, gruppe: 'betrieb' },
   // Paket PS5 (25.09.26): Trinkgeld-Verteilung — Unterpfad von /dashboard/gastro, erbt dessen Freigabe.
   { label: '🪙 Trinkgeld-Verteilung', href: '/dashboard/gastro/trinkgeld', ebene: 3, gruppe: 'betrieb' },

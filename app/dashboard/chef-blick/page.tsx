@@ -61,6 +61,16 @@ export default function ChefBlick() {
   const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
   const [laedt, setLaedt] = useState(true);
   const [spricht, setSpricht] = useState(false);
+  // Paket 280: Fahrzeughandel vorhanden? Dann führt eine Karte zum Chef-Blick Fahrzeughandel (fail-open: ohne Tabelle keine Karte).
+  const [handel, setHandel] = useState(0);
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await supabase.from('kfz_bestand').select('id', { count: 'exact', head: true });
+        if (!r.error) setHandel(r.count ?? 0);
+      } catch { /* kein Fahrzeughandel */ }
+    })();
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -149,6 +159,13 @@ export default function ChefBlick() {
         </div>
         <p style={{ fontSize: 17, lineHeight: 1.6, margin: '10px 0 0' }}>{laedt ? 'Lädt …' : satz}</p>
       </div>
+
+      {handel > 0 && (
+        <a href="/dashboard/kfz/chef" style={{ ...karte, display: 'block', textDecoration: 'none', color: C.text }}>
+          <strong>📈 Chef-Blick Fahrzeughandel</strong>
+          <span style={{ color: C.textDim, marginLeft: 8 }}>Verkäufe, Rohertrag je Marke und Preisklasse gegen Vorjahr, Zulauf und Summen-Wächter →</span>
+        </a>
+      )}
 
       <div style={karte}>
         <strong>📅 Auslastung der nächsten {WOCHEN} Wochen</strong>

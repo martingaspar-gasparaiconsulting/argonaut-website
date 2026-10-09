@@ -1591,6 +1591,23 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Im Testfahrzeug Brief mit Ort „Tresor 1" erfassen, an „Test Zulassungsdienst" bis gestern ausgeben — hier erscheint er rot als überfällig. Zulassungsauftrag „Ummeldung" anlegen und Unterlagen abhaken. Aufbereitung beauftragen, im Werkstatt-Board auf „Fertig" setzen und Kosten übernehmen.', loeschen: 'Tresor-Einträge und Zulassungen löscht nur die Geschäftsleitung (Fahrzeug löschen entfernt alles); den Werkstattauftrag im Werkstatt-Board archivieren.' },
     landetIn: [{ text: 'Fahrzeugbestand (Reiter „Brief und Schlüssel" in der Akte)', href: '/dashboard/kfz/bestand' }, { text: 'Werkstatt-Board', href: '/dashboard/werkstatt' }],
   },
+  '/dashboard/kfz/chef': {
+    zweck: 'Chef-Blick Fahrzeughandel: Verkäufe, Erlös netto, Rohertrag, Deckungsbeitrag und Standtage bis zum Verkauf für den laufenden Monat, das Quartal oder das Jahr — jeweils gegen den gleichen Zeitraum im Vorjahr. Dazu Rohertrag je Monat als Balken, Ertrag je Marke und je Preisklasse, Zulauf und gebundener Einkauf, auf Wunsch eine Verkäufer-Rangliste und ein Summen-Wächter. Gerechnet wird mit der Nachkalkulation jeder Handelsakte, ohne KI.',
+    wer: 'chef',
+    werText: 'Nur der Chef (Geschäftsleitung). Mitarbeiter erreichen die Seite nicht, auch nicht mit Recht „KFZ" oder „Darf abrechnen".',
+    schritte: [
+      'Oben den Zeitraum wählen: laufender Monat, laufendes Quartal oder laufendes Jahr. Verglichen wird immer mit demselben Abschnitt im Vorjahr bis zum gleichen Tag — die Prozentzahl ist grün, wenn es besser läuft',
+      'Was zählt: Fahrzeuge mit Status „verkauft" und Verkaufsdatum. Als Preis gilt der erzielte Preis aus der Kalkulation der Akte, sonst der Preis aus dem Kaufvertrag, sonst der Listenpreis (dann mit Sternchen). Kosten sind die Ist-Kosten der Akte inklusive übernommener Partner-Rechnungen, dazu Standkosten, Gemeinkosten-Satz und Provisionen',
+      'Fehlt einem verkauften Fahrzeug der Einkaufspreis oder jeder Preis, zählt es als Verkauf, aber nicht im Ertrag — ARGONAUT erfindet keine Zahlen. Der Summen-Wächter nennt die Zahl, ein Klick in der Liste unten öffnet die Kalkulation der Akte',
+      'Ertrag je Marke oder je Preisklasse (nach Verkaufspreis brutto: bis 10.000, 10.000–20.000, 20.000–30.000, 30.000–50.000, über 50.000 €). Marken werden zusammengefasst, auch wenn sie unterschiedlich geschrieben sind („VW", „vw")',
+      'Zulauf und Bestand: Fahrzeuge im Zulauf mit Einkauf und geplantem Preis, gebundener Einkauf im Bestand, Langsteher über der gelben Standzeit-Grenze und Hereinnahmen im Zeitraum gegen Vorjahr',
+      'Verkäufer-Rangliste: Standard AUS. Eine Rangliste ist eine Leistungskontrolle — mit Betriebsrat nur mit dessen Zustimmung (§ 87 Abs. 1 Nr. 6 BetrVG). Einschalten fragt einmal nach. Der Verkäufer kommt aus der Kalkulation der Akte',
+      'Summen-Wächter: prüft, dass Marken, Preisklassen, Verkäufer und Monate exakt die Gesamtsumme ergeben (gerechnet in ganzen Cent). Grün = alles stimmt. Rot = bitte dem Support melden. Darunter in Gelb, was nicht eingerechnet ist (z. B. Kaufvertrag erfasst, Fahrzeug aber nicht auf „verkauft")',
+      'Eigene Auswertungen baut der Report-Baukasten mit der Quelle „Fahrzeughandel" (Listenpreis, Einkauf, Marke, Status; Zeitraum = Verkaufsdatum)',
+    ],
+    probe: { anlegen: 'Zwei Testfahrzeuge mit Einkauf, Preis und Eingang anlegen, eins mit erzieltem Preis und Verkäufer in der Kalkulation, beide auf „verkauft" setzen — hier erscheinen sie in Kacheln, Monat, Marke und Preisklasse; der Summen-Wächter ist grün. Einem den Einkaufspreis löschen: Er zählt als Verkauf, der Wächter nennt ihn.', loeschen: 'Testfahrzeuge im Fahrzeugbestand löschen. Die Rangliste unten wieder ausschalten, falls eingeschaltet.' },
+    landetIn: [{ text: 'Fahrzeugbestand (Kalkulation in der Akte)', href: '/dashboard/kfz/bestand' }, { text: 'Report-Baukasten', href: '/dashboard/reports' }, { text: 'Chef-Blick', href: '/dashboard/chef-blick' }],
+  },
   '/dashboard/kfz/partner': {
     zweck: 'Partner-Netzwerk: Betriebe verbinden sich gegenseitig (beide stimmen zu, jederzeit trennbar) und geben einander Aufträge an einem Fahrzeug — z. B. Autohaus an Lackierer oder Aufbereiter. Der Partner arbeitet in seinem eigenen ARGONAUT, sieht nur dieses eine Fahrzeug ohne Preise und Kunde und nur, solange der Auftrag läuft. Beide Seiten schreiben Einträge mit Fotos, die sich nicht mehr ändern lassen.',
     wer: 'beide',
