@@ -20,9 +20,9 @@ test('Wer ist Mitarbeiter? mein_chef_id liefert einen Chef', async () => {
 // Seit 27.09.2026 („Darf abrechnen") prueft tests/darfAbrechnen.test.mjs die
 // 17 Rechnung-aus-Wege sowie Zahlungen und Banking — die harte Chef-Sperre ist
 // dort durch das Recht ersetzt. Hier bleibt nur: vor dem Anlegen wird geprueft.
-test('Alle 18 Rechnung-aus-Wege pruefen das Recht, bevor etwas entsteht', () => {
+test('Alle 19 Rechnung-aus-Wege pruefen das Recht, bevor etwas entsteht', () => {
   const ordner = fs.readdirSync(new URL('../app/api/', import.meta.url)).filter((d) => d.startsWith('rechnung-aus-'));
-  assert.equal(ordner.length, 18); // P268: + rechnung-aus-kfz-verkauf
+  assert.equal(ordner.length, 19); // P268: + rechnung-aus-kfz-verkauf · P292: + rechnung-aus-vermietung
   for (const d of ordner) {
     const s = lies(`app/api/${d}/route.ts`);
     const pruef = s.indexOf('const abr = await abrechnungPruefen(supabase, user.id);');
