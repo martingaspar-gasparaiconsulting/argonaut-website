@@ -34,8 +34,13 @@ export const ARTEN = [
   { key: 'luxus', label: 'Luxus / Sportwagen' },
   { key: 'lkw', label: 'Lkw' },
   { key: 'anhaenger', label: 'Anhänger' },
+  // Paket 296 (T1): Leihfahrzeuge für Trackday, Rennschule und Kartbahn
+  { key: 'kart', label: 'Kart (nur Strecke)' },
+  { key: 'rennfahrzeug', label: 'Rennfahrzeug (nur Strecke)' },
 ] as const;
 export type Art = typeof ARTEN[number]['key'];
+/** Paket 296: Fahrzeuge nur für die Strecke — nie auf der öffentlichen Mietseite (keine Straßenvermietung). */
+export const NUR_STRECKE: readonly string[] = ['kart', 'rennfahrzeug'];
 
 export const KAUTION_ARTEN = [
   { key: 'keine', label: 'Keine Kaution' },

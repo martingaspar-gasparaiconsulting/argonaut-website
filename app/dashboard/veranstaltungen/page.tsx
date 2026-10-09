@@ -225,6 +225,11 @@ export default function VeranstaltungenPage() {
       <div style={styles.eyebrow}>ARGONAUT OS · Kultur &amp; Verein</div>
       <h1 style={styles.h1}>🎫 Veranstaltungen</h1>
       <p style={styles.sub}>Events mit Kapazität und Ticketpreis anlegen, Anmeldungen erfassen — die Anlage rechnet Auslastung, freie Plätze und Einnahmen und setzt bei vollem Haus automatisch auf Warteliste. Je Veranstaltung eine Teilnehmer-/Einlassliste als PDF.</p>
+      {/* Paket 296 (T1): Motorsport-Events mit Startgruppen, Haftungsverzicht und Leihfahrzeugen */}
+      <p style={styles.sub}>
+        <a href="/dashboard/veranstaltungen/motorsport" style={{ color: C.gold, fontWeight: 700, textDecoration: 'none' }}>🏁 Trackday, Rennschule &amp; Kartbahn →</a>
+        {' '}Startgruppen, digitaler Haftungsverzicht, Startfreigabe, Leihfahrzeuge, Sponsoren und Gäste.
+      </p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}

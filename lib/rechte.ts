@@ -174,6 +174,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🗓 Schichtplan', href: '/dashboard/schichtplan', modul: 'schichtplan', ebene: 3, gruppe: 'termine' },
   { label: '📅 Buchungen', href: '/dashboard/buchungen', modul: 'buchungen', ebene: 3, gruppe: 'termine' },
   { label: '🎫 Veranstaltungen', href: '/dashboard/veranstaltungen', modul: 'veranstaltungen', ebene: 3, gruppe: 'termine' },
+  // Paket 296 (09.10.26): T1 Trackday, Rennschule, Kartbahn — Unterpfade von /dashboard/veranstaltungen, erben dessen Freigabe.
+  { label: '🏁 Trackday & Kartbahn', href: '/dashboard/veranstaltungen/motorsport', ebene: 3, gruppe: 'termine' },
+  { label: '🔧 Motorsport: Teile & Laufzeiten', href: '/dashboard/veranstaltungen/motorsport/teile', ebene: 3, gruppe: 'termine' },
   { label: '🔔 Erinnerungen', href: '/dashboard/erinnerungen', modul: 'erinnerungen', ebene: 3, gruppe: 'termine' },
 
   // --- Betrieb & Handwerk (Ebene 3, operativ) -------------------------------

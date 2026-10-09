@@ -15,7 +15,7 @@
 // ============================================================================
 
 import { leseZahl } from './zahlen';
-import { abrechnung, zeit, kollision, ARTEN, TAG, type BuchungKurz } from './fahrzeugMiete';
+import { abrechnung, zeit, kollision, ARTEN, NUR_STRECKE, TAG, type BuchungKurz } from './fahrzeugMiete';
 
 export const MIET_ONLINE_MODUL = 'miet-online';
 export const MAX_TAGE_ANFRAGE = 120;
@@ -41,6 +41,7 @@ export function oeffentlich(roh: unknown): MietFahrzeugOeffentlich | null {
   if (!roh || typeof roh !== 'object') return null;
   const r = roh as Record<string, unknown>;
   if (r.aktiv !== true || typeof r.id !== 'string' || !UUID.test(r.id) || typeof r.bezeichnung !== 'string') return null;
+  if (NUR_STRECKE.includes(String(r.art))) return null; // Paket 296: Kart/Rennfahrzeug nur auf der Strecke, nie öffentlich zur Miete
   const art = ARTEN.some((a) => a.key === r.art) ? String(r.art) : 'pkw';
   return {
     id: r.id, bezeichnung: r.bezeichnung.slice(0, 120), art, fs_klasse: typeof r.fs_klasse === 'string' && /^[A-Z0-9]{1,4}$/.test(r.fs_klasse) ? r.fs_klasse : null,
