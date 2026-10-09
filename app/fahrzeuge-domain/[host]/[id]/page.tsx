@@ -25,7 +25,7 @@ const lade = cache(async (hostRoh: string, id: string) => {
   const [firma, fz] = await Promise.all([firmaZu(db, b.betrieb), sichtbaresFahrzeug(db, b.betrieb, id)]);
   if (!fz) return null;
   const basis = `https://${b.domain}`;
-  const ctx: BoerseKontext = { kennung: b.kennung, einst: b.einst, firma, basis, pfad: domainPfad, kanon: (fid) => basis + domainPfad(fid) };
+  const ctx: BoerseKontext = { kennung: b.kennung, einst: b.einst, firma, basis, roh: b.roh, pfad: domainPfad, kanon: (fid) => basis + domainPfad(fid) };
   return { ctx, betrieb: b.betrieb, ...fz };
 });
 

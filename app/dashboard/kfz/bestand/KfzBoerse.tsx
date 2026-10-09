@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { BOERSE_MODUL, boerseEinstellung, boersePfad, domainPfad, firmaFehlt, hostSauber, neueKennung, sichtbar } from '@/lib/kfzBoerse';
 import { pflichtFehlt } from '@/lib/kfzAkte';
+import KfzBoerseExtras from './KfzBoerseExtras';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -147,6 +148,8 @@ export default function KfzBoerse({ betrieb, istChef }: { betrieb: string | null
             </ul>
           )}
           {fehler && <div style={k.fehler} role="alert">{fehler}</div>}
+          {/* Paket 282 (K15b): Zusatzleistungen, Finanzierungsbeispiel, Rechner */}
+          <KfzBoerseExtras betrieb={betrieb} istChef={istChef} roh={roh} onGespeichert={() => { void lade(betrieb); }} />
         </div>
       )}
     </div>

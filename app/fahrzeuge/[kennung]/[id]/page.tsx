@@ -26,7 +26,7 @@ const lade = cache(async (k: string, id: string) => {
   if (!fz) return null;
   const basis = basisAdresse();
   const ctx: BoerseKontext = {
-    kennung: k, einst: b.einst, firma, basis,
+    kennung: k, einst: b.einst, firma, basis, roh: b.roh,
     pfad: (fid) => boersePfad(k, fid),
     kanon: (fid) => kanonisch({ kennung: k, fahrzeugId: fid, domain, basis }),
   };

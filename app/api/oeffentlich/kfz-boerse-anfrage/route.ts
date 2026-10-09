@@ -6,12 +6,15 @@ import { berlinTag } from '@/lib/aktivitaeten';
 import { naechsteNr, startFaellig } from '@/lib/kfzAnfrage';
 import { anfrageEingabePruefen, fahrzeugName, idGueltig, kennungGueltig, preisText, boersePfad } from '@/lib/kfzBoerse';
 import { basisAdresse, betriebZuKennung, boerseDb, firmaZu, sichtbaresFahrzeug } from '@/lib/kfzBoerseLaden';
+import { EXTRAS_KEY, extrasLesen, extrasWahl, nachrichtMitExtras } from '@/lib/kfzFinanzierung';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/kfz-boerse-anfrage — Paket 272 · K11a Fahrzeugbörse
 // ÖFFENTLICH. Anfrage-Formular auf der Detailseite eines Fahrzeugs der
 // eigenen Fahrzeugbörse eines Kfz-Betriebs.
-//  POST { k, id, name, email, telefon, wunsch, nachricht, datenschutz }
+//  POST { k, id, name, email, telefon, wunsch, nachricht, datenschutz, extras? }
+//  Paket 282: extras = Schlüssel der Zusatzleistungen; Text und Preis kommen aus dem
+//  Katalog des Betriebs (nie aus dem Browser), Unbekanntes fällt weg.
 //    -> legt eine Anfrage (Quelle „Webseite", Stand „Neu", nächster Kontakt
 //       heute) am Fahrzeug an; Mail an den Betrieb, Eingangsbestätigung an
 //       den Interessenten (keine Werbung, keine Serie — eigene Tabelle kfz_anfrage).
@@ -49,6 +52,10 @@ export async function POST(req: Request) {
     const fz = await sichtbaresFahrzeug(db, bt.betrieb, id);
     if (!fz) return NextResponse.json({ error: 'Dieses Fahrzeug ist nicht mehr verfügbar.' }, { status: 404 });
 
+    const roh = bt.roh && typeof bt.roh === 'object' ? (bt.roh as Record<string, unknown>) : {};
+    const { gewaehlt } = extrasWahl(extrasLesen(roh[EXTRAS_KEY]), b.extras);
+    const nachricht = nachrichtMitExtras(d.nachricht, gewaehlt, fz.f.vk_brutto);
+
     const heute = berlinTag(new Date().toISOString());
     let nr = '';
     let gespeichert = false;
@@ -57,7 +64,7 @@ export async function POST(req: Request) {
       nr = naechsteNr('A', (((nrs as unknown) as { nr: string | null }[]) ?? []).map((x) => x.nr));
       const { error } = await db.from('kfz_anfrage').insert({
         owner_user_id: bt.betrieb, bestand_id: id, nr, quelle: 'website', status: 'neu',
-        name: d.name, tel: d.tel, email: d.email, nachricht: d.nachricht,
+        name: d.name, tel: d.tel, email: d.email, nachricht,
         faellig_am: startFaellig('website', heute), erstellt_von: null,
       });
       if (!error) gespeichert = true;
@@ -75,7 +82,7 @@ export async function POST(req: Request) {
     if (firma.email) {
       const zeilen: [string, unknown][] = [
         ['Nummer', nr], ['Fahrzeug', fahrzeug + (fz.f.interne_nr ? ` (${fz.f.interne_nr})` : '')], ['Preis', preisText(fz.f.vk_brutto)],
-        ['Name', d.name], ['E-Mail', d.email], ['Telefon', d.tel], ['Nachricht', d.nachricht],
+        ['Name', d.name], ['E-Mail', d.email], ['Telefon', d.tel], ['Nachricht', nachricht],
       ];
       const tab = zeilen.filter(([, v]) => v).map(([k2, v]) =>
         `<tr><td style="padding:4px 12px 4px 0;color:#6b7688;vertical-align:top;white-space:nowrap;">${escapeHtml(k2)}</td><td style="padding:4px 0;color:#1a2332;font-weight:600;">${escapeHtml(String(v)).replace(/\n/g, '<br>')}</td></tr>`).join('');

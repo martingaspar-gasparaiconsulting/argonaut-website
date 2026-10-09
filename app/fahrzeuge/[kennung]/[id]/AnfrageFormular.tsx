@@ -4,16 +4,23 @@
 // ARGONAUT OS · Paket 272 · K11a — Anfrage-Formular der Fahrzeugbörse
 // Schickt ausschließlich an /api/oeffentlich/kfz-boerse-anfrage (Kennung +
 // Fahrzeug-ID). Kein Supabase im Browser. Spam-Falle firma_hp.
+// Paket 282: Zusatzleistungen ankreuzen (Konfigurator) — geschickt werden nur die
+// Schlüssel, die Preise rechnet der Server aus dem Katalog des Betriebs nach.
 // ============================================================
 
 import { useState, type CSSProperties } from 'react';
 import { WUENSCHE, textAuf } from '@/lib/kfzBoerse';
+import type { Extra } from '@/lib/kfzFinanzierung';
+import { centRunden } from '@/lib/zahlen';
 
 type Form = { name: string; email: string; telefon: string; wunsch: string; nachricht: string; datenschutz: boolean; firma_hp: string };
 const LEER: Form = { name: '', email: '', telefon: '', wunsch: 'info', nachricht: '', datenschutz: false, firma_hp: '' };
 
-export default function AnfrageFormular({ k, id, firma, akzent, hinweis }: { k: string; id: string; firma: string | null; akzent: string; hinweis: string }) {
+export default function AnfrageFormular({ k, id, firma, akzent, hinweis, extras = [], preis = null }: { k: string; id: string; firma: string | null; akzent: string; hinweis: string; extras?: Extra[]; preis?: number | null }) {
   const [f, setF] = useState<Form>(LEER);
+  const [wahl, setWahl] = useState<string[]>([]);
+  const summe = centRunden(extras.filter((x) => wahl.includes(x.key)).reduce((t, x) => t + x.betrag, 0));
+  const eur = (n: number) => n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
   const [stand, setStand] = useState<'offen' | 'gesendet'>('offen');
   const [fehler, setFehler] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,7 +34,7 @@ export default function AnfrageFormular({ k, id, firma, akzent, hinweis }: { k: 
     try {
       const r = await fetch('/api/oeffentlich/kfz-boerse-anfrage', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...f, k, id }),
+        body: JSON.stringify({ ...f, k, id, extras: wahl }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setFehler((j as { error?: string }).error || 'Senden fehlgeschlagen. Bitte versuchen Sie es später erneut.'); return; }
@@ -60,6 +67,26 @@ export default function AnfrageFormular({ k, id, firma, akzent, hinweis }: { k: 
             style={f.wunsch === w.key ? { ...s.chip, borderColor: akzent, background: akzent, color: textAuf(akzent) } : s.chip}>{w.label}</button>
         ))}
       </div>
+      {extras.length > 0 && (
+        <fieldset style={{ border: '1px solid #D5DCE5', borderRadius: 10, padding: '10px 12px', margin: 0, display: 'grid', gap: 6 }}>
+          <legend style={{ ...s.klein, padding: '0 4px' }}>Zusatzleistungen auswählen (optional)</legend>
+          {extras.map((x) => (
+            <label key={x.key} style={{ ...s.haken, justifyContent: 'space-between' }}>
+              <span style={{ display: 'flex', gap: 8 }}>
+                <input type="checkbox" checked={wahl.includes(x.key)} onChange={(e) => setWahl(e.target.checked ? [...wahl, x.key] : wahl.filter((w) => w !== x.key))} style={{ marginTop: 3 }} />
+                <span>{x.text}</span>
+              </span>
+              <span style={{ whiteSpace: 'nowrap', fontWeight: 600 }}>{eur(x.betrag)}</span>
+            </label>
+          ))}
+          {wahl.length > 0 && (
+            <div style={{ ...s.klein, borderTop: '1px solid #E5EAF0', paddingTop: 6 }}>
+              Auswahl {eur(summe)}{preis && preis > 0 ? <> · Fahrzeug mit Auswahl <b style={{ color: '#111827' }}>{eur(centRunden(preis + summe))}</b></> : null}
+            </div>
+          )}
+          <div style={s.klein}>Preise inkl. MwSt. Die Auswahl geht mit Ihrer Anfrage an {firma ?? 'den Betrieb'} — verbindlich wird erst der Kaufvertrag.</div>
+        </fieldset>
+      )}
       {feld('name', 'Name *', 'text', 'name')}
       {feld('email', 'E-Mail', 'email', 'email')}
       {feld('telefon', 'Telefon', 'tel', 'tel')}

@@ -17,6 +17,7 @@ import type { Firma } from '@/lib/kfzBoerseLaden';
 import { historieText } from '@/lib/partnerAnbindung';
 import { BoerseSeite, F, st } from './BoerseTeile';
 import AnfrageFormular from './[kennung]/[id]/AnfrageFormular';
+import { FINANZ_KEY, EXTRAS_KEY, finanzEinstellung, boerseBereit, beispiel, pflichtZeilen, extrasLesen, BEISPIEL_HINWEIS } from '@/lib/kfzFinanzierung';
 
 export type BoerseKontext = {
   kennung: string;
@@ -28,6 +29,8 @@ export type BoerseKontext = {
   kanon: (fahrzeugId?: string) => string;
   /** Absolute Basis für Bilder in den Strukturdaten. */
   basis: string;
+  /** Paket 282: Einstellung roh (Zusatzleistungen, Finanzierungsbeispiel). */
+  roh?: unknown;
 };
 
 const NICHT_FINDEN = { index: false, follow: false } as const;
@@ -116,6 +119,11 @@ export function ListeAnsicht({ ctx, liste, filter }: { ctx: BoerseKontext; liste
 export function DetailAnsicht({ ctx, f, bilder }: { ctx: BoerseKontext; f: BoerseFahrzeug; bilder: string[] }) {
   const zusatz = preisZusatz(f);
   const hinweis = statusHinweis(f.status);
+  // Paket 282: Zusatzleistungen zum Auswählen und Finanzierungsbeispiel (nur vollständig + bestätigt)
+  const roh = ctx.roh && typeof ctx.roh === 'object' ? (ctx.roh as Record<string, unknown>) : {};
+  const extras = extrasLesen(roh[EXTRAS_KEY]);
+  const fe = finanzEinstellung(roh[FINANZ_KEY]);
+  const fb = boerseBereit(fe) ? beispiel(f.vk_brutto, fe) : null;
   const energie = energieZeilen(f);
   const daten = ctx.einst.google
     ? jsonSicher(strukturDaten(f, { basis: ctx.basis, url: ctx.kanon(f.id), bilder: bilder.map((b) => bildPfad(ctx.kennung, b)), firma: ctx.firma.name || null, ort: ctx.firma.ort || null }))
@@ -190,9 +198,19 @@ export function DetailAnsicht({ ctx, f, bilder }: { ctx: BoerseKontext; f: Boers
               </div>
             )}
           </section>
+          {fb && (
+            <section style={st.box} aria-label="Finanzierungsbeispiel">
+              <h2 style={{ fontSize: 17, margin: '0 0 8px' }}>Finanzierungsbeispiel</h2>
+              <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>{fb.rate.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € <span style={{ fontSize: 13, fontWeight: 500 }}>im Monat</span></div>
+              <table style={{ ...st.tab, fontSize: 13 }}><tbody>
+                {pflichtZeilen(fb, fe).map(([a2, b2]) => <tr key={a2}><th style={{ ...st.th, whiteSpace: 'normal' }}>{a2}</th><td style={st.td}>{b2}</td></tr>)}
+              </tbody></table>
+              <div style={{ ...st.klein, marginTop: 8 }}>{BEISPIEL_HINWEIS}{fe.hinweis ? ' ' + fe.hinweis : ''}</div>
+            </section>
+          )}
           <section style={st.box}>
             <h2 style={{ fontSize: 17, margin: '0 0 8px' }}>Anfrage zu diesem Fahrzeug</h2>
-            <AnfrageFormular k={ctx.kennung} id={f.id} firma={ctx.firma.name || null} akzent={ctx.firma.akzent} hinweis={datenschutzHinweis(ctx.firma)} />
+            <AnfrageFormular k={ctx.kennung} id={f.id} firma={ctx.firma.name || null} akzent={ctx.firma.akzent} hinweis={datenschutzHinweis(ctx.firma)} extras={extras} preis={f.vk_brutto} />
           </section>
         </aside>
       </div>

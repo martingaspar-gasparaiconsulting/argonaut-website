@@ -32,14 +32,15 @@ export type Firma = {
 };
 
 /** Betrieb zur Kennung — nur, wenn die Börse eingeschaltet ist. Doppelte Kennung -> nie raten. */
-export async function betriebZuKennung(db: BoerseDb, k: string): Promise<{ betrieb: string; einst: BoerseEinstellung } | null> {
+export async function betriebZuKennung(db: BoerseDb, k: string): Promise<{ betrieb: string; einst: BoerseEinstellung; roh: unknown } | null> {
   if (!kennungGueltig(k)) return null;
   const { data } = await db.from('modul_einstellung').select('owner_user_id, einstellung')
     .eq('modul', BOERSE_MODUL).eq('einstellung->>kennung', k).limit(2);
   const rows = ((data as unknown) as { owner_user_id: string; einstellung: unknown }[]) ?? [];
   if (rows.length !== 1) return null;
   const einst = boerseEinstellung(rows[0].einstellung);
-  return einst.aktiv && einst.kennung === k ? { betrieb: rows[0].owner_user_id, einst } : null;
+  // roh: Paket 282 — Zusatzleistungen und Finanzierungsbeispiel stehen in derselben Einstellung
+  return einst.aktiv && einst.kennung === k ? { betrieb: rows[0].owner_user_id, einst, roh: rows[0].einstellung } : null;
 }
 
 // --- Paket 273: Börse auf der eigenen Domain des Betriebs ----------------------------------
@@ -51,15 +52,16 @@ type DomainZeile = { owner_user_id: string; domain: string | null; status: strin
  * in web_seiten (Website-Bauer, eindeutig je Seite). Gehört sie mehr als einem
  * Betrieb, wird nie geraten. Die Börse muss eingeschaltet sein.
  */
-export async function betriebZuDomain(db: BoerseDb, host: string): Promise<{ betrieb: string; einst: BoerseEinstellung; kennung: string; domain: string } | null> {
+export async function betriebZuDomain(db: BoerseDb, host: string): Promise<{ betrieb: string; einst: BoerseEinstellung; kennung: string; domain: string; roh: unknown } | null> {
   const d = hostSauber(host);
   if (!d) return null;
   const { data } = await db.from('web_seiten').select('owner_user_id, domain, status').in('domain', [d, `www.${d}`]).limit(10);
   const besitzer = [...new Set((((data as unknown) as DomainZeile[]) ?? []).map((z) => z.owner_user_id))];
   if (besitzer.length !== 1) return null;
   const { data: e } = await db.from('modul_einstellung').select('einstellung').eq('owner_user_id', besitzer[0]).eq('modul', BOERSE_MODUL).maybeSingle();
-  const einst = boerseEinstellung((e as { einstellung?: unknown } | null)?.einstellung);
-  return einst.aktiv && einst.kennung ? { betrieb: besitzer[0], einst, kennung: einst.kennung, domain: d } : null;
+  const roh = (e as { einstellung?: unknown } | null)?.einstellung;
+  const einst = boerseEinstellung(roh);
+  return einst.aktiv && einst.kennung ? { betrieb: besitzer[0], einst, kennung: einst.kennung, domain: d, roh } : null;
 }
 
 /** Kennung der eingeschalteten Börse eines Betriebs (für den Menüpunkt „Fahrzeuge" der Webseite), sonst null. */
