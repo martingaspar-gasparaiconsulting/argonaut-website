@@ -34,6 +34,10 @@
       "schedule": "15 6 * * *"
     },
     {
+      "path": "/api/cron/rechts-freigaben",
+      "schedule": "45 6 * * *"
+    },
+    {
       "path": "/api/rechnungen-ueberfaellig",
       "schedule": "0 7 * * *"
     },

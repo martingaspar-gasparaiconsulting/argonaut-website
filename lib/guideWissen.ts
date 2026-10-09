@@ -1298,6 +1298,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Ab 30 Tagen vor Ablauf steht die Karte gelb mit „bitte neu bestätigen“; nach Ablauf ist die Funktion gesperrt, bis Sie neu bestätigen. Werden die Voraussetzungen von ARGONAUT überarbeitet (neue Fassung), ist ebenfalls neu zu bestätigen',
       '„Widerrufen“ mit Rückfrage sperrt die Funktion sofort. Jede Freigabe und jeder Widerruf steht unveränderbar im Protokoll',
     ],
+    landetIn: [{ text: 'Chef-Blick Fahrzeughandel (Verkäufer-Rangliste)', href: '/dashboard/kfz/chef' }],
     probe: { anlegen: 'Bei „Kameras und Videoaufnahmen“ alle Häkchen setzen, Betriebsrat „kein Betriebsrat vorhanden“, Zweck „Test“, bestätigen.', loeschen: '„Widerrufen“ und „Ja, widerrufen“. Der Protokoll-Eintrag bleibt als Nachweis.' },
   },
   '/dashboard/schnittstellen': {
@@ -1622,7 +1623,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Fehlt einem verkauften Fahrzeug der Einkaufspreis oder jeder Preis, zählt es als Verkauf, aber nicht im Ertrag — ARGONAUT erfindet keine Zahlen. Der Summen-Wächter nennt die Zahl, ein Klick in der Liste unten öffnet die Kalkulation der Akte',
       'Ertrag je Marke oder je Preisklasse (nach Verkaufspreis brutto: bis 10.000, 10.000–20.000, 20.000–30.000, 30.000–50.000, über 50.000 €). Marken werden zusammengefasst, auch wenn sie unterschiedlich geschrieben sind („VW", „vw")',
       'Zulauf und Bestand: Fahrzeuge im Zulauf mit Einkauf und geplantem Preis, gebundener Einkauf im Bestand, Langsteher über der gelben Standzeit-Grenze und Hereinnahmen im Zeitraum gegen Vorjahr',
-      'Verkäufer-Rangliste: Standard AUS. Eine Rangliste ist eine Leistungskontrolle — mit Betriebsrat nur mit dessen Zustimmung (§ 87 Abs. 1 Nr. 6 BetrVG). Einschalten fragt einmal nach. Der Verkäufer kommt aus der Kalkulation der Akte',
+      'Verkäufer-Rangliste: Standard AUS. Eine Rangliste ist eine Leistungskontrolle — mit Betriebsrat nur mit dessen Zustimmung (§ 87 Abs. 1 Nr. 6 BetrVG). „Einschalten“ erscheint erst, wenn unter „Rechtliche Freigaben“ die Freigabe „Auswertungen je Mitarbeiter“ bestätigt ist; läuft sie ab oder wird sie widerrufen, ist die Rangliste ausgeblendet. Der Verkäufer kommt aus der Kalkulation der Akte',
       'Summen-Wächter: prüft, dass Marken, Preisklassen, Verkäufer und Monate exakt die Gesamtsumme ergeben (gerechnet in ganzen Cent). Grün = alles stimmt. Rot = bitte dem Support melden. Darunter in Gelb, was nicht eingerechnet ist (z. B. Kaufvertrag erfasst, Fahrzeug aber nicht auf „verkauft")',
       'Eigene Auswertungen baut der Report-Baukasten mit der Quelle „Fahrzeughandel" (Listenpreis, Einkauf, Marke, Status; Zeitraum = Verkaufsdatum)',
     ],

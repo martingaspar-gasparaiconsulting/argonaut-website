@@ -170,7 +170,8 @@ test('Einbau: Seite nur Chef, Rangliste abschaltbar, Menü, Hub, Chef-Blick, Rep
   assert.match(seite, /CHEF_MODUL/);
   assert.match(seite, /ranglisteAn\(/);
   assert.match(seite, /summenWaechter\(/);
-  assert.match(seite, /§ 87/);
+  // P288: die einmalige Rückfrage (§ 87 BetrVG) ist durch die Rechts-Freigabe „Auswertungen je Mitarbeiter“ ersetzt
+  assert.match(seite, /useRechtsFreigabe\('leistungsauswertung'\)/);
   assert.doesNotMatch(seite, /kiFetch|\/api\/ki/, 'keine KI');
   const rechte = lies('lib/rechte.ts');
   assert.match(rechte, /href: '\/dashboard\/kfz\/chef', nurChef: true/);

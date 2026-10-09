@@ -8,6 +8,7 @@
 // Summen-Wächter, der jede Teilsumme gegen die Gesamtsumme prüft.
 // Gerechnet mit der Nachkalkulation aus K5 (lib/kfzKalkulation) — Ist-Kosten
 // inklusive übernommener Partner-Rechnungen. Keine KI, 0 €.
+// Paket 288 (RF1b): Rangliste nur mit gültiger Rechts-Freigabe „Auswertungen je Mitarbeiter“.
 // NUR Chef (rechte.ts nurChef + Prüfung hier). Logik: lib/kfzChefBlick.ts (getestet).
 // Pfad: app/dashboard/kfz/chef/page.tsx
 // ============================================================
@@ -23,6 +24,7 @@ import {
   type ZeitraumArt, type ChefFz, type ChefKalk, type ChefVerkauf, type Kennzahlen, type Gruppe,
 } from '@/lib/kfzChefBlick';
 import Leerzustand from '../../_components/Leerzustand';
+import { useRechtsFreigabe, FreigabeHinweis } from '../../_components/RechtsFreigabe';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -69,7 +71,7 @@ export default function KfzChefBlick() {
   const [chefEinst, setChefEinst] = useState<Record<string, unknown>>({});
   const [art, setArt] = useState<ZeitraumArt>('jahr');
   const [gruppeNach, setGruppeNach] = useState<'marke' | 'preisklasse'>('marke');
-  const [frageRangliste, setFrageRangliste] = useState(false);
+  const freigabe = useRechtsFreigabe('leistungsauswertung');
   const [laden, setLaden] = useState(true);
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -132,6 +134,8 @@ export default function KfzChefBlick() {
     gesamt: kz, marken, klassen, verkaeufer: rang, monate, jahr: kJahr, zeilen: jetzt, fahrzeuge: fz, verkaeufe: verk,
   }), [kz, marken, klassen, rang, monate, kJahr, jetzt, fz, verk]);
   const rangAn = ranglisteAn(chefEinst);
+  // Paket 288: angezeigt wird nur mit gültiger Freigabe — läuft sie ab, ist die Rangliste wieder weg.
+  const rangSichtbar = rangAn && freigabe.aktiv;
   const maxMonat = Math.max(1, ...monate.map((m) => Math.max(Math.abs(m.rohertrag), Math.abs(m.vjRohertrag))));
 
   async function ranglisteSchalten(an: boolean) {
@@ -143,7 +147,6 @@ export default function KfzChefBlick() {
         { onConflict: 'owner_user_id,modul' },
       ).select('id');
       if (error || nichtsGeschrieben(data)) { setFehler(NICHT_GESPEICHERT); return; }
-      setFrageRangliste(false);
       setOk(an ? 'Verkäufer-Rangliste eingeschaltet.' : 'Verkäufer-Rangliste ausgeschaltet.');
       await lade();
     } finally { setBusy(false); }
@@ -284,19 +287,10 @@ export default function KfzChefBlick() {
             <b style={{ color: C.gold }}>Verkäufer-Rangliste</b>
             {rangAn
               ? <button style={s.btnAus} disabled={busy} onClick={() => void ranglisteSchalten(false)}>Ausschalten</button>
-              : !frageRangliste && <button style={s.btnAus} onClick={() => setFrageRangliste(true)}>Einschalten …</button>}
+              : freigabe.aktiv && <button style={s.btnAus} disabled={busy} onClick={() => void ranglisteSchalten(true)}>Einschalten</button>}
           </div>
-          {frageRangliste && !rangAn && (
-            <div style={s.hinweis}>
-              Eine Rangliste je Verkäufer ist eine Leistungskontrolle. Hat Ihr Betrieb einen Betriebsrat, braucht sie dessen Zustimmung
-              (§ 87 Abs. 1 Nr. 6 BetrVG). Ihre Mitarbeiter sehen diese Seite nie. Trotzdem einschalten?
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button style={s.btnGold} disabled={busy} onClick={() => void ranglisteSchalten(true)}>Ja, einschalten</button>
-                <button style={s.btnAus} onClick={() => setFrageRangliste(false)}>Abbrechen</button>
-              </div>
-            </div>
-          )}
-          {!rangAn ? <p style={s.dim}>Ausgeschaltet. Die Summen-Prüfung läuft trotzdem mit.</p>
+          <FreigabeHinweis lage={freigabe} />
+          {!rangSichtbar ? <p style={s.dim}>{rangAn ? 'Eingeschaltet, aber ausgeblendet, solange die Freigabe fehlt.' : 'Ausgeschaltet.'} Die Summen-Prüfung läuft trotzdem mit.</p>
             : !jetzt.length ? <p style={s.dim}>In diesem Zeitraum wurde noch kein Fahrzeug verkauft.</p>
             : gruppeTabelle(rang, 'Verkäufer (laut Kalkulation der Akte)', true)}
         </div>

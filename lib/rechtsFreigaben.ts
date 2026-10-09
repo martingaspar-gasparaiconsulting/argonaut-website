@@ -254,3 +254,38 @@ export function datumDe(iso: string | null | undefined): string {
   if (t === null) return '';
   return new Date(t).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
 }
+
+// ── Paket 288 (RF1b): Erinnerung an die Geschäftsleitung ──────────────────────
+
+export type ErinnerungZeile = FreigabeZeile & { owner_user_id?: string | null };
+export type Erinnerung = { betrieb: string; titel: string[]; fruehesteBis: string; restTage: number };
+
+/**
+ * Welche Betriebe sind zu erinnern? Je Betrieb alle aktiven Freigaben, die in
+ * höchstens 30 Tagen ablaufen (aktuelle Fassung, nicht widerrufen). Eine
+ * Glocke je Betrieb, mit allen Titeln und dem frühesten Ablauf.
+ */
+export function erinnerungen(zeilen: ErinnerungZeile[], jetzt: Date): Erinnerung[] {
+  const je = new Map<string, Erinnerung>();
+  for (const z of zeilen) {
+    const f = funktion(z.funktion);
+    const betrieb = String(z.owner_user_id ?? '');
+    if (!f || !/^[0-9a-f-]{36}$/i.test(betrieb)) continue;
+    const st = freigabeStand(f, z, jetzt);
+    if (!st.aktiv || !st.bald || !st.gueltigBis) continue;
+    const e = je.get(betrieb);
+    if (!e) { je.set(betrieb, { betrieb, titel: [f.titel], fruehesteBis: st.gueltigBis, restTage: st.restTage }); continue; }
+    if (!e.titel.includes(f.titel)) e.titel.push(f.titel);
+    if (st.gueltigBis < e.fruehesteBis) { e.fruehesteBis = st.gueltigBis; e.restTage = st.restTage; }
+  }
+  return [...je.values()].sort((a, b) => a.betrieb.localeCompare(b.betrieb));
+}
+
+/** Text der Glocke. */
+export function erinnerungText(e: Erinnerung): { titel: string; nachricht: string } {
+  const eine = e.titel.length === 1;
+  return {
+    titel: eine ? 'Rechtliche Freigabe läuft bald ab' : `${e.titel.length} rechtliche Freigaben laufen bald ab`,
+    nachricht: `${e.titel.join(', ')} — ${eine ? 'gültig' : 'die erste gilt'} noch bis ${datumDe(e.fruehesteBis)}. Danach ist die Funktion gesperrt, bis Sie die Voraussetzungen neu bestätigen.`,
+  };
+}
