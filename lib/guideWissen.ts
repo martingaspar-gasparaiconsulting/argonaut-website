@@ -213,6 +213,21 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Personalakte-Ampel', href: '/dashboard/personal' }],
   },
 
+  '/dashboard/personal/mobilitaet': {
+    zweck: 'Mobilitäts-Leistungen je Mitarbeiter an einem Ort: Jobticket bzw. Deutschlandticket-Zuschuss, Dienstrad (Rate des Betriebs, Eigenanteil per Gehaltsumwandlung), Ladestrom-Vereinbarung, Fahrtkosten-Zuschuss — mit Betrag, Laufzeit, Nachweis und Hinweis für die Lohnabrechnung. Fristen werden gelb und rot, Kosten je Monat stehen in einer Übersicht, die Liste für das Steuerbüro gibt es als CSV. ARGONAUT rechnet keine Steuern aus: Steuerfrei, pauschal oder steuerpflichtig lässt sich nur mit dem Datum eintragen, an dem der Steuerberater das bestätigt hat.',
+    wer: 'beide',
+    werText: 'Der Chef und Mitarbeiter mit Recht „Personal“: Leserecht sieht alles, Schreibrecht legt an und ändert. Löschen nur der Chef — besser ein Enddatum setzen, dann bleibt der Nachweis erhalten.',
+    schritte: [
+      '„＋ Leistung eintragen“: Mitarbeiter wählen, Art, Betrag des Betriebs in Euro, ggf. Eigenanteil, monatlich oder einmalig, Beginn und Ende',
+      'Nachweis eintragen (z. B. „Ticket-Abo liegt in der Personalakte“) und „Nachweis gültig bis“ — fehlt er, steht in der Liste „kein Nachweis eingetragen“',
+      'Hinweis für die Lohnabrechnung: zuerst „Mit Steuerberater klären“. Hat der Steuerberater die Einordnung bestätigt, „steuerfrei“, „pauschal versteuert“ oder „steuerpflichtig“ wählen und das Datum der Bestätigung eintragen',
+      'Unter „⏰ Fristen“ stehen Laufzeiten und Nachweise, die in 30 Tagen enden oder abgelaufen sind — „🔔 Erinnerung anlegen“ legt sie unter Erinnerungen ab',
+      '„🧾 Liste für die Lohnabrechnung“: Monat wählen, „⬇ CSV für das Steuerbüro“ — eine Zeile je Mitarbeiter und Leistung',
+    ],
+    probe: { anlegen: 'Für einen Test-Mitarbeiter ein Jobticket mit 29 € monatlich ab dem aktuellen Monat eintragen.', loeschen: 'Als Chef „löschen“, „Ja, löschen“.' },
+    landetIn: [{ text: 'Erinnerungen', href: '/dashboard/erinnerungen' }, { text: 'Personal', href: '/dashboard/personal' }],
+  },
+
   // --- Kommunikation & Wissen ---------------------------------------------
   '/dashboard/academy': {
     zweck: 'Schulungen und Erklärvideos mit Player, Fortschritt und Medaillen. Der Chef kann eigene Kurse und Videos ergänzen und sieht, wer was abgeschlossen hat.',

@@ -315,7 +315,7 @@ export default function PersonalPage() {
         <div>
           <div style={styles.eyebrow}>ARGONAUT OS · HR</div>
           <h1 style={styles.h1}>Personal</h1><PersonalAuge />
-          <p style={styles.sub}>Mitarbeitende und Bewerbungen an einem Ort. <a href="/dashboard/personal/dokumente" style={{ color: '#00e5ff' }}>📄 Personal-Dokumente →</a></p>
+          <p style={styles.sub}>Mitarbeitende und Bewerbungen an einem Ort. <a href="/dashboard/personal/dokumente" style={{ color: '#00e5ff' }}>📄 Personal-Dokumente →</a> <a href="/dashboard/personal/mobilitaet" style={{ color: '#00e5ff' }}>🚆 Jobticket &amp; Mobilität →</a></p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
           <select

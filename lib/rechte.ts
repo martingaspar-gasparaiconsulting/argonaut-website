@@ -341,6 +341,8 @@ export const NAV_LINKS: NavLink[] = [
   // Paket PF (24.09.26): Personal-Dokumente — Unterpfad von /dashboard/personal,
   // deshalb ohne eigenen Modul-Schluessel; sensibel wie Personal selbst.
   { label: '📄 Personal-Dokumente', href: '/dashboard/personal/dokumente', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  // Paket 302 (10.10.26): J1 Jobticket, Dienstrad, Mobilitaet — Unterpfad von /dashboard/personal, erbt dessen Modul.
+  { label: '🚆 Jobticket & Mobilität', href: '/dashboard/personal/mobilitaet', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen', kern: true },
   { label: '📥 E-Rechnung einlesen', href: '/dashboard/erechnung-import', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📥 Beleg-Inbox (OCR)', href: '/dashboard/eingangsbelege', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen', kern: true },
