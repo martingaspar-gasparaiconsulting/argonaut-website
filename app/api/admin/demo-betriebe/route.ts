@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { DEMO_BETRIEBE, demoEmail, demoPasswort, type DemoBetrieb } from '../../../../lib/demoBetriebe';
 import { kategorieModule } from '../../../../lib/branchenkatalog';
-import { aktiveSeeder, zugangSeeder, ZUGANG_TABELLEN } from '../../../../lib/uebungswelt';
+import { aktiveSeeder, zugangSeeder, ZUGANG_TABELLEN, LOESCH_ORDER } from '../../../../lib/uebungswelt';
+import { FACHDATEN, FACH_LEITTABELLE } from '../../../../lib/demoFachdatenKfz';
+import { neuerKontext, kontextErgaenzen, zeilenSichern, loeschPlan } from '../../../../lib/musterbetriebXxl';
 import { DEMO_TOKEN } from '../../../../lib/beispielKern';
 import { branchenSchritte } from '../../../../lib/onboardingBranchen';
 import { betreiberGuard } from '../../../../lib/betreiberGuard';
@@ -22,6 +24,9 @@ import { betreiberGuard } from '../../../../lib/betreiberGuard';
 //   3. Branchen-Module scharfschalten (tenant_module)
 //   4. Übungswelt einspielen (dieselben Seeder wie der Kundenknopf)
 //   5. Onboarding-Häkchen bis zum Zielprozentsatz setzen
+//   6. Paket 297: Fachdaten je Branche (lib/demoFachdatenKfz — zuerst das
+//      Autohaus: Bestand, Ankauf, Verkauf, Werkstatt, Vermietung …), einmalig;
+//      ein zweiter Lauf ergänzt sie nur, wenn sie noch fehlen
 //
 // EIGENSCHAFTEN, die für einen Live-Termin wichtig sind:
 //   · Wiederholbar. Ein zweiter Aufruf legt nichts doppelt an, sondern
@@ -60,6 +65,7 @@ type Ergebnis = {
   neu: boolean;
   module: number;
   datensaetze: number;
+  fachdaten: number;
   haken: number;
   prozent: number;
   hinweise: string[];
@@ -142,8 +148,12 @@ async function moduleSetzen(admin: Admin, userId: string, kategorie: string): Pr
 }
 
 /** Übungswelt einspielen — dieselben Seeder wie beim Kundenknopf. */
+function fachLoeschOrder(slug: string): string[] {
+  return FACHDATEN[slug]?.loeschOrder ?? [];
+}
+
 async function weltLaden(
-  admin: Admin, userId: string, kategorie: string, heute: string, zuruecksetzen: boolean,
+  admin: Admin, userId: string, kategorie: string, heute: string, zuruecksetzen: boolean, slug: string,
 ): Promise<{ anzahl: number; hinweise: string[] }> {
   const hinweise: string[] = [];
 
@@ -183,14 +193,17 @@ async function weltLaden(
     }
     const { data: reg } = await admin
       .from('beispiel_datensatz').select('tabelle, datensatz_id').eq('owner_user_id', userId);
-    const proTabelle = new Map<string, string[]>();
-    for (const r of ((reg as Array<{ tabelle: string; datensatz_id: string }> | null) || [])) {
-      const arr = proTabelle.get(r.tabelle) || [];
-      arr.push(r.datensatz_id);
-      proTabelle.set(r.tabelle, arr);
+    // Paket 297: Kinder vor Eltern (Fachdaten zuerst, Kontakte zuletzt) — vorher
+    // in Anlege-Reihenfolge, das scheiterte an Fremdschlüsseln (z. B. Mietwagen
+    // mit Reservierung). Jeder Löschbefehl trägt zusätzlich den Besitzer.
+    for (const schritt of loeschPlan((reg as Array<{ tabelle: string; datensatz_id: string }> | null) || [], [...fachLoeschOrder(slug), ...LOESCH_ORDER])) {
+      for (let i = 0; i < schritt.ids.length; i += 200) {
+        const { error } = await admin.from(schritt.tabelle).delete().in('id', schritt.ids.slice(i, i + 200)).eq('owner_user_id', userId);
+        if (error) hinweise.push(`Aufräumen ${schritt.tabelle}: ${error.message}`);
+      }
     }
-    for (const [tab, ids] of proTabelle) {
-      const { error } = await admin.from(tab).delete().in('id', ids);
+    for (const tab of FACHDATEN[slug]?.besitzerTabellen ?? []) {
+      const { error } = await admin.from(tab).delete().eq('owner_user_id', userId);
       if (error) hinweise.push(`Aufräumen ${tab}: ${error.message}`);
     }
     await admin.from('beispiel_datensatz').delete().eq('owner_user_id', userId);
@@ -219,6 +232,51 @@ async function weltLaden(
     await admin.from('beispiel_datensatz').insert(
       ids.map((id) => ({ owner_user_id: userId, tabelle: s.tabelle, datensatz_id: id })),
     );
+    anzahl += ids.length;
+  }
+  return { anzahl, hinweise };
+}
+
+/**
+ * Paket 297: Fachdaten des Vorführ-Betriebs (z. B. Autohaus: Bestand, Ankauf,
+ * Verkauf, Werkstatt, Vermietung). Einmalig — stehen schon Zeilen der Leit-
+ * Tabelle im Register, bleibt alles, wie es ist. Alles wandert ins Register
+ * (außer Tabellen ohne `id`), damit „Zurücksetzen" es sauber entfernt.
+ */
+async function fachdatenLaden(
+  admin: Admin, userId: string, slug: string, heute: string,
+): Promise<{ anzahl: number; hinweise: string[] }> {
+  const f = FACHDATEN[slug];
+  if (!f) return { anzahl: 0, hinweise: [] };
+  const hinweise: string[] = [];
+  const { count } = await admin.from('beispiel_datensatz').select('*', { count: 'exact', head: true })
+    .eq('owner_user_id', userId).eq('tabelle', FACH_LEITTABELLE[slug]);
+  if ((count || 0) > 0) return { anzahl: 0, hinweise: [] }; // schon geladen — „Zurücksetzen“ lädt sie frisch
+
+  const ctx = neuerKontext(userId, heute);
+  let anzahl = 0;
+  for (const s of f.seeder) {
+    let zeilen;
+    try { zeilen = zeilenSichern(s.baue(ctx), userId); } catch (e) {
+      hinweise.push(`${s.key}: ${e instanceof Error ? e.message : 'Bau fehlgeschlagen'}`);
+      continue;
+    }
+    if (!zeilen.length) continue;
+    if (s.ohneId) {
+      const { error } = await admin.from(s.tabelle).insert(zeilen);
+      if (error) hinweise.push(`${s.key}: ${error.message}`);
+      else anzahl += zeilen.length;
+      continue;
+    }
+    const { data, error } = await admin.from(s.tabelle).insert(zeilen).select('id');
+    if (error || !data) { hinweise.push(`${s.key}: ${error?.message || 'keine Daten'}`); continue; }
+    const ids = (data as Array<{ id: string }>).map((r) => r.id).filter(Boolean);
+    if (!ids.length) continue;
+    const { error: regErr } = await admin.from('beispiel_datensatz').insert(
+      ids.map((datensatz_id) => ({ owner_user_id: userId, tabelle: s.tabelle, datensatz_id })),
+    );
+    if (regErr) hinweise.push(`Register ${s.key}: ${regErr.message}`);
+    kontextErgaenzen(ctx, s.tabelle, ids, zeilen);
     anzahl += ids.length;
   }
   return { anzahl, hinweise };
@@ -270,7 +328,7 @@ async function lauf(req: Request) {
     const passwort = demoPasswort(b.slug);
     const e: Ergebnis = {
       slug: b.slug, firma: `${b.firma} ${b.rechtsform}`.trim(), email, passwort,
-      userId: null, neu: false, module: 0, datensaetze: 0, haken: 0, prozent: 0, hinweise: [],
+      userId: null, neu: false, module: 0, datensaetze: 0, fachdaten: 0, haken: 0, prozent: 0, hinweise: [],
     };
 
     try {
@@ -289,9 +347,13 @@ async function lauf(req: Request) {
       e.module = m.anzahl;
       if (m.hinweis) e.hinweise.push(m.hinweis);
 
-      const w = await weltLaden(admin, k.id, b.kategorie, heute, zuruecksetzen);
+      const w = await weltLaden(admin, k.id, b.kategorie, heute, zuruecksetzen, b.slug);
       e.datensaetze = w.anzahl;
       e.hinweise.push(...w.hinweise);
+
+      const fd = await fachdatenLaden(admin, k.id, b.slug, heute);
+      e.fachdaten = fd.anzahl;
+      e.hinweise.push(...fd.hinweise);
 
       const h = await haekchenSetzen(admin, k.id, b.kategorie, b.ziel, heute);
       e.haken = h.gesetzt;

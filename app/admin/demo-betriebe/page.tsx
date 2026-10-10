@@ -24,7 +24,7 @@ const C = {
 
 type Ergebnis = {
   slug: string; firma: string; email: string; passwort: string;
-  userId: string | null; neu: boolean; module: number; datensaetze: number;
+  userId: string | null; neu: boolean; module: number; datensaetze: number; fachdaten?: number;
   haken: number; prozent: number; hinweise: string[];
 };
 
@@ -34,7 +34,7 @@ export default function DemoBetriebePage() {
   const [fehler, setFehler] = useState('');
   const [ergebnisse, setErgebnisse] = useState<Ergebnis[] | null>(null);
 
-  async function anlegen() {
+  async function anlegen(nur?: string[]) {
     if (laeuft) return;
     setLaeuft(true);
     setFehler('');
@@ -42,7 +42,7 @@ export default function DemoBetriebePage() {
       const r = await fetch('/api/admin/demo-betriebe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zuruecksetzen }),
+        body: JSON.stringify(nur ? { zuruecksetzen, nur } : { zuruecksetzen }),
       });
       const j = await r.json();
       if (!j?.ok) throw new Error(j?.error || 'Anlegen fehlgeschlagen');
@@ -89,9 +89,20 @@ export default function DemoBetriebePage() {
           </span>
         </label>
 
-        <button onClick={anlegen} disabled={laeuft} style={{ ...s.knopf, opacity: laeuft ? 0.6 : 1 }}>
-          {laeuft ? 'Wird angelegt … das dauert ein bis zwei Minuten' : `${DEMO_BETRIEBE.length} Betriebe anlegen`}
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button onClick={() => void anlegen()} disabled={laeuft} style={{ ...s.knopf, opacity: laeuft ? 0.6 : 1 }}>
+            {laeuft ? 'Wird angelegt … das dauert ein bis zwei Minuten' : `${DEMO_BETRIEBE.length} Betriebe anlegen`}
+          </button>
+          {/* Paket 297: nur das Vorführ-Autohaus — mit vollem Kfz-Fachpaket (Bestand, Ankauf, Verkauf, Werkstatt, Vermietung) */}
+          <button onClick={() => void anlegen(['autohaus'])} disabled={laeuft} style={{ ...s.knopf, background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, opacity: laeuft ? 0.6 : 1 }}>
+            🚗 Nur Autohaus (mit Kfz-Fachdaten)
+          </button>
+        </div>
+        <p style={s.sub}>
+          Das Autohaus bekommt zusätzlich ein volles Kfz-Fachpaket: 21 Fahrzeuge vom Zulauf bis verkauft (auch Vorjahr für den Chef-Blick),
+          Ankauf, Verkaufsvorgänge, Anfragen, Probefahrten, Brief-Tresor, Zulassung, Werkstatt und Ersatzwagen. Rechnungen aus dem
+          Fahrzeugverkauf entstehen erst in der Vorführung per Knopf.
+        </p>
 
         {fehler && <div style={s.fehler}>{fehler}</div>}
 
@@ -135,7 +146,7 @@ export default function DemoBetriebePage() {
                   {!e ? <span style={{ color: C.dim }}>—</span>
                     : e.hinweise.length
                       ? <span style={{ color: C.gold }}>{e.hinweise.join(' · ')}</span>
-                      : <span style={{ color: C.green }}>{e.datensaetze} Datensätze · {e.module} Module · {e.prozent} %</span>}
+                      : <span style={{ color: C.green }}>{e.datensaetze} Datensätze{e.fachdaten ? ` · ${e.fachdaten} Fachdaten neu` : ''} · {e.module} Module · {e.prozent} %</span>}
                 </td>
               </tr>
             );
