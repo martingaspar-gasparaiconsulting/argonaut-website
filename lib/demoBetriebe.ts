@@ -1,8 +1,8 @@
 // ============================================================================
-// ARGONAUT OS · lib/demoBetriebe.ts — die 21 Vorführ-Betriebe
+// ARGONAUT OS · lib/demoBetriebe.ts — die 22 Vorführ-Betriebe
 //
 // Je Website-Kategorie ein vollständig eingerichteter Demo-Betrieb, plus je
-// einen zweiten für Handwerk & Bau und für Lebensmittel — macht 21. Gedacht für
+// einen zweiten für Handwerk & Bau und für Lebensmittel — macht 21, dazu (Paket 298) ein großes Premium-Autohaus — 22. Gedacht für
 // die Präsentation am großen Touchscreen: Ein Besucher tippt sich in SEINE
 // Branche ein, schaut sich um, minimiert das Fenster — der Nächste ist dran.
 // Deshalb hat jeder Betrieb eigene Zugangsdaten, und die sind bewusst kurz und
@@ -221,6 +221,19 @@ export const DEMO_BETRIEBE: DemoBetrieb[] = [
     strasse: 'Poststraße 11', plz: '71032', ort: 'Böblingen', telefon: '07031 220980',
     website: 'www.baeckerei-sonnenschein.de', ustId: 'DE824773158', steuernummer: '56050/44219',
     iban: 'DE61600501010004713740', bank: BANK, bic: BIC, ziel: 100, webSlug: 'baeckereien',
+  },
+
+  // --- Paket 298: großer Kfz-Betrieb -----------------------------------------
+  // Neben dem Autohaus Renz (klein, frisch gestartet) ein Premium-Händler mit
+  // 50 Mitarbeitern, der ARGONAUT seit über einem Jahr nutzt — so sieht ein
+  // Interessent beide Enden: den Start und den vollen Betrieb. Fachdaten in
+  // lib/demoFachdatenKfzPremium.
+  {
+    slug: 'premium', kategorie: 'Fahrzeuge & Mobilität', branche: 'Premium-Autohaus mit Werkstatt, Aufbereitung und Media-Abteilung',
+    firma: 'Valtier Automobile', rechtsform: 'GmbH', inhaber: 'Dr. Katharina Valtier, Florian Mertens',
+    strasse: 'Böblinger Allee 12', plz: '71065', ort: 'Sindelfingen', telefon: '07031 790400',
+    website: 'www.valtier-automobile.de', ustId: 'DE825319400', steuernummer: '56051/60384',
+    iban: 'DE48600501010004713877', bank: BANK, bic: BIC, ziel: 100, webSlug: 'kfz-handel',
   },
 ];
 

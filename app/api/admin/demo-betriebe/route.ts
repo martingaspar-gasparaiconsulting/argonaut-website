@@ -12,7 +12,7 @@ import { betreiberGuard } from '../../../../lib/betreiberGuard';
 // ============================================================================
 // ARGONAUT OS · app/api/admin/demo-betriebe/route.ts
 //
-// Legt die 21 Vorführ-Betriebe für die Präsentation an — auf einen Klick.
+// Legt die 22 Vorführ-Betriebe für die Präsentation an — auf einen Klick.
 //
 // Warum als Route und nicht als Skript: Konten anlegen braucht den Service-Role-
 // Schlüssel, und der liegt ausschließlich in Vercel. Diese Route läuft dort,
@@ -26,7 +26,9 @@ import { betreiberGuard } from '../../../../lib/betreiberGuard';
 //   5. Onboarding-Häkchen bis zum Zielprozentsatz setzen
 //   6. Paket 297: Fachdaten je Branche (lib/demoFachdatenKfz — zuerst das
 //      Autohaus: Bestand, Ankauf, Verkauf, Werkstatt, Vermietung …), einmalig;
-//      ein zweiter Lauf ergänzt sie nur, wenn sie noch fehlen
+//      ein zweiter Lauf ergänzt sie nur, wenn sie noch fehlen. Paket 298: dazu
+//      das Premium-Autohaus (lib/demoFachdatenKfzPremium, mehrere tausend
+//      Zeilen) — deshalb wird in Blöcken zu je 500 Zeilen geschrieben
 //
 // EIGENSCHAFTEN, die für einen Live-Termin wichtig sind:
 //   · Wiederholbar. Ein zweiter Aufruf legt nichts doppelt an, sondern
@@ -262,25 +264,36 @@ async function fachdatenLaden(
       continue;
     }
     if (!zeilen.length) continue;
-    if (s.ohneId) {
-      const { error } = await admin.from(s.tabelle).insert(zeilen);
-      if (error) hinweise.push(`${s.key}: ${error.message}`);
-      else anzahl += zeilen.length;
-      continue;
+    // Paket 298: in Blöcken — die Reihenfolge bleibt erhalten, damit Verweise
+    // (Kontakt je Verkauf, Werkstattfahrzeug je Auftrag) über den Index passen.
+    // Bricht ein Block ab, endet diese Tabelle dort: Kinder hängen dann nur an
+    // den schon angelegten Zeilen, nie an falschen.
+    for (let i = 0; i < zeilen.length; i += BLOCK) {
+      const teil = zeilen.slice(i, i + BLOCK);
+      if (s.ohneId) {
+        const { error } = await admin.from(s.tabelle).insert(teil);
+        if (error) { hinweise.push(`${s.key}: ${error.message}`); break; }
+        anzahl += teil.length;
+        continue;
+      }
+      const { data, error } = await admin.from(s.tabelle).insert(teil).select('id');
+      if (error || !data) { hinweise.push(`${s.key}: ${error?.message || 'keine Daten'}`); break; }
+      const ids = (data as Array<{ id: string }>).map((r) => r.id).filter(Boolean);
+      if (!ids.length) break;
+      const { error: regErr } = await admin.from('beispiel_datensatz').insert(
+        ids.map((datensatz_id) => ({ owner_user_id: userId, tabelle: s.tabelle, datensatz_id })),
+      );
+      if (regErr) hinweise.push(`Register ${s.key}: ${regErr.message}`);
+      kontextErgaenzen(ctx, s.tabelle, ids, teil);
+      anzahl += ids.length;
+      if (ids.length < teil.length) break;
     }
-    const { data, error } = await admin.from(s.tabelle).insert(zeilen).select('id');
-    if (error || !data) { hinweise.push(`${s.key}: ${error?.message || 'keine Daten'}`); continue; }
-    const ids = (data as Array<{ id: string }>).map((r) => r.id).filter(Boolean);
-    if (!ids.length) continue;
-    const { error: regErr } = await admin.from('beispiel_datensatz').insert(
-      ids.map((datensatz_id) => ({ owner_user_id: userId, tabelle: s.tabelle, datensatz_id })),
-    );
-    if (regErr) hinweise.push(`Register ${s.key}: ${regErr.message}`);
-    kontextErgaenzen(ctx, s.tabelle, ids, zeilen);
-    anzahl += ids.length;
   }
   return { anzahl, hinweise };
 }
+
+/** Zeilen je Schreibbefehl (Fachdaten). */
+const BLOCK = 500;
 
 /**
  * Onboarding-Häkchen setzen, bis der Zielprozentsatz erreicht ist.

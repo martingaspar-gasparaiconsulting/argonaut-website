@@ -30,6 +30,7 @@
 import { tagPlus, berlinZeit, type XxlKontext } from './musterbetriebXxl';
 import { PRUEF_KEYS } from './kfzAnkauf';
 import type { SeedZeile } from './uebungswelt';
+import { PREMIUM_SEEDER, PREMIUM_LOESCH_ORDER, PREMIUM_BESITZER_TABELLEN } from './demoFachdatenKfzPremium';
 
 /** Markierung in Notizfeldern. */
 export const FACH_NOTIZ = 'Beispiel-Datensatz · Vorführ-Autohaus';
@@ -544,7 +545,9 @@ export const KFZ_FACH_BESITZER_TABELLEN: string[] = ['miet_einstellung'];
 /** Fachdaten je Vorführ-Betrieb (slug aus lib/demoBetriebe). */
 export const FACHDATEN: Record<string, { seeder: FachSeeder[]; loeschOrder: string[]; besitzerTabellen: string[] }> = {
   autohaus: { seeder: KFZ_FACH_SEEDER, loeschOrder: KFZ_FACH_LOESCH_ORDER, besitzerTabellen: KFZ_FACH_BESITZER_TABELLEN },
+  // Paket 298: Premium-Autohaus, ein Jahr im Betrieb (50 Mitarbeiter, Media-Abteilung)
+  premium: { seeder: PREMIUM_SEEDER, loeschOrder: PREMIUM_LOESCH_ORDER, besitzerTabellen: PREMIUM_BESITZER_TABELLEN },
 };
 
 /** Sind die Fachdaten schon geladen? (Register enthält eine Zeile aus der Leit-Tabelle) */
-export const FACH_LEITTABELLE: Record<string, string> = { autohaus: 'kfz_bestand' };
+export const FACH_LEITTABELLE: Record<string, string> = { autohaus: 'kfz_bestand', premium: 'kfz_bestand' };

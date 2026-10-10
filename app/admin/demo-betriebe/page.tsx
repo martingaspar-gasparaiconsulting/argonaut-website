@@ -3,7 +3,7 @@
 // ============================================================================
 // ARGONAUT OS · app/admin/demo-betriebe/page.tsx
 //
-// Der Knopf für die Präsentation: legt die 21 Vorführ-Betriebe an und zeigt
+// Der Knopf für die Präsentation: legt die 22 Vorführ-Betriebe an und zeigt
 // anschließend das Zugangsblatt — je Branche eine Zeile mit E-Mail und Passwort.
 //
 // Gedacht für den Testtag: einmal klicken, Bericht lesen, Blatt ausdrucken.
@@ -97,11 +97,22 @@ export default function DemoBetriebePage() {
           <button onClick={() => void anlegen(['autohaus'])} disabled={laeuft} style={{ ...s.knopf, background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, opacity: laeuft ? 0.6 : 1 }}>
             🚗 Nur Autohaus (mit Kfz-Fachdaten)
           </button>
+          {/* Paket 298: großes Premium-Autohaus, ein Jahr im Betrieb — 50 Mitarbeiter, ca. 120 Fahrzeuge, ca. 500 Verkäufe, Media-Abteilung */}
+          <button onClick={() => void anlegen(['premium'])} disabled={laeuft} style={{ ...s.knopf, background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, opacity: laeuft ? 0.6 : 1 }}>
+            🏁 Nur Premium-Autohaus (1 Jahr Betrieb, 50 Mitarbeiter)
+          </button>
         </div>
         <p style={s.sub}>
           Das Autohaus bekommt zusätzlich ein volles Kfz-Fachpaket: 21 Fahrzeuge vom Zulauf bis verkauft (auch Vorjahr für den Chef-Blick),
           Ankauf, Verkaufsvorgänge, Anfragen, Probefahrten, Brief-Tresor, Zulassung, Werkstatt und Ersatzwagen. Rechnungen aus dem
           Fahrzeugverkauf entstehen erst in der Vorführung per Knopf.
+        </p>
+        <p style={s.sub}>
+          Das Premium-Autohaus (Valtier Automobile) zeigt den vollen Betrieb nach einem Jahr: 50 Mitarbeiter in Abteilungen (Geschäftsführung,
+          Vertrieb, Media mit Videocuttern, Werkstatt, Aufbereitung, Teile, Zulassung, Buchhaltung, Empfang), rund 120 Premium-Fahrzeuge im
+          Bestand, rund 500 Verkäufe über 21 Monate (Chef-Blick mit Vorjahresvergleich und Verkäufer-Rangliste), Werkstatt mit Kundenfahrzeugen
+          aus dem eigenen Verkauf, Kampagnen, Inhalte-Bibliothek und Redaktionskalender der Media-Abteilung. Das Anlegen dauert etwa eine Minute.
+          Foto- und Videodateien sind nicht dabei — die lädt man vor dem Termin selbst am Fahrzeug hoch.
         </p>
 
         {fehler && <div style={s.fehler}>{fehler}</div>}
