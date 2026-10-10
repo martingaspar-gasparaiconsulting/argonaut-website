@@ -75,6 +75,14 @@ export type NavLink = {
    * „＋ Alle Bereiche" und ist im „Voll"-Modus wie gewohnt sofort da.
    */
   kern?: boolean
+  /**
+   * Paket 304 (10.10.2026): Eintrag OHNE eigenen Modul-Schluessel, den ein Mitarbeiter
+   * sieht und oeffnen darf, sobald er EINES dieser Module hat (z. B. Betriebs-Netzwerk:
+   * Projekte, Auftraege, Objektzeiten oder Kfz). Taucht NICHT im Modul-Katalog auf
+   * (kein `modul`), gibt keinen fremden Modul-Pfad frei. Die Rechte je Datensatz
+   * prueft weiter die Datenbank. Fuer den Chef ohne Wirkung.
+   */
+  einesVon?: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -292,7 +300,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
   // Paket 303 (10.10.26): N1 Betriebs-Netzwerk fuer alle Branchen — ohne eigenen Modul-Schluessel (Chef immer;
   // die Rechte je Auftrag prueft die Datenbank nach Projekte/Auftraege/Objektzeiten/Kfz).
-  { label: '🤝 Betriebs-Netzwerk', href: '/dashboard/netzwerk', ebene: 3, gruppe: 'betrieb' },
+  // Paket 304 (10.10.26): Mitarbeiter mit einem dieser Module sehen und erreichen es (vorher: nur Chef,
+  // der Pfad-Riegel schickte Mitarbeiter auch von Glocke-Links auf „Mein Bereich").
+  { label: '🤝 Betriebs-Netzwerk', href: '/dashboard/netzwerk', ebene: 3, gruppe: 'betrieb', einesVon: ['projekte', 'auftraege', 'objektzeiten', 'kfz'] },
   { label: '🔑 Verleih & Vermietung', href: '/dashboard/verleih', modul: 'verleih', ebene: 3, gruppe: 'betrieb' },
   // Paket 291 (09.10.26): V1 Fahrzeugvermietung — Unterpfad von /dashboard/verleih, erbt dessen Freigabe.
   { label: '🚗 Fahrzeugvermietung', href: '/dashboard/verleih/fahrzeuge', ebene: 3, gruppe: 'betrieb' },
@@ -500,6 +510,8 @@ export function mitarbeiterDarf(pfad: string, module: readonly string[]): boolea
     ...MITARBEITER_ERLAUBT,
     // ALLE Pfade je Modul — nicht nur den letzten. Siehe MODUL_PFADE.
     ...module.flatMap((k) => MODUL_PFADE[k] || []),
+    // Paket 304: Eintraege mit `einesVon` — offen, sobald eines der Module vergeben ist.
+    ...NAV_LINKS.filter((l) => !l.nurChef && !l.exakt && l.einesVon?.some((k) => module.includes(k))).map((l) => l.href),
   ]
   return erlaubtePfade.some((b) => pfadPasst(pfad, b))
 }
@@ -549,6 +561,7 @@ export function sichtbareNavLinks(
     // Mitarbeiter
     if (l.nurChef) return false
     if (l.immer || l.nurMitarbeiter) return true
+    if (!l.modul && l.einesVon) return l.einesVon.some((k) => rechte.has(k)) // Paket 304
     return modul ? rechte.has(modul) : false
   })
 }

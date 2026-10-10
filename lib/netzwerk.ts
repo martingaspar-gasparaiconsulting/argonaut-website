@@ -87,3 +87,36 @@ export function hubTexte(ort: 'kfz' | 'netzwerk'): { leerEingang: string; leerAu
     trennenFolge: 'der Partner sieht danach nichts mehr von Ihnen',
   };
 }
+
+// ---------------------------------------------------------------------------
+// Paket 304 · N1b — Knopf „An Partner geben" in Projekt, Auftrag und Objektzeiten
+// ---------------------------------------------------------------------------
+
+/** Laufende Partner-Aufträge (wie LAUFEND in lib/partnerNetzwerk): offen, angenommen, fertig. */
+export const LAUFEND_STATUS = ['offen', 'angenommen', 'fertig'] as const;
+
+/** Zählt laufende Partner-Aufträge je Bezug (nur Zeilen dieser Art, nur laufende). */
+export function laufendJeBezug(
+  zeilen: readonly { bezug_typ?: unknown; bezug_id?: unknown; status?: unknown }[] | null | undefined,
+  typ: Exclude<BezugTyp, 'kfz_bestand'>,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const z of zeilen ?? []) {
+    if (z.bezug_typ !== typ || !istUuid(z.bezug_id)) continue;
+    if (!(LAUFEND_STATUS as readonly unknown[]).includes(z.status)) continue;
+    out[z.bezug_id] = (out[z.bezug_id] ?? 0) + 1;
+  }
+  return out;
+}
+
+/** Beschriftung des Knopfs; ohne laufende Aufträge nur „An Partner geben". */
+export function knopfText(anzahl: unknown, kurz = false): string {
+  const n = typeof anzahl === 'number' && Number.isInteger(anzahl) ? anzahl : 0;
+  const basis = kurz ? '🤝 Partner' : '🤝 An Partner geben';
+  return n > 0 ? `${basis} · ${n} laufend` : basis;
+}
+
+/** Ziel des Knopfs (Auswahl entfällt, Bezug steht schon fest). */
+export function knopfLink(typ: Exclude<BezugTyp, 'kfz_bestand'>, id: string): string | null {
+  return BEZUG_ARTEN.some((a) => a.key === typ) && istUuid(id) ? akteLink(typ, id) : null;
+}

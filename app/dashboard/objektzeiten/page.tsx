@@ -14,6 +14,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import Leerzustand from '../_components/Leerzustand';
+import PartnerKnopf, { usePartnerZaehler } from '../netzwerk/PartnerKnopf';
 import { augeObjektzeiten } from '@/lib/auge';
 import {
   summiereJeObjekt, summiereGesamt, stundenText, eur,
@@ -95,6 +96,7 @@ export default function ObjektzeitenPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [objekte, setObjekte] = useState<ObjektRow[]>([]);
+  const partnerZahl = usePartnerZaehler('objekt'); // Paket 304: laufende Partner-Auftraege je Objekt
   const [zeiten, setZeiten] = useState<ZeitRow[]>([]);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -539,6 +541,7 @@ export default function ObjektzeitenPage() {
                         <td style={{ ...styles.td, textAlign: 'right' }}>{o.stundensatz_netto != null ? eur(o.stundensatz_netto) : '—'}</td>
                         <td style={styles.td}>{OBJ_STATUS.find((s) => s.wert === o.status)?.label || o.status}</td>
                         <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <PartnerKnopf typ="objekt" id={o.id} anzahl={partnerZahl?.[o.id] ?? 0} kurz stil={{ marginRight: 6 }} />
                           <button onClick={() => objBearbeiten(o)} style={styles.miniBtnGhost}>Bearbeiten</button>
                           <button onClick={() => objArchivieren(o)} style={styles.miniBtnGhost}>Archiv</button>
                         </td>

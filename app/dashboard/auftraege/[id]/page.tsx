@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
+import PartnerKnopf from "../../netzwerk/PartnerKnopf";
 import { useDarfAbrechnen } from "../../_components/useDarfAbrechnen";
 import { leseZahlOder, centRunden } from '@/lib/zahlen';
 
@@ -623,6 +624,11 @@ export default function AuftragDetail() {
 
         {/* Paket 168: Ablauf-Knöpfe (nur Geschäftsleitung, nur eingeschaltete) */}
         <AblaufKnoepfe modul="auftraege" vorgangId={id} />
+
+        {/* Paket 304: N1b — Auftrag an einen Partner-Betrieb geben (Subunternehmer) */}
+        <div style={{ display: "flex", justifyContent: "flex-end", margin: "10px 0" }}>
+          <PartnerKnopf typ="auftrag" id={id} />
+        </div>
 
         <div
           style={{

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import AblaufKnoepfe from '../../_components/AblaufKnoepfe';
+import PartnerKnopf from '../../netzwerk/PartnerKnopf';
 
 // ============================================================
 // ARGONAUT OS · MODUL PROJEKTE · P3 — Projekt-Detailseite
@@ -666,6 +667,11 @@ export default function ProjektDetailPage() {
 
       {/* Paket 168: Ablauf-Knöpfe (nur Geschäftsleitung, nur eingeschaltete) */}
       <AblaufKnoepfe modul="projekte" vorgangId={projekt.id} />
+
+      {/* Paket 304: N1b — Projekt an einen Partner-Betrieb geben (Subunternehmer) */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+        <PartnerKnopf typ="projekt" id={projekt.id} />
+      </div>
 
       {/* Projekt-Kopf */}
       <div style={{ ...card, borderLeft: `4px solid ${projekt.farbe || BRAND.cyan}`, marginTop: 16, marginBottom: 18 }}>

@@ -617,10 +617,11 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/netzwerk': {
     zweck: 'Mit anderen Betrieben zusammenarbeiten, ohne Mail-Pingpong: Subunternehmer, andere Gewerke am Bau, Freelancer, Zulieferer, Reinigungs- und Hausmeisterdienste. Sie verbinden sich per Einladungs-Code und geben einander Aufträge an einem Projekt, Auftrag oder Objekt (im Kfz-Handel auch am Fahrzeug). Der Partner sieht nur den Namen und seine Aufgabe — nie Kunde, Adresse, Preise oder andere Aufträge — und nur, solange der Auftrag läuft. Beide Seiten schreiben Einträge mit Fotos, die sich nicht ändern lassen. Die Rechnung des Partners übernehmen Sie per Knopf in den Belegeingang.',
     wer: 'beide',
-    werText: 'Verbinden und Trennen nur die Geschäftsleitung. Aufträge vergeben und bearbeiten: Chef und Mitarbeiter mit Schreibrecht im Modul des Bezugs (Projekte, Aufträge, Objektzeiten bzw. Kfz). Rechnungen übernehmen: Geschäftsleitung oder wer zusätzlich „Darf abrechnen“ hat.',
+    werText: 'Verbinden und Trennen nur die Geschäftsleitung. Aufträge vergeben und bearbeiten: Chef und Mitarbeiter mit Schreibrecht im Modul des Bezugs (Projekte, Aufträge, Objektzeiten bzw. Kfz). Rechnungen übernehmen: Geschäftsleitung oder wer zusätzlich „Darf abrechnen“ hat. Im Menü erscheint das Betriebs-Netzwerk für Mitarbeiter, sobald sie eines dieser Module haben.',
     schritte: [
       '„Verbindungen“: „Einladungs-Code erstellen“ und den Code dem Partner geben (14 Tage gültig, einmal verwendbar). Hat Ihnen ein Partner einen Code gegeben, tragen Sie ihn unter „Code eingeben“ ein',
       '„Meine Aufträge an Partner“ → „＋ Auftrag an Partner vergeben“: Projekt, Auftrag oder Objekt wählen, Partner wählen, Aufgabe und „fertig bis“ eintragen, „Auftrag an Partner senden“. Der Partner bekommt eine Glocke',
+      'Schneller Weg: In der Projekt- oder Auftrags-Akte und in Objektzeiten (je Objekt) führt „🤝 An Partner geben“ direkt dorthin — der Knopf zeigt auch, wie viele Partner-Aufträge dort gerade laufen',
       'Partner ohne ARGONAUT: als Partner „Partner ohne ARGONAUT (Gast-Link)“ wählen — der Link wird einmal angezeigt; Sie schicken ihn selbst per Mail oder WhatsApp',
       '„Aufträge von Partnern“: Aufträge, die Ihr Betrieb bekommen hat — annehmen oder ablehnen, Einträge mit Fotos schreiben, „fertig melden“, Rechnung als PDF oder Foto einreichen',
       'Meldet der Partner fertig, nehmen Sie ab oder schicken zur Nachbesserung zurück. Seine Rechnung prüfen Sie und übernehmen sie per Knopf in den Belegeingang — oder weisen sie mit Grund zurück',
