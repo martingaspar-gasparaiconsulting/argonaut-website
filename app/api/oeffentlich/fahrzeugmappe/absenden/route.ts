@@ -7,6 +7,7 @@ import { kennungGueltig, naechsteAnkaufNr, onlineEingabePruefen } from '@/lib/kf
 import {
   EINWILLIGUNG_FASSUNG, angabenBereinigen, notizZusatz, tokenGueltig, vollstaendigkeit, wunschText, zusammenfassung,
 } from '@/lib/fahrzeugMappe';
+import { NOTIZ_SCHEIN_GELESEN } from '@/lib/fahrzeugMappeAuslesen';
 import { betriebZuKennung, dateienDerMappe, firmaKurz, mappeDb, mappeLink, mappeZuToken } from '@/lib/fahrzeugMappeServer';
 
 // ============================================================================
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
 
     const wunsch = angaben.wunsch === 'inzahlungnahme' ? 'inzahlungnahme' : 'verkauf';
     const summe = zusammenfassung(dateien);
-    const notiz = [notizZusatz(wunsch, summe), d.notiz as string | null].filter(Boolean).join('\n');
+    const notiz = [notizZusatz(wunsch, summe), angaben.schein_gelesen === true ? NOTIZ_SCHEIN_GELESEN : null, d.notiz as string | null].filter(Boolean).join('\n');
 
     // Ankauf anlegen: Nummer A-0001 … wie im Dashboard; bei Kollision einmal neu versuchen.
     let ankaufId: string | null = null;

@@ -8,10 +8,13 @@
 // Datenbank entscheidet, wer sehen darf; Links 1 Stunde gültig).
 // Ohne Mappe (alter Formular-Eingang, Hof, Telefon) zeigt die Karte nichts.
 // Paket 306: darunter Fahrzeughistorie, Antwort an den Verkäufer, Verlauf (MappeAntwort.tsx).
+// Paket 307: Hinweis bei Inzahlungnahme; nach dem Ankauf „In die Fahrzeugakte übernehmen“ (MappeUebernahme.tsx).
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import MappeAntwort, { type AnkaufInfo, type Verlauf } from './MappeAntwort';
+import MappeUebernahme from './MappeUebernahme';
+import { INZAHLUNG_HINWEIS } from '@/lib/fahrzeugMappeBestand';
 import { FAECHER, GRUPPEN, bildUrteil, fachZu, istBild, istPdf, istVideo, mbText, vollstaendigkeit, wunschText } from '@/lib/fahrzeugMappe';
 
 const C = { navy: '#0A1628', navy2: '#0F2036', navy3: '#14294A', gold: '#C9A84C', text: '#E8EDF4', dim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', ok: '#4CAF7D', warn: '#E0A24C', bad: '#E06666' };
@@ -32,6 +35,8 @@ export default function MappeKarte({ ankaufId, firma = '' }: { ankaufId: string;
   const [gross, setGross] = useState<number | null>(null);
   const [verlauf, setVerlauf] = useState<Verlauf[]>([]);
   const [ankauf, setAnkauf] = useState<AnkaufInfo | null>(null);
+  const [bestandId, setBestandId] = useState<string | null>(null);
+  const [uebernommen, setUebernommen] = useState<string[]>([]);
 
   const laden = useCallback(async () => {
     try {
@@ -43,11 +48,19 @@ export default function MappeKarte({ ankaufId, firma = '' }: { ankaufId: string;
       setDateien((j.dateien as Datei[]) ?? []);
       setVerlauf((j.verlauf as Verlauf[]) ?? []);
       setAnkauf((j.ankauf as AnkaufInfo | null) ?? null);
+      setBestandId(typeof j.ankauf?.bestand_id === 'string' ? j.ankauf.bestand_id : null);
+      setUebernommen(Array.isArray(j.uebernommen) ? (j.uebernommen as string[]) : []);
       setStand('da');
     } catch { setStand('fehler'); }
   }, [ankaufId]);
 
   useEffect(() => { void laden(); }, [laden]);
+  // Paket 307: nach „Ankaufen“ neu laden (dann gibt es die Fahrzeugakte)
+  useEffect(() => {
+    const neu = () => { void laden(); };
+    window.addEventListener('kfz-mappe-neu', neu);
+    return () => window.removeEventListener('kfz-mappe-neu', neu);
+  }, [laden]);
 
   // Reihenfolge wie beim Verkäufer: Fach-Reihenfolge, darin nach Eingang
   const sortiert = useMemo(() => {
@@ -87,6 +100,8 @@ export default function MappeKarte({ ankaufId, firma = '' }: { ankaufId: string;
         </div>
       </div>
 
+      {mappe.wunsch === 'inzahlungnahme' && <div style={s.hinweis}>🔁 {INZAHLUNG_HINWEIS}</div>}
+
       {GRUPPEN.map((g) => {
         const liste = sortiert.filter((d) => fachZu(d.fach)?.gruppe === g.key);
         if (!liste.length) return null;
@@ -123,6 +138,8 @@ export default function MappeKarte({ ankaufId, firma = '' }: { ankaufId: string;
         <MappeAntwort ankaufId={ankaufId} ankauf={ankauf} verlauf={verlauf} nachreichenBis={mappe.nachreichen_bis ?? null} firma={firma}
           onNeu={() => { void laden(); window.dispatchEvent(new Event('kfz-ankauf-neu')); }} />
       )}
+
+      {bestandId && <MappeUebernahme key={uebernommen.join(',')} ankaufId={ankaufId} bestandId={bestandId} dateien={dateien} uebernommen={uebernommen} onFertig={() => void laden()} />}
 
       <div style={{ ...s.dim, marginTop: 12 }}>Alle Angaben, Fotos und Unterlagen stammen vom Verkäufer — bitte bei der Besichtigung prüfen. Ein Angebot ohne Besichtigung immer nur unter Vorbehalt.</div>
 
@@ -167,6 +184,7 @@ const s: Record<string, CSSProperties> = {
   img: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
   ecke: { position: 'absolute', right: 6, bottom: 6, background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 },
   unter: { padding: '7px 9px', display: 'grid', gap: 2 },
+  hinweis: { marginTop: 12, background: 'rgba(201,168,76,0.10)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 10, padding: '9px 12px', color: C.text, fontSize: 13, lineHeight: 1.5 },
   link: { background: 'none', border: 0, color: C.gold, cursor: 'pointer', padding: 0, fontWeight: 700 },
   btn: { background: 'transparent', border: `1px solid ${C.border}`, color: C.text, borderRadius: 8, padding: '8px 12px', fontWeight: 700, cursor: 'pointer', fontSize: 13.5 },
   overlay: { position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(5,10,20,0.82)', display: 'grid', placeItems: 'center', padding: 12 },

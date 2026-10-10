@@ -8,6 +8,7 @@ import { basisAdresse } from '@/lib/kfzBoerseLaden';
 import { entschluessele } from '@/lib/crypto';
 import { sendeMail, kundenMailLayout } from '@/lib/mail';
 import { escapeHtml } from '@/lib/newsletter';
+import { mappeIdAusPfad } from '@/lib/fahrzeugMappeBestand';
 
 // ============================================================================
 // ARGONAUT OS · /api/kfz/fahrzeugmappe — Paket 305 · FM1 (Händler-Seite)
@@ -56,13 +57,20 @@ export async function GET(req: Request) {
     const [{ data: v }, { data: an }] = await Promise.all([
       supabase.from('kfz_mappe_nachricht').select('id, von, art, text, betrag, gueltig_bis, termin, erstellt_am')
         .eq('mappe_id', mappe.id).order('erstellt_am', { ascending: true }).limit(200),
-      supabase.from('kfz_ankauf').select('fin, verkaeufer_email, historie_url, historie_anbieter, historie_am, historie_befund').eq('id', ankauf).maybeSingle(),
+      supabase.from('kfz_ankauf').select('fin, verkaeufer_email, historie_url, historie_anbieter, historie_am, historie_befund, bestand_id').eq('id', ankauf).maybeSingle(),
     ]);
-    const a = an as { fin: string | null; verkaeufer_email: string | null; historie_url: string | null; historie_anbieter: string | null; historie_am: string | null; historie_befund: unknown } | null;
+    const a = an as { fin: string | null; verkaeufer_email: string | null; historie_url: string | null; historie_anbieter: string | null; historie_am: string | null; historie_befund: unknown; bestand_id: string | null } | null;
+    // Paket 307: welche Mappen-Dateien liegen schon in den Medien des Bestandsfahrzeugs?
+    let uebernommen: string[] = [];
+    if (a?.bestand_id) {
+      const { data: med } = await supabase.from('kfz_bestand_medien').select('pfad').eq('bestand_id', a.bestand_id).limit(500);
+      uebernommen = (((med as unknown) as { pfad: string }[]) ?? []).map((x) => mappeIdAusPfad(x.pfad)).filter((x): x is string => !!x);
+    }
     return NextResponse.json({
       mappe,
       verlauf: v ?? [],
-      ankauf: a ? { fin: a.fin, hat_email: !!a.verkaeufer_email, historie_url: a.historie_url, historie_anbieter: a.historie_anbieter, historie_am: a.historie_am, historie_befund: a.historie_befund ?? {} } : null,
+      ankauf: a ? { fin: a.fin, hat_email: !!a.verkaeufer_email, historie_url: a.historie_url, historie_anbieter: a.historie_anbieter, historie_am: a.historie_am, historie_befund: a.historie_befund ?? {}, bestand_id: a.bestand_id } : null,
+      uebernommen,
       dateien: dateien.map((x) => ({
         id: x.id, fach: x.fach, art: x.art, mime: x.mime, bytes: x.bytes, dateiname: x.dateiname, beschreibung: x.beschreibung,
         pruefung: pruefungSauber(x.pruefung), erstellt_am: x.erstellt_am, url: links[x.pfad] ?? null,

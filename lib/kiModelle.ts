@@ -41,6 +41,7 @@ export const KI_AUFGABEN = {
   'sachbearbeiter.postfach': 'schnell',
   'beleg.lesen': 'schnell',
   'visitenkarte.lesen': 'schnell',
+  'kfz.schein.lesen': 'schnell',   // Paket 307: Fahrzeugschein in der Fahrzeugmappe (nur Vorschlag, Verkäufer bestätigt)
   'gespraech.protokoll': 'schnell',
   'crm.sprachnotiz': 'schnell',
   'crm.wochenfokus': 'schnell',

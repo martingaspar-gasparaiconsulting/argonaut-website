@@ -191,7 +191,7 @@ export function zusammenfassung(dateien: (DateiKurz & { art?: string })[]): { fo
 export type Wunsch = 'verkauf' | 'inzahlungnahme';
 export const ANGABEN_FELDER: Record<string, number> = {
   name: 120, email: 160, telefon: 40, plz: 10, ort: 80, marke: 60, modell: 80, variante: 80,
-  erstzulassung: 10, km: 12, kraftstoff: 40, fin: 30, unfall: 20, unfall_text: 300, preis: 20, beschreibung: 1500,
+  erstzulassung: 10, km: 12, leistung: 6, kraftstoff: 40, fin: 30, unfall: 20, unfall_text: 300, preis: 20, beschreibung: 1500,
 };
 
 /** Entwurf säubern: nur bekannte Felder, Text gekürzt, Steuerzeichen raus. Nie wird hier etwas abgelehnt. */
@@ -205,6 +205,7 @@ export function angabenBereinigen(roh: unknown): Record<string, string | boolean
     if (t.trim()) aus[k] = t;
   }
   if (b.gewerblich === true) aus.gewerblich = true;
+  if (b.schein_gelesen === true) aus.schein_gelesen = true;   // Paket 307: Daten teils aus dem Fahrzeugschein erkannt
   if (b.wunsch === 'verkauf' || b.wunsch === 'inzahlungnahme') aus.wunsch = b.wunsch;
   return aus;
 }
@@ -318,5 +319,7 @@ export function mappeDatenschutz(f: { name?: string; strasse?: string; plz?: str
     + 'Ihre Angaben, Fotos, Videos und Unterlagen werden auf Grundlage Ihrer Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) und zur Vorbereitung eines Kaufvertrags (Art. 6 Abs. 1 lit. b DSGVO) '
     + 'nur zur Bewertung Ihres Fahrzeugs und zur Kontaktaufnahme verwendet und gelöscht, sobald sie dafür nicht mehr gebraucht werden und keine gesetzliche Aufbewahrungspflicht besteht. '
     + 'Sie können Ihre Einwilligung jederzeit widerrufen und haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch und Beschwerde bei einer Datenschutz-Aufsichtsbehörde. '
-    + 'Die Dateien liegen in einem geschützten Speicher in der EU. Technisch betrieben mit ARGONAUT OS (Gaspar AI Consulting, Böblingen) als Auftragsverarbeiter.';
+    + 'Die Dateien liegen in einem geschützten Speicher in der EU. Technisch betrieben mit ARGONAUT OS (Gaspar AI Consulting, Böblingen) als Auftragsverarbeiter. '
+    + 'Nur wenn Sie „Automatisch ausfüllen" wählen, wird das Foto Ihres Fahrzeugscheins einmalig an Anthropic PBC (USA, Standardvertragsklauseln) übermittelt, um die Fahrzeugdaten zu lesen; '
+    + 'Namen und Anschrift werden dabei nicht ausgelesen, das Ergebnis ist nur ein Vorschlag, den Sie selbst prüfen und übernehmen.';
 }

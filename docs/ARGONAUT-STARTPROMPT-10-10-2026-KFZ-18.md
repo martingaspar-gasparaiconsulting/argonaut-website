@@ -43,7 +43,18 @@ Wächter: kein eigener Zahlen-Leser, kein Math.round(x * 100) / 100 (centRunden/
    kfz_bestand_medien kopieren (Bucket fahrzeug-medien, Schablone aus Fach: vorne_links usw.), Fahrzeugschein/Unterlagen nicht
    in die Börse. Bei Wunsch „inzahlungnahme" Hinweis/Verknüpfung zum Verkauf (kfz_verkauf Inzahlungnahme, K6).
 4. Testtag-Punkte und Kontrollgang ergänzen (/areas/argonaut-kontrollgang.md, Testtag-Datei).
-Danach: Kfz-Thema fertig -> Martin fragt nach neuem Chat. Weitere Bauliste: SP1, D1, C1, BV2, PS-1, BV2b, BV3.
+Danach P308 FM4 (siehe unten), dann Kfz-Thema fertig -> Martin fragt nach neuem Chat.
+
+## Danach: P308 FM4 „Bewertungs-Empfehlung" ([Martin 10.10. 18:46] so gewünscht)
+- Erste Schätzung sofort aus BELEGTEN Quellen: kfz_marktvergleich (P276, lib/kfzMarkt.ts marktLage), DAT/Schwacke-Werte
+  (P283, bewertung_ek/vk am Bestand — für den Ankauf gleiche Felder am kfz_ankauf ergänzen), später mobile.de (K11b).
+- Zu-/Abschläge legt das Autohaus selbst fest (wie „Richtwerte für Schäden"): Scheckheft, Vorbesitzer, Zustand, Nichtraucher,
+  Schäden aus der Mappe, carVertical-Befund (P306 historie_befund) — eigene Prozent/Beträge je Merkmal.
+- Ergebnis: Marktspanne, realistischer VK, max. EK über die vorhandene Bewertungsrechnung (lib/kfzAnkauf.bewertung:
+  Aufbereitung, Standtage, Marge) — immer „Empfehlung", mit Rechenweg; zu wenig Vergleichsdaten ehrlich anzeigen.
+- REGEL BLEIBT [Martin bestätigt 10.10.]: Die KI schätzt NIE einen Preis. KI darf nur die Begründung aus den Daten formulieren.
+- Hinweis: docs/bauliste/rows.py (Zeile FM4), docs/bauliste/bauliste.html und diese Datei sind auf dem Gerät nach P306 geändert (nicht committet) —
+  mit P307 committen; Gerät weicht dort bewusst von HEAD ab. Weitere Bauliste: SP1, D1, C1, BV2, PS-1, BV2b, BV3.
 
 ## Arbeitsumgebung (kein device_bash)
 - Klon: `git clone https://github.com/martingaspar-gasparaiconsulting/argonaut-website.git klon`, `npm ci`.

@@ -15,6 +15,8 @@
 //   Server), mit Fortschrittsbalken. Angaben werden zwischengespeichert.
 // - Am Computer: QR-Code „Am Handy weitermachen" (Link mit Schlüssel im #).
 // Kein Supabase-Client im Browser: alles über /api/oeffentlich/fahrzeugmappe.
+// Paket 307 (FM3): „Automatisch ausfüllen" liest den Fahrzeugschein (KI) — nur
+// Vorschläge zum Anhaken, übernommen wird erst auf Knopfdruck des Verkäufers.
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -25,6 +27,7 @@ import {
 import { Symbol } from './Symbole';
 import { VORBEHALT_TEXT, euroText, nachrichtInhalt, standFuerKunde, tagText, terminText, type Nachricht } from '@/lib/fahrzeugMappeAntwort';
 import { VideoAufnahme, aufnahmeMoeglich } from './VideoAufnahme';
+import { ERKANNT_HINWEIS, LESEN_MIME, uebernehmen, vorschlaege, type Erkannt } from '@/lib/fahrzeugMappeAuslesen';
 
 type Datei = {
   id: string; fach: string; mime: string; bytes: number | null; url: string | null; beschreibung: string | null;
@@ -129,6 +132,11 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
   const [nachreichenBis, setNachreichenBis] = useState<string | null>(null);
   const [nachricht, setNachricht] = useState('');
   const [standOk, setStandOk] = useState<string | null>(null);
+  // Paket 307: Fahrzeugschein auslesen
+  const [erkannt, setErkannt] = useState<Erkannt | null>(null);
+  const [erkanntAuswahl, setErkanntAuswahl] = useState<string[]>([]);
+  const [liest, setLiest] = useState(false);
+  const [leseFehler, setLeseFehler] = useState<string | null>(null);
   const eingabe = useRef<HTMLInputElement | null>(null);
   const ziel = useRef<{ fach: Fach; kamera: boolean; mehr: boolean } | null>(null);
   const speicherUhr = useRef<number | null>(null);
@@ -179,7 +187,10 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
 
   // --- Zwischenspeichern (1,2 s nach der letzten Eingabe) -------------------------------
   function setze(key: string, wert: string | boolean) {
-    const neu = { ...angaben, [key]: wert };
+    setzeAlle({ ...angaben, [key]: wert });
+  }
+
+  function setzeAlle(neu: Angaben) {
     setAngaben(neu);
     if (!token) return;
     if (speicherUhr.current) window.clearTimeout(speicherUhr.current);
@@ -277,6 +288,25 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
     const fach = fachZu(d.fach);
     if (!fach || !d.roh) { void loeschen(d); return; }
     await hochladen(fach, d.roh, d.beschreibung, d.id);
+  }
+
+  // --- Paket 307: Fahrzeugschein automatisch auslesen ----------------------------------------
+  async function scheinLesen(id: string) {
+    if (!token) return;
+    setLiest(true); setLeseFehler(null); setErkannt(null);
+    const r = await api('/api/oeffentlich/fahrzeugmappe/schein', { k, token, id });
+    setLiest(false);
+    if (!r.ok) { setLeseFehler(String(r.j.error ?? 'Automatisches Lesen hat nicht geklappt. Bitte tragen Sie die Angaben selbst ein.')); return; }
+    const e = (r.j.erkannt as Erkannt) ?? {};
+    if (!Object.keys(e).length) { setLeseFehler('Auf dem Foto war nichts sicher lesbar. Bitte tragen Sie die Angaben selbst ein — oder fotografieren Sie den Schein noch einmal gerade und ohne Spiegelung.'); return; }
+    setErkannt(e);
+    setErkanntAuswahl(vorschlaege(e, angaben).filter((v) => v.vorgewaehlt).map((v) => v.key));
+  }
+
+  function erkanntUebernehmen() {
+    if (!erkannt) return;
+    setzeAlle(uebernehmen(angaben, erkannt, erkanntAuswahl));
+    setErkannt(null);
   }
 
   // --- Absenden -----------------------------------------------------------------------------
@@ -461,12 +491,52 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
               <div className="fm-h2">Fahrzeugschein und Fahrzeug</div>
               <p className="fm-klein">Fotografieren Sie die Vorderseite des Fahrzeugscheins. Die Angaben darunter übernehmen Sie bitte daraus — die FIN finden Sie im Feld E.</p>
               <div className="fm-raster eins">{einzel('schein')}</div>
+              {(() => {
+                const schein = vonFach('schein').find((d) => !d.laeuft && !d.fehler && !d.id.startsWith('tmp-'));
+                if (!schein) return null;
+                if (!LESEN_MIME.includes(schein.mime)) return <div className="fm-klein">Dieses Format kann nicht automatisch gelesen werden — bitte tragen Sie die Angaben selbst ein.</div>;
+                const liste = erkannt ? vorschlaege(erkannt, angaben) : [];
+                return (
+                  <div className="fm-lesen">
+                    {!erkannt && (
+                      <>
+                        <button className="fm-knopf zweit" onClick={() => void scheinLesen(schein.id)} disabled={liest}>
+                          <Symbol name="haken" groesse={18} />{liest ? 'Liest den Fahrzeugschein …' : 'Angaben automatisch ausfüllen'}
+                        </button>
+                        <div className="fm-klein">Liest Marke, Modell, FIN, Erstzulassung, Leistung und Kraftstoff vom Foto. Namen und Anschrift werden nicht gelesen. Sie prüfen und übernehmen selbst.</div>
+                      </>
+                    )}
+                    {leseFehler && <div className="fm-fehler" role="alert">{leseFehler}</div>}
+                    {erkannt && (
+                      <div className="fm-erkannt" role="region" aria-label="Automatisch erkannt">
+                        <div className="fm-h3">Automatisch erkannt</div>
+                        <div className="fm-klein">{ERKANNT_HINWEIS}</div>
+                        {liste.map((v) => (
+                          <label key={v.key} className="fm-erkannt-zeile">
+                            <input type="checkbox" checked={erkanntAuswahl.includes(v.key)} disabled={v.gleich}
+                              onChange={(e) => setErkanntAuswahl((a) => (e.target.checked ? [...a, v.key] : a.filter((x) => x !== v.key)))} />
+                            <span className="fm-erkannt-titel">{v.titel} <span className="fm-klein">(Feld {v.feld})</span></span>
+                            <b>{v.wert}</b>
+                            {v.gleich ? <span className="fm-marke gut">stimmt mit Ihrer Eingabe überein</span>
+                              : v.aktuell ? <span className="fm-marke warn">Ihre Eingabe: {v.aktuell}</span> : null}
+                          </label>
+                        ))}
+                        <div className="fm-kachel-knoepfe">
+                          <button className="fm-knopf klein" onClick={erkanntUebernehmen} disabled={!erkanntAuswahl.length}>Ausgewählte übernehmen</button>
+                          <button className="fm-knopf klein zweit" onClick={() => setErkannt(null)}>Verwerfen</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="fm-felder">
                 {feld('marke', 'Marke', { pflicht: true, ph: 'z. B. Volkswagen', max: 60 })}
                 {feld('modell', 'Modell', { pflicht: true, ph: 'z. B. Golf', max: 80 })}
                 {feld('variante', 'Ausführung / Motor', { ph: 'z. B. 1.5 TSI Life', max: 80 })}
                 {feld('erstzulassung', 'Erstzulassung', { ph: 'MM/JJJJ', max: 10 })}
                 {feld('km', 'Kilometerstand', { pflicht: true, mode: 'numeric', ph: 'z. B. 68.400', max: 12 })}
+                {feld('leistung', 'Leistung in kW (Feld P.2)', { mode: 'numeric', ph: 'z. B. 110', max: 6 })}
                 {feld('kraftstoff', 'Kraftstoff', { ph: 'Benzin, Diesel, Elektro …', max: 40 })}
                 {feld('fin', 'FIN (Feld E)', { ph: '17 Zeichen', max: 30 })}
                 <label className="fm-feld"><span>Unfälle oder Vorschäden</span>
@@ -765,6 +835,12 @@ textarea.fm-eingabe{resize:vertical}
 .fm-pruefliste button.da{background:var(--okb);color:var(--ok);cursor:default}
 .fm-haken{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.5;color:var(--t)}
 .fm-haken input{width:20px;height:20px;margin-top:2px;flex:none;accent-color:var(--a)}
+.fm-lesen{display:grid;gap:8px;margin:4px 0 6px}
+.fm-erkannt{border:1.5px solid var(--a);border-radius:16px;padding:14px;display:grid;gap:8px;background:var(--h)}
+.fm-erkannt-zeile{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--l);cursor:pointer}
+.fm-erkannt-zeile input{width:20px;height:20px;grid-row:span 3}
+.fm-erkannt-zeile b{font-size:16px;word-break:break-all}
+.fm-erkannt-titel{font-size:13px;color:var(--d)}
 .fm-fehler{background:var(--sb);color:var(--s);border-radius:12px;padding:10px 13px;font-size:14px;font-weight:600}
 .fm-falle{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .fm-qr summary{display:flex;gap:8px;align-items:center;font-weight:700;cursor:pointer;list-style:none}

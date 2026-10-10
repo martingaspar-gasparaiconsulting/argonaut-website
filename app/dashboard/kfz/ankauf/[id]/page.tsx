@@ -9,6 +9,8 @@
 // „fahrzeug-medien" unter <Betrieb>/ankauf/<Ankauf>/ (Regeln aus Paket 262).
 // Paket 264 (K4 Teil 2): „🖨 Ankaufschein (PDF)" im Reiter Abschluss; Anfragen aus dem
 // Online-Formular (Quelle „online") mit Hinweis. Andockpunkt K6: Inzahlungnahme am Verkauf.
+// Paket 307 (FM3): beim Ankaufen werden die Fahrzeugfotos der Fahrzeugmappe gleich in die
+// Fahrzeugakte kopiert (weitere Auswahl in der Karte „Fahrzeugmappe").
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -264,7 +266,18 @@ export default function AnkaufAktePage() {
       }
       const { error: e2 } = await supabase.from('kfz_ankauf').update({ status: 'angekauft', bestand_id: neuId, aktualisiert_am: new Date().toISOString() }).eq('id', a.id);
       if (e2) { setFehler('Im Bestand angelegt, aber der Ankauf konnte nicht abgeschlossen werden. Bitte Seite neu laden.'); return; }
-      setOk('Angekauft und in den Bestand übernommen.'); await lade();
+      // Paket 307: Fotos aus der Fahrzeugmappe gleich mitnehmen (Fehler hier ändern nichts am Ankauf).
+      let mappeText = '';
+      if (a.quelle === 'online') {
+        try {
+          const r = await fetch('/api/kfz/fahrzeugmappe/uebernehmen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ankauf: a.id }) });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok && (Number(j.fotos) || Number(j.videos))) mappeText = ` ${String(j.text ?? '')}`;
+          else if (!r.ok && r.status !== 404) mappeText = ' Die Fotos der Fahrzeugmappe bitte in der Karte „Fahrzeugmappe" übernehmen.';
+        } catch { mappeText = ' Die Fotos der Fahrzeugmappe bitte in der Karte „Fahrzeugmappe" übernehmen.'; }
+        window.dispatchEvent(new Event('kfz-mappe-neu'));
+      }
+      setOk(`Angekauft und in den Bestand übernommen.${mappeText}`); await lade();
     } finally { setBusy(false); }
   }
 

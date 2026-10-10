@@ -98,6 +98,11 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 600, fensterSek: STUNDE },
     { art: 'ziel', max: 800, fensterSek: TAG },
   ],
+  // Paket 307: Fahrzeugschein auslesen (KI auf Kosten des Betriebs) — je Mappe hoechstens 3 Versuche in 30 Tagen, je Absender 10/Stunde.
+  'oeffentlich/fahrzeugmappe/schein': [
+    { art: 'ip', max: 10, fensterSek: STUNDE },
+    { art: 'ziel', max: 3, fensterSek: 30 * TAG },
+  ],
   'oeffentlich/fahrzeugmappe/absenden': [
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },

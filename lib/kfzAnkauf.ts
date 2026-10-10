@@ -411,6 +411,9 @@ export function onlineEingabePruefen(roh: unknown, jahr: number): { ok: true; da
   }
   const fin = (feld(b.fin, 30) ?? '').replace(/[\s-]/g, '').toUpperCase();
   if (fin && !/^[A-HJ-NPR-Z0-9]{17}$/.test(fin)) return { ok: false, fehler: 'Die FIN hat 17 Zeichen (ohne I, O, Q). Lassen Sie das Feld sonst leer.' };
+  // Paket 307: Leistung in kW (freiwillig, z. B. aus dem Fahrzeugschein P.2) — Unsinn wird verworfen, nie abgelehnt
+  const kwRoh = typeof b.leistung === 'string' && b.leistung.trim() ? leseZahl(b.leistung) : null;
+  const leistung_kw = kwRoh !== null && Number.isFinite(kwRoh) && Math.round(kwRoh) >= 1 && Math.round(kwRoh) <= 2000 ? Math.round(kwRoh) : null;
   const unfall = b.unfall === 'keine_bekannt' || b.unfall === 'ja' || b.unfall === 'unbekannt' ? b.unfall : 'unbekannt';
   const preis = feld(b.preis, 20);
   const preisZahl = preis ? leseZahl(preis) : null;
@@ -427,7 +430,7 @@ export function onlineEingabePruefen(roh: unknown, jahr: number): { ok: true; da
       verkaeufer_art: b.gewerblich === true ? 'gewerblich' : 'privat',
       verkaeufer_name: name, verkaeufer_email: email, verkaeufer_tel: telefon, verkaeufer_anschrift: ort,
       marke, modell, variante: feld(b.variante, 80), fin: fin || null, erstzulassung,
-      km_stand: Math.round(kmRoh), kraftstoff: feld(b.kraftstoff, 40),
+      km_stand: Math.round(kmRoh), kraftstoff: feld(b.kraftstoff, 40), ...(leistung_kw !== null ? { leistung_kw } : {}),
       unfall_angabe: unfall, unfall_text: unfall === 'ja' ? feld(b.unfall_text, 300) : null,
       notiz,
     },
