@@ -68,13 +68,13 @@ export async function betriebZuDomain(db: MappeDb, host: string): Promise<{ betr
 
 export type MappeZeile = {
   id: string; owner_user_id: string; status: string; wunsch: string | null; angaben: unknown;
-  ankauf_id: string | null; eingereicht_am: string | null; erstellt_am: string;
+  ankauf_id: string | null; eingereicht_am: string | null; erstellt_am: string; nachreichen_bis: string | null;
 };
 
 /** Mappe zum Link des Verkäufers — nur im richtigen Betrieb. */
 export async function mappeZuToken(db: MappeDb, betrieb: string, token: unknown): Promise<MappeZeile | null> {
   if (!tokenGueltig(token)) return null;
-  const { data } = await db.from('kfz_mappe').select('id, owner_user_id, status, wunsch, angaben, ankauf_id, eingereicht_am, erstellt_am')
+  const { data } = await db.from('kfz_mappe').select('id, owner_user_id, status, wunsch, angaben, ankauf_id, eingereicht_am, erstellt_am, nachreichen_bis')
     .eq('owner_user_id', betrieb).eq('token_hash', tokenHash(token)).maybeSingle();
   return (data as MappeZeile | null) ?? null;
 }
@@ -118,4 +118,35 @@ export async function objekteLoeschen(db: MappeDb, pfade: string[]): Promise<voi
   if (!pfade.length) return;
   const { error } = await db.storage.from(MAPPE_BUCKET).remove(pfade);
   if (error) console.error('fahrzeugmappe: Dateien löschen fehlgeschlagen:', error.message);
+}
+
+// --- Paket 306 (FM2): Link für Mails, Verlauf ------------------------------------------------
+
+/** Persönlicher Link des Verkäufers (Schlüssel nur im #-Teil, landet in keinem Server-Protokoll). */
+export function mappeLink(basis: string, kennung: string, token: string): string {
+  return `${basis.replace(/\/+$/, '')}/ankauf/${kennung}#m=${token}`;
+}
+
+export type NachrichtZeile = { id: string; von: string; art: string; text: string | null; betrag: number | null; gueltig_bis: string | null; termin: string | null; erstellt_am: string };
+
+export async function verlaufDerMappe(db: MappeDb, mappe: string, betrieb: string): Promise<NachrichtZeile[]> {
+  const { data } = await db.from('kfz_mappe_nachricht').select('id, von, art, text, betrag, gueltig_bis, termin, erstellt_am')
+    .eq('mappe_id', mappe).eq('owner_user_id', betrieb).order('erstellt_am', { ascending: true }).limit(200);
+  return ((data as unknown) as NachrichtZeile[]) ?? [];
+}
+
+/** Firmenname und Antwort-Adresse des Betriebs (Webseiten-Daten, sonst Profil). */
+export async function firmaKurz(db: MappeDb, betrieb: string): Promise<{ firma: string; email: string; akzent: string }> {
+  const [ci, pr] = await Promise.all([
+    db.from('web_ci').select('firma, email, farbe_akzent').eq('owner_user_id', betrieb).maybeSingle(),
+    db.from('profiles').select('firma_name, firma_email').eq('id', betrieb).maybeSingle(),
+  ]);
+  const c = ci.data as { firma?: string | null; email?: string | null; farbe_akzent?: string | null } | null;
+  const p = pr.data as { firma_name?: string | null; firma_email?: string | null } | null;
+  const akzent = String(c?.farbe_akzent ?? '');
+  return {
+    firma: String(c?.firma ?? '').trim() || String(p?.firma_name ?? '').trim(),
+    email: String(c?.email ?? '').trim() || String(p?.firma_email ?? '').trim(),
+    akzent: /^#[0-9a-fA-F]{6}$/.test(akzent) ? akzent : '#0A1628',
+  };
 }

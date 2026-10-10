@@ -3,13 +3,15 @@ import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 import { kennungGueltig } from '@/lib/kfzAnkauf';
 import { angabenBereinigen } from '@/lib/fahrzeugMappe';
 import { betriebZuKennung, mappeDb, tokenNeu } from '@/lib/fahrzeugMappeServer';
+import { encKeyBereit, verschluessele } from '@/lib/crypto';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/fahrzeugmappe/start — Paket 305 · FM1
 // ÖFFENTLICH. Legt für einen Verkäufer eine leere Fahrzeugmappe (Entwurf) bei
 // GENAU dem Betrieb an, dessen Kennung auf der Seite steht. Antwort: der
 // persönliche Link-Schlüssel (nur hier einmal im Klartext; gespeichert wird
-// allein sein SHA-256-Prüfwert). Mengen-Deckel je Absender (lib/drossel.ts).
+// allein sein SHA-256-Prüfwert; ab Paket 306 zusätzlich AES-verschlüsselt mit dem
+// Server-Schlüssel für den Knopf in den Mails). Mengen-Deckel je Absender (lib/drossel.ts).
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -33,6 +35,8 @@ export async function POST(req: Request) {
     const { token, hash } = tokenNeu();
     const { error } = await db.from('kfz_mappe').insert({
       owner_user_id: betrieb, token_hash: hash, status: 'entwurf',
+      // Paket 306: verschlüsselt (Server-Schlüssel), damit jede Mail des Autohauses einen Knopf „Mappe öffnen“ hat
+      ...(encKeyBereit() ? { token_verschluesselt: verschluessele(token) } : {}),
       wunsch: angaben.wunsch === 'inzahlungnahme' ? 'inzahlungnahme' : 'verkauf', angaben,
     });
     if (error) {

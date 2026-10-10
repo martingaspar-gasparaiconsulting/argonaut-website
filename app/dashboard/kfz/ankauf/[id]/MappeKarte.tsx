@@ -7,15 +7,17 @@
 // Blättern, Herunterladen. Daten über /api/kfz/fahrzeugmappe (Login; die
 // Datenbank entscheidet, wer sehen darf; Links 1 Stunde gültig).
 // Ohne Mappe (alter Formular-Eingang, Hof, Telefon) zeigt die Karte nichts.
+// Paket 306: darunter Fahrzeughistorie, Antwort an den Verkäufer, Verlauf (MappeAntwort.tsx).
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import MappeAntwort, { type AnkaufInfo, type Verlauf } from './MappeAntwort';
 import { FAECHER, GRUPPEN, bildUrteil, fachZu, istBild, istPdf, istVideo, mbText, vollstaendigkeit, wunschText } from '@/lib/fahrzeugMappe';
 
 const C = { navy: '#0A1628', navy2: '#0F2036', navy3: '#14294A', gold: '#C9A84C', text: '#E8EDF4', dim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', ok: '#4CAF7D', warn: '#E0A24C', bad: '#E06666' };
 
 type Datei = { id: string; fach: string; art: string; mime: string; bytes: number | null; dateiname: string | null; beschreibung: string | null; pruefung: { schaerfe?: number; helligkeit?: number }; url: string | null };
-type Mappe = { id: string; status: string; wunsch: string | null; eingereicht_am: string | null; einwilligung_am: string | null; einwilligung_fassung: string | null };
+type Mappe = { id: string; status: string; wunsch: string | null; eingereicht_am: string | null; einwilligung_am: string | null; einwilligung_fassung: string | null; nachreichen_bis?: string | null };
 
 function zeit(iso: string | null): string {
   if (!iso) return '—';
@@ -23,11 +25,13 @@ function zeit(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-export default function MappeKarte({ ankaufId }: { ankaufId: string }) {
+export default function MappeKarte({ ankaufId, firma = '' }: { ankaufId: string; firma?: string }) {
   const [mappe, setMappe] = useState<Mappe | null>(null);
   const [dateien, setDateien] = useState<Datei[]>([]);
   const [stand, setStand] = useState<'laedt' | 'da' | 'keine' | 'fehler'>('laedt');
   const [gross, setGross] = useState<number | null>(null);
+  const [verlauf, setVerlauf] = useState<Verlauf[]>([]);
+  const [ankauf, setAnkauf] = useState<AnkaufInfo | null>(null);
 
   const laden = useCallback(async () => {
     try {
@@ -37,6 +41,8 @@ export default function MappeKarte({ ankaufId }: { ankaufId: string }) {
       if (!j.mappe) { setStand('keine'); return; }
       setMappe(j.mappe as Mappe);
       setDateien((j.dateien as Datei[]) ?? []);
+      setVerlauf((j.verlauf as Verlauf[]) ?? []);
+      setAnkauf((j.ankauf as AnkaufInfo | null) ?? null);
       setStand('da');
     } catch { setStand('fehler'); }
   }, [ankaufId]);
@@ -112,6 +118,11 @@ export default function MappeKarte({ ankaufId }: { ankaufId: string }) {
           </div>
         );
       })}
+
+      {mappe.status === 'eingereicht' && (
+        <MappeAntwort ankaufId={ankaufId} ankauf={ankauf} verlauf={verlauf} nachreichenBis={mappe.nachreichen_bis ?? null} firma={firma}
+          onNeu={() => { void laden(); window.dispatchEvent(new Event('kfz-ankauf-neu')); }} />
+      )}
 
       <div style={{ ...s.dim, marginTop: 12 }}>Alle Angaben, Fotos und Unterlagen stammen vom Verkäufer — bitte bei der Besichtigung prüfen. Ein Angebot ohne Besichtigung immer nur unter Vorbehalt.</div>
 

@@ -23,12 +23,13 @@ import {
   mbText, tokenGueltig, vollstaendigkeit, zielGroesse, type Fach, type Urteil,
 } from '@/lib/fahrzeugMappe';
 import { Symbol } from './Symbole';
+import { VORBEHALT_TEXT, euroText, nachrichtInhalt, standFuerKunde, tagText, terminText, type Nachricht } from '@/lib/fahrzeugMappeAntwort';
 import { VideoAufnahme, aufnahmeMoeglich } from './VideoAufnahme';
 
 type Datei = {
   id: string; fach: string; mime: string; bytes: number | null; url: string | null; beschreibung: string | null;
   pruefung: { schaerfe?: number; helligkeit?: number; stufe?: string };
-  lokal?: string; laeuft?: boolean; fortschritt?: number; fehler?: string; roh?: File;
+  lokal?: string; laeuft?: boolean; fortschritt?: number; fehler?: string; roh?: File; neu?: boolean;
 };
 type Angaben = Record<string, string | boolean>;
 
@@ -108,7 +109,7 @@ function speicherSetzen(k: string, t: string | null) {
 }
 
 export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: { k: string; firma: string; akzent: string; vorne: string; datenschutz: string }) {
-  const [phase, setPhase] = useState<'laedt' | 'start' | 'mappe' | 'gesendet'>('laedt');
+  const [phase, setPhase] = useState<'laedt' | 'start' | 'mappe' | 'gesendet' | 'stand'>('laedt');
   const [token, setToken] = useState<string | null>(null);
   const [angaben, setAngaben] = useState<Angaben>({ wunsch: 'verkauf' });
   const [dateien, setDateien] = useState<Datei[]>([]);
@@ -123,6 +124,11 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
   const [qr, setQr] = useState<string | null>(null);
   const [gespeichert, setGespeichert] = useState<'still' | 'speichert' | 'ok'>('still');
   const [schadenText, setSchadenText] = useState('');
+  // Paket 306: Stand nach dem Absenden — Verlauf, Rückfrage mit Nachreichen, Termin bestätigen
+  const [verlauf, setVerlauf] = useState<Nachricht[]>([]);
+  const [nachreichenBis, setNachreichenBis] = useState<string | null>(null);
+  const [nachricht, setNachricht] = useState('');
+  const [standOk, setStandOk] = useState<string | null>(null);
   const eingabe = useRef<HTMLInputElement | null>(null);
   const ziel = useRef<{ fach: Fach; kamera: boolean; mehr: boolean } | null>(null);
   const speicherUhr = useRef<number | null>(null);
@@ -141,7 +147,13 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
       return;
     }
     setToken(t);
-    if (r.j.status !== 'entwurf') { setPhase('gesendet'); return; }
+    if (r.j.status !== 'entwurf') {
+      setVerlauf((r.j.verlauf as Nachricht[]) ?? []);
+      setNachreichenBis(typeof r.j.nachreichen_bis === 'string' ? r.j.nachreichen_bis : null);
+      setDateien(((r.j.dateien as Datei[]) ?? []).map((d) => ({ ...d, pruefung: d.pruefung ?? {} })));
+      setPhase('stand');
+      return;
+    }
     setAngaben({ wunsch: 'verkauf', ...((r.j.angaben as Angaben) ?? {}) });
     setDateien(((r.j.dateien as Datei[]) ?? []).map((d) => ({ ...d, pruefung: d.pruefung ?? {} })));
     setPhase('mappe');
@@ -247,7 +259,7 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
     if (!fr.ok) { setz({ laeuft: false, fehler: String(fr.j.error ?? 'Die Datei ist nicht angekommen.') }); return; }
     setDateien((d) => {
       const rest = fach.max === 1 ? d.filter((x) => x.fach !== fach.key || x.id === tmp) : d;
-      return rest.map((x) => (x.id === tmp ? { ...x, id, url: (fr.j.url as string | null) ?? null, laeuft: false, fortschritt: 100, roh: undefined, bytes: Number(fr.j.bytes) || x.bytes } : x));
+      return rest.map((x) => (x.id === tmp ? { ...x, id, url: (fr.j.url as string | null) ?? null, laeuft: false, fortschritt: 100, roh: undefined, neu: true, bytes: Number(fr.j.bytes) || x.bytes } : x));
     });
   }
 
@@ -284,6 +296,19 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
     setNr(typeof r.j.nr === 'string' ? r.j.nr : null);
     setPhase('gesendet');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function standSenden(art: 'antwort' | 'termin_ok' | 'nachgereicht', text?: string) {
+    setFehler(null); setStandOk(null);
+    if (art === 'antwort' && !(text ?? '').trim()) { setFehler('Bitte eine Nachricht eingeben.'); return; }
+    if (art === 'nachgereicht' && laufend) { setFehler('Bitte warten Sie, bis alle Dateien hochgeladen sind.'); return; }
+    setBusy(true);
+    const r = await api('/api/oeffentlich/fahrzeugmappe', { k, token, aktion: art === 'nachgereicht' ? 'nachgereicht' : 'antworten', art, text });
+    setBusy(false);
+    if (!r.ok) { setFehler(String(r.j.error ?? 'Senden fehlgeschlagen.')); return; }
+    setStandOk(art === 'termin_ok' ? 'Danke — Ihre Bestätigung ist beim Autohaus.' : art === 'nachgereicht' ? 'Danke — das Autohaus ist benachrichtigt.' : 'Ihre Nachricht ist beim Autohaus.');
+    setNachricht('');
+    if (token) await laden(token);
   }
 
   function geheZu(i: number) {
@@ -330,8 +355,8 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
           </div>
           <div className="fm-kachel-aktion">
             {d.fehler && d.roh && <button className="fm-rund" onClick={() => void nochmalVersuchen(d)} aria-label="Noch einmal versuchen"><Symbol name="neu" groesse={18} /></button>}
-            {!d.laeuft && !d.fehler && fach.max === 1 && <button className="fm-rund" onClick={() => waehlen(fach, true)} aria-label="Neu aufnehmen"><Symbol name="neu" groesse={18} /></button>}
-            {!d.laeuft && <button className="fm-rund" onClick={() => void loeschen(d)} aria-label="Löschen"><Symbol name="muell" groesse={18} /></button>}
+            {!d.laeuft && !d.fehler && fach.max === 1 && phase !== 'stand' && <button className="fm-rund" onClick={() => waehlen(fach, true)} aria-label="Neu aufnehmen"><Symbol name="neu" groesse={18} /></button>}
+            {!d.laeuft && (phase !== 'stand' || d.neu) && <button className="fm-rund" onClick={() => void loeschen(d)} aria-label="Löschen"><Symbol name="muell" groesse={18} /></button>}
           </div>
         </div>
       </div>
@@ -538,6 +563,80 @@ export default function FahrzeugMappe({ k, firma, akzent, vorne, datenschutz }: 
         </>
       )}
 
+      {phase === 'stand' && (() => {
+        const st = standFuerKunde(verlauf, nachreichenBis, Date.now());
+        const letzte = [...verlauf].filter((n) => n.von === 'haendler').pop() ?? null;
+        const termin = letzte?.art === 'einladung' ? letzte : null;
+        const angebot = [...verlauf].filter((n) => n.art === 'angebot').pop() ?? null;
+        const bestaetigt = termin ? verlauf.some((n) => n.art === 'termin_ok' && n.erstellt_am > termin.erstellt_am) : false;
+        return (
+          <>
+            <section className="fm-hero">
+              <div className="fm-hero-eyebrow">{firmaName} · Ihre Fahrzeugmappe</div>
+              <h1 className="fm-h1">{st.text}</h1>
+              {st.stufe === 'pruefung' && <p className="fm-hero-text">Sie bekommen eine E-Mail, sobald es Neuigkeiten gibt. Diese Seite zeigt immer den aktuellen Stand.</p>}
+            </section>
+
+            {st.stufe !== 'absage' && angebot && (
+              <section className="fm-karte">
+                <div className="fm-klein">Angebot unter Vorbehalt · gültig bis {tagText(angebot.gueltig_bis)}</div>
+                <div className="fm-preis">{euroText(Number(angebot.betrag))}</div>
+                {angebot.text && <p className="fm-text">{angebot.text}</p>}
+                <p className="fm-klein">{VORBEHALT_TEXT}</p>
+              </section>
+            )}
+
+            {termin && (
+              <section className="fm-karte">
+                <div className="fm-h2">Termin zur Besichtigung</div>
+                <div className="fm-termin"><Symbol name="uhr" groesse={22} />{terminText(termin.termin)}</div>
+                {termin.text && <p className="fm-text">{termin.text}</p>}
+                {bestaetigt ? <div className="fm-marke gut"><Symbol name="haken" groesse={14} />Von Ihnen bestätigt</div>
+                  : <button className="fm-knopf gross" disabled={busy} onClick={() => void standSenden('termin_ok')}><Symbol name="haken" />Termin passt</button>}
+                <div className="fm-klein">Passt es nicht? Schreiben Sie unten einen anderen Vorschlag.</div>
+              </section>
+            )}
+
+            {st.stufe === 'rueckfrage' && letzte && (
+              <section className="fm-karte">
+                <div className="fm-h2">Rückfrage von {firmaName}</div>
+                {letzte.text && <p className="fm-text">{letzte.text}</p>}
+                <p className="fm-klein">Sie können bis {terminText(nachreichenBis)} Fotos und Unterlagen nachreichen.</p>
+                {sammel('weitere')}{sammel('schaden', true)}{sammel('sonstiges')}
+                <button className="fm-knopf gross" disabled={busy} onClick={() => void standSenden('nachgereicht')}>Fertig — {firmaName} benachrichtigen <Symbol name="weiter" /></button>
+              </section>
+            )}
+
+            <section className="fm-karte">
+              <div className="fm-h2">Nachricht an {firmaName}</div>
+              <textarea className="fm-eingabe" rows={3} maxLength={1500} value={nachricht} onChange={(e) => setNachricht(e.target.value)} placeholder="z. B. Dienstag passt leider nicht, ginge Mittwoch ab 16 Uhr?" />
+              <button className="fm-knopf" disabled={busy} onClick={() => void standSenden('antwort', nachricht)}>Nachricht senden <Symbol name="weiter" /></button>
+              {fehler && <div className="fm-fehler" role="alert">{fehler}</div>}
+              {standOk && <div className="fm-marke gut" role="status"><Symbol name="haken" groesse={14} />{standOk}</div>}
+            </section>
+
+            {verlauf.length > 0 && (
+              <section className="fm-karte">
+                <div className="fm-h2">Verlauf</div>
+                <div className="fm-verlauf">
+                  {[...verlauf].reverse().map((n, i) => {
+                    const inh = nachrichtInhalt(n, firmaName);
+                    return (
+                      <div key={i} className={`fm-eintrag${n.von === 'kunde' ? ' ich' : ''}`}>
+                        <div className="fm-klein">{n.von === 'kunde' ? 'Sie' : firmaName} · {terminText(n.erstellt_am)}</div>
+                        <b>{inh.titel}</b>
+                        {inh.zeilen.filter((z) => z !== VORBEHALT_TEXT).map((z, j) => <div key={j} className="fm-text">{z}</div>)}
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            <div className="fm-klein fm-mitte"><button className="fm-link" onClick={neuBeginnen}>Weiteres Fahrzeug anbieten</button></div>
+          </>
+        );
+      })()}
+
       {phase === 'gesendet' && (
         <section className="fm-karte fm-fertig">
           <div className="fm-fertig-haken"><Symbol name="haken" groesse={34} /></div>
@@ -674,6 +773,12 @@ textarea.fm-eingabe{resize:vertical}
 .fm-fertig{text-align:center;justify-items:center;padding:36px 20px}
 .fm-fertig-haken{width:68px;height:68px;border-radius:99px;display:grid;place-items:center;background:var(--okb);color:var(--ok)}
 .fm-nummer{font-size:16px}
+.fm-preis{font-size:clamp(30px,7vw,42px);font-weight:800;letter-spacing:-.02em;color:var(--a)}
+.fm-text{margin:0;font-size:15px;line-height:1.55;white-space:pre-wrap}
+.fm-termin{display:flex;gap:10px;align-items:center;font-size:18px;font-weight:700}
+.fm-verlauf{display:grid;gap:12px}
+.fm-eintrag{border-left:3px solid var(--a);padding-left:12px;display:grid;gap:3px}
+.fm-eintrag.ich{border-left-color:#C5CEDA}
 .fm-overlay{position:fixed;inset:0;z-index:50;background:rgba(10,14,22,.78);display:grid;place-items:center;padding:12px}
 .fm-rec,.fm-gross{width:min(720px,100%);max-height:100%;overflow:auto;background:#fff;border-radius:20px;padding:14px;display:grid;gap:12px;color:var(--t)}
 .fm-rec-kopf{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}

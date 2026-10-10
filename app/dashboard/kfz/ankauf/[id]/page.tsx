@@ -127,6 +127,8 @@ export default function AnkaufAktePage() {
   }, [id]);
 
   useEffect(() => { void lade(); }, [lade]);
+  // Paket 306: Antwort aus der Fahrzeugmappe ändert Status/Angebot in der Datenbank -> Akte neu laden
+  useEffect(() => { const neu = () => { void lade(); }; window.addEventListener('kfz-ankauf-neu', neu); return () => window.removeEventListener('kfz-ankauf-neu', neu); }, [lade]);
 
   async function speichern(patch: Record<string, unknown>, meldung: string): Promise<boolean> {
     if (!a) return false;

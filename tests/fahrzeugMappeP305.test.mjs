@@ -172,7 +172,7 @@ test('WÄCHTER Routen: Türen gedeckelt, Betrieb nur aus Kennung, Ersetzen erst 
   const fertig = haupt.slice(haupt.indexOf("aktion === 'fertig'"), haupt.indexOf("aktion === 'loeschen'"));
   assert.ok(fertig.includes('objektGroesse(') && fertig.indexOf('objektGroesse(') < fertig.indexOf("status: 'fertig'"), 'erst prüfen, dann fertig');
   assert.ok(fertig.includes('p.fach.max === 1'));
-  assert.ok(haupt.includes("if (!entwurf) return KEIN(409"));
+  assert.ok(haupt.includes("if (!entwurf && !nachreichen) return KEIN(409"), 'nach dem Einreichen nur bei offener Rückfrage (Paket 306)');
   assert.ok(ab.includes('vollstaendigkeit(') && ab.includes("b.einwilligung !== true"));
   assert.ok(ab.includes('EINWILLIGUNG_FASSUNG'));
 });

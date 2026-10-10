@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import { sendeMail, mailLayout } from '@/lib/mail';
+import { sendeMail, mailLayout, kundenMailLayout } from '@/lib/mail';
+import { basisAdresse } from '@/lib/kfzBoerseLaden';
 import { escapeHtml } from '@/lib/newsletter';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 import { kennungGueltig, naechsteAnkaufNr, onlineEingabePruefen } from '@/lib/kfzAnkauf';
 import {
   EINWILLIGUNG_FASSUNG, angabenBereinigen, notizZusatz, tokenGueltig, vollstaendigkeit, wunschText, zusammenfassung,
 } from '@/lib/fahrzeugMappe';
-import { betriebZuKennung, dateienDerMappe, mappeDb, mappeZuToken } from '@/lib/fahrzeugMappeServer';
+import { betriebZuKennung, dateienDerMappe, firmaKurz, mappeDb, mappeLink, mappeZuToken } from '@/lib/fahrzeugMappeServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/fahrzeugmappe/absenden — Paket 305 · FM1
@@ -128,14 +129,18 @@ export async function POST(req: Request) {
       if (!r.ok) console.error('fahrzeugmappe Betriebs-Mail fehlgeschlagen:', r.fehler);
     }
 
-    // Eingangsbestätigung an den Verkäufer (best effort, keine Werbung).
+    // Eingangsbestätigung an den Verkäufer im Look des Autohauses (best effort, keine Werbung).
+    // Paket 306: mit Knopf „Ihre Fahrzeugmappe öffnen“ — dort sieht er Antworten und reicht nach.
     if (d.verkaeufer_email) {
       const vorname = String(d.verkaeufer_name ?? '').split(' ')[0];
-      const html = mailLayout('Ihre Fahrzeugmappe ist angekommen',
+      const { akzent } = await firmaKurz(db, betrieb);
+      const link = mappeLink(basisAdresse(), k, b.token as string);
+      const html = kundenMailLayout(firma || 'Ihr Autohaus', akzent, 'Ihre Fahrzeugmappe ist angekommen',
         `<p style="margin:0 0 14px;">Guten Tag${vorname ? ' ' + escapeHtml(vorname) : ''},</p>
-         <p style="margin:0 0 14px;">vielen Dank für Ihre Fahrzeugmappe (${escapeHtml(fahrzeug)})${firma ? ' an ' + escapeHtml(firma) : ''}. Wir sehen uns Fotos, Video und Unterlagen an und melden uns bei Ihnen. Ein verbindliches Angebot erhalten Sie erst nach der Besichtigung des Fahrzeugs.</p>
+         <p style="margin:0 0 14px;">vielen Dank für Ihre Fahrzeugmappe (${escapeHtml(fahrzeug)}). Wir sehen uns Fotos, Video und Unterlagen an und melden uns bei Ihnen. Ein verbindliches Angebot erhalten Sie erst nach der Besichtigung des Fahrzeugs.</p>
          <p style="margin:0 0 14px;">Ihre Nummer: <b>${escapeHtml(nr)}</b></p>
-         <p style="margin:16px 0 0;">Beste Grüße${firma ? '<br>' + escapeHtml(firma) : ''}</p>`);
+         <p style="margin:18px 0;"><a href="${escapeHtml(link)}" style="display:inline-block;background:${akzent};color:#ffffff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px;">Ihre Fahrzeugmappe öffnen</a></p>
+         <p style="margin:0;color:#6b7688;font-size:13px;">Über diesen Knopf sehen Sie unsere Antwort und können bei Rückfragen Fotos nachreichen. Bitte leiten Sie diese E-Mail nicht weiter — der Knopf öffnet Ihre Mappe.</p>`);
       try {
         const r = await sendeMail({ an: d.verkaeufer_email as string, betreff: `Ihre Fahrzeugmappe${firma ? ' bei ' + firma : ''}`, html, betriebId: betrieb, ...(firma ? { absenderName: firma } : {}), ...(betriebMail ? { antwortAn: betriebMail } : {}) });
         if (!r.ok) console.error('fahrzeugmappe Bestätigung fehlgeschlagen:', r.fehler);

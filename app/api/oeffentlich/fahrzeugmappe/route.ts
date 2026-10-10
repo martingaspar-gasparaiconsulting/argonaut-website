@@ -5,8 +5,9 @@ import {
   MAPPE_BUCKET, angabenBereinigen, anzahlJeFach, dateiPruefen, istUuid, mappePfad, platzFrei, pruefungSauber, tokenGueltig,
 } from '@/lib/fahrzeugMappe';
 import {
-  ansichtLinks, betriebZuKennung, dateienDerMappe, mappeDb, mappeZuToken, objekteLoeschen, objektGroesse, tokenHash,
+  ansichtLinks, betriebZuKennung, dateienDerMappe, mappeDb, mappeZuToken, objekteLoeschen, objektGroesse, tokenHash, verlaufDerMappe,
 } from '@/lib/fahrzeugMappeServer';
+import { NACHREICHEN_TAGE, kundeAntwortPruefen } from '@/lib/fahrzeugMappeAntwort';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/fahrzeugmappe — Paket 305 · FM1 Fahrzeugmappe
@@ -22,6 +23,9 @@ import {
 //   fertig     Upload melden: der Server sieht nach, ob die Datei wirklich
 //              daliegt und wie groß sie ist; erst dann zählt sie
 //   loeschen   Datei entfernen (nur Entwurf) — Ordner und Eintrag
+//   Paket 306: nach Rückfrage des Autohauses 14 Tage nachreichen (nur Sammelfächer,
+//   löschen nur selbst Nachgereichtes); antworten (Nachricht, Termin passt),
+//   nachgereicht (Autohaus benachrichtigen); laden liefert den Verlauf
 // Der Betrieb kommt nur aus der Kennung, die Mappe nur über Betrieb + Prüfwert.
 // Deckel je Absender und je Mappe (lib/drossel.ts).
 // ============================================================================
@@ -47,24 +51,59 @@ export async function POST(req: Request) {
     const mappe = await mappeZuToken(db, betrieb, token);
     if (!mappe) return KEIN(404, 'Diese Mappe gibt es nicht (mehr).');
     const entwurf = mappe.status === 'entwurf';
+    // Paket 306: nach einer Rückfrage des Autohauses darf der Verkäufer 14 Tage lang nachreichen
+    const nachreichen = mappe.status === 'eingereicht' && !!mappe.nachreichen_bis && Date.parse(mappe.nachreichen_bis) > Date.now();
+    const nachreichenAb = nachreichen ? Date.parse(mappe.nachreichen_bis as string) - NACHREICHEN_TAGE * 86_400_000 : 0;
     const aktion = String(b.aktion ?? '');
 
     if (aktion === 'laden') {
       const dateien = (await dateienDerMappe(db, mappe.id, betrieb)).filter((d) => d.status === 'fertig');
-      const links = entwurf ? await ansichtLinks(db, dateien.map((d) => d.pfad), 1800) : {};
+      const links = await ansichtLinks(db, dateien.map((d) => d.pfad), 1800);
+      const verlauf = entwurf ? [] : await verlaufDerMappe(db, mappe.id, betrieb);
       return JA({
         status: mappe.status, wunsch: mappe.wunsch, eingereicht_am: mappe.eingereicht_am,
+        nachreichen_bis: nachreichen ? mappe.nachreichen_bis : null,
         angaben: entwurf ? angabenBereinigen(mappe.angaben) : {},
+        verlauf: verlauf.map((n) => ({ von: n.von, art: n.art, text: n.text, betrag: n.betrag, gueltig_bis: n.gueltig_bis, termin: n.termin, erstellt_am: n.erstellt_am })),
         dateien: dateien.map((d) => ({
           id: d.id, fach: d.fach, art: d.art, mime: d.mime, bytes: d.bytes, beschreibung: d.beschreibung,
           pruefung: pruefungSauber(d.pruefung), url: links[d.pfad] ?? null,
+          neu: nachreichen && Date.parse(d.erstellt_am) >= nachreichenAb,
         })),
       });
     }
 
-    if (!entwurf) return KEIN(409, 'Diese Mappe ist schon beim Autohaus. Änderungen gehen nicht mehr.');
+    if (aktion === 'antworten' || aktion === 'nachgereicht') {
+      if (mappe.status !== 'eingereicht') return KEIN(409, 'Diese Mappe ist noch nicht beim Autohaus.');
+      let art: 'antwort' | 'termin_ok' | 'nachgereicht';
+      let txt: string | null;
+      if (aktion === 'nachgereicht') {
+        if (!nachreichen) return KEIN(409, 'Die Frist zum Nachreichen ist abgelaufen.');
+        const neu = (await dateienDerMappe(db, mappe.id, betrieb)).filter((d) => d.status === 'fertig' && Date.parse(d.erstellt_am) >= nachreichenAb).length;
+        if (!neu) return KEIN(400, 'Sie haben noch keine Datei nachgereicht.');
+        art = 'nachgereicht'; txt = `${neu} ${neu === 1 ? 'Datei' : 'Dateien'} nachgereicht.`;
+      } else {
+        const p = kundeAntwortPruefen(b);
+        if (!p.ok) return KEIN(400, p.fehler);
+        art = p.art; txt = p.text;
+      }
+      const { error } = await db.from('kfz_mappe_nachricht').insert({ owner_user_id: betrieb, mappe_id: mappe.id, von: 'kunde', art, text: txt });
+      if (error) { console.error('fahrzeugmappe antworten:', error.message); return KEIN(500, 'Ihre Nachricht konnte nicht gesendet werden.'); }
+      try {
+        await db.rpc('benachrichtigung_erstellen', {
+          p_owner: betrieb, p_typ: 'kfz_fahrzeugmappe',
+          p_titel: art === 'termin_ok' ? 'Fahrzeugmappe: Termin bestätigt' : art === 'nachgereicht' ? 'Fahrzeugmappe: Dateien nachgereicht' : 'Fahrzeugmappe: neue Nachricht',
+          p_nachricht: (txt ?? '').slice(0, 140), p_link: mappe.ankauf_id ? `/dashboard/kfz/ankauf/${mappe.ankauf_id}` : '/dashboard/kfz/ankauf',
+          p_ref_tabelle: 'kfz_mappe', p_ref_id: mappe.id, p_dedup_stunden: 0,
+        });
+      } catch { /* Glocke ist Zugabe */ }
+      return JA({ ok: true });
+    }
+
+    if (!entwurf && !nachreichen) return KEIN(409, 'Diese Mappe ist schon beim Autohaus. Änderungen gehen nicht mehr.');
 
     if (aktion === 'speichern') {
+      if (!entwurf) return KEIN(409, 'Die Angaben sind schon beim Autohaus.');
       const angaben = angabenBereinigen(b.angaben);
       const wunsch = angaben.wunsch === 'inzahlungnahme' ? 'inzahlungnahme' : 'verkauf';
       const { error } = await db.from('kfz_mappe').update({ angaben, wunsch }).eq('id', mappe.id).eq('owner_user_id', betrieb).eq('status', 'entwurf');
@@ -75,6 +114,8 @@ export async function POST(req: Request) {
     if (aktion === 'ziel') {
       const p = dateiPruefen({ fach: b.fach, mime: b.mime, bytes: b.bytes });
       if (!p.ok) return KEIN(400, p.fehler);
+      // Beim Nachreichen nur ergänzen (Sammelfächer), nie ein eingereichtes Foto ersetzen
+      if (!entwurf && p.fach.max === 1) return KEIN(409, 'Beim Nachreichen bitte „Weitere Fotos“, „Schäden“ oder die Unterlagen nutzen.');
       const alle = await dateienDerMappe(db, mappe.id, betrieb);
       // Liegengebliebene Reservierungen (Upload abgebrochen, Link nach 2 Stunden ungültig) wegräumen
       const grenze = Date.now() - 2 * 3600 * 1000;
@@ -140,10 +181,11 @@ export async function POST(req: Request) {
 
     if (aktion === 'loeschen') {
       if (!istUuid(b.id)) return KEIN(400, 'Ungültige Datei.');
-      const { data } = await db.from('kfz_mappe_datei').select('id, pfad')
+      const { data } = await db.from('kfz_mappe_datei').select('id, pfad, erstellt_am')
         .eq('id', b.id).eq('mappe_id', mappe.id).eq('owner_user_id', betrieb).maybeSingle();
-      const d = data as { id: string; pfad: string } | null;
+      const d = data as { id: string; pfad: string; erstellt_am: string } | null;
       if (!d) return JA({ ok: true });
+      if (!entwurf && Date.parse(d.erstellt_am) < nachreichenAb) return KEIN(409, 'Eingereichte Dateien kann nur das Autohaus löschen.');
       await objekteLoeschen(db, [d.pfad]);
       const { error } = await db.from('kfz_mappe_datei').delete().eq('id', d.id);
       if (error) return KEIN(500, 'Löschen hat nicht geklappt.');
