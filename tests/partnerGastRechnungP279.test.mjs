@@ -153,9 +153,9 @@ test('Gast-Seite: nie bei Google, kein Referrer; Einbindung', () => {
   assert.match(s, /index: false/);
   assert.match(s, /referrer: 'no-referrer'/);
   assert.match(lies('app/robots.ts'), /'\/partner-gast\/'/);
-  const akte = lies('app/dashboard/kfz/bestand/KfzPartner.tsx');
+  const akte = lies('app/dashboard/netzwerk/PartnerAuftraege.tsx'); // seit Paket 303 gemeinsam für alle Bezüge
   assert.match(akte, /Partner ohne ARGONAUT \(Gast-Link\)/);
   assert.match(akte, /rechnung-uebernehmen/);
-  assert.match(lies('app/dashboard/kfz/partner/page.tsx'), /<RechnungEinreichen /);
+  assert.match(lies('app/dashboard/netzwerk/PartnerHub.tsx'), /<RechnungEinreichen /); // seit Paket 303
   assert.match(lies('lib/guideWissen.ts'), /Rechnung des Partners/);
 });

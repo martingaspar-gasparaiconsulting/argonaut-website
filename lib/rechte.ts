@@ -290,6 +290,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🌲 Baumkataster', href: '/dashboard/forst', modul: 'forst', ebene: 3, gruppe: 'betrieb' },
   { label: '🏛 Objekt-Register', href: '/dashboard/objekte', modul: 'objekte', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
+  // Paket 303 (10.10.26): N1 Betriebs-Netzwerk fuer alle Branchen — ohne eigenen Modul-Schluessel (Chef immer;
+  // die Rechte je Auftrag prueft die Datenbank nach Projekte/Auftraege/Objektzeiten/Kfz).
+  { label: '🤝 Betriebs-Netzwerk', href: '/dashboard/netzwerk', ebene: 3, gruppe: 'betrieb' },
   { label: '🔑 Verleih & Vermietung', href: '/dashboard/verleih', modul: 'verleih', ebene: 3, gruppe: 'betrieb' },
   // Paket 291 (09.10.26): V1 Fahrzeugvermietung — Unterpfad von /dashboard/verleih, erbt dessen Freigabe.
   { label: '🚗 Fahrzeugvermietung', href: '/dashboard/verleih/fahrzeuge', ebene: 3, gruppe: 'betrieb' },

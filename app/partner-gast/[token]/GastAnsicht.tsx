@@ -7,6 +7,7 @@
 // ============================================================
 
 import { useCallback, useEffect, useState, CSSProperties } from 'react';
+import { artName } from '@/lib/netzwerk';
 import { aktionen, fahrzeugZeilen, grundPruefen, statusName, type Aktion, type PartnerFahrzeug } from '@/lib/partnerNetzwerk';
 import PartnerVerlauf, { type VerlaufEintrag } from '../../dashboard/kfz/partner/PartnerVerlauf';
 import RechnungEinreichen, { type EingereichteRechnung } from '../../dashboard/kfz/partner/RechnungEinreichen';
@@ -16,7 +17,7 @@ const TUER = '/api/oeffentlich/partner-gast';
 
 type Auftrag = {
   id: string; nummer: string; titel: string; beschreibung: string | null; faellig_am: string | null; status: string; status_grund: string | null;
-  fahrzeug_titel: string | null; aktiv: boolean; auftraggeber: string; gast_name: string; gast_bis: string;
+  fahrzeug_titel: string | null; bezug_typ?: string; bezug_titel?: string | null; aktiv: boolean; auftraggeber: string; gast_name: string; gast_bis: string;
   fahrzeug?: PartnerFahrzeug; fotos?: string[]; eintraege?: VerlaufEintrag[]; rechnung_erlaubt: boolean; rechnungen: EingereichteRechnung[];
 };
 
@@ -60,15 +61,15 @@ export default function GastAnsicht({ token }: { token: string }) {
       <div style={s.karte}>
         <div style={s.dim}>Auftrag von <b style={{ color: C.text }}>{a.auftraggeber}</b> · für {a.gast_name} · Link gültig bis {de(a.gast_bis)}</div>
         <h1 style={s.h1}>{a.nummer} · {a.titel}</h1>
-        <div style={s.dim}>{a.fahrzeug_titel || 'Fahrzeug'} · fertig bis {de(a.faellig_am)} · <b style={{ color: C.gold }}>{statusName(a.status)}</b></div>
+        <div style={s.dim}>{(a.bezug_typ ?? 'kfz_bestand') === 'kfz_bestand' ? (a.fahrzeug_titel || 'Fahrzeug') : `${artName(a.bezug_typ)} · ${a.bezug_titel || 'ohne Titel'}`} · fertig bis {de(a.faellig_am)} · <b style={{ color: C.gold }}>{statusName(a.status)}</b></div>
         {a.beschreibung && <div style={{ whiteSpace: 'pre-wrap', fontSize: 14, marginTop: 10 }}>{a.beschreibung}</div>}
         {a.status_grund && <div style={{ ...s.dim, marginTop: 6 }}>Grund: {a.status_grund}</div>}
 
         {a.aktiv ? (
           <>
-            <div style={s.tabelle}>
+            {a.fahrzeug && <div style={s.tabelle}>
               {fahrzeugZeilen(a.fahrzeug).map(([x, y]) => <div key={x} style={{ display: 'contents' }}><span style={s.dim}>{x}</span><span style={{ fontSize: 14, overflowWrap: 'anywhere' }}>{y}</span></div>)}
-            </div>
+            </div>}
             {(a.fotos ?? []).length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                 {(a.fotos ?? []).map((m) => (

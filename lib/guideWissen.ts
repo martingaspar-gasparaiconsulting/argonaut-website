@@ -614,6 +614,21 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Artikel „Test".', loeschen: 'Löschen-Knopf am Artikel.' },
     landetIn: [{ text: 'Kasse', href: '/dashboard/kasse' }, { text: 'Einkauf', href: '/dashboard/einkauf' }],
   },
+  '/dashboard/netzwerk': {
+    zweck: 'Mit anderen Betrieben zusammenarbeiten, ohne Mail-Pingpong: Subunternehmer, andere Gewerke am Bau, Freelancer, Zulieferer, Reinigungs- und Hausmeisterdienste. Sie verbinden sich per Einladungs-Code und geben einander Aufträge an einem Projekt, Auftrag oder Objekt (im Kfz-Handel auch am Fahrzeug). Der Partner sieht nur den Namen und seine Aufgabe — nie Kunde, Adresse, Preise oder andere Aufträge — und nur, solange der Auftrag läuft. Beide Seiten schreiben Einträge mit Fotos, die sich nicht ändern lassen. Die Rechnung des Partners übernehmen Sie per Knopf in den Belegeingang.',
+    wer: 'beide',
+    werText: 'Verbinden und Trennen nur die Geschäftsleitung. Aufträge vergeben und bearbeiten: Chef und Mitarbeiter mit Schreibrecht im Modul des Bezugs (Projekte, Aufträge, Objektzeiten bzw. Kfz). Rechnungen übernehmen: Geschäftsleitung oder wer zusätzlich „Darf abrechnen“ hat.',
+    schritte: [
+      '„Verbindungen“: „Einladungs-Code erstellen“ und den Code dem Partner geben (14 Tage gültig, einmal verwendbar). Hat Ihnen ein Partner einen Code gegeben, tragen Sie ihn unter „Code eingeben“ ein',
+      '„Meine Aufträge an Partner“ → „＋ Auftrag an Partner vergeben“: Projekt, Auftrag oder Objekt wählen, Partner wählen, Aufgabe und „fertig bis“ eintragen, „Auftrag an Partner senden“. Der Partner bekommt eine Glocke',
+      'Partner ohne ARGONAUT: als Partner „Partner ohne ARGONAUT (Gast-Link)“ wählen — der Link wird einmal angezeigt; Sie schicken ihn selbst per Mail oder WhatsApp',
+      '„Aufträge von Partnern“: Aufträge, die Ihr Betrieb bekommen hat — annehmen oder ablehnen, Einträge mit Fotos schreiben, „fertig melden“, Rechnung als PDF oder Foto einreichen',
+      'Meldet der Partner fertig, nehmen Sie ab oder schicken zur Nachbesserung zurück. Seine Rechnung prüfen Sie und übernehmen sie per Knopf in den Belegeingang — oder weisen sie mit Grund zurück',
+      'Trennen geht jederzeit — laufende Aufträge enden dann sofort, der Partner sieht nichts mehr',
+    ],
+    probe: { anlegen: 'Einen Einladungs-Code erstellen.', loeschen: 'Unter „Offene Einladungen“ „Zurückziehen“.' },
+    landetIn: [{ text: 'Belegeingang', href: '/dashboard/eingangsbelege' }, { text: 'Projekte', href: '/dashboard/projekte' }],
+  },
   '/dashboard/erp/fuhrpark/fahrtenbuch': {
     zweck: 'Elektronisches Fahrtenbuch je Fahrzeug und Ladestrom-Erstattung: jede Fahrt mit Datum, Kilometerstand bei Beginn und Ende, Art (dienstlich, privat, Arbeitsweg), bei Dienstfahrten Reiseziel, Zweck und Geschäftspartner. Lücken und Überschneidungen werden angezeigt, spät eingetragene Fahrten gekennzeichnet, Änderungen nur mit Grund (der alte Stand bleibt im Protokoll), abgeschlossene Monate sind gesperrt. Ob ein Fahrtenbuch steuerlich anerkannt wird, entscheidet das Finanzamt.',
     wer: 'beide',

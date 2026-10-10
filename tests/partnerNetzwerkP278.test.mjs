@@ -200,8 +200,9 @@ test('Einbindung: Reiter, Menü, Hub, Guide', () => {
   assert.match(lies('lib/rechte.ts'), /href: '\/dashboard\/kfz\/partner'/);
   assert.match(lies('app/dashboard/kfz/page.tsx'), /href="\/dashboard\/kfz\/partner"/);
   assert.match(lies('lib/guideWissen.ts'), /'\/dashboard\/kfz\/partner': \{/);
-  const seite = lies('app/dashboard/kfz/partner/page.tsx');
+  assert.match(lies('app/dashboard/kfz/partner/page.tsx'), /<PartnerHub ort="kfz" \/>/);
+  const seite = lies('app/dashboard/netzwerk/PartnerHub.tsx'); // seit Paket 303 gemeinsam
   assert.match(seite, /So geht&apos;s/);
   assert.match(seite, /<Leerzustand /);
-  assert.doesNotMatch(seite + lies('app/dashboard/kfz/bestand/KfzPartner.tsx'), /KI-Agent|KI-Crew/);
+  assert.doesNotMatch(seite + lies('app/dashboard/netzwerk/PartnerAuftraege.tsx'), /KI-Agent|KI-Crew/);
 });
