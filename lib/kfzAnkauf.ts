@@ -307,6 +307,8 @@ export type AnkaufFuerBestand = {
   verkaeufer_art: string | null;
   ankaufpreis: number | null; ziel_vk: number | null;
   schaeden: unknown; aufbereitung: number | null;
+  // Paket 308: DAT/Schwacke-Werte am Ankauf gehen mit in den Bestand
+  bewertung_anbieter?: string | null; bewertung_ek?: number | null; bewertung_vk?: number | null; bewertung_am?: string | null; bewertung_url?: string | null;
 };
 
 /**
@@ -330,6 +332,10 @@ export function zuBestand(a: AnkaufFuerBestand, heuteIso: string): Record<string
     vk_brutto: a.ziel_vk !== null && Number.isFinite(a.ziel_vk) && a.ziel_vk > 0 ? centRunden(a.ziel_vk) : null,
     besteuerung: besteuerungAus(a.verkaeufer_art),
     notiz: a.nr ? `Aus Ankauf ${a.nr}` : 'Aus Ankauf',
+    ...(a.bewertung_ek != null || a.bewertung_vk != null ? {
+      bewertung_anbieter: a.bewertung_anbieter ?? 'sonstige', bewertung_ek: a.bewertung_ek ?? null, bewertung_vk: a.bewertung_vk ?? null,
+      bewertung_am: a.bewertung_am ?? null, bewertung_url: a.bewertung_url ?? null,
+    } : {}),
   };
 }
 

@@ -6,6 +6,7 @@
 // Link, Datum) — daraus Marktmitte, Spanne und Rang des eigenen Preises.
 // Keine fremden Marktdaten, kein Auslesen von Börsen, keine KI (lib/kfzMarkt.ts).
 // Schreiben/Löschen mit Schreibrecht „kfz" (RLS Paket 276); ohne SQL Hinweis statt Absturz.
+// Paket 308: auch am Ankauf (bezug="ankauf" -> Spalte ankauf_id), meldet Änderungen per onGeaendert.
 // ============================================================
 
 import { useCallback, useEffect, useState, CSSProperties } from 'react';
@@ -28,7 +29,11 @@ const LEER = { preis: '', km: '', ez: '', quelle: 'mobile.de', link: '', notiz: 
 
 function heute(): string { return new Date().toISOString().slice(0, 10); }
 
-export default function KfzMarkt({ fz }: { fz: { id: string; owner_user_id: string; vk_brutto: number | null; km_stand: number | null; erstzulassung: string | null } }) {
+export default function KfzMarkt({ fz, bezug = 'bestand', onGeaendert }: {
+  fz: { id: string; owner_user_id: string; vk_brutto: number | null; km_stand: number | null; erstzulassung: string | null };
+  bezug?: 'bestand' | 'ankauf'; onGeaendert?: () => void;
+}) {
+  const spalte = bezug === 'ankauf' ? 'ankauf_id' : 'bestand_id';
   const [liste, setListe] = useState<Zeile[]>([]);
   const [f, setF] = useState(LEER);
   const [offen, setOffen] = useState(false);
@@ -39,10 +44,10 @@ export default function KfzMarkt({ fz }: { fz: { id: string; owner_user_id: stri
 
   const lade = useCallback(async () => {
     const { data, error } = await supabase.from('kfz_marktvergleich').select('id, preis, km, erstzulassung, quelle, link, notiz, erfasst_am')
-      .eq('bestand_id', fz.id).order('erfasst_am', { ascending: false }).limit(200);
+      .eq(spalte, fz.id).order('erfasst_am', { ascending: false }).limit(200);
     setFehlt(!!error);
     setListe(error ? [] : (((data as unknown) as Zeile[]) ?? []).map((z) => ({ ...z, preis: z.preis === null ? null : Number(z.preis) })));
-  }, [fz.id]);
+  }, [fz.id, spalte]);
   useEffect(() => { void lade(); }, [lade]);
 
   const tag = heute();
@@ -54,9 +59,9 @@ export default function KfzMarkt({ fz }: { fz: { id: string; owner_user_id: stri
     if (!p.ok) { setMeldung({ ok: false, text: p.fehler }); return; }
     setBusy(true);
     try {
-      const { data, error } = await supabase.from('kfz_marktvergleich').insert({ ...p.felder, owner_user_id: fz.owner_user_id, bestand_id: fz.id }).select('id');
+      const { data, error } = await supabase.from('kfz_marktvergleich').insert({ ...p.felder, owner_user_id: fz.owner_user_id, [spalte]: fz.id }).select('id');
       if (error || nichtsGeschrieben(data)) { setMeldung({ ok: false, text: error ? 'Speichern fehlgeschlagen. Haben Sie das Schreibrecht für „KFZ" und ist SQL Paket 276 ausgeführt?' : NICHT_GESPEICHERT }); return; }
-      setF({ ...LEER, quelle: f.quelle }); setMeldung({ ok: true, text: 'Vergleich erfasst.' }); await lade();
+      setF({ ...LEER, quelle: f.quelle }); setMeldung({ ok: true, text: 'Vergleich erfasst.' }); await lade(); onGeaendert?.();
     } finally { setBusy(false); }
   }
 
@@ -65,7 +70,7 @@ export default function KfzMarkt({ fz }: { fz: { id: string; owner_user_id: stri
     try {
       const { data, error } = await supabase.from('kfz_marktvergleich').delete().eq('id', id).select('id');
       if (error || nichtsGeschrieben(data)) { setMeldung({ ok: false, text: NICHT_GELOESCHT }); return; }
-      setLoeschFrage(null); await lade();
+      setLoeschFrage(null); await lade(); onGeaendert?.();
     } finally { setBusy(false); }
   }
 
@@ -76,7 +81,7 @@ export default function KfzMarkt({ fz }: { fz: { id: string; owner_user_id: stri
     <div style={k.karte}>
       <h3 style={k.h3}>Marktvergleich</h3>
       <div style={k.dim}>Erfassen Sie Angebote ähnlicher Fahrzeuge (z. B. aus den Börsen) — nur Preis, km, Erstzulassung und Quelle, keine Namen. Gerechnet wird mit Einträgen der letzten {MAX_TAGE} Tage; ab 3 passenden gibt es eine Aussage.</div>
-      {fehlt && <div style={{ ...k.dim, color: C.warn, marginTop: 6 }}>Marktvergleich ist noch nicht eingerichtet (SQL Paket 276 fehlt).</div>}
+      {fehlt && <div style={{ ...k.dim, color: C.warn, marginTop: 6 }}>Marktvergleich ist noch nicht eingerichtet (SQL Paket {bezug === 'ankauf' ? '308' : '276'} fehlt).</div>}
 
       <div style={{ marginTop: 10, fontSize: 13.5, color: FARBE[lage.stufe] }}>{lage.text}</div>
       {lage.kmText && <div style={{ ...k.dim, marginTop: 4 }}>{lage.kmText}</div>}

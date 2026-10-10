@@ -6,6 +6,7 @@
 // und -Verkaufswert hier eintragen. ARGONAUT liest nichts aus und schätzt
 // nichts; es vergleicht nur mit dem eigenen Verkaufspreis (lib/kfzBewertung.ts).
 // Speichern mit Schreibrecht „kfz" (RLS Paket 259); ohne SQL 283 Hinweis statt Absturz.
+// Paket 308: auch am Ankauf (tabelle="kfz_ankauf", gleiche Spalten, SQL 308).
 // ============================================================
 
 import { useEffect, useState, CSSProperties } from 'react';
@@ -25,8 +26,8 @@ function berlinHeute(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 
-export default function KfzBewertung({ id, werte, fin, vkBrutto, onGespeichert }: {
-  id: string; werte: Partial<Bewertung>; fin: string | null; vkBrutto: number | null; onGespeichert: () => void;
+export default function KfzBewertung({ id, werte, fin, vkBrutto, onGespeichert, tabelle = 'kfz_bestand' }: {
+  id: string; werte: Partial<Bewertung>; fin: string | null; vkBrutto: number | null; onGespeichert: () => void; tabelle?: 'kfz_bestand' | 'kfz_ankauf';
 }) {
   const [f, setF] = useState({ anbieter: 'dat', ek: '', vk: '', am: '', url: '' });
   const [busy, setBusy] = useState(false);
@@ -60,8 +61,8 @@ export default function KfzBewertung({ id, werte, fin, vkBrutto, onGespeichert }
     if (!e.ok) { setMeldung({ ok: false, text: e.fehler }); return; }
     setBusy(true);
     try {
-      const { error } = await supabase.from('kfz_bestand').update({ ...e.felder, aktualisiert_am: new Date().toISOString() }).eq('id', id);
-      if (error) { setMeldung({ ok: false, text: 'Speichern fehlgeschlagen. Haben Sie das Schreibrecht für „KFZ" und ist SQL Paket 283 ausgeführt?' }); return; }
+      const { error } = await supabase.from(tabelle).update({ ...e.felder, aktualisiert_am: new Date().toISOString() }).eq('id', id);
+      if (error) { setMeldung({ ok: false, text: 'Speichern fehlgeschlagen. Haben Sie das Schreibrecht für „KFZ" und ist SQL Paket ' + (tabelle === 'kfz_ankauf' ? '308' : '283') + ' ausgeführt?' }); return; }
       setMeldung({ ok: true, text: e.felder.bewertung_ek === null && e.felder.bewertung_vk === null ? 'Bewertung entfernt.' : 'Bewertung gespeichert.' });
       onGespeichert();
     } finally { setBusy(false); }

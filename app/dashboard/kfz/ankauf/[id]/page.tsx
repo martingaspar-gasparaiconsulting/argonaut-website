@@ -11,6 +11,8 @@
 // Online-Formular (Quelle „online") mit Hinweis. Andockpunkt K6: Inzahlungnahme am Verkauf.
 // Paket 307 (FM3): beim Ankaufen werden die Fahrzeugfotos der Fahrzeugmappe gleich in die
 // Fahrzeugakte kopiert (weitere Auswahl in der Karte „Fahrzeugmappe").
+// Paket 308 (FM4): Reiter „Bewertung" mit Marktvergleich, DAT/Schwacke und Bewertungs-Empfehlung;
+// beim Ankaufen gehen Vergleiche und DAT/Schwacke-Werte mit an das Bestandsfahrzeug.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -29,6 +31,9 @@ import {
 import { ankaufscheinPdf } from '@/lib/kfzAnkaufPdf';
 import FotoMarkierung from '../../../bautagebuch/FotoMarkierung';
 import MappeKarte from './MappeKarte';
+import EmpfehlungKarte from './EmpfehlungKarte';
+import KfzMarkt from '../../bestand/KfzMarkt';
+import KfzBewertung from '../../bestand/KfzBewertung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -51,6 +56,8 @@ type Ankauf = {
   ziel_vk: number | null; aufbereitung: number | null; sonstige_kosten: number | null; standtage_plan: number | null; marge: number | null;
   angebot: number | null; ankaufpreis: number | null; angekauft_am: string | null; bestand_id: string | null; notiz: string | null;
   erstellt_am: string; aktualisiert_am: string;
+  historie_befund?: unknown; empfehlung?: unknown;
+  bewertung_anbieter?: string | null; bewertung_ek?: number | null; bewertung_vk?: number | null; bewertung_am?: string | null; bewertung_url?: string | null;
 };
 type Reiter = 'fahrzeug' | 'pruefung' | 'schaeden' | 'bewertung' | 'abschluss';
 const REITER: [Reiter, string][] = [['fahrzeug', 'Fahrzeug und Verkäufer'], ['pruefung', 'Prüfprotokoll'], ['schaeden', 'Schäden'], ['bewertung', 'Bewertung'], ['abschluss', 'Abschluss']];
@@ -87,6 +94,7 @@ export default function AnkaufAktePage() {
   const [bew, setBew] = useState({ ziel_vk: '', aufbereitung: '', sonstige: '', standtage: '', marge: '', angebot: '' });
   const [abs, setAbs] = useState({ ankaufpreis: '', angekauft_am: heute(), ausweis: false });
   const [loeschFrage, setLoeschFrage] = useState<string | null>(null);
+  const [marktNeu, setMarktNeu] = useState(0);
 
   const lade = useCallback(async () => {
     if (!id) return;
@@ -266,6 +274,8 @@ export default function AnkaufAktePage() {
       }
       const { error: e2 } = await supabase.from('kfz_ankauf').update({ status: 'angekauft', bestand_id: neuId, aktualisiert_am: new Date().toISOString() }).eq('id', a.id);
       if (e2) { setFehler('Im Bestand angelegt, aber der Ankauf konnte nicht abgeschlossen werden. Bitte Seite neu laden.'); return; }
+      // Paket 308: Marktvergleiche des Ankaufs gelten auch am Bestandsfahrzeug (Fehler ändern nichts am Ankauf).
+      await supabase.from('kfz_marktvergleich').update({ bestand_id: neuId }).eq('ankauf_id', a.id).is('bestand_id', null);
       // Paket 307: Fotos aus der Fahrzeugmappe gleich mitnehmen (Fehler hier ändern nichts am Ankauf).
       let mappeText = '';
       if (a.quelle === 'online') {
@@ -453,6 +463,19 @@ export default function AnkaufAktePage() {
             </div>
           ))}
           <div style={{ ...s.karte, display: 'flex', justifyContent: 'space-between' }}><b>Summe Schäden (netto)</b><b style={{ color: C.gold }}>{euro(summe)}</b></div>
+        </div>
+      )}
+
+      {reiter === 'bewertung' && (
+        <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
+          <EmpfehlungKarte a={a} istChef={istChef} darfSchreiben={!abgeschlossen} neuLaden={marktNeu}
+            kosten={{ schaeden: summe, aufbereitung: betrag(bew.aufbereitung), sonstige: betrag(bew.sonstige), standtagePlan: ganz(bew.standtage), standkostenTag, marge: betrag(bew.marge), verkaeuferArt: fz.verkaeufer_art }}
+            onVk={(vk) => { setBew({ ...bew, ziel_vk: t(vk) }); setOk('Empfohlener Verkaufspreis eingetragen — mit „💾 Bewertung speichern“ übernehmen.'); }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
+            <KfzMarkt fz={{ id: a.id, owner_user_id: a.owner_user_id, vk_brutto: betrag(bew.ziel_vk), km_stand: a.km_stand, erstzulassung: a.erstzulassung }} bezug="ankauf" onGeaendert={() => setMarktNeu((n) => n + 1)} />
+            <KfzBewertung id={a.id} tabelle="kfz_ankauf" fin={a.fin} vkBrutto={betrag(bew.ziel_vk)} onGespeichert={() => void lade()}
+              werte={{ bewertung_anbieter: (a.bewertung_anbieter as 'dat' | 'schwacke' | 'sonstige' | null) ?? null, bewertung_ek: a.bewertung_ek ?? null, bewertung_vk: a.bewertung_vk ?? null, bewertung_am: a.bewertung_am ?? null, bewertung_url: a.bewertung_url ?? null }} />
+          </div>
         </div>
       )}
 
