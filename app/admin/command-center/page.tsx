@@ -102,6 +102,7 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
   ];
 
   const sektionenGesch: Sektion[] = [
+    { titel: 'Vorführ-Betriebe & Zeitreise', sub: 'Demo-Logins je Branche · leer → erste Monate → 18 Monate', href: '/admin/demo-betriebe' },
     { titel: 'Website-Analyse', sub: 'Besucher · Klicks · Kanäle · Termine', href: '/dashboard/analyse' },
     { titel: 'Kunden & Module', sub: 'Tenants, Onboarding, Freischaltung', href: '/admin/tenants' },
     { titel: 'Betriebe einrichten', sub: 'Kunden-Akte · Checkliste · KI-Berater', href: '/admin/command-center/betrieb' },
@@ -195,6 +196,26 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
             </div>
           ))}
         </section>
+
+        {/* Paket 299: Vorführung — gut sichtbar, direkt unter den Kennzahlen */}
+        {ansicht === 'geschaeftlich' && (
+          <Link href="/admin/demo-betriebe" style={{ textDecoration: 'none', color: 'inherit', display: 'block', marginBottom: 'clamp(20px,3vw,32px)' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap',
+              background: 'linear-gradient(120deg, rgba(201,168,76,0.16), rgba(0,229,255,0.06))', border: `1px solid rgba(201,168,76,0.55)`,
+              borderRadius: 18, padding: 'clamp(18px,2.2vw,28px)',
+            }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 'clamp(11px,1vw,13px)', color: C.gold, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>Präsentation beim Kunden</div>
+                <div style={{ fontFamily: 'var(--font-syne), sans-serif', fontWeight: 900, fontSize: 'clamp(22px,2.6vw,34px)', marginTop: 6 }}>🎬 Vorführ-Betriebe & Zeitreise</div>
+                <div style={{ fontSize: 'clamp(13px,1.1vw,16px)', color: 'rgba(255,255,255,0.75)', marginTop: 6, maxWidth: 760 }}>
+                  Tag 1 leer · die ersten Monate · nach 18 Monaten — je Stufe ein eigener Login. Dazu alle Branchen-Demos mit Zugangsblatt.
+                </div>
+              </div>
+              <span style={{ background: C.gold, color: C.navy, borderRadius: 12, padding: '12px 20px', fontWeight: 800, fontSize: 'clamp(14px,1.2vw,17px)', whiteSpace: 'nowrap' }}>Öffnen →</span>
+            </div>
+          </Link>
+        )}
 
         {/* Control-Room-Umschalter: öffentliche Knöpfe Termin ↔ Bestellen */}
         <CtaModusSchalter initial={ctaModus} />

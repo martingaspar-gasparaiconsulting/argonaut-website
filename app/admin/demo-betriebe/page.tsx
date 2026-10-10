@@ -3,7 +3,8 @@
 // ============================================================================
 // ARGONAUT OS · app/admin/demo-betriebe/page.tsx
 //
-// Der Knopf für die Präsentation: legt die 22 Vorführ-Betriebe an und zeigt
+// Der Knopf für die Präsentation: legt die 23 Vorführ-Betriebe an und zeigt
+// (Paket 299: oben die Zeitreise je Branche — leer, erste Monate, 18 Monate)
 // anschließend das Zugangsblatt — je Branche eine Zeile mit E-Mail und Passwort.
 //
 // Gedacht für den Testtag: einmal klicken, Bericht lesen, Blatt ausdrucken.
@@ -16,6 +17,7 @@
 
 import { useState, type CSSProperties } from 'react';
 import { DEMO_BETRIEBE, demoEmail, demoPasswort } from '@/lib/demoBetriebe';
+import { ZEITREISE, zeitreiseKarten, zeitreiseSlugs, KUNDEN_LOGIN } from '@/lib/demoZeitreise';
 
 const C = {
   navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', cyan: '#00e5ff', green: '#4CAF7D', rot: '#e06666',
@@ -55,6 +57,10 @@ export default function DemoBetriebePage() {
   }
 
   const mitHinweis = (ergebnisse || []).filter((e) => e.hinweise.length > 0).length;
+  const [kopiert, setKopiert] = useState('');
+  async function kopieren(text: string) {
+    try { await navigator.clipboard.writeText(text); setKopiert(text); setTimeout(() => setKopiert(''), 1500); } catch { /* Zwischenablage gesperrt — Text steht sichtbar da */ }
+  }
 
   return (
     <div style={s.seite}>
@@ -67,7 +73,52 @@ export default function DemoBetriebePage() {
       `}</style>
 
       <div className="kein-druck">
-        <h1 style={s.h1}>Vorführ-Betriebe für die Präsentation</h1>
+        {/* Paket 299: Zeitreise — leer, erste Monate, nach 18 Monaten */}
+        <p style={s.eyebrow}>Präsentation beim Kunden</p>
+        <h1 style={s.h1}>Zeitreise: So wächst ARGONAUT mit dem Betrieb</h1>
+        <p style={s.sub}>
+          Erst das leere Konto zeigen, dann den Betrieb nach den ersten Monaten, dann den nach anderthalb Jahren — dort sieht der Kunde,
+          was das ganze System kann. Je Stufe ein eigener Login; am besten jede Stufe in einem eigenen privaten Browserfenster öffnen.
+        </p>
+        {ZEITREISE.map((reihe) => (
+          <section key={reihe.key} style={s.reihe}>
+            <div style={s.reiheKopf}>
+              <span style={{ fontSize: 18, fontWeight: 800 }}>{reihe.icon} {reihe.branche}</span>
+              <button onClick={() => void anlegen(zeitreiseSlugs(reihe))} disabled={laeuft} style={{ ...s.knopfKlein, opacity: laeuft ? 0.6 : 1 }}>
+                {laeuft ? 'Wird angelegt …' : 'Alle Stufen anlegen / auffrischen'}
+              </button>
+            </div>
+            <div style={s.stufen}>
+              {zeitreiseKarten(reihe).map((k) => {
+                const e = (ergebnisse || []).find((x) => x.slug === k.slug);
+                return (
+                  <div key={k.slug} style={s.stufe}>
+                    <div style={s.stufeNr}>Stufe {k.nr}</div>
+                    <div style={{ fontSize: 17, fontWeight: 800, marginTop: 4 }}>{k.titel}</div>
+                    <div style={{ color: C.gold, fontWeight: 700, fontSize: 14, marginTop: 6 }}>{k.firma}</div>
+                    <div style={{ color: C.dim, fontSize: 13.5, lineHeight: 1.5, marginTop: 8, flex: 1 }}>{k.zeigt}</div>
+                    <div style={s.zugang}>
+                      <button onClick={() => void kopieren(k.email)} style={s.kopier} title="E-Mail kopieren">
+                        {kopiert === k.email ? '✓ kopiert' : k.email}
+                      </button>
+                      <button onClick={() => void kopieren(k.passwort)} style={s.kopier} title="Passwort kopieren">
+                        {kopiert === k.passwort ? '✓ kopiert' : k.passwort}
+                      </button>
+                    </div>
+                    <a href={KUNDEN_LOGIN} target="_blank" rel="noopener noreferrer" style={s.login}>Anmeldung öffnen →</a>
+                    {e && (
+                      <div style={{ fontSize: 12.5, marginTop: 8, color: e.hinweise.length ? C.gold : C.green }}>
+                        {e.hinweise.length ? e.hinweise.join(' · ') : `bereit · ${e.datensaetze + (e.fachdaten || 0)} Datensätze neu · ${e.prozent} % Startstrecke`}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+
+        <h2 style={s.h2}>Alle Vorführ-Betriebe</h2>
         <p style={s.sub}>
           {DEMO_BETRIEBE.length} Demo-Betriebe — je Branche einer, plus je ein zweiter für Handwerk und Lebensmittel.
           Jeder bekommt eigene Zugangsdaten, vollständige Firmenstammdaten, die Branchen-Module,
@@ -180,6 +231,16 @@ export default function DemoBetriebePage() {
 const s: Record<string, CSSProperties> = {
   seite: { maxWidth: 1180, margin: '0 auto', padding: '28px 20px 70px', color: C.text, background: C.navy, minHeight: '100vh', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' },
   h1: { fontSize: 26, fontWeight: 800, margin: 0 },
+  eyebrow: { color: C.gold, fontSize: 12, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', margin: '0 0 8px' },
+  reihe: { marginTop: 18, background: C.navy2, border: `1px solid rgba(201,168,76,0.35)`, borderRadius: 16, padding: '16px 18px' },
+  reiheKopf: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
+  stufen: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginTop: 14 },
+  stufe: { display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.rand}`, borderRadius: 12, padding: '14px 15px' },
+  stufeNr: { color: C.cyan, fontSize: 11.5, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' },
+  zugang: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 },
+  kopier: { background: 'transparent', color: C.text, border: `1px solid ${C.rand}`, borderRadius: 8, padding: '6px 10px', fontSize: 12.5, fontFamily: 'ui-monospace, monospace', cursor: 'pointer' },
+  login: { marginTop: 12, alignSelf: 'flex-start', background: C.gold, color: C.navy, borderRadius: 9, padding: '9px 14px', fontSize: 13.5, fontWeight: 800, textDecoration: 'none' },
+  knopfKlein: { background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, borderRadius: 9, padding: '8px 14px', fontSize: 13.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   h2: { fontSize: 19, fontWeight: 800, margin: '30px 0 12px' },
   sub: { color: C.dim, fontSize: 15, lineHeight: 1.55, margin: '9px 0 0', maxWidth: 820 },
   hinweisBox: { marginTop: 16, background: 'rgba(0,229,255,0.06)', border: `1px solid ${C.rand}`, borderRadius: 12, padding: '13px 16px', color: C.dim, fontSize: 13.5, lineHeight: 1.6, maxWidth: 820 },

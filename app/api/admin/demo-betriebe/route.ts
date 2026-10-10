@@ -12,7 +12,7 @@ import { betreiberGuard } from '../../../../lib/betreiberGuard';
 // ============================================================================
 // ARGONAUT OS · app/api/admin/demo-betriebe/route.ts
 //
-// Legt die 22 Vorführ-Betriebe für die Präsentation an — auf einen Klick.
+// Legt die 23 Vorführ-Betriebe für die Präsentation an — auf einen Klick.
 //
 // Warum als Route und nicht als Skript: Konten anlegen braucht den Service-Role-
 // Schlüssel, und der liegt ausschließlich in Vercel. Diese Route läuft dort,
@@ -121,6 +121,13 @@ async function profilSetzen(admin: Admin, userId: string, b: DemoBetrieb, email:
     demo_ablauf: null,                 // unbegrenzt: stirbt vor der Präsentation nicht weg
     onboarding_completed: b.ziel >= 100,
   };
+
+  // Paket 299: leeres Konto („Tag 1" der Zeitreise) — nur Name, Branche, Kontakt-Mail;
+  // Anschrift, Steuer- und Bankdaten bleiben leer, damit die Startstrecke bei 0 % steht.
+  if (b.leer) {
+    for (const k of ['firma_strasse', 'firma_plz', 'firma_ort', 'firma_telefon', 'firma_website', 'firma_rechtsform', 'firma_geschaeftsfuehrer',
+      'firma_ust_id', 'firma_steuernummer', 'firma_iban', 'firma_bank', 'firma_bic', 'sepa_iban']) felder[k] = null;
+  }
 
   const { data: upd, error: updErr } = await admin.from('profiles').update(felder).eq('id', userId).select('id');
   if (updErr) {
@@ -360,13 +367,16 @@ async function lauf(req: Request) {
       e.module = m.anzahl;
       if (m.hinweis) e.hinweise.push(m.hinweis);
 
-      const w = await weltLaden(admin, k.id, b.kategorie, heute, zuruecksetzen, b.slug);
-      e.datensaetze = w.anzahl;
-      e.hinweise.push(...w.hinweise);
+      // Paket 299: das leere Konto der Zeitreise bekommt weder Übungswelt noch Fachdaten.
+      if (!b.leer) {
+        const w = await weltLaden(admin, k.id, b.kategorie, heute, zuruecksetzen, b.slug);
+        e.datensaetze = w.anzahl;
+        e.hinweise.push(...w.hinweise);
 
-      const fd = await fachdatenLaden(admin, k.id, b.slug, heute);
-      e.fachdaten = fd.anzahl;
-      e.hinweise.push(...fd.hinweise);
+        const fd = await fachdatenLaden(admin, k.id, b.slug, heute);
+        e.fachdaten = fd.anzahl;
+        e.hinweise.push(...fd.hinweise);
+      }
 
       const h = await haekchenSetzen(admin, k.id, b.kategorie, b.ziel, heute);
       e.haken = h.gesetzt;
