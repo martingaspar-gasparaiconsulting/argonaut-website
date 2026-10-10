@@ -25,7 +25,7 @@
 // React-Hooks. Der eigentliche DB-Read passiert beim Aufrufer (DashboardNav im
 // Browser, proxy.ts in Node). Nur so bleibt sie in beiden Laufzeiten nutzbar.
 // ============================================================================
-import { NAV_LINKS, pfadPasst, type NavLink } from './rechte'
+import { NAV_LINKS, pfadPasst, navModul, type NavLink } from './rechte'
 /** Eine Zeile aus public.tenant_module (nur die fuers Gate noetigen Spalten). */
 export type TenantModulRow = { modul_key: string; aktiv: boolean }
 /**
@@ -68,7 +68,8 @@ export function nurGebuchteLinks(
   gebucht: Set<string> | null,
 ): NavLink[] {
   if (gebucht === null) return links
-  return links.filter((l) => istModulGebucht(l.modul, gebucht))
+  // Paket 301: Unterseiten (Trinkgeld, Trackday …) nur, wenn das Eltern-Modul gebucht ist — wie im Pfad-Riegel
+  return links.filter((l) => istModulGebucht(navModul(l), gebucht))
 }
 // ---------------------------------------------------------------------------
 // P49 Teil 2 · Pfad -> Modul. Fuer den URL-Riegel im proxy.

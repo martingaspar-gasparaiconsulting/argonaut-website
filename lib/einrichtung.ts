@@ -148,7 +148,7 @@ export const PUNKTE: Punkt[] = [
     zustaendig: 'kunde',
     feld: 'shopArtikel',
     modul: 'shop',
-    wo: '/dashboard/artikel',
+    wo: '/dashboard/shop/produkte', // P301: vorher /dashboard/artikel (gibt es nicht)
   },
 
   // --- Noch nicht gebaut ---------------------------------------------------

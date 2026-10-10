@@ -453,7 +453,7 @@ export default function AnkaufAktePage() {
             <div style={s.ergebnis}>{b.maxAnkauf !== null ? euro(b.maxAnkauf) : '—'}</div>
             <div style={s.dim}>höchster sinnvoller Ankaufspreis {b.besteuerung === '25a' ? '(Zahlbetrag, § 25a)' : `(netto${b.maxAnkaufBrutto !== null ? `, brutto ${euro(b.maxAnkaufBrutto)}` : ''})`}</div>
             <div style={{ margin: '10px 0', display: 'grid', gap: 4 }}>{b.rechenweg.map((r, i) => <div key={i} style={{ fontSize: 13.5, color: b.lohntSich === false ? C.bad : C.text }}>{r}</div>)}</div>
-            <div style={s.dim}>Kosten gesamt (netto): {euro(b.kosten)}. Richtrechnung mit 19 % — die genaue Kalkulation je Fahrzeug folgt mit dem Baustein Kalkulation.</div>
+            <div style={s.dim}>Kosten gesamt (netto): {euro(b.kosten)}. Richtrechnung mit 19 % — die genaue Kalkulation steht nach dem Ankauf am Fahrzeug im Bestand (Reiter „Kalkulation“).</div>
             <hr style={{ border: 0, borderTop: `1px solid ${C.border}`, margin: '12px 0' }} />
             <label style={s.lab}>Angebot an den Verkäufer<input style={s.inp} inputMode="decimal" value={bew.angebot} onChange={(e) => setBew({ ...bew, angebot: e.target.value })} /></label>
             <div style={{ marginTop: 6, color: FARBE[ampel.stufe], fontSize: 13.5 }}>● {ampel.text}</div>

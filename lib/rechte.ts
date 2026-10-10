@@ -500,6 +500,25 @@ export function mitarbeiterDarf(pfad: string, module: readonly string[]): boolea
 }
 
 /**
+ * Paket 301 (10.10.2026): Modul eines Nav-Eintrags — bei Unterseiten ohne
+ * eigenen Schluessel (z. B. „🪙 Trinkgeld-Verteilung“ unter /dashboard/gastro,
+ * „🏁 Trackday & Kartbahn“ unter /dashboard/veranstaltungen) der Schluessel der
+ * Elternseite. Vorher galten solche Eintraege als „Infra“: Sie standen bei
+ * JEDEM Betrieb im Menue, der Pfad-Riegel (proxy) leitete aber auf die
+ * Uebersicht um, weil das Eltern-Modul nicht gebucht war — man klickte und
+ * landete wieder auf der Startseite. Mitarbeiter sahen sie dagegen nie, obwohl
+ * sie die Seite oeffnen durften. Jetzt folgen Menue, Buchung, Standort und
+ * Mitarbeiter-Rechte demselben Modul wie der Pfad-Riegel.
+ */
+export function navModul(l: Pick<NavLink, 'href' | 'modul'>): string | undefined {
+  if (l.modul) return l.modul
+  const eltern = NAV_LINKS
+    .filter((p) => p.modul && p.href !== l.href && pfadPasst(l.href, p.href))
+    .sort((a, b) => b.href.length - a.href.length)[0]
+  return eltern?.modul
+}
+
+/**
  * Welche Nav-Eintraege sieht dieser Nutzer?
  *
  * @param istChef            Kein mitarbeiter-Datensatz = Chef.
@@ -512,19 +531,20 @@ export function sichtbareNavLinks(
   sichtbareModule: ReadonlySet<string> | null,
 ): NavLink[] {
   return NAV_LINKS.filter((l) => {
+    const modul = navModul(l) // Paket 301: Unterseiten erben das Modul der Elternseite
     if (istChef) {
       if (l.nurMitarbeiter) return false
       if (l.immer) return true
       // Starter-Modus: nur beim Chef, nur fuer Module mit Schluessel.
       // Greift auch bei nurChef-Modulen — der Chef darf Finanzen ausblenden.
-      if (l.modul && sichtbareModule !== null && !sichtbareModule.has(l.modul)) return false
+      if (modul && sichtbareModule !== null && !sichtbareModule.has(modul)) return false
       return true
     }
 
     // Mitarbeiter
     if (l.nurChef) return false
     if (l.immer || l.nurMitarbeiter) return true
-    return l.modul ? rechte.has(l.modul) : false
+    return modul ? rechte.has(modul) : false
   })
 }
 

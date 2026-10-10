@@ -23,7 +23,7 @@
 // KEINE Supabase-Aufrufe, KEINE Hooks — in Browser UND Node nutzbar.
 // ============================================================================
 
-import type { NavLink } from './rechte';
+import { navModul, type NavLink } from './rechte';
 
 /** Eine Zeile aus public.standort_module (nur die fuers Gate noetigen Spalten). */
 export type StandortModulRow = { modul_key: string; aktiv: boolean };
@@ -62,5 +62,5 @@ export function nurStandortAktiveLinks(
   aus: Set<string> | null,
 ): NavLink[] {
   if (aus === null) return links;
-  return links.filter((l) => istModulAmStandortAktiv(l.modul, aus));
+  return links.filter((l) => istModulAmStandortAktiv(navModul(l), aus)); // Paket 301: Unterseiten erben das Modul
 }

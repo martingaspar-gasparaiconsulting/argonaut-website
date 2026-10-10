@@ -290,7 +290,7 @@ export default function HandelsaktePage() {
             <h3 style={s.h3}>Inserats-Ampel <span style={{ color: FARBE[ampel.stufe] }}>{ampel.prozent} %</span></h3>
             <div style={s.meter}><i style={{ display: 'block', height: '100%', width: `${ampel.prozent}%`, background: FARBE[ampel.stufe], borderRadius: 99 }} /></div>
             {ampel.punkte.map((p) => <div key={p.name} style={s.ampelZeile}><span>{p.ok ? '✓' : '○'} {p.name}</span><span style={{ color: p.ok ? C.ok : C.warn, textAlign: 'right' }}>{p.hinweis}</span></div>)}
-            <div style={{ ...s.dim, marginTop: 8 }}>Fotos pflegen Sie im Reiter „Fotos und Video". Die Übertragung an die Börsen folgt mit K11.</div>
+            <div style={{ ...s.dim, marginTop: 8 }}>Fotos pflegen Sie im Reiter „Fotos und Video".</div>
           </div>
         </div>
       )}

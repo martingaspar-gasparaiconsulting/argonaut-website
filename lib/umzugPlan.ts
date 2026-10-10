@@ -31,8 +31,8 @@ export type DateiErkennung = {
 };
 
 const SONDER: Record<SonderWeg['art'], Omit<SonderWeg, 'art'>> = {
-  bank: { titel: 'Kontoauszug', href: '/dashboard/bank', grund: 'Kontoauszüge gehören in den Bankabgleich — dort werden die Zahlungen den offenen Rechnungen zugeordnet.' },
-  erechnung: { titel: 'E-Rechnung (XRechnung/ZUGFeRD)', href: '/dashboard/eingangsrechnungen', grund: 'E-Rechnungen liest ARGONAUT unter Eingangsrechnungen mit allen Positionen ein.' },
+  bank: { titel: 'Kontoauszug', href: '/dashboard/banking', grund: 'Kontoauszüge gehören in den Bankabgleich — dort werden die Zahlungen den offenen Rechnungen zugeordnet.' },
+  erechnung: { titel: 'E-Rechnung (XRechnung/ZUGFeRD)', href: '/dashboard/erechnung-import', grund: 'E-Rechnungen liest ARGONAUT unter Eingangsrechnungen mit allen Positionen ein.' },
   gaeb: { titel: 'GAEB-Leistungsverzeichnis', href: '/dashboard/bau-lv', grund: 'GAEB-Dateien liest ARGONAUT unter Bau & LV ein.' },
   datev_buchungen: { titel: 'DATEV-Buchungsstapel', href: '/dashboard/import', grund: 'Buchungsstapel bleiben beim Steuerberater — ARGONAUT übernimmt Debitoren/Kreditoren (Stammdaten), keine Buchungen.' },
   datev_andere: { titel: 'DATEV-Datei', href: '/dashboard/import', grund: 'Übernommen werden aus DATEV nur Debitoren/Kreditoren (Stammdaten).' },

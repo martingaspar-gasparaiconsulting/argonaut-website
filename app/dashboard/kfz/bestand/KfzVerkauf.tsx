@@ -393,7 +393,7 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
             {b.anzahlung > 0 && <tr><td style={s.td}>Anzahlung</td><td style={s.tdR}>- {geld(b.anzahlung)}</td></tr>}
             <tr><td style={{ ...s.td, fontWeight: 800 }}>{b.rest >= 0 ? 'Noch zu zahlen' : 'Auszahlung an Käufer'}</td><td style={{ ...s.tdR, fontWeight: 800, color: C.gold }}>{geld(Math.abs(b.rest))}</td></tr>
           </tbody></table>
-          <div style={{ ...s.dim, marginTop: 6 }}>{f.fz.besteuerung === '25a' ? 'Differenzbesteuert (§ 25a): keine Umsatzsteuer im Vertrag ausgewiesen.' : f.fz.besteuerung === 'regel' ? 'Regelsteuer: Der Vertrag nennt die enthaltene Umsatzsteuer.' : 'Besteuerung offen — bitte in den Stammdaten festlegen.'} Die Rechnung folgt mit dem nächsten Ausbau.</div>
+          <div style={{ ...s.dim, marginTop: 6 }}>{f.fz.besteuerung === '25a' ? 'Differenzbesteuert (§ 25a): keine Umsatzsteuer im Vertrag ausgewiesen.' : f.fz.besteuerung === 'regel' ? 'Regelsteuer: Der Vertrag nennt die enthaltene Umsatzsteuer.' : 'Besteuerung offen — bitte in den Stammdaten festlegen.'} Die Rechnung erstellen Sie unten mit „🧾 Rechnung erstellen“.</div>
         </div>
 
         <div style={s.karte}>

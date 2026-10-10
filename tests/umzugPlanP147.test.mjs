@@ -26,7 +26,7 @@ test('Haldenberg: alle 16 Listen am richtigen Ziel, Kontoauszug als Sonderweg Ba
   const bank = erkenne('06-Kontoauszug-September-2026.csv');
   assert.equal(bank.ziel, null);
   assert.equal(bank.sonder?.art, 'bank');
-  assert.equal(bank.sonder?.href, '/dashboard/bank');
+  assert.equal(bank.sonder?.href, '/dashboard/banking'); // P301: die Seite heißt Banking
   const sicher = Object.keys(ERWARTET).filter((d) => erkenne(d).sicher).length;
   assert.ok(sicher >= 13, `nur ${sicher} sicher erkannt`);
 });

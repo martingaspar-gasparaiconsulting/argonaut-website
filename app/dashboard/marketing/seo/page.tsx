@@ -133,7 +133,7 @@ export default function SeoPage() {
             <div style={{ background: C.navy2, border: `1px dashed ${C.border}`, borderRadius: 14, padding: 24, color: C.textDim, fontSize: 14.5, lineHeight: 1.6 }}>
               Noch keine Seite im ARGONAUT-Baukasten. Sobald Sie dort eine Seite angelegt und veröffentlicht haben, prüft der Check sie hier automatisch. Eine bestehende externe Website können Sie oben direkt prüfen.
               <div style={{ marginTop: 12 }}>
-                <a href="/dashboard/website" style={{ color: C.cyan, textDecoration: 'none', fontWeight: 700 }}>Zum Website-Baukasten →</a>
+                <a href="/dashboard/webseiten" style={{ color: C.cyan, textDecoration: 'none', fontWeight: 700 }}>Zum Website-Baukasten →</a>
               </div>
             </div>
           ) : (
