@@ -83,6 +83,13 @@ export async function proxy(req: NextRequest) {
     url.pathname = `/fahrzeuge-domain/${encodeURIComponent(host.split(':')[0])}${pfad.slice('/fahrzeuge'.length)}`
     return NextResponse.rewrite(url)
   }
+  // Paket 305: /fahrzeug-verkaufen auf der Domain eines Kunden -> seine Fahrzeugmappe
+  // (/ankauf-domain/<host>). Betrieb allein über die Domain; Online-Ankauf aus -> „nicht verfügbar".
+  if (host && !istEigeneDomain(host) && pfad === '/fahrzeug-verkaufen') {
+    const url = req.nextUrl.clone()
+    url.pathname = `/ankauf-domain/${encodeURIComponent(host.split(':')[0])}`
+    return NextResponse.rewrite(url)
+  }
   if (host && !istEigeneDomain(host) && !reserviert) {
     const url = req.nextUrl.clone()
     url.pathname = `/p-domain/${encodeURIComponent(host.split(':')[0])}`

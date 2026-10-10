@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
 import { aktiveBoerseKennung, betriebZuDomain, boerseDb } from '@/lib/kfzBoerseLaden';
+import { aktiveAnkaufKennung } from '@/lib/fahrzeugMappeServer';
 
 // ============================================================
 // ARGONAUT OS · W7 · app/p-domain/[host]/route.ts
@@ -51,7 +52,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ host: s
     const bloecke = Array.isArray((seite as { bloecke?: unknown }).bloecke) ? ((seite as { bloecke: Block[] }).bloecke) : [];
     // Paket 273: Menüpunkt „Fahrzeuge" -> /fahrzeuge auf derselben Domain, wenn die Börse eingeschaltet ist.
     const boerse = await aktiveBoerseKennung((seite as { owner_user_id: string }).owner_user_id).catch(() => null);
-    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: (seite as { oeffentlich_id?: string }).oeffentlich_id, ...(boerse ? { fahrzeugeLink: '/fahrzeuge' } : {}) });
+    // Paket 305: Menüpunkt „Fahrzeug verkaufen" -> /fahrzeug-verkaufen auf derselben Domain, wenn der Online-Ankauf an ist.
+    const ankauf = await aktiveAnkaufKennung((seite as { owner_user_id: string }).owner_user_id).catch(() => null);
+    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: (seite as { oeffentlich_id?: string }).oeffentlich_id, ...(boerse ? { fahrzeugeLink: '/fahrzeuge' } : {}), ...(ankauf ? { verkaufenLink: '/fahrzeug-verkaufen' } : {}) });
 
     return new Response(html, {
       status: 200,

@@ -57,6 +57,10 @@ export const OFFENE_TUEREN: OffeneTuer[] = [
   { pfad: 'oeffentlich/partner-gast/bild', grund: 'Fotos zum Gast-Link (Eintrags-Fotos, freigegebene Fahrzeugfotos), signierter Link 5 Minuten', schutz: 'token', geprueft: true },
   // Paket 294 (09.10.26): unverbindliche Mietanfrage der Fahrzeugvermietung — Betrieb nur ueber Kennung, vom Chef ein-/ausschaltbar; nach aussen nur frei/vergeben, nie Mieter.
   { pfad: 'oeffentlich/miet-anfrage', grund: 'Unverbindliche Mietanfrage (Fahrzeugvermietung) -> Anfragen des Betriebs, keine Buchung, keine Zahlung', schutz: 'formular', geprueft: true },
+  // Paket 305 (10.10.26): Fahrzeugmappe — Verkaeufer schickt EINEM Autohaus Fotos, Video, Unterlagen. Betrieb nur ueber Kennung (Online-Ankauf an), Mappe nur ueber Link-Schluessel (gespeichert nur der Pruefwert), Dateien direkt in privaten Ordner ohne Nutzer-Regeln.
+  { pfad: 'oeffentlich/fahrzeugmappe/start', grund: 'Fahrzeugmappe anlegen (Entwurf bei genau dem Autohaus der Seite) -> persoenlicher Link-Schluessel', schutz: 'formular', geprueft: true },
+  { pfad: 'oeffentlich/fahrzeugmappe', grund: 'Fahrzeugmappe bearbeiten: laden, zwischenspeichern, Datei hochladen (signierter Upload-Link), Upload pruefen, loeschen — nur mit Link-Schluessel und nur als Entwurf', schutz: 'formular', geprueft: true },
+  { pfad: 'oeffentlich/fahrzeugmappe/absenden', grund: 'Fahrzeugmappe absenden -> Ankauf In Bewertung beim Autohaus, Mail an Betrieb und Eingangsbestaetigung an den Verkaeufer', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/web-newsletter', grund: 'Newsletter-Anmeldung der Kundenwebseite (Double-Opt-in)', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/shop-produkte', grund: 'freigeschaltete Produkte eines Shops', schutz: 'seite', geprueft: true },
   { pfad: 'oeffentlich/shop-bestellung', grund: 'Bestellung im Shop des Betriebs', schutz: 'formular', geprueft: true },

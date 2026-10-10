@@ -1006,13 +1006,16 @@ export function seiteHtml(
   seite: { titel?: string; bloecke: Block[] },
   ci: CiWeb,
   jahr: number,
-  opts: { oeffentlichId?: string; editor?: boolean; fahrzeugeLink?: string } = {},
+  opts: { oeffentlichId?: string; editor?: boolean; fahrzeugeLink?: string; verkaufenLink?: string } = {},
 ): string {
   const firma = esc(z(ci.firma) || 'Ihr Firmenname');
   // Paket 273: Menüpunkt „Fahrzeuge", wenn der Betrieb seine Fahrzeugbörse eingeschaltet hat.
   // Nur relative Pfade (/fahrzeuge …) — nie eine fremde Adresse ins Menü.
   const fahrzeuge = opts.fahrzeugeLink && /^\/fahrzeuge(\/[a-z0-9]{24})?$/.test(opts.fahrzeugeLink)
     ? '<a href="' + opts.fahrzeugeLink + '">Fahrzeuge</a>' : '';
+  // Paket 305: Menüpunkt „Fahrzeug verkaufen" (Fahrzeugmappe), wenn der Online-Ankauf an ist.
+  const verkaufen = opts.verkaufenLink && /^\/(fahrzeug-verkaufen|ankauf\/[a-z0-9]{24})$/.test(opts.verkaufenLink)
+    ? '<a href="' + opts.verkaufenLink + '">Fahrzeug verkaufen</a>' : '';
   const slogan = esc(z(ci.slogan));
   const logo = safeUrl(ci.logo_url)
     ? '<span class="logo"><img src="' + safeUrl(ci.logo_url) + '" alt="Logo"></span>'
@@ -1043,7 +1046,7 @@ export function seiteHtml(
     '<header class="top"><div class="trow">',
     logo,
     '<div><div class="fn">' + firma + '</div>' + (slogan ? '<div class="cl">' + slogan + '</div>' : '') + '</div>',
-    '<nav class="mainnav"><a href="#leistungen">Leistungen</a>' + fahrzeuge + '<a href="#ueber">Über uns</a><a href="#kontakt">Kontakt</a></nav>',
+    '<nav class="mainnav"><a href="#leistungen">Leistungen</a>' + fahrzeuge + verkaufen + '<a href="#ueber">Über uns</a><a href="#kontakt">Kontakt</a></nav>',
     '</div></header>',
     koerper,
     rechtsSektionen(ci, webDiensteDerSeite(seite.bloecke || [])),

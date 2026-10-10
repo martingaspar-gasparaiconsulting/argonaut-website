@@ -14,7 +14,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin', '/admin-login', '/api/', '/auth/', '/dashboard', '/fahrzeuge-domain/', '/partner-gast/'],
+      disallow: ['/admin', '/admin-login', '/api/', '/auth/', '/dashboard', '/fahrzeuge-domain/', '/partner-gast/', '/ankauf/', '/ankauf-domain/'],
     },
     sitemap: `${BASE}/sitemap.xml`,
     host: BASE,

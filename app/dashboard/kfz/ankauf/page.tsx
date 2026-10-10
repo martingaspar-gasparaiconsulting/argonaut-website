@@ -8,12 +8,14 @@
 // /dashboard/kfz (Modul „kfz"). Die Akte liegt unter ./[id].
 // Paket 264 (K4 Teil 2): Karte „🌐 Online-Ankaufformular" (nur Chef) —
 // ein-/ausschalten, geheime Kennung, Link für die eigene Webseite.
+// Paket 305 (FM1): daraus wird die Fahrzeugmappe (MappeEinstellung.tsx).
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { leseZahl } from '@/lib/zahlen';
 import { euro } from '@/lib/kfzBestand';
+import MappeEinstellung from './MappeEinstellung';
 import {
   ANKAUF_STATUS, QUELLEN, SCHADEN_ARTEN, RICHTWERTE_START, richtwerteMit, schadenBereinigen, schadenSumme,
   naechsteAnkaufNr, onlineEinstellung, neueKennung, type Richtwerte,
@@ -54,7 +56,6 @@ export default function AnkaufPage() {
   const [rwEntwurf, setRwEntwurf] = useState<Record<string, string[]>>({});
   const [rwRoh, setRwRoh] = useState<Record<string, unknown>>({});
   const [onOffen, setOnOffen] = useState(false);
-  const [kopiert, setKopiert] = useState(false);
 
   const lade = useCallback(async (b: string) => {
     const [a, e] = await Promise.all([
@@ -139,7 +140,6 @@ export default function AnkaufPage() {
 
   if (laden) return <div style={s.page}><p style={s.dim}>Lädt …</p></div>;
   const online = onlineEinstellung(rwRoh);
-  const onlineLink = online.kennung && typeof window !== 'undefined' ? `${window.location.origin}/ankauf/${online.kennung}` : '';
 
   const zahl = (k: string) => liste.filter((z) => z.status === k).length;
   const neuOnline = liste.filter((z) => z.quelle === 'online' && z.status === 'offen').length;
@@ -154,14 +154,14 @@ export default function AnkaufPage() {
         </div>
         <div style={s.knopfReihe}>
           <a href="/dashboard/kfz/bestand" style={{ ...s.btn, textDecoration: 'none' }}>🚘 Zum Bestand</a>
-          {istChef && <button style={s.btn} onClick={() => setOnOffen(!onOffen)}>🌐 Online-Formular{online.aktiv ? ' (an)' : ''}</button>}
+          {istChef && <button style={s.btn} onClick={() => setOnOffen(!onOffen)}>🌐 Fahrzeugmappe{online.aktiv ? ' (an)' : ''}</button>}
           {istChef && <button style={s.btn} onClick={rwOeffnen}>⚙ Richtwerte für Schäden</button>}
           <button style={s.gold} onClick={() => setNeu({ ...neu, offen: !neu.offen })}>＋ Neuer Ankauf</button>
         </div>
       </div>
 
       {fehler && <div style={s.fehler} role="alert">{fehler}</div>}
-      {neuOnline > 0 && <div style={s.hinweis}>🌐 {neuOnline} {neuOnline === 1 ? 'Fahrzeug wurde' : 'Fahrzeuge wurden'} über das Online-Formular angeboten und {neuOnline === 1 ? 'wartet' : 'warten'} auf Ihre Bewertung.</div>}
+      {neuOnline > 0 && <div style={s.hinweis}>🌐 {neuOnline} {neuOnline === 1 ? 'Fahrzeug wurde' : 'Fahrzeuge wurden'} über die Fahrzeugmappe angeboten und {neuOnline === 1 ? 'wartet' : 'warten'} auf Ihre Bewertung.</div>}
 
       {neu.offen && (
         <div style={s.karte}>
@@ -180,25 +180,8 @@ export default function AnkaufPage() {
         </div>
       )}
 
-      {onOffen && istChef && (
-        <div style={s.karte}>
-          <h3 style={s.h3}>🌐 Online-Ankaufformular</h3>
-          <div style={{ ...s.dim, marginBottom: 10 }}>Privatleute und Firmen bieten Ihnen ihr Fahrzeug über einen eigenen Link an. Jede Anfrage landet hier als Ankauf „In Bewertung" (Woher: Online-Formular); Sie bekommen eine E-Mail an die Adresse aus Ihren Firmendaten, der Verkäufer eine Eingangsbestätigung. Den Link setzen Sie auf Ihre Webseite oder in Inserate.</div>
-          <div style={{ ...s.knopfReihe, marginBottom: 10 }}>
-            <span style={{ ...s.pill, color: online.aktiv ? C.ok : C.dim }}>{online.aktiv ? 'eingeschaltet' : 'ausgeschaltet'}</span>
-            {online.aktiv
-              ? <button style={s.btn} disabled={busy} onClick={() => void onlineSetzen(false)}>Ausschalten</button>
-              : <button style={{ ...s.gold, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => void onlineSetzen(true)}>Einschalten</button>}
-          </div>
-          {online.aktiv && onlineLink && (
-            <div style={s.knopfReihe}>
-              <input style={{ ...s.inp, flex: '1 1 320px' }} readOnly value={onlineLink} aria-label="Link zum Formular" onFocus={(e) => e.currentTarget.select()} />
-              <button style={s.btn} onClick={() => { void navigator.clipboard?.writeText(onlineLink).then(() => { setKopiert(true); setTimeout(() => setKopiert(false), 1800); }); }}>{kopiert ? '✓ Kopiert' : '📋 Kopieren'}</button>
-              <a href={onlineLink} target="_blank" rel="noopener noreferrer" style={{ ...s.btn, textDecoration: 'none' }}>Ansehen ↗</a>
-            </div>
-          )}
-          <div style={{ ...s.dim, marginTop: 10 }}>Ausschalten macht den Link sofort ungültig; beim Wiedereinschalten gilt derselbe Link. Fotos kann der Verkäufer im Formular noch nicht hochladen.</div>
-        </div>
+      {onOffen && istChef && betrieb && (
+        <MappeEinstellung betrieb={betrieb} aktiv={online.aktiv} kennung={online.kennung} busy={busy} onSetzen={(an) => void onlineSetzen(an)} />
       )}
 
       {rwOffen && istChef && (

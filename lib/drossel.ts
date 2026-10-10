@@ -90,6 +90,18 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },
   ],
+  // Paket 305: Fahrzeugmappe — Anlegen je Absender knapp; Bearbeiten/Hochladen grosszuegig je Absender und je Mappe; Absenden wie Formulare.
+  'oeffentlich/fahrzeugmappe/start': [
+    { art: 'ip', max: 10, fensterSek: STUNDE },
+  ],
+  'oeffentlich/fahrzeugmappe': [
+    { art: 'ip', max: 600, fensterSek: STUNDE },
+    { art: 'ziel', max: 800, fensterSek: TAG },
+  ],
+  'oeffentlich/fahrzeugmappe/absenden': [
+    { art: 'ip', max: 5, fensterSek: STUNDE },
+    { art: 'ziel', max: 3, fensterSek: TAG },
+  ],
   'oeffentlich/web-newsletter': [
     { art: 'ip', max: 10, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },

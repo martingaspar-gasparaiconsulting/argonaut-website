@@ -26,6 +26,7 @@ import {
 } from '@/lib/kfzAnkauf';
 import { ankaufscheinPdf } from '@/lib/kfzAnkaufPdf';
 import FotoMarkierung from '../../../bautagebuch/FotoMarkierung';
+import MappeKarte from './MappeKarte';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -288,6 +289,10 @@ export default function AnkaufAktePage() {
     setLoeschFrage(null); setBusy(true);
     try {
       const pfade = schaeden.flatMap((x) => x.fotos);
+      // Paket 305: Fahrzeugmappe des Verkäufers (Fotos, Videos, Unterlagen) zuerst mit löschen —
+      // sonst blieben seine Dateien im Speicher liegen. Klappt das nicht, bleibt alles stehen.
+      const mr = await fetch(`/api/kfz/fahrzeugmappe?ankauf=${a.id}`, { method: 'DELETE' }).catch(() => null);
+      if (!mr || !mr.ok) { setFehler('Die Fahrzeugmappe ließ sich nicht löschen. Der Ankauf bleibt erhalten — bitte später erneut versuchen.'); return; }
       const { error } = await supabase.from('kfz_ankauf').delete().eq('id', a.id);
       if (error) { setFehler('Löschen fehlgeschlagen.'); return; }
       if (pfade.length) await supabase.storage.from(MEDIEN_BUCKET).remove(pfade);
@@ -320,6 +325,7 @@ export default function AnkaufAktePage() {
       </div>
 
       {a.quelle === 'online' && a.status === 'offen' && <div style={s.hinweis}>🌐 Über Ihr Online-Formular angeboten. Die Angaben stammen vom Verkäufer; Preisvorstellung und Beschreibung stehen unter „Notiz". Bitte bei der Besichtigung prüfen.</div>}
+      {a.quelle === 'online' && <MappeKarte ankaufId={a.id} />}
       {fehler && <div style={s.fehler} role="alert">{fehler}</div>}
       {ok && <div style={s.ok} role="status">{ok}</div>}
 
@@ -498,7 +504,7 @@ export default function AnkaufAktePage() {
             <button style={{ ...s.btn, marginTop: 12 }} onClick={() => void scheinDrucken()}>🖨 Ankaufschein (PDF)</button>
             <div style={{ ...s.dim, marginTop: 6 }}>Zum Ausdrucken und Unterschreiben: Verkäufer, Fahrzeug, Angaben des Verkäufers, festgestellte Schäden (ohne Beträge), Kaufpreis und Erklärungen. Vorher Preis im Feld links eintragen.</div>
             {istChef && (loeschFrage === 'akte'
-              ? <div style={{ marginTop: 12 }}><button style={{ ...s.btn, color: C.bad }} onClick={() => void ankaufLoeschen()}>Ja, Ankauf und Schadenfotos löschen</button> <button style={s.btn} onClick={() => setLoeschFrage(null)}>Nein</button>{a.bestand_id && <div style={{ ...s.dim, marginTop: 6 }}>Das Fahrzeug im Bestand bleibt erhalten.</div>}</div>
+              ? <div style={{ marginTop: 12 }}><button style={{ ...s.btn, color: C.bad }} onClick={() => void ankaufLoeschen()}>Ja, Ankauf, Schadenfotos und Fahrzeugmappe löschen</button> <button style={s.btn} onClick={() => setLoeschFrage(null)}>Nein</button>{a.bestand_id && <div style={{ ...s.dim, marginTop: 6 }}>Das Fahrzeug im Bestand bleibt erhalten.</div>}</div>
               : <button style={{ ...s.btn, marginTop: 12 }} onClick={() => setLoeschFrage('akte')}>🗑 Ankauf löschen</button>)}
           </div>
         </div>
