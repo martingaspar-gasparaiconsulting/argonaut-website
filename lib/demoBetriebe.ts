@@ -31,8 +31,11 @@
 // dadurch etwa beim Rang Steuermann — genau der Punkt, an dem man den Weg nach
 // oben am besten zeigen kann.
 //
-// Keine Imports, keine Hooks — node-testbar, von Client UND Server nutzbar.
+// Nur reine Daten-Imports (lib/demoWachstumProfile), keine Hooks — node-testbar,
+// von Client UND Server nutzbar.
 // ============================================================================
+
+import { ZEITREISE_BETRIEBE } from './demoWachstumProfile';
 
 export type DemoBetrieb = {
   /** Kurzschlüssel — zugleich Postfach-Teil und Passwort-Stamm. */
@@ -70,6 +73,12 @@ export type DemoBetrieb = {
    * Steuerdaten, Startstrecke bei 0 %. So sieht der Kunde, wie er anfängt.
    */
   leer?: boolean;
+  /**
+   * Paket 300: gehört nur zur Zeitreise (Stufe 1 oder 3) — wird über die
+   * Zeitreise-Knöpfe angelegt, nicht über „alle Betriebe anlegen“ (das bliebe
+   * sonst nicht im Zeitlimit der Route).
+   */
+  zeitreise?: boolean;
 };
 
 const BANK = 'Baden-Württembergische Bank';
@@ -77,7 +86,7 @@ const BIC = 'SOLADEST600';
 
 export const DEMO_MAILDOMAIN = 'demo.argonaut-os.com';
 
-export const DEMO_BETRIEBE: DemoBetrieb[] = [
+const BASIS_BETRIEBE: DemoBetrieb[] = [
   {
     slug: 'maler', kategorie: 'Handwerk & Bau', branche: 'Maler- und Lackiererbetrieb',
     firma: 'Malerwerkstätten Brandeis', rechtsform: 'GmbH', inhaber: 'Tobias Brandeis',
@@ -241,7 +250,7 @@ export const DEMO_BETRIEBE: DemoBetrieb[] = [
     firma: 'Autohaus Kessler', rechtsform: 'GmbH', inhaber: 'Jan Kessler',
     strasse: 'Calwer Straße 88', plz: '71034', ort: 'Böblingen', telefon: '07031 615200',
     website: 'www.autohaus-kessler-bb.de', ustId: 'DE826147735', steuernummer: '56052/71460',
-    iban: 'DE35600501010004714014', bank: BANK, bic: BIC, ziel: 0, webSlug: 'kfz-handel', leer: true,
+    iban: 'DE35600501010004714014', bank: BANK, bic: BIC, ziel: 0, webSlug: 'kfz-handel', leer: true, zeitreise: true,
   },
 
   // --- Paket 298: großer Kfz-Betrieb -----------------------------------------
@@ -254,9 +263,18 @@ export const DEMO_BETRIEBE: DemoBetrieb[] = [
     firma: 'Valtier Automobile', rechtsform: 'GmbH', inhaber: 'Dr. Katharina Valtier, Florian Mertens',
     strasse: 'Böblinger Allee 12', plz: '71065', ort: 'Sindelfingen', telefon: '07031 790400',
     website: 'www.valtier-automobile.de', ustId: 'DE825319400', steuernummer: '56051/60384',
-    iban: 'DE48600501010004713877', bank: BANK, bic: BIC, ziel: 100, webSlug: 'kfz-handel',
+    iban: 'DE48600501010004713877', bank: BANK, bic: BIC, ziel: 100, webSlug: 'kfz-handel', zeitreise: true,
   },
 ];
+
+/**
+ * Alle Vorführ-Betriebe: die handgeschriebenen oben, dazu (Paket 300) Stufe 1
+ * und Stufe 3 der Zeitreise je Branche aus lib/demoWachstumProfile.
+ */
+export const DEMO_BETRIEBE: DemoBetrieb[] = [...BASIS_BETRIEBE, ...ZEITREISE_BETRIEBE];
+
+/** Betriebe für „alle anlegen“ — ohne die Zeitreise-Stufen (die haben eigene Knöpfe). */
+export const GRUND_BETRIEBE: DemoBetrieb[] = DEMO_BETRIEBE.filter((b) => !b.zeitreise);
 
 /** E-Mail-Adresse eines Demo-Betriebs. */
 export function demoEmail(slug: string): string {

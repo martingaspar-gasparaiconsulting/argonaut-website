@@ -16,7 +16,7 @@
 // ============================================================================
 
 import { useState, type CSSProperties } from 'react';
-import { DEMO_BETRIEBE, demoEmail, demoPasswort } from '@/lib/demoBetriebe';
+import { DEMO_BETRIEBE, GRUND_BETRIEBE, demoEmail, demoPasswort } from '@/lib/demoBetriebe';
 import { ZEITREISE, zeitreiseKarten, zeitreiseSlugs, KUNDEN_LOGIN } from '@/lib/demoZeitreise';
 
 const C = {
@@ -48,7 +48,9 @@ export default function DemoBetriebePage() {
       });
       const j = await r.json();
       if (!j?.ok) throw new Error(j?.error || 'Anlegen fehlgeschlagen');
-      setErgebnisse(j.ergebnisse as Ergebnis[]);
+      // Paket 300: Ergebnisse sammeln statt ersetzen — die Zeitreisen laufen Reihe für Reihe
+      const neu = j.ergebnisse as Ergebnis[];
+      setErgebnisse((alt) => [...(alt || []).filter((x) => !neu.some((n) => n.slug === x.slug)), ...neu]);
     } catch (e) {
       setFehler(e instanceof Error ? e.message : 'Unbekannter Fehler');
     } finally {
@@ -58,6 +60,15 @@ export default function DemoBetriebePage() {
 
   const mitHinweis = (ergebnisse || []).filter((e) => e.hinweise.length > 0).length;
   const [kopiert, setKopiert] = useState('');
+  const [fortschritt, setFortschritt] = useState('');
+  async function alleZeitreisen() {
+    if (laeuft) return;
+    for (let i = 0; i < ZEITREISE.length; i++) {
+      setFortschritt(`${i + 1} von ${ZEITREISE.length}: ${ZEITREISE[i].branche}`);
+      await anlegen(zeitreiseSlugs(ZEITREISE[i]));
+    }
+    setFortschritt('');
+  }
   async function kopieren(text: string) {
     try { await navigator.clipboard.writeText(text); setKopiert(text); setTimeout(() => setKopiert(''), 1500); } catch { /* Zwischenablage gesperrt — Text steht sichtbar da */ }
   }
@@ -80,6 +91,12 @@ export default function DemoBetriebePage() {
           Erst das leere Konto zeigen, dann den Betrieb nach den ersten Monaten, dann den nach anderthalb Jahren — dort sieht der Kunde,
           was das ganze System kann. Je Stufe ein eigener Login; am besten jede Stufe in einem eigenen privaten Browserfenster öffnen.
         </p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 14 }}>
+          <button onClick={() => void alleZeitreisen()} disabled={laeuft} style={{ ...s.knopf, marginTop: 0, opacity: laeuft ? 0.6 : 1 }}>
+            {laeuft && fortschritt ? `Läuft … ${fortschritt}` : `Alle ${ZEITREISE.length} Zeitreisen anlegen`}
+          </button>
+          <span style={{ color: C.dim, fontSize: 13.5 }}>Reihe für Reihe, je etwa eine Minute — das Fenster dabei offen lassen.</span>
+        </div>
         {ZEITREISE.map((reihe) => (
           <section key={reihe.key} style={s.reihe}>
             <div style={s.reiheKopf}>
@@ -120,7 +137,7 @@ export default function DemoBetriebePage() {
 
         <h2 style={s.h2}>Alle Vorführ-Betriebe</h2>
         <p style={s.sub}>
-          {DEMO_BETRIEBE.length} Demo-Betriebe — je Branche einer, plus je ein zweiter für Handwerk und Lebensmittel.
+          {GRUND_BETRIEBE.length} Demo-Betriebe — je Branche einer, plus je ein zweiter für Handwerk und Lebensmittel.
           Jeder bekommt eigene Zugangsdaten, vollständige Firmenstammdaten, die Branchen-Module,
           die Übungswelt und den passenden Onboarding-Fortschritt.
         </p>
@@ -142,7 +159,7 @@ export default function DemoBetriebePage() {
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button onClick={() => void anlegen()} disabled={laeuft} style={{ ...s.knopf, opacity: laeuft ? 0.6 : 1 }}>
-            {laeuft ? 'Wird angelegt … das dauert ein bis zwei Minuten' : `${DEMO_BETRIEBE.length} Betriebe anlegen`}
+            {laeuft ? 'Wird angelegt … das dauert ein bis zwei Minuten' : `${GRUND_BETRIEBE.length} Betriebe anlegen`}
           </button>
           {/* Paket 297: nur das Vorführ-Autohaus — mit vollem Kfz-Fachpaket (Bestand, Ankauf, Verkauf, Werkstatt, Vermietung) */}
           <button onClick={() => void anlegen(['autohaus'])} disabled={laeuft} style={{ ...s.knopf, background: 'transparent', color: C.gold, border: `1px solid ${C.gold}`, opacity: laeuft ? 0.6 : 1 }}>

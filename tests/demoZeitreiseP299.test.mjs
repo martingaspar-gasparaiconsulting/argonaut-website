@@ -41,18 +41,22 @@ test('Jede Stufe jeder Reihe ist ein echter Vorführ-Betrieb derselben Branche; 
   }
   const start = demoBetrieb('kfzstart');
   assert.equal(start.ziel, 0, 'Startstrecke bei 0 %');
-  assert.equal(DEMO_BETRIEBE.filter((b) => b.leer).map((b) => b.slug).join(), 'kfzstart', 'kein anderer Betrieb wird leer angelegt');
+  // P300: leer sind nur die Stufe-1-Konten der Zeitreise — nie ein Grund-Betrieb
+  assert.ok(DEMO_BETRIEBE.filter((b) => b.leer).every((b) => b.zeitreise && b.ziel === 0));
+  assert.ok(DEMO_BETRIEBE.filter((b) => b.leer).some((b) => b.slug === 'kfzstart'));
 });
 
 test('Stammdaten aller Vorführ-Betriebe: gültige, eindeutige IBAN und USt-IdNr., eindeutige Slugs', () => {
-  assert.equal(DEMO_BETRIEBE.length, 23);
-  assert.equal(new Set(DEMO_BETRIEBE.map((b) => b.slug)).size, 23);
-  assert.equal(new Set(DEMO_BETRIEBE.map((b) => b.iban)).size, 23);
-  assert.equal(new Set(DEMO_BETRIEBE.map((b) => b.ustId)).size, 23);
+  const n = DEMO_BETRIEBE.length;
+  assert.ok(n >= 23);
+  assert.equal(new Set(DEMO_BETRIEBE.map((b) => b.slug)).size, n);
+  assert.equal(new Set(DEMO_BETRIEBE.map((b) => b.iban)).size, n);
+  assert.equal(new Set(DEMO_BETRIEBE.map((b) => b.ustId)).size, n);
   for (const b of DEMO_BETRIEBE) {
     assert.match(b.slug, /^[a-z0-9]+$/, 'kleingeschrieben für die Bildschirmtastatur');
     const u = (b.iban.slice(4) + b.iban.slice(0, 4)).replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
-    assert.equal(BigInt(u) % 97n, 1n, `${b.slug} IBAN`);
+    let rest = 0; for (const c of u) rest = (rest * 10 + Number(c)) % 97;
+    assert.equal(rest, 1, `${b.slug} IBAN`);
     let p = 10;
     for (const c of b.ustId.slice(2, 10)) { let s = (+c + p) % 10; if (s === 0) s = 10; p = (2 * s) % 11; }
     let pz = 11 - p; if (pz === 10) pz = 0;

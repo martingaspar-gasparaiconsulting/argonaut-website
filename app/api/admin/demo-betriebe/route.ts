@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { DEMO_BETRIEBE, demoEmail, demoPasswort, type DemoBetrieb } from '../../../../lib/demoBetriebe';
+import { DEMO_BETRIEBE, GRUND_BETRIEBE, demoEmail, demoPasswort, type DemoBetrieb } from '../../../../lib/demoBetriebe';
 import { kategorieModule } from '../../../../lib/branchenkatalog';
 import { aktiveSeeder, zugangSeeder, ZUGANG_TABELLEN, LOESCH_ORDER } from '../../../../lib/uebungswelt';
 import { FACHDATEN, FACH_LEITTABELLE } from '../../../../lib/demoFachdatenKfz';
@@ -12,7 +12,8 @@ import { betreiberGuard } from '../../../../lib/betreiberGuard';
 // ============================================================================
 // ARGONAUT OS · app/api/admin/demo-betriebe/route.ts
 //
-// Legt die 23 Vorführ-Betriebe für die Präsentation an — auf einen Klick.
+// Legt die Vorführ-Betriebe für die Präsentation an — auf einen Klick (Paket 300:
+// ohne Auswahl die 21 Grund-Betriebe; die Zeitreise-Stufen je Branche einzeln).
 //
 // Warum als Route und nicht als Skript: Konten anlegen braucht den Service-Role-
 // Schlüssel, und der liegt ausschließlich in Vercel. Diese Route läuft dort,
@@ -337,7 +338,8 @@ async function lauf(req: Request) {
 
   const nur = Array.isArray(body.nur) ? body.nur.map((x) => String(x)) : [];
   const zuruecksetzen = body.zuruecksetzen === true;
-  const liste = nur.length ? DEMO_BETRIEBE.filter((b) => nur.includes(b.slug)) : DEMO_BETRIEBE;
+  // Paket 300: ohne Auswahl nur die Grund-Betriebe — die Zeitreise-Stufen haben eigene Knöpfe (Zeitlimit)
+  const liste = nur.length ? DEMO_BETRIEBE.filter((b) => nur.includes(b.slug)) : GRUND_BETRIEBE;
 
   const admin = service();
   const heute = new Date().toISOString().slice(0, 10);

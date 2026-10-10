@@ -31,6 +31,8 @@ import { tagPlus, berlinZeit, type XxlKontext } from './musterbetriebXxl';
 import { PRUEF_KEYS } from './kfzAnkauf';
 import type { SeedZeile } from './uebungswelt';
 import { PREMIUM_SEEDER, PREMIUM_LOESCH_ORDER, PREMIUM_BESITZER_TABELLEN } from './demoFachdatenKfzPremium';
+import { wachstumSeeder, wachstumLoeschOrder } from './demoWachstum';
+import { WACHSTUM_PROFILE } from './demoWachstumProfile';
 
 /** Markierung in Notizfeldern. */
 export const FACH_NOTIZ = 'Beispiel-Datensatz · Vorführ-Autohaus';
@@ -547,7 +549,13 @@ export const FACHDATEN: Record<string, { seeder: FachSeeder[]; loeschOrder: stri
   autohaus: { seeder: KFZ_FACH_SEEDER, loeschOrder: KFZ_FACH_LOESCH_ORDER, besitzerTabellen: KFZ_FACH_BESITZER_TABELLEN },
   // Paket 298: Premium-Autohaus, ein Jahr im Betrieb (50 Mitarbeiter, Media-Abteilung)
   premium: { seeder: PREMIUM_SEEDER, loeschOrder: PREMIUM_LOESCH_ORDER, besitzerTabellen: PREMIUM_BESITZER_TABELLEN },
+  // Paket 300: Stufe 3 der Zeitreise je Branche (lib/demoWachstum nach lib/demoWachstumProfile)
+  ...Object.fromEntries(WACHSTUM_PROFILE.map((p) => [p.slug, { seeder: wachstumSeeder(p), loeschOrder: wachstumLoeschOrder(), besitzerTabellen: [] as string[] }])),
 };
 
 /** Sind die Fachdaten schon geladen? (Register enthält eine Zeile aus der Leit-Tabelle) */
-export const FACH_LEITTABELLE: Record<string, string> = { autohaus: 'kfz_bestand', premium: 'kfz_bestand' };
+export const FACH_LEITTABELLE: Record<string, string> = {
+  autohaus: 'kfz_bestand', premium: 'kfz_bestand',
+  // Paket 300: Mitarbeiter legt die Übungswelt nie an — eindeutiges Zeichen „Fachdaten geladen“
+  ...Object.fromEntries(WACHSTUM_PROFILE.map((p) => [p.slug, 'mitarbeiter'])),
+};

@@ -285,7 +285,7 @@ test('Löschen: jede Tabelle in der Reihenfolge, Kinder vor Eltern, Besitzer-Tab
 test('Vorführ-Betrieb „premium": Stammdaten mit gültiger IBAN und USt-IdNr., verdrahtet in Route und Seite', () => {
   const b = demoBetrieb('premium');
   assert.ok(b);
-  assert.equal(DEMO_BETRIEBE.length, 23, 'P299: dazu kfzstart (leeres Konto der Zeitreise)');
+  assert.ok(DEMO_BETRIEBE.length >= 23, 'P299/P300: dazu die Zeitreise-Stufen');
   assert.equal(b.kategorie, demoBetrieb('autohaus').kategorie);
   assert.equal(demoEmail('premium'), 'premium@demo.argonaut-os.com');
   assert.equal(demoPasswort('premium'), 'premium2026');
