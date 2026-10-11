@@ -481,6 +481,9 @@ export type Gefahrstoff = {
   sdb_datum?: string | null;
   betriebsanweisung_am?: string | null;
   ersatz_geprueft_am?: string | null;
+  /** Paket 318 (G2a): Lagerklasse nach TRGS 510 und Lagerplatz — nur Angaben, keine Pflichtprüfung. */
+  lagerklasse?: string | null;
+  lagerplatz?: string | null;
 };
 
 /** H- und EUH-Sätze aus einem freien Text: "H225, H319 / EUH066" -> ['H225','H319','EUH066']. */
@@ -525,13 +528,14 @@ export function pruefeGefahrstoff(g: Gefahrstoff, heute: string): GefahrPruefung
 
 /** Verzeichnis als Tabelle (für CSV/Druck). */
 export function verzeichnisZeilen(liste: Gefahrstoff[]): string[][] {
-  const kopf = ['Bezeichnung', 'Hersteller', 'H-Sätze', 'Piktogramme', 'Signalwort', 'Mengenbereich', 'Arbeitsbereiche', 'Sicherheitsdatenblatt vom', 'Betriebsanweisung vom'];
+  const kopf = ['Bezeichnung', 'Hersteller', 'H-Sätze', 'Piktogramme', 'Signalwort', 'Mengenbereich', 'Arbeitsbereiche', 'Sicherheitsdatenblatt vom', 'Betriebsanweisung vom', 'Lagerklasse (TRGS 510)', 'Lagerplatz'];
   const zeilen = [...(liste ?? [])]
     .sort((a, b) => String(a.bezeichnung ?? '').localeCompare(String(b.bezeichnung ?? ''), 'de'))
     .map((g) => [
       String(g.bezeichnung ?? ''), String(g.hersteller ?? ''), leseHSaetze(g.h_saetze).join(', '),
       (g.piktogramme ?? []).join(', '), String(g.signalwort ?? ''), String(g.mengenbereich ?? ''),
       String(g.arbeitsbereiche ?? ''), datumDe(g.sdb_datum), datumDe(g.betriebsanweisung_am),
+      g.lagerklasse ? `LGK ${String(g.lagerklasse)}` : '', String(g.lagerplatz ?? ''),
     ]);
   return [kopf, ...zeilen];
 }
