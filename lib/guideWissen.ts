@@ -719,6 +719,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
     schritte: ['Bestellungen per CSV einlesen oder von Hand anlegen', 'Je Bestellung: Kunde ins CRM, Lager abbuchen, Rechnung erstellen', 'Status weiterschalten', 'Retouren unter „Retouren & Widerruf"'],
     landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Vertrieb/CRM', href: '/dashboard/crm' }, { text: 'Retouren & Widerruf', href: '/dashboard/shop/retouren' }],
   },
+  '/dashboard/shop/geschaeftskunden': {
+    zweck: 'Geschäftskunden-Shop: Firmenkunden sehen im Shop ihre eigenen Netto-Preise mit Staffeln („ab 10 Stück“) und dürfen — wenn Sie es freigeben — auf Rechnung kaufen. Jeder Kunde bekommt einen persönlichen Link; ein neuer Link macht den alten ungültig. Gebinde und Mindestmenge legen Sie je Artikel fest, sie gelten für alle Käufer. Der Shop bleibt bis zur rechtlichen Freigabe geschlossen; vorbereiten können Sie schon alles.',
+    wer: 'beide',
+    werText: 'Pflegen (Kunden, Preislisten, Kauf auf Rechnung, Kreditrahmen, Links, Gebinde, Preis-Basis): nur die Geschäftsleitung. Mitarbeiter mit Recht „Shop“ sehen den Stand.',
+    schritte: [
+      'Reiter „⚙️ Preis-Basis“: einmal festlegen, ob der Verkaufspreis im Artikelstamm brutto oder netto eingetragen ist (BMEcat/Datanorm = meist netto)',
+      'Reiter „💶 Preislisten“: Liste anlegen (z. B. „Händler“, optional Rabatt in %), dann je Artikel feste Netto-Preise mit „Ab Menge“ eintragen. Fester Preis geht vor Rabatt, beides wird nie zusammengerechnet. Rechts steht, was der Kunde sieht',
+      'Reiter „🏢 Geschäftskunden“: Kontakt suchen, „Als Geschäftskunde anlegen“, dann „Bearbeiten“: Preisliste, Kauf auf Rechnung, Zahlungsziel (0–90 Tage) und optional Kreditrahmen',
+      '„✉️ Link per E-Mail senden“ schickt den persönlichen Shop-Link an die E-Mail des Kontakts; „🔗 Link nur anzeigen“ zeigt ihn einmal zum Kopieren. „⛔ Link sperren“ macht ihn sofort ungültig',
+      'Reiter „📦 Gebinde & Mindestmenge“: z. B. Gebinde 6 und Mindestmenge 12 — dann sind nur 12, 18, 24 … bestellbar',
+    ],
+    landetIn: [{ text: 'Shop / Marktplatz', href: '/dashboard/shop' }, { text: 'Vertrieb/CRM', href: '/dashboard/crm' }, { text: 'Rechnungen', href: '/dashboard/rechnungen' }],
+  },
   '/dashboard/shop/retouren': {
     zweck: 'Widerruf, Reklamation oder Kulanz zu einer Bestellung erfassen: Frist prüfen, Erstattung rechnen, Ware zurück ins Lager, Kundentexte zum Kopieren. Gutschriften machen Sie in Rechnungen.',
     wer: 'beide',

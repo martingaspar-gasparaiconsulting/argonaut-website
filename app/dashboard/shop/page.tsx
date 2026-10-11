@@ -260,6 +260,7 @@ export default function ShopPage() {
           </span>
           <a href="/dashboard/shop/produkte" style={styles.produkteBtn}>🛍️ Produkte in den Shop übernehmen →</a>
           <a href="/dashboard/shop/zahlung" style={styles.zahlungBtn}>💳 Online-Zahlung einrichten →</a>
+          <a href="/dashboard/shop/geschaeftskunden" style={styles.zahlungBtn}>🏢 Geschäftskunden-Shop →</a>
         </div>
       </div>
 
