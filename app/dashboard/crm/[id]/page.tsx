@@ -7,6 +7,10 @@ import { createBrowserClient } from "@supabase/ssr";
 import AdressBlock from "../../_components/AdressBlock";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
+import { useBranchenVorlage } from "../../_components/useBranchenVorlage";
+import { KONTAKT_MODUL } from "../KontaktAnsicht";
+import { kontaktAmpel, tageSeitKontakt, intervallVon } from "@/lib/kontaktVorlage";
+import { leseZahlOder } from "@/lib/zahlen";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C3+C4+C5 Kontakt-Detailseite
@@ -154,19 +158,14 @@ interface FormState {
   extra: Partial<Record<ImportFeldKey, string>>;
 }
 
-function tageSeit(iso: string | null): number | null {
-  if (!iso) return null;
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-}
-
-function ampel(k: Kontakt | null): { farbe: string; label: string } {
+// Paket 312: Ampel aus lib/kontaktVorlage (Kalendertage, Intervall des Kontakts sonst der Vorlage)
+function ampel(k: Kontakt | null, heute: string, standard: number): { farbe: string; label: string } {
   if (!k) return { farbe: C.textDim, label: "" };
-  const tage = tageSeit(k.letzter_kontakt_am);
-  if (tage === null) return { farbe: C.textDim, label: "Noch kein Kontakt" };
-  const iv = k.betreuungs_intervall_tage || 30;
-  if (tage <= iv) return { farbe: C.green, label: `Im Takt · vor ${tage} T` };
-  if (tage <= iv * 2)
-    return { farbe: C.warn, label: `Bald fällig · vor ${tage} T` };
+  const key = kontaktAmpel(k, heute, standard);
+  const tage = tageSeitKontakt(k, heute);
+  if (key === "neutral" || tage === null) return { farbe: C.textDim, label: "Noch kein Kontakt" };
+  if (key === "gruen") return { farbe: C.green, label: `Im Takt · vor ${tage} T` };
+  if (key === "gelb") return { farbe: C.warn, label: `Bald fällig · vor ${tage} T` };
   return { farbe: C.danger, label: `Überfällig · vor ${tage} T` };
 }
 
@@ -208,6 +207,10 @@ export default function CrmDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = (params?.id as string) || "";
+  // Paket 312: Status-Namen und Standard-Intervall aus der Branchen-Vorlage
+  const { vorlage, statusLabel } = useBranchenVorlage(supabase, KONTAKT_MODUL);
+  const heuteTag = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+  const standardIv = vorlage.intervallTage ?? 30;
 
   const [kontakt, setKontakt] = useState<Kontakt | null>(null);
   const [aktivitaeten, setAktivitaeten] = useState<Aktivitaet[]>([]);
@@ -341,7 +344,7 @@ export default function CrmDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const a = useMemo(() => ampel(kontakt), [kontakt]);
+  const a = useMemo(() => ampel(kontakt, heuteTag, standardIv), [kontakt, heuteTag, standardIv]);
   const anzeigeName = kontakt
     ? [kontakt.vorname, kontakt.nachname].filter(Boolean).join(" ") ||
       kontakt.firma ||
@@ -375,7 +378,7 @@ export default function CrmDetailPage() {
       firma_id: kontakt.firma_id || "",
       status: kontakt.status || "interessent",
       quelle: kontakt.quelle || "",
-      betreuungs_intervall_tage: String(kontakt.betreuungs_intervall_tage || 30),
+      betreuungs_intervall_tage: String(intervallVon(kontakt, standardIv)),
       extra: Object.fromEntries(
         IMPORT_FELDER.filter((f) => f.key in kontakt).map((f) => [f.key, String(kontakt[f.key] ?? '')]),
       ) as Partial<Record<ImportFeldKey, string>>,
@@ -401,8 +404,7 @@ export default function CrmDetailPage() {
       firma_id: form.firma_id || null,
       status: form.status,
       quelle: form.quelle || null,
-      betreuungs_intervall_tage:
-        parseInt(form.betreuungs_intervall_tage, 10) || 30,
+      betreuungs_intervall_tage: intervallVon({ betreuungs_intervall_tage: Math.trunc(leseZahlOder(form.betreuungs_intervall_tage, NaN)) }, standardIv),
       // Schritt 3: nur Spalten, die beim Laden da waren — sonst scheitert das Speichern.
       ...Object.fromEntries(
         Object.entries(form.extra).map(([k, v]) => [k, String(v ?? '').trim() || null]),
@@ -934,7 +936,7 @@ export default function CrmDetailPage() {
                 >
                   {anzeigeName}
                 </h1>
-                <StatusBadge status={kontakt.status} />
+                <StatusBadge status={kontakt.status} label={kontakt.status ? statusLabel(kontakt.status) : null} />
               </div>
               <div
                 style={{
@@ -1556,7 +1558,7 @@ export default function CrmDetailPage() {
                     }
                   />
                 ))}
-                <Info label="Status" wert={kontakt.status} />
+                <Info label="Status" wert={kontakt.status ? statusLabel(kontakt.status) : null} />
                 <Info label="Quelle" wert={kontakt.quelle} />
                 <Info
                   label="Betreuungs-Intervall"
@@ -1668,7 +1670,7 @@ export default function CrmDetailPage() {
                   <select style={inp} value={form.status} onChange={(e) => feld("status", e.target.value)}>
                     {STATUS_OPTIONEN.map((s) => (
                       <option key={s} value={s}>
-                        {s}
+                        {statusLabel(s)}
                       </option>
                     ))}
                   </select>
@@ -2245,7 +2247,7 @@ function ReiterBtn({
   );
 }
 
-function StatusBadge({ status }: { status: string | null }) {
+function StatusBadge({ status, label }: { status: string | null; label?: string | null }) {
   const map: Record<string, string> = {
     kunde: C.green,
     aktiv: C.cyan,
@@ -2265,7 +2267,7 @@ function StatusBadge({ status }: { status: string | null }) {
         border: `1px solid ${farbe}`,
       }}
     >
-      {status || "—"}
+      {label || status || "—"}
     </span>
   );
 }

@@ -38,6 +38,10 @@ export type Vorlage = {
   warnProzent?: number;
   /** Paket 311 (BV2 Aufträge): Aufträge — Wort für den Termin („Lieferdatum", „Ausführungstermin", „Frist"). */
   terminWort?: string;
+  /** Paket 312 (BV2 Kunden): Wort für die eigenen Kunden („Kunden", „Mandanten") … */
+  kundenWort?: string;
+  /** … und das Betreuungs-Intervall für neue Kontakte (Tage bis zur nächsten Pflege). */
+  intervallTage?: number;
 };
 
 /** Was der Kunde je Modul speichern darf (alles optional). */
@@ -52,6 +56,8 @@ export type KundenEinstellung = {
   warnTage?: number;
   warnProzent?: number;
   terminWort?: string;
+  kundenWort?: string;
+  intervallTage?: number;
 };
 
 type Feinschliff = { name: string; passt: (branche: string) => boolean; aenderung: Partial<Vorlage> };
@@ -257,10 +263,65 @@ const AUFTRAEGE_FEINSCHLIFF: Feinschliff[] = [
       spalten: A_SPALTEN('Kunde', 'Abgabetermin'), suchen: A_SUCHEN('Abgabetermin', 'Abgenommen', 'Kunde') } },
 ];
 
+// --- Grund-Vorlage: Kontakte im CRM (Paket 312, BV2 Kunden) -----------------
+// Status-SCHLÜSSEL wie in der Datenbank (interessent, aktiv, kunde, inaktiv);
+// Ampel nach dem Betreuungs-Intervall: im Takt grün, bis doppelt so lang gelb,
+// danach rot. Das Intervall der Vorlage gilt für neue Kontakte.
+const K_STATUS = (interessent: string, aktiv: string, kunde: string, inaktiv: string): VorlageStatus[] => [
+  { key: 'interessent', label: interessent, farbe: 'gold' },
+  { key: 'aktiv', label: aktiv, farbe: 'info' },
+  { key: 'kunde', label: kunde, farbe: 'ok' },
+  { key: 'inaktiv', label: inaktiv, farbe: 'dim' },
+];
+const K_SPALTEN: VorlageSpalte[] = [
+  { key: 'firma', label: 'Firma', sichtbar: true },
+  { key: 'kontakt', label: 'E-Mail und Telefon', sichtbar: true },
+  { key: 'letzter', label: 'Letzter Kontakt', sichtbar: true },
+  { key: 'wiedervorlage', label: 'Wiedervorlage', sichtbar: false },
+  { key: 'quelle', label: 'Quelle', sichtbar: false },
+];
+const K_SUCHEN = (einschlafend: string): VorlageSuche[] => [
+  { key: 'einschlafend', name: einschlafend, regel: 'ampel=rot' },
+  { key: 'bald', name: 'Bald fällig', regel: 'ampel=gelb' },
+  { key: 'wiedervorlage', name: 'Wiedervorlage fällig', regel: 'wiedervorlage=faellig' },
+  { key: 'nochNie', name: 'Noch nie kontaktiert', regel: 'kontakt=nie' },
+  { key: 'ohneMail', name: 'Ohne E-Mail', regel: 'email=leer' },
+];
+
+const KONTAKTE: Vorlage = {
+  modul: 'kontakte',
+  titel: 'Vertrieb / CRM',
+  einheit: 'Kontakt',
+  einheitPlural: 'Kontakte',
+  status: K_STATUS('Interessent', 'Aktiv', 'Kunde', 'Inaktiv'),
+  sparten: [],
+  spalten: K_SPALTEN,
+  ampel: { gruenBis: 0, gelbBis: 0 },
+  suchen: K_SUCHEN('Einschlafende Kunden'),
+  standkostenTag: 0,
+  kundenWort: 'Kunden',
+  intervallTage: 30,
+};
+
+/** Gleiche Branchen-Erkennung wie Projekte und Aufträge. */
+const KONTAKTE_FEINSCHLIFF: Feinschliff[] = [
+  { name: 'Kanzlei und Beratung', passt: (b) => RX_KANZLEI.test(b),
+    aenderung: { status: K_STATUS('Anfrage', 'Erstgespräch', 'Mandant', 'Ruht'), kundenWort: 'Mandanten', intervallTage: 90,
+      suchen: K_SUCHEN('Mandanten ohne Kontakt') } },
+  { name: 'Veranstaltungen', passt: (b) => RX_EVENT.test(b),
+    aenderung: { status: K_STATUS('Anfrage', 'Im Gespräch', 'Kunde', 'Inaktiv'), intervallTage: 90 } },
+  { name: 'Handwerk und Bau', passt: (b) => RX_HANDWERK.test(b),
+    aenderung: { status: K_STATUS('Anfrage', 'Im Gespräch', 'Kunde', 'Ruht'), intervallTage: 180,
+      suchen: K_SUCHEN('Kunden lange nicht gehört') } },
+  { name: 'Agentur, IT und Beratung', passt: (b) => RX_AGENTUR.test(b),
+    aenderung: { status: K_STATUS('Lead', 'Im Gespräch', 'Kunde', 'Inaktiv'), intervallTage: 30 } },
+];
+
 const VORLAGEN: Record<string, { grund: Vorlage; fein: Feinschliff[] }> = {
   'kfz-bestand': { grund: KFZ_BESTAND, fein: KFZ_FEINSCHLIFF },
   'projekte': { grund: PROJEKTE, fein: PROJEKTE_FEINSCHLIFF },
   'auftraege': { grund: AUFTRAEGE, fein: AUFTRAEGE_FEINSCHLIFF },
+  'kontakte': { grund: KONTAKTE, fein: KONTAKTE_FEINSCHLIFF },
 };
 
 export function bekannteModule(): string[] {
@@ -343,6 +404,12 @@ export function mitKunde(v: Vorlage, k?: KundenEinstellung | null): Vorlage {
   if (k.warnProzent !== undefined && e.warnProzent !== undefined) e.warnProzent = Math.min(100, Math.trunc(zahlOder(k.warnProzent, e.warnProzent)));
   // Paket 311: Termin-Wort der Aufträge (nur wo die Vorlage eins hat)
   if (typeof k.terminWort === 'string' && k.terminWort.trim() && e.terminWort !== undefined) e.terminWort = k.terminWort.trim().slice(0, 30);
+  // Paket 312: Kunden-Wort und Betreuungs-Intervall der Kontakte (1–730 Tage)
+  if (typeof k.kundenWort === 'string' && k.kundenWort.trim() && e.kundenWort !== undefined) e.kundenWort = k.kundenWort.trim().slice(0, 30);
+  if (k.intervallTage !== undefined && e.intervallTage !== undefined) {
+    const t = Math.trunc(zahlOder(k.intervallTage, e.intervallTage));
+    e.intervallTage = Math.min(730, Math.max(1, t));
+  }
   return e;
 }
 

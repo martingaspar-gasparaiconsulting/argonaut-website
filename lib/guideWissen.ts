@@ -468,10 +468,10 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Eine Anfrage an Ihre eigene E-Mail schicken.', loeschen: 'Anfrage löschen.' },
   },
   '/dashboard/crm': {
-    zweck: 'Ihre Kundenkartei: Kontakte mit Tags, Visitenkarte per Foto auslesen, CSV-Import, Wochenfokus, Firmen und Pipeline.',
+    zweck: 'Ihre Kundenkartei: Kontakte mit Tags, Visitenkarte per Foto auslesen, CSV-Import, Wochenfokus, Firmen und Pipeline. Status-Namen und Betreuungs-Takt passen sich Ihrer Branche an (z. B. „Mandant“ und 90 Tage in der Kanzlei, „Anfrage“ und 180 Tage im Handwerk).',
     wer: 'beide',
-    werText: 'Wer das Modul hat, legt Kontakte an. Löschen ist möglich — bei Kunden mit Rechnungen lieber nicht.',
-    schritte: ['„+ Neuer Kontakt" — Name und E-Mail genügen', '„📇 Visitenkarte" fotografieren, die Felder werden ausgefüllt', '„📥 Import" für eine Excel/CSV-Liste — Dubletten werden gemeldet', 'Tags vergeben, um später Zielgruppen zu bilden'],
+    werText: 'Wer das Modul hat, legt Kontakte an. Löschen ist möglich — bei Kunden mit Rechnungen lieber nicht. Die Ansicht („⚙️ Ansicht“) legt die Geschäftsleitung für alle fest.',
+    schritte: ['„+ Neuer Kontakt" — Name und E-Mail genügen', '„📇 Visitenkarte" fotografieren, die Felder werden ausgefüllt', '„📥 Import" für eine Excel/CSV-Liste — Dubletten werden gemeldet', 'Tags vergeben, um später Zielgruppen zu bilden', '„Schnellsuche“: einschlafende Kunden, bald fällig, Wiedervorlage fällig, noch nie kontaktiert, ohne E-Mail', '„⚙️ Ansicht“: Status-Namen, Spalten, Wort für die Kunden und Betreuungs-Takt für neue Kontakte'],
     probe: { anlegen: 'Kontakt „Test Kunde" anlegen.', loeschen: 'Kontakt öffnen → „Löschen".' },
     landetIn: [{ text: 'Angebote', href: '/dashboard/angebote' }, { text: 'Termine', href: '/dashboard/termine' }, { text: 'Kunden-Akte', href: '/dashboard/kunde-akte' }],
   },

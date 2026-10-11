@@ -17,10 +17,17 @@ import {
   speichereWerte,
 } from "../_components/EigeneFelder";
 import type { EigenesFeld } from "@/lib/eigeneFelder";
+import { useBranchenVorlage } from "../_components/useBranchenVorlage";
+import KontaktAnsicht, { KONTAKT_MODUL } from "./KontaktAnsicht";
+import { kontaktAmpel, tageSeitKontakt, suchePasst, zaehlen, intervallVon, type AmpelKey } from "@/lib/kontaktVorlage";
+import { leseZahlOder } from "@/lib/zahlen";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · MODUL 4 VERTRIEB+CRM · C2+C5 Kontakt-Cockpit
 // C5: Tag-Chips pro Zeile + Tag-Filter
+// Paket 312 (BV2 Kunden): Status-Namen, Spalten, Betreuungs-Intervall,
+// Wort für die Kunden und Schnellsuche nach Branchen-Vorlage
+// (lib/branchenVorlage.ts, Modul „kontakte"); Ampel mit Kalendertagen.
 // ---------------------------------------------------------------------
 
 const supabase = createBrowserClient(
@@ -102,19 +109,14 @@ const LEER_FORM: FormState = {
   notizen: "",
 };
 
-function tageSeit(iso: string | null): number | null {
-  if (!iso) return null;
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-}
-
-function ampel(k: Kontakt): { farbe: string; label: string } {
-  const tage = tageSeit(k.letzter_kontakt_am);
-  if (tage === null) return { farbe: C.textDim, label: "Noch kein Kontakt" };
-  const iv = k.betreuungs_intervall_tage || 30;
-  if (tage <= iv) return { farbe: C.green, label: `Im Takt · vor ${tage} T` };
-  if (tage <= iv * 2)
-    return { farbe: C.warn, label: `Bald fällig · vor ${tage} T` };
-  return { farbe: C.danger, label: `Überfällig · vor ${tage} T` };
+// Paket 312: Ampel aus lib/kontaktVorlage (Kalendertage, Intervall des Kontakts sonst der Vorlage)
+const AMPEL_FARBE: Record<AmpelKey, string> = { gruen: C.green, gelb: C.warn, rot: C.danger, neutral: C.textDim };
+function ampel(k: Kontakt, heute: string, standard: number): { farbe: string; label: string; key: AmpelKey } {
+  const key = kontaktAmpel(k, heute, standard);
+  const tage = tageSeitKontakt(k, heute);
+  if (key === "neutral" || tage === null) return { key, farbe: C.textDim, label: "Noch kein Kontakt" };
+  const text = key === "gruen" ? "Im Takt" : key === "gelb" ? "Bald fällig" : "Überfällig";
+  return { key, farbe: AMPEL_FARBE[key], label: `${text} · vor ${tage} T` };
 }
 
 function datumKurz(iso: string | null): string {
@@ -142,6 +144,13 @@ export default function CrmCockpitPage() {
 
   const [suche, setSuche] = useState("");
   const [statusFilter, setStatusFilter] = useState("alle");
+  // Paket 312: Branchen-Vorlage, Schnellsuche, Ansicht-Panel
+  const { vorlage, einstellung, setEinstellung, betrieb, istChef, fein, statusLabel, sichtbar, spaltenLabel } = useBranchenVorlage(supabase, KONTAKT_MODUL);
+  const [schnell, setSchnell] = useState<string | null>(null);
+  const [zeigeAnsicht, setZeigeAnsicht] = useState(false);
+  const heuteTag = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+  const standardIv = vorlage.intervallTage ?? 30;
+  const kundenWort = vorlage.kundenWort ?? "Kunden";
   const [quelleFilter, setQuelleFilter] = useState("alle");
   const [tagFilter, setTagFilter] = useState("alle");
 
@@ -251,9 +260,11 @@ export default function CrmCockpitPage() {
 
   const gefiltert = useMemo(() => {
     const q = suche.trim().toLowerCase();
+    const regel = schnell ? vorlage.suchen.find((x) => x.key === schnell)?.regel ?? null : null;
     return kontakte.filter((k) => {
       if (statusFilter !== "alle" && (k.status || "") !== statusFilter)
         return false;
+      if (regel && !suchePasst(regel, k, kontaktAmpel(k, heuteTag, standardIv), heuteTag)) return false;
       if (quelleFilter !== "alle" && (k.quelle || "") !== quelleFilter)
         return false;
       if (tagFilter !== "alle") {
@@ -267,27 +278,14 @@ export default function CrmCockpitPage() {
         .toLowerCase();
       return heu.includes(q);
     });
-  }, [kontakte, suche, statusFilter, quelleFilter, tagFilter, tagMap]);
+  }, [kontakte, suche, statusFilter, quelleFilter, tagFilter, tagMap, schnell, vorlage, heuteTag, standardIv]);
 
-  const kpi = useMemo(() => {
-    const gesamt = kontakte.length;
-    const kunden = kontakte.filter((k) => k.status === "kunde").length;
-    const heute = Date.now();
-    const wiedervorlage = kontakte.filter(
-      (k) =>
-        k.naechster_kontakt_am &&
-        new Date(k.naechster_kontakt_am).getTime() <= heute
-    ).length;
-    const einschlafend = kontakte.filter(
-      (k) => ampel(k).farbe === C.danger
-    ).length;
-    return { gesamt, kunden, wiedervorlage, einschlafend };
-  }, [kontakte]);
+  const kpi = useMemo(() => zaehlen(kontakte, heuteTag, standardIv), [kontakte, heuteTag, standardIv]);
 
   // Kompakter, stabiler Kontext für die KI-Klartext-Box: priorisiert vernachlässigte Kunden
   const crmKiKontext = useMemo(() => {
     const bewertet = kontakte
-      .map((k) => ({ k, a: ampel(k), tage: tageSeit(k.letzter_kontakt_am) }))
+      .map((k) => ({ k, a: ampel(k, heuteTag, standardIv), tage: tageSeitKontakt(k, heuteTag) }))
       .filter((x) => x.a.farbe === C.danger || x.a.farbe === C.warn);
     if (bewertet.length === 0) return "";
     const rot = bewertet.filter((x) => x.a.farbe === C.danger).length;
@@ -307,11 +305,11 @@ export default function CrmCockpitPage() {
       .map(zeile)
       .join("\n");
     return `${rot} Kunde(n) überfällig, ${gelb} bald fällig für Betreuung.\nAm längsten vernachlässigt:\n${top}`;
-  }, [kontakte]);
+  }, [kontakte, heuteTag, standardIv]);
 
   function dialogNeu() {
     setBearbeite(null);
-    setForm(LEER_FORM);
+    setForm({ ...LEER_FORM, betreuungs_intervall_tage: String(standardIv) });
     setNmExtra({});
     setDublette(null);
     setDubletteBestaetigt(false);
@@ -330,7 +328,7 @@ export default function CrmCockpitPage() {
       firma: k.firma || "",
       status: k.status || "interessent",
       quelle: k.quelle || "",
-      betreuungs_intervall_tage: String(k.betreuungs_intervall_tage || 30),
+      betreuungs_intervall_tage: String(intervallVon(k, standardIv)),
       notizen: k.notizen || "",
     });
     setDublette(null);
@@ -383,8 +381,7 @@ export default function CrmCockpitPage() {
       firma: form.firma.trim() || null,
       status: form.status,
       quelle: form.quelle || null,
-      betreuungs_intervall_tage:
-        parseInt(form.betreuungs_intervall_tage, 10) || 30,
+      betreuungs_intervall_tage: intervallVon({ betreuungs_intervall_tage: Math.trunc(leseZahlOder(form.betreuungs_intervall_tage, NaN)) }, standardIv),
       notizen: form.notizen.trim() || null,
     };
 
@@ -610,7 +607,7 @@ export default function CrmCockpitPage() {
         position: position || null,
         status: "interessent",
         quelle: "CSV-Import",
-        betreuungs_intervall_tage: 30,
+        betreuungs_intervall_tage: standardIv,
       });
     }
 
@@ -746,7 +743,7 @@ export default function CrmCockpitPage() {
       firma: vkFelder.firma.trim() || null,
       status: "interessent",
       quelle: "Visitenkarte",
-      betreuungs_intervall_tage: 30,
+      betreuungs_intervall_tage: standardIv,
       notizen: notiz,
     });
     setVkSpeichert(false);
@@ -805,6 +802,7 @@ export default function CrmCockpitPage() {
               }}
             >
               Ihre Kontakte, Beziehungen und Wiedervorlagen auf einen Blick.
+              {fein ? ` · Vorlage ${fein}` : ""}
             </p>
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -904,6 +902,23 @@ export default function CrmCockpitPage() {
             >
               + Neuer Kontakt
             </button>
+            <button
+              onClick={() => setZeigeAnsicht((x) => !x)}
+              title="Status-Namen, Spalten, Wort für die Kunden und Betreuungs-Intervall"
+              style={{
+                background: "transparent",
+                color: C.textDim,
+                border: `1px solid ${C.border}`,
+                borderRadius: 10,
+                padding: "12px 14px",
+                fontFamily: "var(--font-dm-sans), sans-serif",
+                fontWeight: 600,
+                fontSize: 'clamp(15px, 1.31vw, 21px)',
+                cursor: "pointer",
+              }}
+            >
+              ⚙️ Ansicht
+            </button>
           </div>
         </div>
 
@@ -917,7 +932,7 @@ export default function CrmCockpitPage() {
           }}
         >
           <KpiKarte label="Kontakte gesamt" wert={kpi.gesamt} farbe={C.cyan} />
-          <KpiKarte label="Kunden" wert={kpi.kunden} farbe={C.green} />
+          <KpiKarte label={kundenWort} wert={kpi.kunden} farbe={C.green} />
           <KpiKarte
             label="Wiedervorlage fällig"
             wert={kpi.wiedervorlage}
@@ -957,7 +972,7 @@ export default function CrmCockpitPage() {
             <option value="alle">Status: alle</option>
             {STATUS_OPTIONEN.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {statusLabel(s)}
               </option>
             ))}
           </select>
@@ -1004,6 +1019,26 @@ export default function CrmCockpitPage() {
           </div>
         )}
 
+        {/* Paket 312: gespeicherte Suchen der Branchen-Vorlage */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+          <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: "'DM Sans', sans-serif" }}>Schnellsuche:</span>
+          {vorlage.suchen.map((x) => {
+            const an = schnell === x.key;
+            const farbe = x.regel === "ampel=rot" ? C.danger : C.gold;
+            return (
+              <button key={x.key} onClick={() => setSchnell(an ? null : x.key)}
+                style={{ background: an ? `${farbe}22` : "transparent", color: an ? farbe : C.textDim, border: `1px solid ${an ? farbe : C.border}`, borderRadius: 20, padding: "6px 13px", fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                {x.name}
+              </button>
+            );
+          })}
+        </div>
+
+        {zeigeAnsicht && betrieb && (
+          <KontaktAnsicht vorlage={vorlage} einstellung={einstellung} betrieb={betrieb} istChef={istChef} fein={fein}
+            onGespeichert={(e) => setEinstellung(e)} onSchliessen={() => setZeigeAnsicht(false)} />
+        )}
+
         {uid && (
           <EigeneFelderManager modul={MODUL} ownerId={uid} onChange={laden_} />
         )}
@@ -1042,7 +1077,7 @@ export default function CrmCockpitPage() {
               >
                 <thead>
                   <tr>
-                    {["", "Name", "Firma", "Kontakt", "Status", "Letzter Kontakt", ""].map(
+                    {["", "Name", ...(sichtbar("firma") ? [spaltenLabel("firma")] : []), ...(sichtbar("kontakt") ? ["Kontakt"] : []), "Status", ...(sichtbar("letzter") ? [spaltenLabel("letzter")] : []), ...(sichtbar("wiedervorlage") ? [spaltenLabel("wiedervorlage")] : []), ...(sichtbar("quelle") ? [spaltenLabel("quelle")] : []), ""].map(
                       (h, i) => (
                         <th key={i} style={th}>
                           {h}
@@ -1053,7 +1088,7 @@ export default function CrmCockpitPage() {
                 </thead>
                 <tbody>
                   {gefiltert.map((k) => {
-                    const a = ampel(k);
+                    const a = ampel(k, heuteTag, standardIv);
                     const kTagIds = tagMap[k.id] || [];
                     return (
                       <tr
@@ -1105,9 +1140,12 @@ export default function CrmCockpitPage() {
                           )}
                           <EigeneFelderAnzeige felder={felder} werte={werteMap[k.id]} />
                         </td>
+                        {sichtbar("firma") && (
                         <td style={{ ...td, color: C.textDim }}>
                           {k.firma || "—"}
                         </td>
+                        )}
+                        {sichtbar("kontakt") && (
                         <td style={td}>
                           <div
                             style={{
@@ -1147,12 +1185,25 @@ export default function CrmCockpitPage() {
                             )}
                           </div>
                         </td>
+                        )}
                         <td style={td}>
-                          <StatusBadge status={k.status} />
+                          <StatusBadge status={k.status} label={k.status ? statusLabel(k.status) : null} />
                         </td>
+                        {sichtbar("letzter") && (
                         <td style={{ ...td, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
                           {datumKurz(k.letzter_kontakt_am)}
                         </td>
+                        )}
+                        {sichtbar("wiedervorlage") && (
+                        <td style={{ ...td, color: k.naechster_kontakt_am && k.naechster_kontakt_am.slice(0, 10) <= heuteTag ? C.warn : C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
+                          {datumKurz(k.naechster_kontakt_am)}
+                        </td>
+                        )}
+                        {sichtbar("quelle") && (
+                        <td style={{ ...td, color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>
+                          {k.quelle || "—"}
+                        </td>
+                        )}
                         <td style={{ ...td, whiteSpace: "nowrap" }}>
                           <button
                             onClick={(e) => {
@@ -1249,7 +1300,7 @@ export default function CrmCockpitPage() {
                   <select style={inp} value={form.status} onChange={(e) => feld("status", e.target.value)}>
                     {STATUS_OPTIONEN.map((s) => (
                       <option key={s} value={s}>
-                        {s}
+                        {statusLabel(s)}
                       </option>
                     ))}
                   </select>
@@ -1912,7 +1963,7 @@ function KpiKarte({
   );
 }
 
-function StatusBadge({ status }: { status: string | null }) {
+function StatusBadge({ status, label }: { status: string | null; label?: string | null }) {
   const map: Record<string, string> = {
     kunde: C.green,
     aktiv: C.cyan,
@@ -1933,7 +1984,7 @@ function StatusBadge({ status }: { status: string | null }) {
         background: "transparent",
       }}
     >
-      {status || "—"}
+      {label || status || "—"}
     </span>
   );
 }
