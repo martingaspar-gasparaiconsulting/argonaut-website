@@ -2065,7 +2065,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Maschine „Test", dann eine Buchung mit 60 Minuten Planbelegung.', loeschen: '„✕ Buchung" an der Buchung und ✕ an der Maschine im Reiter „Maschinen" — beides löscht mit Rückfrage.' },
   },
   '/dashboard/chargen': {
-    zweck: 'Chargen und Seriennummern führen: Status, MHD, Rückverfolgbarkeit (woraus die Charge besteht, wohin sie ging) und Prüfplan mit Soll ± Toleranz, der jedes Merkmal als i.O. oder n.i.O. bewertet. Je Charge ein Nachweis als PDF.',
+    zweck: 'Chargen und Seriennummern führen: Status, MHD, Rückverfolgbarkeit (woraus die Charge besteht, wohin sie ging) und Prüfplan mit Soll ± Toleranz, der jedes Merkmal als i.O. oder n.i.O. bewertet. Je Charge ein interner Nachweis als PDF und ein Zertifikat für den Kunden; Chargen in Quarantäne sind für die Verwendung gesperrt.',
     wer: 'beide',
     werText: 'Wer das Modul Chargen & Prüfplan hat, trägt ein. Eine Unterscheidung zwischen Chef und Mitarbeiter gibt es auf der Seite nicht. Charge und Prüfung löschen mit Rückfrage; Rückverfolgungs-Einträge und Merkmale löschen mit ✕, ebenfalls mit Rückfrage.',
     schritte: [
@@ -2073,6 +2073,8 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'An der Charge „▼ Details" öffnen. Unter „Status setzen" zwischen Freigegeben, Quarantäne, Gesperrt und Verbraucht wechseln',
       '„🔗 Rückverfolgbarkeit": „Richtung" wählen — „Eingang (Rohstoff)" oder „Ausgang (Auftrag)" —, „Referenz", Menge und Datum eintragen, dann „+ Eintrag". Die offene Menge rechnet mit',
       '„🔬 Prüfplan": „Prüfart" (Wareneingang, Zwischenprüfung, Endprüfung), Datum und Prüfer, dann „+ Prüfung"',
+      'Rohstoff im Wareneingang auf „⏳ Quarantäne" setzen: Bis zur Freigabe lässt ARGONAUT keine Verwendung und keine Auslieferung dieser Charge zu. Freigeben ohne bestandene Prüfung geht nur mit Rückfrage und wird vermerkt',
+      '„📜 Zertifikat": Analysenzertifikat oder Abnahmeprüfzeugnis 3.1 für den Kunden aus einer bestandenen Prüfung — nur Produkt, Charge und Prüfergebnisse, keine Lieferanten oder Abnehmer. Drucken oder als PDF speichern',
       'Bei der Prüfung „▼ Merkmale" öffnen: Merkmal, Soll, „Tol −", „Tol +", Ist und Einheit eintragen, dann „+ Merkmal" — die Bewertung i.O./n.i.O. erscheint sofort',
       '„📄 Nachweis" erstellt das PDF mit Ein- und Ausgängen und Prüfungen. Oben zählen Kacheln gesperrte Chargen, n.i.O.-Prüfungen, Chargen über MHD und ungeprüfte',
       'Über den Link „🧪 Qualität: Reklamationen (8D), Lieferanten-Bewertung, Rückruf →" geht es zur Qualitäts-Seite',

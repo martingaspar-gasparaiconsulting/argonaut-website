@@ -19,6 +19,7 @@ import {
   type MerkmalLite,
 } from "@/lib/chargen";
 import { chargenPdf } from "@/lib/chargenPdf";
+import { ZERT_ARTEN, bestePruefung, freigabeOhnePruefung, istGesperrt, type MerkmalZ } from "@/lib/chargenZertifikat";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
@@ -29,6 +30,10 @@ const MODUL = 'charge_los';
 // ARGONAUT OS · L2-3 · Serien-/Chargen- & Prüfplan-Tiefe (Industrie)
 // Chargen/Serien mit Status + MHD, Rückverfolgbarkeit (Ein-/Ausgänge,
 // one up / one down) und Prüfplan (Soll ± Toleranz → i.O./n.i.O.).
+// Paket 320 (Q1): „📜 Zertifikat" (Analysenzertifikat / Abnahmeprüfzeugnis 3.1)
+// aus dem Prüfplan — Druckansicht /dashboard/chargen/<id>/zertifikat; Freigabe
+// ohne bestandene Prüfung nur mit Rückfrage und Vermerk; Chargen in Quarantäne
+// oder gesperrt sperrt die Datenbank für die Verwendung (SQL p320).
 // ---------------------------------------------------------------------
 
 const supabase = createBrowserClient(
@@ -93,6 +98,8 @@ export default function ChargenSeite() {
   const [vw, setVw] = useState({ richtung: "eingang", referenz: "", menge: "", datum: heuteISO() });
   const [pf, setPf] = useState({ art: "endpruefung", datum: heuteISO(), pruefer: "" });
   const [selPruef, setSelPruef] = useState<string | null>(null);
+  const [zf, setZf] = useState({ art: "coa", pruefung: "", kunde: "", bestellung: "", menge: "", freigabe: "", funktion: "", abnahme: "" });
+  const [zfOffen, setZfOffen] = useState<string | null>(null);
   const [mk, setMk] = useState({ merkmal: "", sollwert: "", toleranz_minus: "", toleranz_plus: "", istwert: "", einheit: "" });
 
   const [felder, setFelder] = useState<EigenesFeld[]>([]);
@@ -197,7 +204,13 @@ export default function ChargenSeite() {
     setModal(false); await ladeAlles();
   }
   async function statusSetzen(l: Los, status: string) {
-    const { error } = await supabase.from("charge_los").update({ status }).eq("id", l.id);
+    let extra: { bemerkung?: string } = {};
+    if (status === "freigegeben" && l.status !== "freigegeben" && freigabeOhnePruefung(pfByLos[l.id] ?? [], merkmaleByPruefung as Record<string, MerkmalZ[]>)) {
+      if (!window.confirm(`Charge „${l.charge_nr}" hat keine bestandene Prüfung (alle Merkmale mit Ist-Wert in der Toleranz).\n\nTrotzdem freigeben? Das wird an der Charge vermerkt.`)) return;
+      const vermerk = `Freigabe ohne bestandene Prüfung am ${new Date().toLocaleDateString("de-DE")}`;
+      extra = { bemerkung: [l.bemerkung, vermerk].filter(Boolean).join(" · ").slice(0, 1000) };
+    }
+    const { error } = await supabase.from("charge_los").update({ status, ...extra }).eq("id", l.id);
     if (error) { window.alert("Fehler: " + error.message); return; }
     await ladeAlles();
   }
@@ -370,7 +383,8 @@ export default function ChargenSeite() {
                   </div>
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <button style={btnGhost} onClick={() => { setOffen(istOffen ? null : l.id); setSelPruef(null); }}>{istOffen ? "▲ Details" : "▼ Details"}</button>
-                    <button style={btnGhost} onClick={() => pdf(l)}>📄 Nachweis</button>
+                    <button style={btnGhost} onClick={() => pdf(l)} title="Interner Nachweis mit Rückverfolgung — nicht für Kunden">📄 Nachweis</button>
+                    <button style={btnGhost} onClick={() => { setOffen(l.id); setZfOffen(zfOffen === l.id ? null : l.id); setZf((z) => ({ ...z, pruefung: bestePruefung(pfByLos[l.id] ?? [], merkmaleByPruefung as Record<string, MerkmalZ[]>)?.id ?? "" })); }} title="Analysenzertifikat oder Abnahmeprüfzeugnis 3.1 für den Kunden">📜 Zertifikat</button>
                     <button style={btnGhost} onClick={() => oeffneBearbeiten(l)}>Bearbeiten</button>
                     <button style={{ ...btnGhost, color: C.danger, borderColor: "rgba(224,102,102,0.4)" }} onClick={() => loescheLos(l)}>Löschen</button>
                   </div>
@@ -385,6 +399,39 @@ export default function ChargenSeite() {
                         <button key={s} style={{ ...btnGhost, ...(l.status === s ? { borderColor: STATUS_LABEL[s].farbe, color: STATUS_LABEL[s].farbe } : {}) }} onClick={() => statusSetzen(l, s)}>{STATUS_LABEL[s].text}</button>
                       ))}
                     </div>
+
+                    {/* Paket 320: Zertifikat für den Kunden */}
+                    {zfOffen === l.id && (() => {
+                      const ps = pfByLos[l.id] ?? [];
+                      const href = `/dashboard/chargen/${l.id}/zertifikat?` + new URLSearchParams(Object.entries(zf).filter(([, v]) => v.trim() !== "")).toString();
+                      return (
+                        <div style={{ border: `1px solid ${C.gold}`, borderRadius: 10, padding: 12 }}>
+                          <div style={{ fontWeight: 800, marginBottom: 8 }}>📜 Zertifikat für den Kunden</div>
+                          {l.status !== "freigegeben" && <div style={{ color: C.warn, marginBottom: 8 }}>Die Charge ist nicht freigegeben — ein Zertifikat gibt es erst nach der Freigabe.</div>}
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 8 }}>
+                            <div><label style={label}>Art</label>
+                              <select style={input} value={zf.art} onChange={(e) => setZf({ ...zf, art: e.target.value })}>{ZERT_ARTEN.map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}</select>
+                            </div>
+                            <div><label style={label}>Prüfung</label>
+                              <select style={input} value={zf.pruefung} onChange={(e) => setZf({ ...zf, pruefung: e.target.value })}>
+                                <option value="">— bitte wählen —</option>
+                                {ps.map((p) => <option key={p.id} value={p.id}>{ART_LABEL[p.art] ?? p.art} · {dstr(p.datum)}</option>)}
+                              </select>
+                            </div>
+                            <div><label style={label}>Empfänger (Kunde)</label><input style={input} value={zf.kunde} maxLength={120} onChange={(e) => setZf({ ...zf, kunde: e.target.value })} /></div>
+                            <div><label style={label}>Bestellung / Lieferschein</label><input style={input} value={zf.bestellung} maxLength={60} onChange={(e) => setZf({ ...zf, bestellung: e.target.value })} /></div>
+                            <div><label style={label}>Liefermenge</label><input style={input} value={zf.menge} maxLength={40} placeholder="z. B. 200 kg" onChange={(e) => setZf({ ...zf, menge: e.target.value })} /></div>
+                            <div><label style={label}>Freigegeben durch (Name)</label><input style={input} value={zf.freigabe} maxLength={80} onChange={(e) => setZf({ ...zf, freigabe: e.target.value })} /></div>
+                            <div><label style={label}>Funktion</label><input style={input} value={zf.funktion} maxLength={60} placeholder="z. B. Qualitätssicherung" onChange={(e) => setZf({ ...zf, funktion: e.target.value })} /></div>
+                            {zf.art === "abnahme31" && <div><label style={label}>Abnahmebeauftragter (unabhängig)</label><input style={input} value={zf.abnahme} maxLength={80} onChange={(e) => setZf({ ...zf, abnahme: e.target.value })} /></div>}
+                          </div>
+                          <div style={{ color: C.textDim, fontSize: "clamp(12px,1vw,15px)", margin: "8px 0" }}>{ZERT_ARTEN.find((a) => a.key === zf.art)?.hinweis} Das Zertifikat zeigt nur Produkt, Charge und Prüfergebnisse — keine Lieferanten oder Abnehmer.</div>
+                          <a href={href} target="_blank" rel="noopener noreferrer" style={{ ...btnGold, display: "inline-block", textDecoration: "none" }}>Zertifikat öffnen (drucken / als PDF)</a>
+                        </div>
+                      );
+                    })()}
+
+                    {istGesperrt(l.status) && <div style={{ color: C.danger, fontWeight: 700 }}>⛔ Diese Charge ist {l.status === "quarantaene" ? "in Quarantäne" : "gesperrt"} — sie darf nicht verwendet oder ausgeliefert werden. Die Datenbank lässt keine Verwendung zu, bis sie freigegeben ist.</div>}
 
                     {/* Rückverfolgbarkeit */}
                     <div>
@@ -520,7 +567,8 @@ export default function ChargenSeite() {
               <NurVoll><div><label style={label}>MHD / Verfall (optional)</label><input type="date" style={input} value={form.mhd} onChange={(e) => setF("mhd", e.target.value)} /></div></NurVoll>
               <NurVoll><div><label style={label}>Herkunft (Lieferant/Vor-Charge)</label><input style={input} value={form.herkunft} onChange={(e) => setF("herkunft", e.target.value)} /></div></NurVoll>
               <NurVoll><div><label style={label}>Auftrag / Los</label><input style={input} value={form.auftrag} onChange={(e) => setF("auftrag", e.target.value)} /></div></NurVoll>
-              <div><label style={label}>Status</label><select style={input} value={form.status} onChange={(e) => setF("status", e.target.value)}>{CHARGE_STATUS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s].text}</option>)}</select></div>
+              <div><label style={label}>Status</label><select style={input} value={form.status} onChange={(e) => setF("status", e.target.value)}>{CHARGE_STATUS.map((s) => <option key={s} value={s}>{STATUS_LABEL[s].text}</option>)}</select>
+                {!editId && <div style={{ color: C.textDim, fontSize: "clamp(11px,0.95vw,14px)", marginTop: 4 }}>Rohstoff im Wareneingang? „⏳ Quarantäne" wählen, bis die Wareneingangsprüfung in Ordnung ist — bis dahin sperrt ARGONAUT die Verwendung.</div>}</div>
               <NurVoll><div style={{ gridColumn: "1 / -1" }}><label style={label}>Bemerkung</label><input style={input} value={form.bemerkung} onChange={(e) => setF("bemerkung", e.target.value)} /></div></NurVoll>
               <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={input} labStyle={label} /></NurVoll>
             </div>
