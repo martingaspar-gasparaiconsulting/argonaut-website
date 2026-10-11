@@ -2619,7 +2619,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     vorher: [{ text: 'Artikel im Lager (für „Basis-Artikel")', href: '/dashboard/erp' }],
   },
   '/dashboard/rezeptur': {
-    zweck: 'Rezepte mit Zutaten pflegen und live rechnen: Wareneinsatz, Teigausbeute, Schüttwasser, Gebäck nach Backverlust, Ausbeute, Kosten je Einheit und Portion, Verkaufspreis-Vorschlag über Food-Cost — dazu Skalierung auf eine andere Menge.',
+    zweck: 'Rezepte mit Zutaten pflegen und live rechnen: Wareneinsatz, Teigausbeute, Schüttwasser, Gebäck nach Backverlust, Ausbeute, Kosten je Einheit und Portion, Verkaufspreis-Vorschlag über Food-Cost — dazu Skalierung auf eine andere Menge. Für Mischungen und Abfüllungen: Rezeptur in Prozent mit Einwaage für jede Ansatzgröße, Rohstoffkosten je kg und je Gebinde.',
     wer: 'beide',
     werText: 'Wer das Modul „Rezeptur & Ausbeute" hat. Die Seite selbst unterscheidet nicht zwischen Chef und Mitarbeiter. Ein Rezept lässt sich hier nicht löschen.',
     schritte: [
@@ -2629,6 +2629,11 @@ export const WISSEN: Record<string, SeitenWissen> = {
       '„📊 Live-Rechner": Teigausbeute und Schüttwasser erscheinen nur beim Typ Teig und wenn eine Zutat als „Mehl" markiert ist. Kosten je Portion braucht „Portionen", der Verkaufspreis-Vorschlag (netto, je Portion) zusätzlich „Ziel Food-Cost %"',
       '„🔁 Skalierung": „Ziel-Ausbeute" eintragen — die Tabelle zeigt jede Zutat im Original und skaliert mit dem Faktor',
       '„🏷 Charge erzeugen" (mit Rückfrage) legt aus der gespeicherten Ausbeute-Menge eine Charge im Lebensmittel-Modul an',
+      'Typ „🧪 Mischung / Abfüllung (Prozent)" (für Farben, Reinigungsmittel, Kosmetik, Seifen, Futter, Baustoffe, Getränke): In den Eckdaten „Standard-Ansatz" mit Einheit, „Verlust %", „Gebinde-Inhalt" und „Verpackung € je Gebinde"',
+      '„🧪 Rohstoffe in Prozent": je Zeile wahlweise einen Artikel aus dem Lager wählen (Einkaufspreis wird je kg bzw. l übernommen), Rohstoff, „Anteil %" und Preis. Bei genau einer Zeile „ad 100" anhaken — sie bekommt den Rest. Unter der Liste steht die Summe; „💾 Rohstoffe speichern" geht nur ohne Fehler',
+      'Ein bestehendes Mengen-Rezept auf den Typ Mischung stellen, Eckdaten speichern, dann „％ Mengen in Prozent umrechnen" — die Anteile ergeben zusammen genau 100 %',
+      '„📊 Rohstoffkosten": Kosten je kg bzw. l, für den Standard-Ansatz, je kg Fertigware nach Verlust, Gebinde je Ansatz und Kosten je Gebinde (ohne Lohn). „⚖ Ansatz umrechnen": Ansatzgröße eintragen — die Tabelle zeigt die Einwaage je Rohstoff, die Summe ergibt genau den Ansatz',
+      'Eine Gefahrstoff-Einstufung (GHS/CLP) rechnet die Rezeptur bewusst nicht — die steht im Sicherheitsdatenblatt',
     ],
     probe: { anlegen: 'Ein Rezept „Test" mit „+ Anlegen".', loeschen: 'Löschen gibt es hier nicht — das Rezept bleibt in der Auswahl. Einzelne Zutaten entfernt „✕" und danach „💾 Zutaten speichern".' },
     landetIn: [{ text: 'Lebensmittel (Chargen / MHD)', href: '/dashboard/lebensmittel' }],

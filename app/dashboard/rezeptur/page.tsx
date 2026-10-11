@@ -7,6 +7,7 @@
 // Einheit/Portion, Verkaufspreis-Vorschlag (Food-Cost) + Skalierung.
 // Reine Formeln aus lib/rezeptur (0 €, web-verifiziert, getestet).
 // Pfad: app/dashboard/rezeptur/page.tsx
+// Paket 321 (R1): Typ „Mischung" = Rezeptur in Prozent (lib/rezepturProzent).
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -19,7 +20,10 @@ import {
 import { augeRezeptur } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
 import { NurVoll } from '../_components/Ansicht';
-import { leseZahlOder, zahlFeld } from '@/lib/zahlen';
+import { leseZahlOder, leseZahl, zahlFeld } from '@/lib/zahlen';
+import {
+  TYP_MISCHUNG, istMischung, einheitInfo, anteileAufloesen, einwaage, anteileAusMengen, preisJeBasis, kosten, augeMischung,
+} from '@/lib/rezepturProzent';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -37,17 +41,25 @@ const TYPEN = [
   { w: 'konditor', l: '🍰 Konditor / Portionen' },
   { w: 'getraenk', l: '🍺 Getränk / Sud' },
   { w: 'allgemein', l: '📋 Allgemein' },
+  { w: TYP_MISCHUNG, l: '🧪 Mischung / Abfüllung (Prozent)' },
 ];
 const ROLLEN = [{ w: 'sonstige', l: 'Zutat' }, { w: 'mehl', l: 'Mehl' }, { w: 'wasser', l: 'Wasser' }];
 
 type Rezept = {
   id: string; name: string; typ: string; basis_menge: number | null; basis_einheit: string | null;
   portionen: number | null; backverlust_prozent: number | null; foodcost_ziel: number | null; notiz: string | null;
+  gebinde_menge?: number | null; gebinde_kosten?: number | null;
 };
-type ZutatRow = { id?: string; bezeichnung: string; menge: string; einheit: string; preis_pro_einheit: string; rolle: string };
+type ZutatRow = {
+  id?: string; bezeichnung: string; menge: string; einheit: string; preis_pro_einheit: string; rolle: string;
+  anteil: string; ist_rest: boolean; artikel_id: string;
+};
+type ArtikelKurz = { id: string; bezeichnung: string; einheit: string | null; einkaufspreis: number | null };
 
-const LEER_ZUTAT: ZutatRow = { bezeichnung: '', menge: '', einheit: 'kg', preis_pro_einheit: '', rolle: 'sonstige' };
+const LEER_ZUTAT: ZutatRow = { bezeichnung: '', menge: '', einheit: 'kg', preis_pro_einheit: '', rolle: 'sonstige', anteil: '', ist_rest: false, artikel_id: '' };
 function num(s: string) { return leseZahlOder(s, 0); }
+/** Anteil-Feld: leer = null (nicht 0), damit „noch nicht eingetragen" erkennbar bleibt. */
+function anteilWert(s: string): number | null { return s.trim() === '' ? null : leseZahl(s); }
 function eur(n: number | null) { return n == null ? '—' : n.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function z1(n: number | null) { return n == null ? '—' : n.toLocaleString('de-DE', { maximumFractionDigits: 2 }); }
 
@@ -66,6 +78,7 @@ export default function RezepturRechner() {
   const [neuName, setNeuName] = useState('');
   const [neuTyp, setNeuTyp] = useState('teig');
   const [zielMenge, setZielMenge] = useState('');
+  const [artikel, setArtikel] = useState<ArtikelKurz[]>([]);
 
   const ladeRezepte = useCallback(async () => {
     const { data } = await supabase.from('rezepturen').select('*').eq('archiviert', false).order('name', { ascending: true });
@@ -78,6 +91,8 @@ export default function RezepturRechner() {
       id: String(z.id), bezeichnung: String(z.bezeichnung ?? ''), menge: zahlFeld(z.menge), // F9: vorher String() -> „2.125" -> beim Speichern 2125
       einheit: String(z.einheit ?? 'kg'), preis_pro_einheit: zahlFeld(z.preis_pro_einheit),
       rolle: String(z.rolle ?? 'sonstige'),
+      anteil: zahlFeld(z.anteil_prozent), ist_rest: z.ist_rest === true,
+      artikel_id: typeof z.artikel_id === 'string' ? z.artikel_id : '',
     }));
     setZutaten(rows.length ? rows : [{ ...LEER_ZUTAT }]);
   }, []);
@@ -91,6 +106,10 @@ export default function RezepturRechner() {
       const { data: chef } = await supabase.rpc('mein_chef_id');
       setBesitzer(typeof chef === 'string' && chef ? chef : id);
       setUid(id); await ladeRezepte(); setLaden(false);
+      // Paket 321: Rohstoffe aus dem Lager (für Preis und Verknüpfung in der Prozent-Rezeptur)
+      const { data: art } = await supabase.from('artikel').select('id, bezeichnung, einheit, einkaufspreis')
+        .eq('aktiv', true).order('bezeichnung', { ascending: true }).range(0, 999);
+      setArtikel(((art as ArtikelKurz[] | null) ?? []));
     })();
   }, [ladeRezepte]);
 
@@ -123,6 +142,8 @@ export default function RezepturRechner() {
         name: eck.name, typ: eck.typ, basis_menge: eck.basis_menge, basis_einheit: eck.basis_einheit,
         portionen: eck.portionen, backverlust_prozent: eck.backverlust_prozent, foodcost_ziel: eck.foodcost_ziel,
         aktualisiert_am: new Date().toISOString(),
+        // Paket 321: Gebinde nur bei der Prozent-Rezeptur
+        ...(istMischung(eck.typ) ? { gebinde_menge: eck.gebinde_menge ?? null, gebinde_kosten: eck.gebinde_kosten ?? null } : {}),
       }).eq('id', eck.id);
       if (error) throw error;
       await ladeRezepte(); setOk('Eckdaten gespeichert.');
@@ -140,14 +161,30 @@ export default function RezepturRechner() {
       const { data: alt, error: eAlt } = await supabase.from('rezeptur_zutaten').select('id').eq('rezeptur_id', eck.id);
       if (eAlt) throw eAlt;
       const altIds = ((alt as { id: string }[] | null) ?? []).map((r) => r.id);
-      const rows = zutaten
-        .filter((z) => z.bezeichnung.trim() || num(z.menge) > 0)
-        .map((z, i) => ({
+      let rows;
+      if (istMischung(eck.typ)) {
+        // Paket 321: Prozent-Rezeptur — Anteile prüfen, Rest auffüllen, Menge für den Standard-Ansatz mitspeichern
+        const genutzt = zutaten.filter((z) => z.bezeichnung.trim() || z.artikel_id || z.ist_rest || (anteilWert(z.anteil) ?? 0) > 0);
+        const auf = anteileAufloesen(genutzt.map((z) => ({ bezeichnung: z.bezeichnung, anteil: anteilWert(z.anteil), istRest: z.ist_rest })));
+        if (auf.status === 'fehler') throw new Error(auf.fehler.join(' '));
+        const basis = Number(eck.basis_menge) || 0;
+        const ew = basis > 0 ? einwaage(auf.anteile, basis, 3) : null;
+        rows = genutzt.map((z, i) => ({
           owner_user_id: besitzer, rezeptur_id: eck.id, position: i + 1,
-          bezeichnung: z.bezeichnung.trim() || 'Zutat', menge: num(z.menge) || null,
-          einheit: z.einheit.trim() || 'kg', preis_pro_einheit: z.preis_pro_einheit.trim() ? num(z.preis_pro_einheit) : null,
-          rolle: z.rolle || 'sonstige',
+          bezeichnung: z.bezeichnung.trim() || 'Rohstoff', menge: ew ? ew[i] : null,
+          einheit: eck.basis_einheit?.trim() || 'kg', preis_pro_einheit: z.preis_pro_einheit.trim() ? num(z.preis_pro_einheit) : null,
+          rolle: 'sonstige', anteil_prozent: auf.anteile[i], ist_rest: z.ist_rest, artikel_id: z.artikel_id || null,
         }));
+      } else {
+        rows = zutaten
+          .filter((z) => z.bezeichnung.trim() || num(z.menge) > 0)
+          .map((z, i) => ({
+            owner_user_id: besitzer, rezeptur_id: eck.id, position: i + 1,
+            bezeichnung: z.bezeichnung.trim() || 'Zutat', menge: num(z.menge) || null,
+            einheit: z.einheit.trim() || 'kg', preis_pro_einheit: z.preis_pro_einheit.trim() ? num(z.preis_pro_einheit) : null,
+            rolle: z.rolle || 'sonstige',
+          }));
+      }
       if (rows.length) { const { error } = await supabase.from('rezeptur_zutaten').insert(rows); if (error) throw error; }
       if (altIds.length) { const { error: eDel } = await supabase.from('rezeptur_zutaten').delete().in('id', altIds); if (eDel) throw eDel; }
       await ladeZutaten(eck.id); setOk('Zutaten gespeichert.');
@@ -184,7 +221,7 @@ export default function RezepturRechner() {
   // die Zahl direkt im Feld — ein Komma liess sich nicht tippen („2," -> 2)
   // und 2.125 aus der Datenbank erschien als „2.125" (= 2125 beim Speichern).
   const [eckText, setEckText] = useState<Record<string, string>>({});
-  type EckZahl = 'basis_menge' | 'portionen' | 'backverlust_prozent' | 'foodcost_ziel';
+  type EckZahl = 'basis_menge' | 'portionen' | 'backverlust_prozent' | 'foodcost_ziel' | 'gebinde_menge' | 'gebinde_kosten';
   function eckWert(k: EckZahl): string { return eckText[k] ?? zahlFeld(eck?.[k]); }
   function eckZahl(k: EckZahl, text: string, ganz = false) {
     setEckText((t) => ({ ...t, [k]: text }));
@@ -214,6 +251,46 @@ export default function RezepturRechner() {
     };
   }, [zutaten, eck]);
 
+  // --- Paket 321: Prozent-Rezeptur (aus lib/rezepturProzent) ---
+  const mischung = istMischung(eck?.typ);
+  const basisKurz = einheitInfo(eck?.basis_einheit)?.basis ?? 'kg';
+  const misch = useMemo(() => {
+    if (!mischung) return null;
+    const auf = anteileAufloesen(zutaten.map((z) => ({ bezeichnung: z.bezeichnung, anteil: anteilWert(z.anteil), istRest: z.ist_rest })));
+    const preise = zutaten.map((z) => (z.preis_pro_einheit.trim() ? leseZahl(z.preis_pro_einheit) : null));
+    const k = kosten({
+      anteile: auf.anteile, preise, ansatz: eck?.basis_menge != null ? Number(eck.basis_menge) : null, ansatzEinheit: eck?.basis_einheit ?? null,
+      verlustProzent: eck?.backverlust_prozent != null ? Number(eck.backverlust_prozent) : 0,
+      gebindeMenge: eck?.gebinde_menge != null ? Number(eck.gebinde_menge) : null, gebindeKosten: eck?.gebinde_kosten != null ? Number(eck.gebinde_kosten) : null,
+    });
+    const zeilen = zutaten.filter((z) => z.bezeichnung.trim() || z.ist_rest || (anteilWert(z.anteil) ?? 0) > 0).length;
+    return { auf, k, preise, zeilen };
+  }, [mischung, zutaten, eck]);
+  const ansatzWert = mischung ? (zielMenge.trim() ? num(zielMenge) : Number(eck?.basis_menge) || 0) : 0;
+  const ansatzTabelle = useMemo(() => {
+    if (!misch || !(ansatzWert > 0) || misch.auf.status === 'fehler') return null;
+    const ew = einwaage(misch.auf.anteile, ansatzWert, 3);
+    const k = kosten({ anteile: misch.auf.anteile, preise: misch.preise, ansatz: ansatzWert, ansatzEinheit: eck?.basis_einheit ?? null });
+    return { ew, summe: ew.reduce((s, v) => s + v, 0), kosten: k.ansatzKosten };
+  }, [misch, ansatzWert, eck]);
+
+  function artikelWaehlen(i: number, id: string) {
+    const a = artikel.find((x) => x.id === id);
+    if (!a) { setZ(i, { artikel_id: '' }); return; }
+    const p = preisJeBasis(a.einkaufspreis != null ? Number(a.einkaufspreis) : null, a.einheit, eck?.basis_einheit ?? 'kg');
+    setZ(i, { artikel_id: a.id, bezeichnung: a.bezeichnung, ...(p != null ? { preis_pro_einheit: zahlFeld(p) } : {}) });
+    if (p == null) setFehler(`Für „${a.bezeichnung}" ließ sich kein Preis je ${basisKurz} übernehmen (Einkaufspreis fehlt oder Einheit ${a.einheit || '—'} passt nicht). Bitte von Hand eintragen.`);
+  }
+
+  function mengenInProzent() {
+    const genutzt = zutaten.map((z) => ({ menge: num(z.menge) > 0 ? num(z.menge) : null, einheit: z.einheit }));
+    const r = anteileAusMengen(genutzt);
+    if (!r.anteile) { setFehler('Umrechnen nicht möglich: ' + (r.grund ?? '')); return; }
+    const a = r.anteile;
+    setZutaten((rows) => rows.map((z, i) => ({ ...z, anteil: a[i] > 0 ? zahlFeld(a[i]) : '', ist_rest: false })));
+    setFehler(null); setOk('Mengen in Anteile umgerechnet — bitte prüfen und „💾 Rohstoffe speichern".');
+  }
+
   const faktor = useMemo(() => {
     const basis = Number(eck?.basis_menge) || 0;
     const ziel = num(zielMenge);
@@ -224,7 +301,7 @@ export default function RezepturRechner() {
     <div style={styles.page}>
       <div style={styles.eyebrow}>ARGONAUT OS · Rezeptur</div>
       <h1 style={styles.h1}>🧮 Rezeptur- & Ausbeute-Rechner</h1>
-      <p style={styles.sub}>Rezepte mit Zutaten pflegen — und live Teigausbeute, Schüttwasser, Backverlust, Wareneinsatz, Kosten je Portion und Verkaufspreis rechnen. Für Bäcker, Metzger, Konditor, Brauer & Küche.</p>
+      <p style={styles.sub}>Rezepte mit Zutaten pflegen — und live Teigausbeute, Schüttwasser, Backverlust, Wareneinsatz, Kosten je Portion und Verkaufspreis rechnen. Für Bäcker, Metzger, Konditor, Brauer & Küche — und als Rezeptur in Prozent für alle, die mischen oder abfüllen (Farben, Reinigungsmittel, Kosmetik, Seifen, Futter, Baustoffe).</p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}
@@ -260,12 +337,20 @@ export default function RezepturRechner() {
               <label style={styles.lab}>Typ
                 <select style={styles.inp} value={eck.typ} onChange={(e) => setEckF('typ', e.target.value)}>{TYPEN.map((t) => <option key={t.w} value={t.w}>{t.l}</option>)}</select>
               </label>
-              <label style={styles.lab}>Ausbeute-Menge
+              <label style={styles.lab}>{mischung ? 'Standard-Ansatz' : 'Ausbeute-Menge'}
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <input style={styles.inp} inputMode="decimal" value={eckWert('basis_menge')} onChange={(e) => eckZahl('basis_menge', e.target.value)} placeholder="z. B. 16" />
+                  <input style={styles.inp} inputMode="decimal" value={eckWert('basis_menge')} onChange={(e) => eckZahl('basis_menge', e.target.value)} placeholder={mischung ? 'z. B. 1.000' : 'z. B. 16'} />
                   <input style={{ ...styles.inp, maxWidth: 70 }} value={eck.basis_einheit ?? ''} onChange={(e) => setEckF('basis_einheit', e.target.value)} placeholder="kg" />
                 </div>
               </label>
+              {mischung ? (
+                <>
+                  <label style={styles.lab}>Verlust %<input style={styles.inp} inputMode="decimal" value={eckWert('backverlust_prozent')} onChange={(e) => eckZahl('backverlust_prozent', e.target.value)} placeholder="z. B. 2 (Abfüllen, Spülen)" /></label>
+                  <label style={styles.lab}>Gebinde-Inhalt ({eck.basis_einheit || 'kg'})<input style={styles.inp} inputMode="decimal" value={eckWert('gebinde_menge')} onChange={(e) => eckZahl('gebinde_menge', e.target.value)} placeholder="z. B. 5" /></label>
+                  <label style={styles.lab}>Verpackung € je Gebinde<input style={styles.inp} inputMode="decimal" value={eckWert('gebinde_kosten')} onChange={(e) => eckZahl('gebinde_kosten', e.target.value)} placeholder="z. B. 0,85" /></label>
+                </>
+              ) : (
+                <>
               <NurVoll>
                 <label style={styles.lab}>Portionen<input style={styles.inp} inputMode="numeric" value={eckWert('portionen')} onChange={(e) => eckZahl('portionen', e.target.value, true)} placeholder="optional" /></label>
               </NurVoll>
@@ -275,13 +360,110 @@ export default function RezepturRechner() {
               <NurVoll>
                 <label style={styles.lab}>Ziel Food-Cost %<input style={styles.inp} inputMode="decimal" value={eckWert('foodcost_ziel')} onChange={(e) => eckZahl('foodcost_ziel', e.target.value)} placeholder="z. B. 30" /></label>
               </NurVoll>
+                </>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
               <button onClick={eckSpeichern} disabled={busy} style={styles.primaer}>💾 Eckdaten speichern</button>
-              <button onClick={chargeErzeugen} disabled={chargeBusy} style={{ ...styles.mini, borderColor: `${C.cyan}55`, color: C.cyan }} title="Aus diesem Rezept eine Charge fürs Lebensmittel-Modul erzeugen">{chargeBusy ? '…' : '🏷 Charge erzeugen'}</button>
+              {!mischung && <button onClick={chargeErzeugen} disabled={chargeBusy} style={{ ...styles.mini, borderColor: `${C.cyan}55`, color: C.cyan }} title="Aus diesem Rezept eine Charge fürs Lebensmittel-Modul erzeugen">{chargeBusy ? '…' : '🏷 Charge erzeugen'}</button>}
             </div>
           </div>
 
+          {mischung && misch && (
+            <>
+              {/* Paket 321: Rohstoffe in Prozent */}
+              <div style={{ ...styles.card, marginTop: 16 }}>
+                <div style={styles.cardTitel}>🧪 Rohstoffe in Prozent</div>
+                <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.1vw, 17px)', marginBottom: 6 }}>
+                  Anteil je Rohstoff in Prozent (Gewicht bzw. Volumen wie der Ansatz). Eine Zeile darf „ad 100" sein — sie bekommt den Rest, z. B. Wasser. Preis je {basisKurz}; mit Artikel aus dem Lager wird der Einkaufspreis übernommen.
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                  {zutaten.map((z, i) => (
+                    <div key={i} style={styles.zRow}>
+                      <select style={{ ...styles.inp, width: 170 }} value={z.artikel_id} onChange={(e) => artikelWaehlen(i, e.target.value)} title="Rohstoff aus dem Lager">
+                        <option value="">— ohne Artikel —</option>
+                        {artikel.map((a) => <option key={a.id} value={a.id}>{a.bezeichnung}</option>)}
+                      </select>
+                      <input style={{ ...styles.inp, flex: 1, minWidth: 120 }} value={z.bezeichnung} onChange={(e) => setZ(i, { bezeichnung: e.target.value })} placeholder="Rohstoff" />
+                      <input style={{ ...styles.inp, width: 96 }} inputMode="decimal" value={z.ist_rest ? zahlFeld(misch.auf.anteile[i]) : z.anteil} disabled={z.ist_rest} onChange={(e) => setZ(i, { anteil: e.target.value })} placeholder="Anteil %" title="Anteil in Prozent" />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', whiteSpace: 'nowrap' }}>
+                        <input type="checkbox" checked={z.ist_rest} onChange={(e) => setZ(i, { ist_rest: e.target.checked })} /> ad 100
+                      </label>
+                      <input style={{ ...styles.inp, width: 96 }} inputMode="decimal" value={z.preis_pro_einheit} onChange={(e) => setZ(i, { preis_pro_einheit: e.target.value })} placeholder={`€/${basisKurz}`} />
+                      <button onClick={() => zutatWeg(i)} style={styles.weg} title="Entfernen">✕</button>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 10, fontWeight: 700, color: misch.auf.status === 'ok' ? C.green : C.warn }}>
+                  Summe {z1(misch.auf.summe)} %{misch.auf.status === 'ok' ? ' ✓' : misch.auf.status === 'zuWenig' ? ` — es fehlen ${z1(misch.auf.differenz)} %` : misch.auf.status === 'zuViel' ? ` — ${z1(-misch.auf.differenz)} % zu viel` : ''}
+                </div>
+                {misch.auf.fehler.length > 0 && <div style={{ color: C.danger, marginTop: 4 }}>{misch.auf.fehler.join(' ')}</div>}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button onClick={zutatDazu} style={styles.mini}>＋ Rohstoff</button>
+                    {zutaten.some((z) => num(z.menge) > 0) && zutaten.every((z) => !z.anteil.trim() && !z.ist_rest) && (
+                      <button onClick={mengenInProzent} style={styles.mini} title="Vorhandene Mengen in Anteile umrechnen">％ Mengen in Prozent umrechnen</button>
+                    )}
+                  </div>
+                  <button onClick={zutatenSpeichern} disabled={busy || misch.auf.status === 'fehler'} style={styles.primaer}>💾 Rohstoffe speichern</button>
+                </div>
+              </div>
+
+              {/* Kosten */}
+              <div style={{ ...styles.card, marginTop: 16 }}>
+                <div style={styles.cardTitel}>📊 Rohstoffkosten</div>
+                <div style={styles.rGrid}>
+                  <RKachel label={`Rohstoffe je ${basisKurz}`} value={eur(misch.k.jeBasisRoh)} accent={C.gold} sub={misch.k.fehlendePreise ? `${misch.k.fehlendePreise} ohne Preis` : undefined} />
+                  {misch.k.ansatzKosten != null && <RKachel label="Standard-Ansatz" value={eur(misch.k.ansatzKosten)} accent={C.gold} sub={`${z1(eck.basis_menge)} ${eck.basis_einheit || ''}`} />}
+                  {misch.k.ausbringung != null && <RKachel label="Ausbringung nach Verlust" value={`${z1(misch.k.ausbringung)} ${eck.basis_einheit || ''}`} accent={C.warn} />}
+                  {misch.k.jeBasisFertig != null && <RKachel label={`Fertigware je ${basisKurz}`} value={eur(misch.k.jeBasisFertig)} accent={C.green} sub="Rohstoffe, nach Verlust" />}
+                  {misch.k.gebindeAnzahl != null && <RKachel label="Gebinde je Ansatz" value={`${misch.k.gebindeAnzahl.toLocaleString('de-DE')}`} accent={C.cyan} sub={misch.k.gebindeRest ? `Rest ${z1(misch.k.gebindeRest)} ${eck.basis_einheit || ''}` : 'ohne Rest'} />}
+                  {misch.k.kostenJeGebinde != null && <RKachel label="Kosten je Gebinde" value={eur(misch.k.kostenJeGebinde)} accent={C.green} sub="Inhalt + Verpackung, ohne Lohn" />}
+                </div>
+                {misch.k.hinweise.length > 0 && <div style={{ color: C.textDim, marginTop: 8, fontSize: 'clamp(12.5px, 1.1vw, 17px)' }}>{misch.k.hinweise.join(' ')}</div>}
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <KiAuge modul="Rezeptur" regel={augeMischung({ status: misch.auf.status, differenz: misch.auf.differenz, fehler: misch.auf.fehler, zeilen: misch.zeilen, fehlendePreise: misch.k.fehlendePreise, jeBasisRoh: misch.k.jeBasisRoh, basis: misch.k.basis })} />
+              </div>
+
+              {/* Ansatz umrechnen */}
+              <div style={{ ...styles.card, marginTop: 16 }}>
+                <div style={styles.cardTitel}>⚖ Ansatz umrechnen</div>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginTop: 6 }}>
+                  <label style={styles.lab}>Ansatzgröße ({eck.basis_einheit || 'kg'})
+                    <input style={{ ...styles.inp, maxWidth: 160 }} inputMode="decimal" value={zielMenge} onChange={(e) => setZielMenge(e.target.value)} placeholder={eck.basis_menge ? `Standard ${z1(eck.basis_menge)}` : 'z. B. 250'} />
+                  </label>
+                  {ansatzTabelle?.kosten != null && <div style={{ color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>Rohstoffkosten <b style={{ color: C.gold }}>{eur(ansatzTabelle.kosten)}</b></div>}
+                </div>
+                {misch.auf.status !== 'ok' && <div style={{ color: C.warn, marginTop: 8 }}>Erst wenn die Anteile genau 100 % ergeben, stimmt die Summe der Einwaage mit dem Ansatz überein.</div>}
+                {ansatzTabelle && (
+                  <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                    <table style={styles.table}>
+                      <thead><tr><th style={styles.th}>Rohstoff</th><th style={{ ...styles.th, textAlign: 'right' }}>Anteil</th><th style={{ ...styles.th, textAlign: 'right' }}>Einwaage</th></tr></thead>
+                      <tbody>
+                        {zutaten.map((z, i) => ({ z, i })).filter(({ i }) => misch.auf.anteile[i] > 0).map(({ z, i }) => (
+                          <tr key={i}>
+                            <td style={styles.td}>{z.bezeichnung || 'Rohstoff'}{z.ist_rest ? ' (ad 100)' : ''}</td>
+                            <td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{misch.auf.anteile[i].toLocaleString('de-DE', { maximumFractionDigits: 4 })} %</td>
+                            <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>{ansatzTabelle.ew[i].toLocaleString('de-DE', { maximumFractionDigits: 3 })} {eck.basis_einheit || ''}</td>
+                          </tr>
+                        ))}
+                        <tr>
+                          <td style={{ ...styles.td, fontWeight: 800 }}>Summe</td>
+                          <td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{misch.auf.summe.toLocaleString('de-DE', { maximumFractionDigits: 4 })} %</td>
+                          <td style={{ ...styles.td, textAlign: 'right', fontWeight: 800, color: C.gold }}>{ansatzTabelle.summe.toLocaleString('de-DE', { maximumFractionDigits: 3 })} {eck.basis_einheit || ''}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {!mischung && (
+            <>
           {/* Zutaten */}
           <div style={{ ...styles.card, marginTop: 16 }}>
             <div style={styles.cardTitel}>Zutaten</div>
@@ -349,6 +531,8 @@ export default function RezepturRechner() {
               </div>
             )}
           </div>
+            </>
+          )}
         </>
       )}
     </div>
