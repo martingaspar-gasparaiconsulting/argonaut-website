@@ -6,6 +6,7 @@
 //   2. Auslastung der nächsten 8 Wochen je Monteur (Einsätze gegen Soll)
 //   3. Frühwarnung je Projekt (überfällige Aufgaben, Mängel, Nachträge, Stillstand)
 //   4. Bank-Mappe: Umsatz 12 Monate, Forderungen, Zahlungsdauer — druckfertig
+//   5. „Was ARGONAUT Ihnen gespart hat" (Paket 309) — nur belegte Werte, ErsparnisKarte.tsx
 // Sprachbefehle (B31) und der KI-Tagesbericht leben schon im Chef-Cockpit
 // auf der Übersicht — hier nur verlinkt.
 // Logik: lib/chefPaket.ts (getestet). Nur Chef (rechte.ts nurChef).
@@ -20,6 +21,7 @@ import {
   type Einsatz, type Monteur, type Projekt, type Aufgabe, type Mangel, type Nachtrag, type Rechnung,
 } from '@/lib/chefPaket';
 import { sprich, stoppeVorlesen, istVorlesenMoeglich } from '@/lib/vorlesen';
+import ErsparnisKarte from './ErsparnisKarte';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -61,6 +63,10 @@ export default function ChefBlick() {
   const [rechnungen, setRechnungen] = useState<Rechnung[]>([]);
   const [laedt, setLaedt] = useState(true);
   const [spricht, setSpricht] = useState(false);
+  // Paket 309: erst nach dem Laden im Browser prüfen — auf dem Server gibt es keine Sprachausgabe,
+  // sonst weicht die erste Darstellung ab (React-Fehler 418).
+  const [vorlesbar, setVorlesbar] = useState(false);
+  useEffect(() => { setVorlesbar(istVorlesenMoeglich()); }, []);
   // Paket 280: Fahrzeughandel vorhanden? Dann führt eine Karte zum Chef-Blick Fahrzeughandel (fail-open: ohne Tabelle keine Karte).
   const [handel, setHandel] = useState(0);
   useEffect(() => {
@@ -153,12 +159,14 @@ export default function ChefBlick() {
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <strong>☀️ Morgen-Briefing</strong>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {istVorlesenMoeglich() && <button style={knopf(C.gold, true)} onClick={vorlesen} disabled={laedt}>{spricht ? '⏹ Stopp' : '🔊 Vorlesen'}</button>}
+            {vorlesbar && <button style={knopf(C.gold, true)} onClick={vorlesen} disabled={laedt}>{spricht ? '⏹ Stopp' : '🔊 Vorlesen'}</button>}
             <a href="/dashboard" style={{ ...knopf(C.cyan), textDecoration: 'none' }}>🎙 Sprachbefehle & KI-Bericht im Cockpit</a>
           </div>
         </div>
         <p style={{ fontSize: 17, lineHeight: 1.6, margin: '10px 0 0' }}>{laedt ? 'Lädt …' : satz}</p>
       </div>
+
+      <ErsparnisKarte firma={firma} />
 
       {handel > 0 && (
         <a href="/dashboard/kfz/chef" style={{ ...karte, display: 'block', textDecoration: 'none', color: C.text }}>

@@ -19,6 +19,8 @@ import KiAuge from '../_components/KiAuge';
 import { augeZahlungen } from '@/lib/auge';
 import { zaehleZahlungen } from '@/lib/augeZaehler';
 import { abrechnungPruefen, ZAHLUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
+import { skontoAbzugPruefen } from '@/lib/ersparnis';
+import { zahlText } from '@/lib/zahlen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -31,7 +33,7 @@ const C = {
 };
 
 type Rechnung = { id: string; rechnungsnummer: string | null; titel: string | null; empfaenger_name: string | null; brutto_summe: number | null; zahlungsstatus: string | null; bezahlt_am: string | null; zahlung_gemeldet_am: string | null; bezahlter_betrag?: number | null };
-type Beleg = { id: string; lieferant: string | null; belegnummer: string | null; belegdatum: string | null; brutto: number | null; kategorie: string | null; bezahlt_am: string | null };
+type Beleg = { id: string; lieferant: string | null; belegnummer: string | null; belegdatum: string | null; brutto: number | null; kategorie: string | null; bezahlt_am: string | null; skonto_abzug?: number | null };
 type Vertrag = { id: string; bezeichnung: string; kategorie: string | null; kosten_betrag: number | null; kosten_intervall: string | null; status: string | null };
 
 function eur(n: number | null | undefined) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
@@ -50,6 +52,9 @@ export default function ZahlungenPage() {
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Paket 309: gezogenen Skonto am bezahlten Beleg eintragen (zählt im Chef-Blick „Was ARGONAUT Ihnen gespart hat")
+  const [skontoDa, setSkontoDa] = useState(false);
+  const [skontoEdit, setSkontoEdit] = useState<{ id: string; wert: string } | null>(null);
 
   const laden_ = useCallback(async () => {
     setLaden(true); setFehler(null);
@@ -59,6 +64,10 @@ export default function ZahlungenPage() {
       setRechnungen((data as Rechnung[]) ?? []);
     });
     await versuch(async () => {
+      // Paket 309: skonto_abzug — fehlt die Spalte noch (SQL p309), ohne sie laden.
+      const mit = await supabase.from('eingangsbelege').select('id, lieferant, belegnummer, belegdatum, brutto, kategorie, bezahlt_am, skonto_abzug').order('belegdatum', { ascending: false }).limit(500);
+      if (!mit.error) { setBelege((mit.data as Beleg[]) ?? []); setSkontoDa(true); return; }
+      setSkontoDa(false);
       const { data } = await supabase.from('eingangsbelege').select('id, lieferant, belegnummer, belegdatum, brutto, kategorie, bezahlt_am').order('belegdatum', { ascending: false }).limit(500);
       setBelege((data as Beleg[]) ?? []);
     });
@@ -110,6 +119,19 @@ export default function ZahlungenPage() {
       await supabase.from('eingangsbelege').update({ bezahlt_am: an ? heute() : null }).eq('id', b.id);
       await laden_();
     } catch { setFehler('Speichern fehlgeschlagen.'); }
+    finally { setBusy(null); }
+  }
+
+  async function skontoSpeichern(b: Beleg, eingabe: string) {
+    const p = skontoAbzugPruefen(eingabe, b.brutto);
+    if (!p.ok) { setFehler(p.fehler); return; }
+    setBusy(b.id); setFehler(null);
+    try {
+      const { error } = await supabase.from('eingangsbelege').update({ skonto_abzug: p.wert }).eq('id', b.id);
+      if (error) throw error;
+      setSkontoEdit(null);
+      await laden_();
+    } catch (e) { setFehler('Skonto speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(null); }
   }
 
@@ -199,6 +221,20 @@ export default function ZahlungenPage() {
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <b>{b.lieferant || 'Beleg'}</b>{b.kategorie ? <span style={{ color: C.textDim }}> · {b.kategorie}</span> : null}
                       <br /><span style={{ color: C.textDim, fontSize: 13 }}>{dtag(b.belegdatum)}{b.bezahlt_am ? ` · bezahlt ${dtag(b.bezahlt_am)}` : ''}</span>
+                      {skontoDa && b.bezahlt_am && (skontoEdit?.id === b.id ? (
+                        <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                          <span style={{ fontSize: 13, color: C.textDim }}>Skonto gezogen (€)</span>
+                          <input autoFocus inputMode="decimal" value={skontoEdit.wert} onChange={(e) => setSkontoEdit({ id: b.id, wert: e.target.value })} placeholder="leer = kein Skonto"
+                            style={{ background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 6, padding: '4px 8px', width: 130, fontSize: 13 }} />
+                          <button disabled={busy === b.id} onClick={() => skontoSpeichern(b, skontoEdit.wert)} style={{ background: C.gold, color: C.navy, border: 'none', borderRadius: 6, padding: '4px 10px', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Speichern</button>
+                          <button onClick={() => setSkontoEdit(null)} style={{ background: 'transparent', color: C.textDim, border: `1px solid ${C.border}`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontSize: 13 }}>Abbrechen</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setSkontoEdit({ id: b.id, wert: b.skonto_abzug ? zahlText(b.skonto_abzug, 2) : '' })}
+                          style={{ background: 'transparent', border: 'none', color: b.skonto_abzug ? C.green : C.cyan, cursor: 'pointer', padding: 0, fontSize: 13, marginTop: 2, display: 'block' }}>
+                          {b.skonto_abzug ? `✓ Skonto ${eur(b.skonto_abzug)} gezogen · ändern` : '+ Skonto gezogen?'}
+                        </button>
+                      ))}
                     </span>
                     <b style={{ whiteSpace: 'nowrap', color: b.bezahlt_am ? C.textDim : C.text }}>{eur(b.brutto)}</b>
                   </div>

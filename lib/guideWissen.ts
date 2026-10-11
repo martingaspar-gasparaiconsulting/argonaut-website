@@ -107,11 +107,13 @@ export const WISSEN: Record<string, SeitenWissen> = {
     ],
   },
   '/dashboard/chef-blick': {
-    zweck: 'Ihr Morgen-Briefing zum Vorlesen, die Auslastung Ihrer Monteure für acht Wochen, Frühwarnungen je Projekt und eine druckfertige Bank-Mappe (Umsatz, Forderungen, Zahlungsdauer).',
+    zweck: 'Ihr Morgen-Briefing zum Vorlesen, „Was ARGONAUT Ihnen gespart hat“ (nur belegte Werte), die Auslastung Ihrer Monteure für acht Wochen, Frühwarnungen je Projekt und eine druckfertige Bank-Mappe (Umsatz, Forderungen, Zahlungsdauer).',
     wer: 'lesen',
     werText: 'Nur für den Chef. Die Zahlen kommen aus Dispo, Projekten, Mängeln, Nachträgen und Rechnungen.',
     schritte: [
       'Morgen-Briefing vorlesen lassen — ein Satz mit dem Wichtigsten des Tages',
+      '„Was ARGONAUT Ihnen gespart hat“: Skonto, abgelöste Programme, THG-Prämie, Importe und geltend gemachte Verzugszinsen — nur aus Ihren eigenen Daten, nichts geschätzt',
+      'Unter „✏️ Angaben & Teilen“ Kosten alter Programme und ausgezahlte THG-Prämien eintragen; Teilen als Text oder Bild erst nach Ihrer Einwilligung',
       'Auslastung: gelb ab 80 %, rot über 100 % — Soll kommt aus den Wochenstunden in der Personalakte',
       'Frühwarnung anklicken, um das Projekt zu öffnen',
       'Bank-Mappe mit „🖨 Drucken / als PDF speichern" für Bankgespräche',
@@ -863,6 +865,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Erst den Geldeingang auf dem Konto prüfen, dann „✓ Als bezahlt bestätigen“: Betrag (vorbelegt mit dem offenen Rest) und Eingangsdatum eintragen. Weniger als offen ergibt „teilbezahlt“, der Rest bleibt offen',
       '„✅ Erhaltene Zahlungen“ zeigt die bezahlten Rechnungen mit Datum',
       'Reiter „⬆ Ausgänge“: Unter „🧾 Belege / Eingangsrechnungen“ setzt das Häkchen den Beleg auf bezahlt (mit heutigem Datum). Häkchen entfernen nimmt das zurück',
+      'Mit Skonto bezahlt? Beim bezahlten Beleg „+ Skonto gezogen?“ anklicken und den Abzug in Euro eintragen — er zählt im Chef-Blick unter „Was ARGONAUT Ihnen gespart hat“. Die Vorsteuer-Korrektur macht Ihr Steuerberater',
       '„🔁 Laufende Verträge & Abos“ rechnet aktive Verträge auf Kosten je Monat um, mit Summe unten',
     ],
     landetIn: [
