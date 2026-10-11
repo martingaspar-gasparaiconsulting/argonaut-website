@@ -2621,7 +2621,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
   '/dashboard/rezeptur': {
     zweck: 'Rezepte mit Zutaten pflegen und live rechnen: Wareneinsatz, Teigausbeute, Schüttwasser, Gebäck nach Backverlust, Ausbeute, Kosten je Einheit und Portion, Verkaufspreis-Vorschlag über Food-Cost — dazu Skalierung auf eine andere Menge. Für Mischungen und Abfüllungen: Rezeptur in Prozent mit Einwaage für jede Ansatzgröße, Rohstoffkosten je kg und je Gebinde.',
     wer: 'beide',
-    werText: 'Wer das Modul „Rezeptur & Ausbeute" hat. Die Seite selbst unterscheidet nicht zwischen Chef und Mitarbeiter. Ein Rezept lässt sich hier nicht löschen.',
+    werText: 'Wer das Modul „Rezeptur & Ausbeute" hat. Speichern, Versionen und Rohstoff-Tausch brauchen beim Mitarbeiter das Schreibrecht für Rezeptur; „Als Charge anlegen" zusätzlich das Schreibrecht für Chargen. Ein Rezept lässt sich hier nicht löschen, Versionen auch nicht.',
     schritte: [
       'Unter „Neues Rezept" einen Namen eintragen, den Typ wählen (z. B. „🥖 Teig / Backwaren") und „+ Anlegen" — oder oben bei „Rezept" ein bestehendes wählen',
       '„Eckdaten": „Ausbeute-Menge" mit Einheit; in der Ansicht „Voll" zusätzlich „Portionen", „Backverlust %" und „Ziel Food-Cost %". Dann „💾 Eckdaten speichern"',
@@ -2634,9 +2634,12 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Ein bestehendes Mengen-Rezept auf den Typ Mischung stellen, Eckdaten speichern, dann „％ Mengen in Prozent umrechnen" — die Anteile ergeben zusammen genau 100 %',
       '„📊 Rohstoffkosten": Kosten je kg bzw. l, für den Standard-Ansatz, je kg Fertigware nach Verlust, Gebinde je Ansatz und Kosten je Gebinde (ohne Lohn). „⚖ Ansatz umrechnen": Ansatzgröße eintragen — die Tabelle zeigt die Einwaage je Rohstoff, die Summe ergibt genau den Ansatz',
       'Eine Gefahrstoff-Einstufung (GHS/CLP) rechnet die Rezeptur bewusst nicht — die steht im Sicherheitsdatenblatt',
+      'Mischung: in den Eckdaten optional „Fertigprodukt (Artikel)". Unter „⚖ Ansatz umrechnen" je Rohstoff die „Rohstoff-Charge" eintragen (Vorschläge aus den freigegebenen Chargen), Chargennummer und Haltbarkeit, dann „🏷 Als Charge anlegen" (mit Rückfrage) — die Charge startet in Quarantäne, Rohstoffe stehen als Eingang daran. „🖨 Ansatzzettel" öffnet das Blatt für die Waage',
+      '„🗂 Versionen": Notiz eintragen und „📌 Stand festhalten" — friert den gespeicherten Stand ein. „Vergleichen" zeigt, was sich seitdem geändert hat; „Laden" holt eine Version in den Editor (gespeichert wird erst mit „💾 speichern")',
+      '„🔁 Rohstoff in allen Rezepturen tauschen": Rohstoff aus dieser Rezeptur wählen, neuen Artikel oder Namen, optional neuen Preis und Grund — nach der Rückfrage wird er in jeder gespeicherten Rezeptur ersetzt, vorher entsteht je Rezeptur eine Version',
     ],
     probe: { anlegen: 'Ein Rezept „Test" mit „+ Anlegen".', loeschen: 'Löschen gibt es hier nicht — das Rezept bleibt in der Auswahl. Einzelne Zutaten entfernt „✕" und danach „💾 Zutaten speichern".' },
-    landetIn: [{ text: 'Lebensmittel (Chargen / MHD)', href: '/dashboard/lebensmittel' }],
+    landetIn: [{ text: 'Lebensmittel (Chargen / MHD)', href: '/dashboard/lebensmittel' }, { text: 'Chargen (Ansatz aus einer Mischung)', href: '/dashboard/chargen' }],
   },
   '/dashboard/landwirtschaft': {
     zweck: 'Schläge (Flächen) mit Kultur und Standort anlegen und je Schlag die Maßnahmen dokumentieren: Aussaat, Düngung, Pflanzenschutz, Ernte, Sonstige. Oben zeigt die Seite die Gesamtfläche in ha.',

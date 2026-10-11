@@ -98,9 +98,10 @@ test('F9/F10/F19 Zahlen: mit Komma vorbelegen, km deutsch lesen, Zutaten nicht z
   const r = lies('app/dashboard/rezeptur/page.tsx');
   assert.ok(r.includes('menge: zahlFeld(z.menge)'));
   assert.ok(!/menge: z\.menge != null \? String\(z\.menge\)/.test(r));
-  const iIns = r.indexOf("from('rezeptur_zutaten').insert(rows)");
-  const iDel = r.indexOf("from('rezeptur_zutaten').delete().in('id', altIds)");
-  assert.ok(iIns > 0 && iDel > iIns, 'erst einfügen, dann alte löschen');
+  // Paket 322: Speichern ersetzt die Zeilen in EINER Transaktion (rezeptur_zutaten_speichern) —
+  // nie mehr erst löschen; Mitarbeiter dürfen gar nicht löschen.
+  assert.ok(r.includes("rpc('rezeptur_zutaten_speichern'"), 'Speichern über die Datenbank-Funktion');
+  assert.ok(!r.includes("from('rezeptur_zutaten').delete()"), 'kein Löschen von der Seite aus');
   assert.ok(!/value=\{eck\.basis_menge \?\? ''\}/.test(r), 'Komma muss tippbar sein');
   const k = lies('app/dashboard/kfz/page.tsx');
   assert.ok(!/parseInt\(fz\.km_stand/.test(k));

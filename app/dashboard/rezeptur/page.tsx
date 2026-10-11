@@ -19,6 +19,7 @@ import {
 } from '@/lib/rezeptur';
 import { augeRezeptur } from '@/lib/auge';
 import KiAuge from '../_components/KiAuge';
+import { zeilenFuerSpeichern, versionVergleich, chargenNummer, ansatzRohstoffe, fehlendeChargen, type StandZeile } from '@/lib/rezepturVersion';
 import { NurVoll } from '../_components/Ansicht';
 import { leseZahlOder, leseZahl, zahlFeld } from '@/lib/zahlen';
 import {
@@ -48,8 +49,10 @@ const ROLLEN = [{ w: 'sonstige', l: 'Zutat' }, { w: 'mehl', l: 'Mehl' }, { w: 'w
 type Rezept = {
   id: string; name: string; typ: string; basis_menge: number | null; basis_einheit: string | null;
   portionen: number | null; backverlust_prozent: number | null; foodcost_ziel: number | null; notiz: string | null;
-  gebinde_menge?: number | null; gebinde_kosten?: number | null;
+  gebinde_menge?: number | null; gebinde_kosten?: number | null; artikel_id?: string | null;
 };
+type Version = { id: string; version_nr: number; notiz: string | null; anlass: string; erstellt_am: string; erstellt_von_name: string | null; daten: { zeilen?: StandZeile[] } | null };
+type RohCharge = { id: string; charge_nr: string; artikel_id: string | null; bezeichnung: string | null };
 type ZutatRow = {
   id?: string; bezeichnung: string; menge: string; einheit: string; preis_pro_einheit: string; rolle: string;
   anteil: string; ist_rest: boolean; artikel_id: string;
@@ -79,10 +82,24 @@ export default function RezepturRechner() {
   const [neuTyp, setNeuTyp] = useState('teig');
   const [zielMenge, setZielMenge] = useState('');
   const [artikel, setArtikel] = useState<ArtikelKurz[]>([]);
+  // Paket 322: Versionen, Tausch, Ansatz → Charge
+  const [versionen, setVersionen] = useState<Version[]>([]);
+  const [versionNotiz, setVersionNotiz] = useState('');
+  const [vergleichId, setVergleichId] = useState('');
+  const [tausch, setTausch] = useState({ alt: '', neuArtikel: '', neuName: '', preis: '', notiz: '' });
+  const [charge, setCharge] = useState({ nr: '', mhd: '', bemerkung: '' });
+  const [rohCharge, setRohCharge] = useState<Record<number, string>>({});
+  const [rohChargen, setRohChargen] = useState<RohCharge[]>([]);
 
   const ladeRezepte = useCallback(async () => {
     const { data } = await supabase.from('rezepturen').select('*').eq('archiviert', false).order('name', { ascending: true });
     setRezepte((data as Rezept[]) ?? []);
+  }, []);
+
+  const ladeVersionen = useCallback(async (rid: string) => {
+    const { data } = await supabase.from('rezeptur_version').select('id, version_nr, notiz, anlass, erstellt_am, erstellt_von_name, daten')
+      .eq('rezeptur_id', rid).order('version_nr', { ascending: false }).range(0, 99);
+    setVersionen(((data as Version[] | null) ?? []));
   }, []);
 
   const ladeZutaten = useCallback(async (rid: string) => {
@@ -110,6 +127,10 @@ export default function RezepturRechner() {
       const { data: art } = await supabase.from('artikel').select('id, bezeichnung, einheit, einkaufspreis')
         .eq('aktiv', true).order('bezeichnung', { ascending: true }).range(0, 999);
       setArtikel(((art as ArtikelKurz[] | null) ?? []));
+      // Paket 322: freigegebene Chargen als Vorschlag für Rohstoff-Chargen
+      const { data: ch } = await supabase.from('charge_los').select('id, charge_nr, artikel_id, bezeichnung')
+        .eq('status', 'freigegeben').order('created_at', { ascending: false }).range(0, 499);
+      setRohChargen(((ch as RohCharge[] | null) ?? []));
     })();
   }, [ladeRezepte]);
 
@@ -118,8 +139,9 @@ export default function RezepturRechner() {
     setEck(r);
     setEckText({});
     if (aktivId) void ladeZutaten(aktivId); else setZutaten([]);
-    setZielMenge('');
-  }, [aktivId, rezepte, ladeZutaten]);
+    if (aktivId) void ladeVersionen(aktivId); else setVersionen([]);
+    setZielMenge(''); setVergleichId(''); setRohCharge({}); setCharge({ nr: '', mhd: '', bemerkung: '' });
+  }, [aktivId, rezepte, ladeZutaten, ladeVersionen]);
 
   async function rezeptAnlegen() {
     if (!besitzer || !neuName.trim()) { setFehler('Bitte einen Rezeptnamen angeben.'); return; }
@@ -143,7 +165,7 @@ export default function RezepturRechner() {
         portionen: eck.portionen, backverlust_prozent: eck.backverlust_prozent, foodcost_ziel: eck.foodcost_ziel,
         aktualisiert_am: new Date().toISOString(),
         // Paket 321: Gebinde nur bei der Prozent-Rezeptur
-        ...(istMischung(eck.typ) ? { gebinde_menge: eck.gebinde_menge ?? null, gebinde_kosten: eck.gebinde_kosten ?? null } : {}),
+        ...(istMischung(eck.typ) ? { gebinde_menge: eck.gebinde_menge ?? null, gebinde_kosten: eck.gebinde_kosten ?? null, artikel_id: eck.artikel_id || null } : {}),
       }).eq('id', eck.id);
       if (error) throw error;
       await ladeRezepte(); setOk('Eckdaten gespeichert.');
@@ -155,38 +177,14 @@ export default function RezepturRechner() {
     if (!eck || !besitzer) return;
     setBusy(true); setFehler(null); setOk(null);
     try {
-      // F9 (26.09.2026): erst die NEUEN Zeilen speichern, dann die alten
-      // loeschen. Vorher wurde zuerst alles geloescht — scheiterte danach das
-      // Speichern, war die ganze Zutatenliste weg.
-      const { data: alt, error: eAlt } = await supabase.from('rezeptur_zutaten').select('id').eq('rezeptur_id', eck.id);
-      if (eAlt) throw eAlt;
-      const altIds = ((alt as { id: string }[] | null) ?? []).map((r) => r.id);
-      let rows;
-      if (istMischung(eck.typ)) {
-        // Paket 321: Prozent-Rezeptur — Anteile prüfen, Rest auffüllen, Menge für den Standard-Ansatz mitspeichern
-        const genutzt = zutaten.filter((z) => z.bezeichnung.trim() || z.artikel_id || z.ist_rest || (anteilWert(z.anteil) ?? 0) > 0);
-        const auf = anteileAufloesen(genutzt.map((z) => ({ bezeichnung: z.bezeichnung, anteil: anteilWert(z.anteil), istRest: z.ist_rest })));
-        if (auf.status === 'fehler') throw new Error(auf.fehler.join(' '));
-        const basis = Number(eck.basis_menge) || 0;
-        const ew = basis > 0 ? einwaage(auf.anteile, basis, 3) : null;
-        rows = genutzt.map((z, i) => ({
-          owner_user_id: besitzer, rezeptur_id: eck.id, position: i + 1,
-          bezeichnung: z.bezeichnung.trim() || 'Rohstoff', menge: ew ? ew[i] : null,
-          einheit: eck.basis_einheit?.trim() || 'kg', preis_pro_einheit: z.preis_pro_einheit.trim() ? num(z.preis_pro_einheit) : null,
-          rolle: 'sonstige', anteil_prozent: auf.anteile[i], ist_rest: z.ist_rest, artikel_id: z.artikel_id || null,
-        }));
-      } else {
-        rows = zutaten
-          .filter((z) => z.bezeichnung.trim() || num(z.menge) > 0)
-          .map((z, i) => ({
-            owner_user_id: besitzer, rezeptur_id: eck.id, position: i + 1,
-            bezeichnung: z.bezeichnung.trim() || 'Zutat', menge: num(z.menge) || null,
-            einheit: z.einheit.trim() || 'kg', preis_pro_einheit: z.preis_pro_einheit.trim() ? num(z.preis_pro_einheit) : null,
-            rolle: z.rolle || 'sonstige',
-          }));
-      }
-      if (rows.length) { const { error } = await supabase.from('rezeptur_zutaten').insert(rows); if (error) throw error; }
-      if (altIds.length) { const { error: eDel } = await supabase.from('rezeptur_zutaten').delete().in('id', altIds); if (eDel) throw eDel; }
+      // Paket 322: Speichern über rezeptur_zutaten_speichern() — prüft Betrieb und
+      // Schreibrecht und ersetzt alles in EINER Transaktion. Vorher: neue Zeilen
+      // anlegen, alte löschen — Mitarbeiter dürfen nicht löschen, ihre Zutaten
+      // standen danach doppelt da (Claude-Befund 11.10.2026).
+      const { zeilen: rows, fehler: fz } = zeilenFuerSpeichern(eck.typ, zutaten, { basis_menge: eck.basis_menge != null ? Number(eck.basis_menge) : null, basis_einheit: eck.basis_einheit });
+      if (fz) throw new Error(fz);
+      const { error } = await supabase.rpc('rezeptur_zutaten_speichern', { p_rezeptur: eck.id, p_zeilen: rows });
+      if (error) throw error;
       await ladeZutaten(eck.id); setOk('Zutaten gespeichert.');
     } catch (e: unknown) { setFehler('Speichern fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
     finally { setBusy(false); }
@@ -291,6 +289,96 @@ export default function RezepturRechner() {
     setFehler(null); setOk('Mengen in Anteile umgerechnet — bitte prüfen und „💾 Rohstoffe speichern".');
   }
 
+  // --- Paket 322: Versionen ---
+  async function versionAnlegen() {
+    if (!eck) return;
+    setBusy(true); setFehler(null); setOk(null);
+    try {
+      const { data, error } = await supabase.rpc('rezeptur_version_anlegen', { p_rezeptur: eck.id, p_notiz: versionNotiz.trim() || null });
+      if (error) throw error;
+      setVersionNotiz(''); await ladeVersionen(eck.id);
+      setOk(`Version ${String(data)} festgehalten — so, wie die Rezeptur gespeichert ist.`);
+    } catch (e: unknown) { setFehler('Version fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
+    finally { setBusy(false); }
+  }
+  function versionLaden(v: Version) {
+    const zeilen = v.daten?.zeilen ?? [];
+    if (!window.confirm(`Version ${v.version_nr} in den Editor laden?\n\nDie Zeilen ersetzen die Liste auf dem Bildschirm. Gespeichert wird erst mit „💾 speichern".`)) return;
+    setZutaten(zeilen.length ? zeilen.map((z) => ({
+      bezeichnung: String(z.bezeichnung ?? ''), menge: zahlFeld(z.menge), einheit: String(z.einheit ?? 'kg'), preis_pro_einheit: zahlFeld(z.preis_pro_einheit),
+      rolle: String((z as Record<string, unknown>).rolle ?? 'sonstige'), anteil: zahlFeld(z.anteil_prozent), ist_rest: (z as Record<string, unknown>).ist_rest === true,
+      artikel_id: typeof (z as Record<string, unknown>).artikel_id === 'string' ? String((z as Record<string, unknown>).artikel_id) : '',
+    })) : [{ ...LEER_ZUTAT }]);
+    setFehler(null); setOk(`Version ${v.version_nr} geladen — prüfen und speichern.`);
+  }
+  const vergleich = useMemo(() => {
+    const v = versionen.find((x) => x.id === vergleichId);
+    if (!v) return null;
+    const jetzt: StandZeile[] = zutaten.filter((z) => z.bezeichnung.trim()).map((z) => ({
+      bezeichnung: z.bezeichnung, menge: z.menge.trim() ? leseZahl(z.menge) : null, einheit: z.einheit,
+      preis_pro_einheit: z.preis_pro_einheit.trim() ? leseZahl(z.preis_pro_einheit) : null,
+      anteil_prozent: mischung ? (misch?.auf.anteile[zutaten.indexOf(z)] ?? null) : null,
+    }));
+    return { v, liste: versionVergleich(v.daten?.zeilen ?? [], jetzt) };
+  }, [vergleichId, versionen, zutaten, mischung, misch]);
+
+  // --- Paket 322: Rohstoff in allen Rezepturen tauschen ---
+  const tauschQuellen = useMemo(() => {
+    const m = new Map<string, { key: string; label: string; artikelId: string | null; name: string }>();
+    for (const z of zutaten) {
+      const name = z.bezeichnung.trim();
+      if (!name) continue;
+      const key = z.artikel_id ? `a:${z.artikel_id}` : `n:${name.toLowerCase()}`;
+      if (!m.has(key)) m.set(key, { key, label: z.artikel_id ? `${name} (Artikel)` : name, artikelId: z.artikel_id || null, name });
+    }
+    return [...m.values()];
+  }, [zutaten]);
+  async function tauschen() {
+    const q = tauschQuellen.find((x) => x.key === tausch.alt);
+    if (!q) { setFehler('Bitte wählen, welcher Rohstoff ersetzt werden soll.'); return; }
+    const neuArt = artikel.find((a) => a.id === tausch.neuArtikel) ?? null;
+    const neuName = tausch.neuName.trim() || neuArt?.bezeichnung || '';
+    if (!neuName) { setFehler('Bitte den neuen Rohstoff wählen oder eintragen.'); return; }
+    // Preis nur, wenn eingetragen — die Rezepturen können unterschiedliche Einheiten haben (€/kg, €/l, €/Stk)
+    const preis = tausch.preis.trim() ? leseZahl(tausch.preis) : null;
+    if (tausch.preis.trim() && preis == null) { setFehler('Der Preis ist keine Zahl.'); return; }
+    if (!window.confirm(`„${q.name}" in ALLEN Rezepturen durch „${neuName}" ersetzen?\n\nVorher wird von jeder betroffenen Rezeptur eine Version festgehalten. Anteile und Mengen bleiben gleich${preis != null ? `, Preis wird ${preis.toLocaleString('de-DE')} €` : ''}.`)) return;
+    setBusy(true); setFehler(null); setOk(null);
+    try {
+      const { data, error } = await supabase.rpc('rezeptur_rohstoff_tauschen', {
+        p_alt_artikel: q.artikelId, p_alt_name: q.name, p_neu_artikel: neuArt?.id ?? null, p_neu_name: tausch.neuName.trim() || null,
+        p_neu_preis: preis, p_notiz: tausch.notiz.trim() || null,
+      });
+      if (error) throw error;
+      const liste = ((data as { name: string; zeilen: number }[] | null) ?? []);
+      setTausch({ alt: '', neuArtikel: '', neuName: '', preis: '', notiz: '' });
+      if (eck) { await ladeZutaten(eck.id); await ladeVersionen(eck.id); }
+      setOk(liste.length ? `Getauscht in ${liste.length} Rezeptur(en): ${liste.map((x) => x.name).join(', ')}.` : 'Keine gespeicherte Rezeptur enthält diesen Rohstoff — bitte zuerst speichern.');
+    } catch (e: unknown) { setFehler('Tausch fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
+    finally { setBusy(false); }
+  }
+
+  // --- Paket 322: Ansatz → Charge (Quarantäne bis zur Endprüfung) ---
+  async function ansatzZurCharge() {
+    if (!eck || !misch || misch.auf.status !== 'ok' || !(ansatzWert > 0)) return;
+    const nr = charge.nr.trim() || chargenNummer();
+    const roh = ansatzRohstoffe(zutaten.map((z) => z.bezeichnung), misch.auf.anteile, ansatzWert, zutaten.map((_, i) => rohCharge[i] ?? ''));
+    const ohne = fehlendeChargen(roh);
+    const ausbringung = kosten({ anteile: misch.auf.anteile, preise: misch.preise, ansatz: ansatzWert, ansatzEinheit: eck.basis_einheit ?? null, verlustProzent: eck.backverlust_prozent != null ? Number(eck.backverlust_prozent) : 0 }).ausbringung ?? ansatzWert;
+    if (!window.confirm(`Charge ${nr} aus „${eck.name}" anlegen?\n\n• ${z1(ausbringung)} ${eck.basis_einheit || ''} (Ansatz ${z1(ansatzWert)}, nach Verlust)\n• Status: Quarantäne bis zur Endprüfung\n• ${roh.length} Rohstoffe als Eingang${ohne.length ? `\n\nOhne Rohstoff-Charge (Rückverfolgung lückenhaft): ${ohne.join(', ')}` : ''}`)) return;
+    setChargeBusy(true); setFehler(null); setOk(null);
+    try {
+      const { error } = await supabase.rpc('rezeptur_ansatz_charge', {
+        p_rezeptur: eck.id, p_charge_nr: nr, p_menge: ausbringung, p_einheit: eck.basis_einheit || 'kg',
+        p_mhd: charge.mhd || null, p_bemerkung: charge.bemerkung.trim() || null, p_rohstoffe: roh,
+      });
+      if (error) throw error;
+      setCharge({ nr: '', mhd: '', bemerkung: '' }); setRohCharge({});
+      setOk(`Charge ${nr} angelegt (Quarantäne) — unter Chargen prüfen und freigeben.`);
+    } catch (e: unknown) { setFehler('Charge fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler')); }
+    finally { setChargeBusy(false); }
+  }
+
   const faktor = useMemo(() => {
     const basis = Number(eck?.basis_menge) || 0;
     const ziel = num(zielMenge);
@@ -347,6 +435,12 @@ export default function RezepturRechner() {
                 <>
                   <label style={styles.lab}>Verlust %<input style={styles.inp} inputMode="decimal" value={eckWert('backverlust_prozent')} onChange={(e) => eckZahl('backverlust_prozent', e.target.value)} placeholder="z. B. 2 (Abfüllen, Spülen)" /></label>
                   <label style={styles.lab}>Gebinde-Inhalt ({eck.basis_einheit || 'kg'})<input style={styles.inp} inputMode="decimal" value={eckWert('gebinde_menge')} onChange={(e) => eckZahl('gebinde_menge', e.target.value)} placeholder="z. B. 5" /></label>
+                  <label style={styles.lab}>Fertigprodukt (Artikel)
+                    <select style={styles.inp} value={eck.artikel_id ?? ''} onChange={(e) => setEckF('artikel_id', e.target.value || null)}>
+                      <option value="">— ohne —</option>
+                      {artikel.map((a) => <option key={a.id} value={a.id}>{a.bezeichnung}</option>)}
+                    </select>
+                  </label>
                   <label style={styles.lab}>Verpackung € je Gebinde<input style={styles.inp} inputMode="decimal" value={eckWert('gebinde_kosten')} onChange={(e) => eckZahl('gebinde_kosten', e.target.value)} placeholder="z. B. 0,85" /></label>
                 </>
               ) : (
@@ -440,22 +534,45 @@ export default function RezepturRechner() {
                 {ansatzTabelle && (
                   <div style={{ overflowX: 'auto', marginTop: 12 }}>
                     <table style={styles.table}>
-                      <thead><tr><th style={styles.th}>Rohstoff</th><th style={{ ...styles.th, textAlign: 'right' }}>Anteil</th><th style={{ ...styles.th, textAlign: 'right' }}>Einwaage</th></tr></thead>
+                      <thead><tr><th style={styles.th}>Rohstoff</th><th style={{ ...styles.th, textAlign: 'right' }}>Anteil</th><th style={{ ...styles.th, textAlign: 'right' }}>Einwaage</th><th style={styles.th}>Rohstoff-Charge</th></tr></thead>
                       <tbody>
                         {zutaten.map((z, i) => ({ z, i })).filter(({ i }) => misch.auf.anteile[i] > 0).map(({ z, i }) => (
                           <tr key={i}>
                             <td style={styles.td}>{z.bezeichnung || 'Rohstoff'}{z.ist_rest ? ' (ad 100)' : ''}</td>
                             <td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{misch.auf.anteile[i].toLocaleString('de-DE', { maximumFractionDigits: 4 })} %</td>
                             <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>{ansatzTabelle.ew[i].toLocaleString('de-DE', { maximumFractionDigits: 3 })} {eck.basis_einheit || ''}</td>
+                            <td style={styles.td}>
+                              <input style={{ ...styles.inp, width: 150 }} list={`roh-${i}`} value={rohCharge[i] ?? ''} onChange={(e) => setRohCharge((r) => ({ ...r, [i]: e.target.value }))} placeholder="Charge-Nr." />
+                              <datalist id={`roh-${i}`}>
+                                {rohChargen.filter((c) => !z.artikel_id || c.artikel_id === z.artikel_id).slice(0, 30).map((c) => <option key={c.id} value={c.charge_nr}>{c.bezeichnung ?? ''}</option>)}
+                              </datalist>
+                            </td>
                           </tr>
                         ))}
                         <tr>
                           <td style={{ ...styles.td, fontWeight: 800 }}>Summe</td>
                           <td style={{ ...styles.td, textAlign: 'right', color: C.textDim }}>{misch.auf.summe.toLocaleString('de-DE', { maximumFractionDigits: 4 })} %</td>
                           <td style={{ ...styles.td, textAlign: 'right', fontWeight: 800, color: C.gold }}>{ansatzTabelle.summe.toLocaleString('de-DE', { maximumFractionDigits: 3 })} {eck.basis_einheit || ''}</td>
+                          <td style={styles.td} />
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+                )}
+                {ansatzTabelle && misch.auf.status === 'ok' && (
+                  <div style={{ marginTop: 14, borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 8 }}>🏷 Ansatz als Charge anlegen</div>
+                    <div style={styles.grid3}>
+                      <label style={styles.lab}>Chargennummer<input style={styles.inp} value={charge.nr} onChange={(e) => setCharge({ ...charge, nr: e.target.value })} placeholder={chargenNummer()} /></label>
+                      <label style={styles.lab}>Mindesthaltbarkeit / verwendbar bis<input style={styles.inp} type="date" value={charge.mhd} onChange={(e) => setCharge({ ...charge, mhd: e.target.value })} /></label>
+                      <label style={styles.lab}>Bemerkung<input style={styles.inp} value={charge.bemerkung} onChange={(e) => setCharge({ ...charge, bemerkung: e.target.value })} placeholder="optional" /></label>
+                    </div>
+                    <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.1vw, 17px)', marginTop: 8 }}>Die Charge startet in Quarantäne und wird unter Chargen nach der Endprüfung freigegeben. Rohstoff-Chargen in Quarantäne oder gesperrt lehnt die Datenbank ab.</div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+                      <button onClick={ansatzZurCharge} disabled={chargeBusy} style={styles.primaer}>{chargeBusy ? '…' : '🏷 Als Charge anlegen'}</button>
+                      <a href={`/dashboard/rezeptur/${eck.id}/ansatz?menge=${encodeURIComponent(String(ansatzWert))}`} target="_blank" rel="noopener noreferrer" style={{ ...styles.mini, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>🖨 Ansatzzettel</a>
+                      <a href="/dashboard/chargen" style={{ ...styles.mini, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>→ Chargen</a>
+                    </div>
                   </div>
                 )}
               </div>
@@ -533,6 +650,72 @@ export default function RezepturRechner() {
           </div>
             </>
           )}
+
+          {/* Paket 322: Versionen */}
+          <div style={{ ...styles.card, marginTop: 16 }}>
+            <div style={styles.cardTitel}>🗂 Versionen</div>
+            <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.1vw, 17px)', marginBottom: 8 }}>Hält den gespeicherten Stand fest (Eckdaten und alle Zeilen). Versionen lassen sich nicht ändern oder löschen. Beim Rohstoff-Tausch entsteht automatisch eine Version.</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <label style={{ ...styles.lab, flex: 1, minWidth: 200 }}>Notiz zur Version
+                <input style={styles.inp} value={versionNotiz} maxLength={500} onChange={(e) => setVersionNotiz(e.target.value)} placeholder="z. B. Freigabe Kunde, neue Viskosität" />
+              </label>
+              <button onClick={versionAnlegen} disabled={busy} style={styles.primaer}>📌 Stand festhalten</button>
+            </div>
+            {versionen.length === 0 ? (
+              <div style={{ color: C.textDim, marginTop: 10 }}>Noch keine Version.</div>
+            ) : (
+              <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                <table style={styles.table}>
+                  <thead><tr><th style={styles.th}>Version</th><th style={styles.th}>Wann · wer</th><th style={styles.th}>Notiz</th><th style={styles.th} /></tr></thead>
+                  <tbody>
+                    {versionen.map((v) => (
+                      <tr key={v.id}>
+                        <td style={{ ...styles.td, fontWeight: 700 }}>V{v.version_nr}{v.anlass === 'tausch' ? ' 🔁' : ''}</td>
+                        <td style={{ ...styles.td, color: C.textDim }}>{new Date(v.erstellt_am).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Berlin' })} · {v.erstellt_von_name || '—'}</td>
+                        <td style={styles.td}>{v.notiz || '—'}</td>
+                        <td style={{ ...styles.td, whiteSpace: 'nowrap' }}>
+                          <button onClick={() => setVergleichId(vergleichId === v.id ? '' : v.id)} style={styles.mini}>{vergleichId === v.id ? 'Zu' : 'Vergleichen'}</button>{' '}
+                          <button onClick={() => versionLaden(v)} style={styles.mini}>Laden</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {vergleich && (
+              <div style={{ marginTop: 12, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>V{vergleich.v.version_nr} → jetzt (Bildschirm)</div>
+                {vergleich.liste.length === 0 ? <div style={{ color: C.green }}>Keine Unterschiede.</div> : vergleich.liste.map((a, i) => (
+                  <div key={i} style={{ color: a.art === 'neu' ? C.green : a.art === 'weg' ? C.danger : C.warn }}>{a.art === 'neu' ? '＋' : a.art === 'weg' ? '－' : '～'} {a.bezeichnung}: {a.text}</div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Paket 322: Rohstoff in allen Rezepturen tauschen */}
+          <div style={{ ...styles.card, marginTop: 16 }}>
+            <div style={styles.cardTitel}>🔁 Rohstoff in allen Rezepturen tauschen</div>
+            <div style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.1vw, 17px)', marginBottom: 8 }}>Zum Beispiel bei Lieferantenwechsel: der Rohstoff wird in jeder gespeicherten Rezeptur ersetzt, Anteile und Mengen bleiben. Vorher wird von jeder betroffenen Rezeptur eine Version festgehalten.</div>
+            <div style={styles.grid3}>
+              <label style={styles.lab}>Ersetzen
+                <select style={styles.inp} value={tausch.alt} onChange={(e) => setTausch({ ...tausch, alt: e.target.value })}>
+                  <option value="">— Rohstoff aus dieser Rezeptur —</option>
+                  {tauschQuellen.map((q) => <option key={q.key} value={q.key}>{q.label}</option>)}
+                </select>
+              </label>
+              <label style={styles.lab}>durch Artikel
+                <select style={styles.inp} value={tausch.neuArtikel} onChange={(e) => setTausch({ ...tausch, neuArtikel: e.target.value })}>
+                  <option value="">— ohne Artikel —</option>
+                  {artikel.map((a) => <option key={a.id} value={a.id}>{a.bezeichnung}</option>)}
+                </select>
+              </label>
+              <label style={styles.lab}>oder Name<input style={styles.inp} value={tausch.neuName} onChange={(e) => setTausch({ ...tausch, neuName: e.target.value })} placeholder="neuer Rohstoff" /></label>
+              <label style={styles.lab}>Neuer Preis (optional)<input style={styles.inp} inputMode="decimal" value={tausch.preis} onChange={(e) => setTausch({ ...tausch, preis: e.target.value })} placeholder="leer = bisherige Preise bleiben" /></label>
+              <label style={styles.lab}>Grund<input style={styles.inp} value={tausch.notiz} maxLength={300} onChange={(e) => setTausch({ ...tausch, notiz: e.target.value })} placeholder="z. B. Lieferant gewechselt" /></label>
+            </div>
+            <div style={{ marginTop: 10 }}><button onClick={tauschen} disabled={busy} style={styles.primaer}>🔁 In allen Rezepturen tauschen</button></div>
+          </div>
         </>
       )}
     </div>
