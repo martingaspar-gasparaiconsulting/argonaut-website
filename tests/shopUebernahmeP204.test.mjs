@@ -93,7 +93,8 @@ test('Verdrahtung: Seite, öffentliche Routen, SQL', () => {
   const produkte = lies('app/api/oeffentlich/shop-produkte/route.ts');
   assert.match(produkte, /filter\(oeffentlichBestellbar\)/);
   const kasse = lies('app/api/oeffentlich/shop-bestellung/route.ts');
-  assert.match(kasse, /baueBestellung\(artikel, wunsch\)/);
+  // Paket 317: Endkunden-Weg rechnet bei Preis-Basis „netto“ vorher in brutto um (mitBrutto).
+  assert.match(kasse, /baueBestellung\(mitBrutto, wunsch\)/);
   assert.doesNotMatch(kasse, /mwst: 19/, 'kein pauschaler Satz mehr');
   const sql = lies('supabase-sql/p204-shop-aus-inventar.sql');
   assert.match(sql, /add column if not exists shop_mwst smallint not null default 19/);

@@ -7,7 +7,8 @@
 //
 // ⚠️ MwSt: Shop-Preise sind BRUTTO (der Kunde hat brutto bezahlt). Jede Position
 //   trägt ihren eigenen Satz (Feld `mwst`: 7 für Lebensmittel, 19 für Getränke/
-//   Non-Food). Fehlt der Satz -> Fallback 19 %. Verschiedene Sätze in einer
+//   Non-Food, 0 steuerfrei). Fehlt der Satz -> Fallback 19 %. Geschäftskunden-
+//   Positionen (Paket 317) tragen einzelpreis_netto und werden NICHT zurückgerechnet. Verschiedene Sätze in einer
 //   Bestellung werden über steuerGruppen korrekt getrennt ausgewiesen. Wir rechnen
 //   Netto je Position heraus, damit die Rechnungs-Bruttosumme dem Bezahlten
 //   entspricht. (Kleinunternehmer = 0 % kommt mit der globalen Einstellung.)
@@ -23,14 +24,15 @@ import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_compone
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
 import { ladeBetriebProfil } from "@/lib/betriebProfil";
+import { rechnungsPosten as positionRechnen, zahlungsziel } from "@/lib/shopB2b";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ZAHLUNGSZIEL_TAGE = 14;
-const STANDARD_MWST = 19;
+// Standard-Satz 19 % steht jetzt in lib/shopB2b.rechnungsPosten (Paket 317).
 
-type ShopPos = { bezeichnung?: string; menge?: number; einzelpreis?: number; mwst?: number };
+type ShopPos = { bezeichnung?: string; menge?: number; einzelpreis?: number; einzelpreis_netto?: number; mwst?: number; einheit?: string };
 
 export async function POST(req: Request) {
   try {
@@ -53,12 +55,24 @@ export async function POST(req: Request) {
     const kleinunternehmer = !!prof?.kleinunternehmer;
 
     // ---- 1) Bestellung laden (RLS schützt auf owner) ----
-    const { data: b, error: bErr } = await supabase
-      .from("shop_bestellungen")
-      .select("id, extern_id, besteller, email, status, brutto_summe, positionen, rechnung_id")
-      .eq("id", bestellungId)
-      .single();
-    if (bErr || !b) return NextResponse.json({ error: "Bestellung nicht gefunden." }, { status: 404 });
+    // Paket 317 (S3a): Geschäftskunde, Kontakt und Zahlart mitlesen; fehlen die Spalten (SQL p316 offen), ohne sie.
+    type BestellZeile = {
+      id: string; extern_id: string | null; besteller: string | null; email: string | null; status: string;
+      brutto_summe: number; positionen: unknown; rechnung_id: string | null;
+      kontakt_id?: string | null; shop_kunde_id?: string | null; zahlart?: string | null;
+    };
+    const GRUND = "id, extern_id, besteller, email, status, brutto_summe, positionen, rechnung_id";
+    let antwortB = await supabase.from("shop_bestellungen").select(GRUND + ", kontakt_id, shop_kunde_id, zahlart").eq("id", bestellungId).single();
+    if (antwortB.error && antwortB.error.code !== "PGRST116") antwortB = await supabase.from("shop_bestellungen").select(GRUND).eq("id", bestellungId).single();
+    const b = antwortB.data as unknown as BestellZeile | null;
+    if (antwortB.error || !b) return NextResponse.json({ error: "Bestellung nicht gefunden." }, { status: 404 });
+
+    // Zahlungsziel: bei Kauf auf Rechnung das des Geschäftskunden, sonst wie bisher 14 Tage.
+    let zielTage = ZAHLUNGSZIEL_TAGE;
+    if (b.shop_kunde_id && b.zahlart === "rechnung") {
+      const { data: sk } = await supabase.from("shop_kunde").select("zahlungsziel_tage").eq("id", b.shop_kunde_id).maybeSingle();
+      zielTage = zahlungsziel((sk as { zahlungsziel_tage?: unknown } | null)?.zahlungsziel_tage);
+    }
 
     // ---- 2) Doppel-Schutz: bereits fakturiert? ----
     if (b.rechnung_id) {
@@ -81,15 +95,15 @@ export async function POST(req: Request) {
     }
     const rechnungsPosten = posRaw.map((p, i) => {
       const menge = Number(p?.menge) || 1;
-      const bruttoEinzel = Number(p?.einzelpreis) || 0;
-      const satz = kleinunternehmer ? 0 : (Number(p?.mwst) > 0 ? Number(p.mwst) : STANDARD_MWST);
-      const nettoEinzel = cent(bruttoEinzel / (1 + satz / 100));
+      // Paket 317: Satz und Netto je Position aus lib/shopB2b (Netto-Vorgabe der Geschäftskunden unverändert;
+      // Claude-Befund: steuerfreie Shop-Artikel mit mwst 0 liefen hier mit 19 % — 0 bleibt jetzt 0).
+      const { satz, nettoEinzel } = positionRechnen(p ?? {}, kleinunternehmer, cent);
       return {
         owner_user_id: betrieb,
         position: i + 1,
         bezeichnung: (p?.bezeichnung || "Position").toString().slice(0, 300),
         menge,
-        einheit: "Stk",
+        einheit: (p?.einheit || "Stk").toString().slice(0, 20),
         einzelpreis: nettoEinzel,
         mwst_satz: satz,
         gesamt_netto: cent(menge * nettoEinzel),
@@ -100,15 +114,15 @@ export async function POST(req: Request) {
     // ---- 4) Rechnung anlegen (Nummer via Trigger) ----
     const heute = new Date();
     const rechnungsdatum = heute.toISOString().slice(0, 10);
-    const faellig = new Date(heute); faellig.setDate(faellig.getDate() + ZAHLUNGSZIEL_TAGE);
+    const faellig = new Date(heute); faellig.setDate(faellig.getDate() + zielTage);
     const titel = b.extern_id ? `Online-Bestellung ${b.extern_id}` : "Online-Bestellung";
 
     const standortId = standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase.from("rechnungen").insert({
-      owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: null, firma_id: null,
+      owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: b.kontakt_id ?? null, firma_id: null,
       titel, empfaenger_name: b.besteller || null, zahlungsstatus: "offen", kleinunternehmer,
       rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
-      zahlungsziel_tage: ZAHLUNGSZIEL_TAGE, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: "EUR",
+      zahlungsziel_tage: zielTage, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: "EUR",
     }).select("id").single();
     if (rErr || !neueRechnung) {
       console.error("Shop-Rechnung anlegen fehlgeschlagen:", rErr?.message ?? rErr);

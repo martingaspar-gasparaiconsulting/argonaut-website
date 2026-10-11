@@ -11,6 +11,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { oeffentlichBestellbar, shopMwst } from '@/lib/shopUebernahme';
 import { shopDokumente, type Dok } from '@/lib/produktDokumente';
+import { basisNettoCent, endkundenPreis, euro, mengenRegel, schaufensterStaffeln } from '@/lib/shopB2b';
+import { kundeAusToken, ladePreisBasis, tokenAus } from '@/lib/shopB2bServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,6 +32,8 @@ type ArtikelRow = {
   aktueller_bestand: number | null;
   aktiv?: boolean | null;
   shop_mwst?: number | null;
+  shop_gebinde?: number | null;
+  shop_mindestmenge?: number | null;
 };
 
 // Paket 204: aktiv + shop_mwst mitlesen. Fehlt die Spalte shop_mwst noch
@@ -58,7 +62,9 @@ export async function GET(req: Request) {
       .order('shop_sortierung', { ascending: true, nullsFirst: false })
       .order('bezeichnung', { ascending: true })
       .limit(200);
-    let antwort = await lies(FELDER + ', shop_mwst');
+    // Paket 316: Gebinde und Mindestmenge mitlesen; fehlen die Spalten (SQL p316 offen), ohne sie.
+    let antwort = await lies(FELDER + ', shop_mwst, shop_gebinde, shop_mindestmenge');
+    if (antwort.error) antwort = await lies(FELDER + ', shop_mwst');
     if (antwort.error) antwort = await lies(FELDER);
 
     // Paket 204: nur aktive Artikel mit Preis über 0 (vorher auch 0,00 € und ausgelistete).
@@ -78,10 +84,17 @@ export async function GET(req: Request) {
     }
     const heute = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
 
+    // Paket 317 (S3a): Preis-Basis des Betriebs und Geschäftskunde aus dem Link (Kopfzeile x-shop-konto).
+    const betrieb = inh.owner_user_id as string;
+    const basis = await ladePreisBasis(db, betrieb);
+    const token = tokenAus(req);
+    const kunde = token ? await kundeAusToken(db, betrieb, token, rows.map((r) => r.id)) : null;
+
     const produkte = rows.map((r) => ({
       id: r.id,
       name: (r.bezeichnung || 'Produkt').toString(),
-      preis: Number(r.verkaufspreis) || 0,
+      preis: endkundenPreis(r.verkaufspreis, r.shop_mwst, basis),
+      ...gewerbe(r),
       einheit: (r.einheit || '').toString(),
       kategorie: (r.kategorie || '').toString(),
       beschreibung: (r.shop_beschreibung || '').toString().slice(0, 600),
@@ -91,7 +104,26 @@ export async function GET(req: Request) {
       dokumente: shopDokumente(dokJe[r.id] ?? [], heute),
     }));
 
-    return NextResponse.json({ produkte, anzahl: produkte.length });
+    return NextResponse.json({
+      produkte,
+      anzahl: produkte.length,
+      ...(kunde ? { konto: { name: kunde.name, netto: true, auf_rechnung: kunde.auf_rechnung, zahlungsziel: kunde.zahlungsziel_tage } } : {}),
+      ...(token && !kunde ? { konto_ungueltig: true } : {}),
+    }, { headers: { 'Cache-Control': 'no-store' } });
+
+    /** Gebinde, Mindestmenge und — nur für den Geschäftskunden — Netto-Preis mit Staffeln. */
+    function gewerbe(r: ArtikelRow) {
+      const regel = mengenRegel(r.shop_gebinde, r.shop_mindestmenge);
+      if (!kunde) return { gebinde: regel.gebinde, mindest: regel.mindest };
+      const satz = shopMwst(r.shop_mwst);
+      const st = schaufensterStaffeln(r.id, basisNettoCent(r.verkaufspreis, satz, basis), regel.mindest, kunde.liste);
+      return {
+        gebinde: regel.gebinde,
+        mindest: regel.mindest,
+        preis_netto: st.length ? euro(st[0].netto_cent) : null,
+        staffeln: st.map((x) => ({ ab: x.ab, netto: euro(x.netto_cent) })),
+      };
+    }
   } catch (e: unknown) {
     console.error('oeffentlich/shop-produkte:', e instanceof Error ? e.message : 'unbekannt');
     return NextResponse.json({ produkte: [] });

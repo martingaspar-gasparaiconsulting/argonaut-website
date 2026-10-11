@@ -15,7 +15,13 @@ import { sendeMail, mailLayout } from '@/lib/mail';
 import { escapeHtml, istEmailGueltig } from '@/lib/newsletter';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 import { baueBestellung, leseMenge, type ShopZeile } from '@/lib/shopUebernahme';
+import { centRunden } from '@/lib/zahlen';
 import { startSperrGrund } from '@/lib/startSperre';
+import {
+  baueB2bBestellung, centText, leseWunschMenge, endkundenPreis, euro, mengenRegel, mengePruefen, offenAusBestellungen,
+  offenAusRechnungen, rahmenPruefen, zahlartPruefen, type B2bArtikel,
+} from '@/lib/shopB2b';
+import { kundeAusToken, ladePreisBasis, tokenAus } from '@/lib/shopB2bServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -70,7 +76,8 @@ export async function POST(req: Request) {
     for (const e of eingaben.slice(0, 100)) {
       const o = e as Record<string, unknown>;
       const id = typeof o.id === 'string' ? o.id : '';
-      const menge = leseMenge(o.menge);
+      // Paket 317: bis 100.000 lesen (Gebinde); Endkunden bleiben unten bei höchstens 9.999.
+      const menge = leseWunschMenge(o.menge);
       if (id && menge > 0) wunsch.set(id, (wunsch.get(id) || 0) + menge);
     }
     if (!wunsch.size) return NextResponse.json({ error: 'Keine gültigen Positionen.' }, { status: 400 });
@@ -96,26 +103,88 @@ export async function POST(req: Request) {
       .eq('owner_user_id', ownerId)
       .eq('im_shop', true)
       .in('id', Array.from(wunsch.keys()));
-    let antwort = await lies(FELDER + ', shop_mwst');
+    // Paket 316: Gebinde und Mindestmenge mitlesen (fehlen die Spalten, ohne sie).
+    let antwort = await lies(FELDER + ', shop_mwst, shop_gebinde, shop_mindestmenge, einheit');
+    if (antwort.error) antwort = await lies(FELDER + ', shop_mwst');
     if (antwort.error) antwort = await lies(FELDER);
-    const artikel = (antwort.data as unknown as ShopZeile[]) ?? [];
+    const artikel = (antwort.data as unknown as (ShopZeile & B2bArtikel)[]) ?? [];
 
-    const { positionen, brutto } = baueBestellung(artikel, wunsch);
-    if (!positionen.length) return NextResponse.json({ error: 'Die gewählten Produkte sind nicht mehr verfügbar.' }, { status: 409 });
+    // Paket 317 (S3a): Preis-Basis des Betriebs und Geschäftskunde aus dem Link.
+    const basis = await ladePreisBasis(db, ownerId);
+    const kunde = await kundeAusToken(db, ownerId, tokenAus(req, b.konto), artikel.map((a) => a.id));
+    if (tokenAus(req, b.konto) && !kunde) {
+      return NextResponse.json({ error: 'Ihr Kundenlink ist nicht mehr gültig. Bitte fordern Sie beim Anbieter einen neuen an oder bestellen Sie ohne Firmenkonto.', konto_ungueltig: true }, { status: 403 });
+    }
+    const bestellnr = clean(b.bestellnummer, 60);
 
-    const notizTeile = [telefon ? `Telefon: ${telefon}` : '', nachricht || ''].filter(Boolean);
+    let positionen: object[];
+    let brutto: number;
+    let netto: number | null = null;
+    let zahlart: 'rechnung' | 'vorkasse' | null = null;
+    if (kunde) {
+      const { data: pr } = await db.from('profiles').select('kleinunternehmer').eq('id', ownerId).maybeSingle();
+      const ku = !!(pr as { kleinunternehmer?: boolean } | null)?.kleinunternehmer;
+      const e = baueB2bBestellung(artikel, wunsch, kunde.liste, basis, ku);
+      if (e.fehler.length) return NextResponse.json({ error: e.fehler.join(' ') }, { status: 400 });
+      if (!e.positionen.length) return NextResponse.json({ error: 'Die gewählten Produkte sind nicht mehr verfügbar.' }, { status: 409 });
+      zahlart = zahlartPruefen(b.zahlart, kunde.auf_rechnung);
+      if (b.zahlart === 'rechnung' && zahlart !== 'rechnung') {
+        return NextResponse.json({ error: 'Kauf auf Rechnung ist für Ihr Konto nicht freigegeben. Bitte wählen Sie Vorkasse.' }, { status: 400 });
+      }
+      if (zahlart === 'rechnung' && kunde.kreditrahmen_cent) {
+        const [rq, bq] = await Promise.all([
+          db.from('rechnungen').select('brutto_summe, bezahlter_betrag, zahlungsstatus').eq('owner_user_id', ownerId).eq('kontakt_id', kunde.kontakt_id).in('zahlungsstatus', ['offen', 'teilbezahlt', 'ueberfaellig']).limit(1000),
+          db.from('shop_bestellungen').select('brutto_summe, status, rechnung_id').eq('owner_user_id', ownerId).eq('shop_kunde_id', kunde.id).is('rechnung_id', null).limit(1000),
+        ]);
+        if (rq.error || bq.error) return NextResponse.json({ error: 'Der Rahmen für Kauf auf Rechnung konnte nicht geprüft werden. Bitte wählen Sie Vorkasse oder versuchen Sie es später.' }, { status: 503 });
+        const offen = offenAusRechnungen(rq.data ?? []) + offenAusBestellungen(bq.data ?? []);
+        const r = rahmenPruefen(kunde.kreditrahmen_cent, offen, e.brutto_cent);
+        if (!r.ok) {
+          return NextResponse.json({ error: `Ihr Rahmen für Kauf auf Rechnung reicht für diese Bestellung nicht (noch frei: ${centText(r.frei_cent ?? 0)}). Bitte wählen Sie Vorkasse oder sprechen Sie uns an.` }, { status: 409 });
+        }
+      }
+      positionen = e.positionen;
+      brutto = euro(e.brutto_cent);
+      netto = euro(e.netto_cent);
+    } else {
+      // Endkunde: Mengen wie bisher (ganze Zahl bis 9.999), dazu Gebinde und Mindestmenge; Preis brutto je Preis-Basis.
+      for (const [id, m] of wunsch) wunsch.set(id, leseMenge(m));
+      const fehler: string[] = [];
+      for (const a of artikel) {
+        const m = wunsch.get(a.id) || 0;
+        if (m <= 0) continue;
+        const p = mengePruefen(m, mengenRegel(a.shop_gebinde, a.shop_mindestmenge), String(a.bezeichnung || 'Produkt'));
+        if (!p.ok) fehler.push(p.fehler);
+      }
+      if (fehler.length) return NextResponse.json({ error: fehler.join(' ') }, { status: 400 });
+      const mitBrutto = basis === 'netto' ? artikel.map((a) => ({ ...a, verkaufspreis: endkundenPreis(a.verkaufspreis, a.shop_mwst, basis) })) : artikel;
+      const e = baueBestellung(mitBrutto, wunsch);
+      if (!e.positionen.length) return NextResponse.json({ error: 'Die gewählten Produkte sind nicht mehr verfügbar.' }, { status: 409 });
+      positionen = e.positionen;
+      brutto = e.brutto;
+    }
 
-    const { error: insErr } = await db.from('shop_bestellungen').insert({
+    const notizTeile = [
+      kunde ? `Geschäftskunde: ${kunde.name}` : '',
+      zahlart ? `Zahlart: ${zahlart === 'rechnung' ? 'auf Rechnung' : 'Vorkasse'}` : '',
+      bestellnr ? `Bestellnummer des Kunden: ${bestellnr}` : '',
+      telefon ? `Telefon: ${telefon}` : '',
+      nachricht || '',
+    ].filter(Boolean);
+
+    const zeile: Record<string, unknown> = {
       owner_user_id: ownerId,
       quelle: 'website',
-      besteller,
+      besteller: kunde ? `${kunde.name} · ${besteller}`.slice(0, 200) : besteller,
       email,
       status: 'neu',
       brutto_summe: brutto,
       positionen,
       notiz: notizTeile.join(' · ') || null,
       bestell_am: new Date().toISOString(),
-    });
+    };
+    if (kunde) Object.assign(zeile, { shop_kunde_id: kunde.id, kontakt_id: kunde.kontakt_id, zahlart, netto_summe: netto });
+    const { error: insErr } = await db.from('shop_bestellungen').insert(zeile);
     if (insErr) {
       console.error('shop-bestellung Insert:', insErr);
       return NextResponse.json({ error: 'Bestellung konnte nicht gespeichert werden.' }, { status: 500 });
@@ -127,9 +196,16 @@ export async function POST(req: Request) {
     const firma = (ci?.firma || '').toString().trim();
     const betriebMail = (ci?.email || '').toString().trim();
 
-    const posTab = positionen
-      .map((p) => `<tr><td style="padding:4px 12px 4px 0;">${p.menge}×</td><td style="padding:4px 12px 4px 0;">${escapeHtml(p.bezeichnung)}</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(eur(p.menge * p.einzelpreis))}</td></tr>`)
+    type MailPos = { menge: number; bezeichnung: string; einzelpreis: number; einzelpreis_netto?: number };
+    const posTab = (positionen as MailPos[])
+      .map((p) => `<tr><td style="padding:4px 12px 4px 0;">${p.menge.toLocaleString('de-DE')}×</td><td style="padding:4px 12px 4px 0;">${escapeHtml(p.bezeichnung)}</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(eur(kunde && p.einzelpreis_netto != null ? centRunden(p.menge * p.einzelpreis_netto) : p.menge * p.einzelpreis))}</td></tr>`)
       .join('');
+    const summenZeilen = kunde && netto != null
+      ? `<tr><td colspan="2" style="padding:8px 12px 0 0;">Summe netto</td><td style="padding:8px 0 0;text-align:right;">${escapeHtml(eur(netto))}</td></tr>`
+        + `<tr><td colspan="2" style="padding:2px 12px 0 0;">Umsatzsteuer</td><td style="padding:2px 0 0;text-align:right;">${escapeHtml(eur(centRunden(brutto - netto)))}</td></tr>`
+        + `<tr><td colspan="2" style="padding:2px 12px 0 0;font-weight:700;">Summe brutto</td><td style="padding:2px 0 0;text-align:right;font-weight:800;">${escapeHtml(eur(brutto))}</td></tr>`
+        + `<tr><td colspan="3" style="padding:8px 0 0;color:#6b7688;">Zahlart: ${zahlart === 'rechnung' ? `auf Rechnung (${kunde.zahlungsziel_tage} Tage)` : 'Vorkasse'}${bestellnr ? ` · Ihre Bestellnummer: ${escapeHtml(bestellnr)}` : ''}</td></tr>`
+      : `<tr><td colspan="2" style="padding:8px 12px 0 0;font-weight:700;">Summe</td><td style="padding:8px 0 0;text-align:right;font-weight:800;">${escapeHtml(eur(brutto))}</td></tr>`;
 
     // 1) Betrieb benachrichtigen (best effort — Bestellung liegt schon sicher).
     if (betriebMail) {
@@ -137,7 +213,7 @@ export async function POST(req: Request) {
         'Neue Shop-Bestellung',
         `<p style="margin:0 0 14px;">Über Ihren Onlineshop ist eine neue Bestellung eingegangen — sie liegt bereits unter „Shop / Marktplatz".</p>
          <table style="border-collapse:collapse;font-size:14px;">${posTab}
-         <tr><td colspan="2" style="padding:8px 12px 0 0;font-weight:700;">Summe</td><td style="padding:8px 0 0;text-align:right;font-weight:800;">${escapeHtml(eur(brutto))}</td></tr></table>
+         ${summenZeilen}</table>
          <p style="margin:16px 0 0;font-size:14px;">Besteller: <b>${escapeHtml(besteller)}</b>${email ? ` · ${escapeHtml(email)}` : ''}${telefon ? ` · ${escapeHtml(telefon)}` : ''}</p>
          ${nachricht ? `<p style="margin:8px 0 0;color:#6b7688;font-size:13px;">${escapeHtml(nachricht).replace(/\n/g, '<br>')}</p>` : ''}`,
       );
@@ -153,7 +229,7 @@ export async function POST(req: Request) {
         `<p style="margin:0 0 14px;">Guten Tag${vorname ? ' ' + escapeHtml(vorname) : ''},</p>
          <p style="margin:0 0 14px;">vielen Dank für Ihre Bestellung${firma ? ' bei ' + escapeHtml(firma) : ''}. Wir haben sie erhalten und melden uns mit der Bestätigung.</p>
          <table style="border-collapse:collapse;font-size:14px;margin:0 0 12px;">${posTab}
-         <tr><td colspan="2" style="padding:8px 12px 0 0;font-weight:700;">Summe</td><td style="padding:8px 0 0;text-align:right;font-weight:800;">${escapeHtml(eur(brutto))}</td></tr></table>
+         ${summenZeilen}</table>
          <p style="margin:8px 0 0;">Beste Grüße${firma ? '<br>' + escapeHtml(firma) : ''}</p>`,
       );
       try {

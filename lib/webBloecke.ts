@@ -855,6 +855,18 @@ function seiteCss(ci: CiWeb): string {
     '.ao-prod-preis{font-weight:900;color:#1c2430;font-size:18px}',
     '.ao-prod-mwst{display:block;font-size:11px;color:#8290a0;font-weight:600;margin-top:1px}',
     '.ao-wk-rechtshinweis{font-size:12px;color:#8290a0;padding:2px 0 6px;line-height:1.4}',
+    // Paket 317 (S3a): Geschäftskunden — Konto-Leiste, Staffeln, Mengen-Hinweis, Zahlart
+    '.ao-konto{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;background:#f2f6fb;border:1px solid #d6e0eb;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:14px;color:#1c2430}',
+    '.ao-konto b{color:var(--p)}',
+    '.ao-konto button{background:none;border:none;color:#51606f;text-decoration:underline;cursor:pointer;font:inherit;font-size:13px;padding:0}',
+    '.ao-konto-alt{background:#fff6e5;border-color:#f0d29a}',
+    '.ao-prod-staffel{font-size:13px;color:#2d3a48;display:flex;flex-wrap:wrap;gap:4px 10px}',
+    '.ao-prod-staffel span{white-space:nowrap}',
+    '.ao-prod-menge{font-size:12px;color:#8290a0;font-weight:600}',
+    '.ao-wk-zahlart{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px;font-size:14px}',
+    '.ao-wk-zahlart label{display:flex;gap:8px;align-items:center}',
+    // Claude-Befund: „.ao-wk-kasse input{width:100%}“ zog auch Haken und Auswahlknöpfe auf volle Breite (Datenschutz-Zeile zerfiel)
+    '.ao-wk-kasse input[type=checkbox],.ao-wk-kasse input[type=radio]{width:auto;flex:0 0 auto;margin:2px 0 0;padding:0}',
     '.ao-prod-add{border:none;cursor:pointer;font-size:14px;padding:10px 14px}',
     '.ao-shop-lade,.ao-shop-leer,.ao-shop-hinweis{color:#8290a0;font-weight:600;padding:8px 0}',
     '.ao-wk-bar{position:sticky;top:8px;z-index:6;background:var(--p);color:#fff;border-radius:12px;padding:12px 18px;margin-bottom:16px;font-weight:800;box-shadow:0 10px 30px -12px rgba(0,0,0,.4);cursor:pointer}',

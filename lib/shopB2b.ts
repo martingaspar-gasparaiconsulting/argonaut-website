@@ -383,3 +383,73 @@ export function kundeName(k: { firma?: string | null; vorname?: string | null; n
 export function centText(cent: number): string {
   return (Math.round(cent) / 100).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 }
+
+// ---------------------------------------------------------------------------
+// Paket 317: offene Beträge für den Kreditrahmen (in Cent, brutto)
+// ---------------------------------------------------------------------------
+
+export type OffeneRechnung = { brutto_summe: unknown; bezahlter_betrag?: unknown; zahlungsstatus?: string | null };
+export type OffeneBestellung = { brutto_summe: unknown; status?: string | null; rechnung_id?: string | null };
+
+const RECHNUNG_OFFEN = new Set(['offen', 'teilbezahlt', 'ueberfaellig']);
+
+/** Offene Rechnungen des Kontakts: Brutto minus schon bezahlt, nie negativ. */
+export function offenAusRechnungen(zeilen: OffeneRechnung[]): number {
+  let c = 0;
+  for (const r of zeilen || []) {
+    if (!r || !RECHNUNG_OFFEN.has(String(r.zahlungsstatus ?? ''))) continue;
+    const b = leseZahl(r.brutto_summe) ?? 0;
+    const p = leseZahl(r.bezahlter_betrag) ?? 0;
+    c += Math.max(0, inCent(b) - inCent(p));
+  }
+  return c;
+}
+
+/** Bestellungen des Kunden, die noch keine Rechnung haben und nicht storniert/archiviert sind. */
+export function offenAusBestellungen(zeilen: OffeneBestellung[]): number {
+  let c = 0;
+  for (const b of zeilen || []) {
+    if (!b || b.rechnung_id || b.status === 'storniert' || b.status === 'abgeschlossen') continue;
+    c += Math.max(0, inCent(leseZahl(b.brutto_summe) ?? 0));
+  }
+  return c;
+}
+
+/** Endkunden-Preis (brutto, Euro) aus dem Artikelstamm je nach Preis-Basis. */
+export function endkundenPreis(verkaufspreis: unknown, satz: unknown, basis: PreisBasis): number {
+  const c = basisBruttoCent(verkaufspreis, satzVon(satz), basis);
+  return c == null ? 0 : euro(c);
+}
+
+/** Liegt der letzte Besuch länger als eine Stunde zurück? (Schreibt „zuletzt im Shop" höchstens stündlich.) */
+export function besuchMerken(zuletzt: string | null | undefined, jetztMs: number): boolean {
+  if (!zuletzt) return true;
+  const t = Date.parse(zuletzt);
+  return !Number.isFinite(t) || jetztMs - t > 3600000;
+}
+
+/** Menge aus dem Warenkorb für die Prüfung lesen: Zahl 1 … 100.000, sonst 0. Nicht gerundet — mengePruefen lehnt Bruchteile ab. */
+export function leseWunschMenge(wert: unknown): number {
+  const n = typeof wert === 'number' ? wert : leseZahl(wert);
+  if (n == null || !Number.isFinite(n) || n < 1 || n > MENGE_MAX) return 0;
+  return n;
+}
+
+/**
+ * Rechnung aus einer Shop-Bestellung: Satz und Netto-Stückpreis je Position.
+ * · Geschäftskunden-Position mit einzelpreis_netto: Netto unverändert (keine Rückrechnung).
+ * · Sonst Netto aus dem Brutto-Preis (Endkunde hat brutto bezahlt).
+ * · mwst 0 bleibt 0 (steuerfreie Artikel); fehlt der Satz, 19 %. Kleinunternehmer: 0.
+ * `runden` = Cent-Rundung des Aufrufers (steuerLogik.cent), damit die Rechnung wie bisher rundet.
+ */
+export function rechnungsPosten(
+  p: { einzelpreis?: unknown; einzelpreis_netto?: unknown; mwst?: unknown },
+  kleinunternehmer: boolean, runden: (n: number) => number,
+): { satz: number; nettoEinzel: number } {
+  const m = p?.mwst;
+  const satz = kleinunternehmer ? 0 : (m === 0 ? 0 : (Number(m) > 0 ? Number(m) : 19));
+  const vorgabe = leseZahl(p?.einzelpreis_netto);
+  if (vorgabe != null && vorgabe > 0) return { satz, nettoEinzel: runden(vorgabe) };
+  const brutto = Number(p?.einzelpreis) || 0;
+  return { satz, nettoEinzel: runden(brutto / (1 + satz / 100)) };
+}

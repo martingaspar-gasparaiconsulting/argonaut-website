@@ -35,6 +35,7 @@ type Position = { bezeichnung: string; menge: number; einzelpreis: number; mwst?
 type Bestellung = {
   id: string; quelle: string; extern_id: string | null; besteller: string | null; email: string | null;
   status: string; brutto_summe: number; positionen: Position[]; bestell_am: string | null; erstellt_am: string; rechnung_id: string | null; kontakt_id: string | null; lager_gebucht: boolean;
+  zahlart?: string | null; shop_kunde_id?: string | null;
 };
 
 const STATUS: { key: string; label: string; farbe: string }[] = [
@@ -100,13 +101,19 @@ export default function ShopPage() {
     // Paket 144: das Archiv aus dem Altsystem nie in die laufende Liste mischen
     // (sonst verdraengen tausende alte Bestellungen die neuen).
     const spalten = 'id, quelle, extern_id, besteller, email, status, brutto_summe, positionen, bestell_am, erstellt_am, rechnung_id, kontakt_id, lager_gebucht';
-    const abfrage = supabase.from('shop_bestellungen').select(spalten);
-    const { data } = zeigeArchiv
-      ? await abfrage.eq('status', ARCHIV).order('bestell_am', { ascending: false, nullsFirst: false }).limit(500)
-      : await abfrage.neq('status', ARCHIV).order('erstellt_am', { ascending: false });
+    const hole = (sp: string) => {
+      const abfrage = supabase.from('shop_bestellungen').select(sp);
+      return zeigeArchiv
+        ? abfrage.eq('status', ARCHIV).order('bestell_am', { ascending: false, nullsFirst: false }).limit(500)
+        : abfrage.neq('status', ARCHIV).order('erstellt_am', { ascending: false });
+    };
+    // Paket 317 (S3a): Geschäftskunde und Zahlart mitlesen; fehlen die Spalten (SQL p316 offen), ohne sie.
+    let antwort = await hole(spalten + ', zahlart, shop_kunde_id');
+    if (antwort.error) antwort = await hole(spalten);
+    const { data } = antwort;
     const { count } = await supabase.from('shop_bestellungen').select('id', { count: 'exact', head: true }).eq('status', ARCHIV);
     setArchivAnzahl(count ?? 0);
-    const rows = (data as Bestellung[]) ?? [];
+    const rows = (data as unknown as Bestellung[] | null) ?? [];
     setListe(rows);
     setFelder(await ladeFelder(MODUL));
     setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
@@ -321,6 +328,7 @@ export default function ShopPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700 }}>
                     {b.extern_id ? `#${b.extern_id} · ` : ''}{b.besteller || 'Kunde'} <span style={{ color: C.textDim, fontWeight: 400 }}>· {b.quelle}</span>
+                    {b.shop_kunde_id && <span style={{ marginLeft: 8, fontSize: 12, fontWeight: 700, color: C.gold, border: `1px solid ${C.gold}66`, borderRadius: 6, padding: '1px 6px' }}>🏢 Geschäftskunde · {b.zahlart === 'rechnung' ? 'auf Rechnung' : 'Vorkasse'}</span>}
                   </div>
                   <div style={{ color: C.textDim, fontSize: 13 }}>
                     {(b.positionen || []).map((p) => `${p.menge}× ${p.bezeichnung}`).join(', ') || '—'}
