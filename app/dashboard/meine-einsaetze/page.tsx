@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { useBranchenVorlage } from '../_components/useBranchenVorlage';
 import EinsatzRechnungButton from "../_components/EinsatzRechnungButton";
 import BelegErfassen from './BelegErfassen';
 import MaterialAbruf from './MaterialAbruf';
@@ -29,13 +30,15 @@ const C = {
   border: 'rgba(143,163,190,0.18)', warn: '#E0A24C', danger: '#E06666',
 };
 
-function statusInfo(s: string | null): { label: string; farbe: string } {
+// Paket 313: Status-Wörter aus der Branchen-Vorlage „einsaetze" (Schlüssel bleiben gleich)
+function statusInfo(s: string | null, wort?: (k: string) => string): { label: string; farbe: string } {
+  const w = (std: string, key: string) => (wort ? wort(key) : std);
   switch (s ?? 'geplant') {
-    case 'unterwegs': return { label: 'Unterwegs', farbe: C.cyan };
-    case 'vor_ort':   return { label: 'Vor Ort', farbe: C.warn };
-    case 'erledigt':  return { label: 'Erledigt', farbe: C.green };
-    case 'abgesagt':  return { label: 'Abgesagt', farbe: C.danger };
-    default:          return { label: 'Geplant', farbe: C.gold };
+    case 'unterwegs': return { label: w('Unterwegs', 'unterwegs'), farbe: C.cyan };
+    case 'vor_ort':   return { label: w('Vor Ort', 'vor_ort'), farbe: C.warn };
+    case 'erledigt':  return { label: w('Erledigt', 'erledigt'), farbe: C.green };
+    case 'abgesagt':  return { label: w('Abgesagt', 'abgesagt'), farbe: C.danger };
+    default:          return { label: w('Geplant', 'geplant'), farbe: C.gold };
   }
 }
 function belegend(status: string | null): boolean {
@@ -99,6 +102,8 @@ type PositionRow = { id: string; einsatz_id: string; bezeichnung: string; menge:
 type PosForm = { katalogId: string; bezeichnung: string; menge: string; einheit: string; einzelpreis: string; mwst: string };
 
 export default function MeineEinsaetzePage() {
+  // Paket 313: Status-Namen wie im Dispo-Board (Branchen-Vorlage „einsaetze“)
+  const { statusLabel } = useBranchenVorlage(supabase, 'einsaetze');
   const [uid, setUid] = useState<string | null>(null);
   const [mitarbeiter, setMitarbeiter] = useState<MitarbeiterRow | null>(null);
   const [istChef, setIstChef] = useState(false);
@@ -553,7 +558,7 @@ export default function MeineEinsaetzePage() {
           {aktive.map((e) => {
             const b = e.beginn_am ? new Date(e.beginn_am) : null;
             const en = e.ende_am ? new Date(e.ende_am) : null;
-            const si = statusInfo(e.status);
+            const si = statusInfo(e.status, statusLabel);
             return (
               <div key={e.id} style={{ ...styles.einsatzKarte, borderLeft: `4px solid ${si.farbe}` }}>
                 <div style={styles.karteKopf}>

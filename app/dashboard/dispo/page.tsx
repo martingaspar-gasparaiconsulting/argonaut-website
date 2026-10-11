@@ -12,6 +12,9 @@
 // beim Zuweisen (lib/dispoPlus.ts, getestet), Routen-Knopf je Monteur/Tag (/api/tour-planen).
 // Paket 212 (05.10.26, B6): Einsätze per Ziehen und Ablegen auf Monteur/Tag oder „Unzugeordnet“
 // (lib/dispoZiehen.ts, getestet) — gleiche Warnungen wie im Fenster, Rückfrage bei Befähigung/Überschneidung.
+// Paket 313 (BV2 Einsätze): Status-Namen, Wort für die Person („Monteur",
+// „Reinigungskraft", „Crew") und Schnellsuche über alle Wochen nach
+// Branchen-Vorlage (lib/branchenVorlage.ts, Modul „einsaetze").
 // Pfad: app/dashboard/dispo/page.tsx
 // ============================================================
 
@@ -26,6 +29,9 @@ import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
 import { QUALIFIKATIONEN, qualiLabel, saubereAnforderungen, pruefeZuweisung, vorschlaege, ueberschneidungen, engePuffer, type MaQuali } from '@/lib/dispoPlus';
 import { verschiebePlan, UNZUGEORDNET } from '@/lib/dispoZiehen';
 import { zahlText } from '@/lib/zahlen';
+import { useBranchenVorlage } from '../_components/useBranchenVorlage';
+import EinsatzAnsicht, { EINSATZ_MODUL } from './EinsatzAnsicht';
+import { treffer } from '@/lib/einsatzVorlage';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -46,13 +52,16 @@ const STATUS_OPTIONEN: { key: string; label: string }[] = [
   { key: 'erledigt', label: 'Erledigt' },
   { key: 'abgesagt', label: 'Abgesagt' },
 ];
-function statusInfo(s: string | null): { label: string; farbe: string } {
-  switch (s ?? 'geplant') {
-    case 'unterwegs': return { label: 'Unterwegs', farbe: C.cyan };
-    case 'vor_ort':   return { label: 'Vor Ort', farbe: C.warn };
-    case 'erledigt':  return { label: 'Erledigt', farbe: C.green };
-    case 'abgesagt':  return { label: 'Abgesagt', farbe: C.danger };
-    default:          return { label: 'Geplant', farbe: C.gold };
+// Paket 313: Wort aus der Branchen-Vorlage (Schlüssel bleiben gleich)
+function statusInfo(s: string | null, wort?: (k: string) => string): { label: string; farbe: string } {
+  const k = s ?? 'geplant';
+  const w = (std: string, key: string) => (wort ? wort(key) : std);
+  switch (k) {
+    case 'unterwegs': return { label: w('Unterwegs', 'unterwegs'), farbe: C.cyan };
+    case 'vor_ort':   return { label: w('Vor Ort', 'vor_ort'), farbe: C.warn };
+    case 'erledigt':  return { label: w('Erledigt', 'erledigt'), farbe: C.green };
+    case 'abgesagt':  return { label: w('Abgesagt', 'abgesagt'), farbe: C.danger };
+    default:          return { label: w('Geplant', 'geplant'), farbe: C.gold };
   }
 }
 function belegend(status: string | null): boolean {
@@ -122,6 +131,13 @@ const WT_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 export default function DispoPage() {
   // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
   const darfAbrechnen = useDarfAbrechnen();
+  // Paket 313: Branchen-Vorlage, Schnellsuche, Ansicht-Panel
+  const { vorlage, einstellung, setEinstellung, betrieb, istChef, fein, statusLabel } = useBranchenVorlage(supabase, EINSATZ_MODUL);
+  const person = vorlage.personWort ?? 'Mitarbeiter';
+  const personen = vorlage.personPlural ?? 'Mitarbeiter';
+  const [schnell, setSchnell] = useState<string | null>(null);
+  const [zeigeAnsicht, setZeigeAnsicht] = useState(false);
+  const heuteTag = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [chefName, setChefName] = useState('Ich (Chef)');
@@ -324,7 +340,7 @@ export default function DispoPage() {
   // --- Absagen (nicht-destruktiv, wie Termine) ------------------------------
   async function absagen() {
     if (!form?.id) return;
-    if (!window.confirm(`Einsatz „${form.titel || 'Einsatz'}" absagen?\n\nEr bleibt erhalten, gibt Monteur & Zeitraum aber wieder frei.`)) return;
+    if (!window.confirm(`Einsatz „${form.titel || 'Einsatz'}" absagen?\n\nEr bleibt erhalten, gibt ${person} und Zeitraum aber wieder frei.`)) return;
     setSpeichert(true); setFehler(null); setErfolg(null);
     try {
       const { error } = await supabase.from('einsaetze').update({ status: 'abgesagt' }).eq('id', form.id);
@@ -469,13 +485,60 @@ export default function DispoPage() {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
         <div>
           <h1 style={styles.h1}>Dispo-Board</h1>
-          <p style={styles.sub}>Einsätze auf Monteure und Tage verteilen. Klick auf eine Kachel zum Ändern, „+" legt direkt für Monteur & Tag an.</p>
+          <p style={styles.sub}>Einsätze auf {personen} und Tage verteilen. Klick auf eine Kachel zum Ändern, „+" legt direkt für {person} und Tag an.{fein ? ` · Vorlage ${fein}` : ''}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a href="/dashboard/dispo/qualifikationen" style={{ ...styles.ghostBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>🎓 Befähigungen</a>
           <button onClick={() => neuerEinsatz()} style={styles.primaerBtn}>+ Neuer Einsatz</button>
+          <button onClick={() => setZeigeAnsicht((x) => !x)} style={styles.ghostBtn} title="Status-Namen und Wort für die Person">⚙️ Ansicht</button>
         </div>
       </div>
+
+      {zeigeAnsicht && betrieb && (
+        <EinsatzAnsicht vorlage={vorlage} einstellung={einstellung} betrieb={betrieb} istChef={istChef} fein={fein}
+          onGespeichert={(e) => setEinstellung(e)} onSchliessen={() => setZeigeAnsicht(false)} />
+      )}
+
+      {/* Paket 313: Schnellsuche über alle Wochen */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', margin: '4px 0 10px' }}>
+        <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Schnellsuche:</span>
+        {vorlage.suchen.map((x) => {
+          const an = schnell === x.key;
+          const farbe = x.regel === 'ampel=rot' ? C.danger : C.gold;
+          const n = treffer(einsaetze, x.regel, heuteTag).length;
+          return (
+            <button key={x.key} onClick={() => setSchnell(an ? null : x.key)}
+              style={{ background: an ? `${farbe}22` : 'transparent', color: an ? farbe : C.textDim, border: `1px solid ${an ? farbe : C.border}`, borderRadius: 20, padding: '6px 13px', fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, cursor: 'pointer' }}>
+              {x.name} · {n}
+            </button>
+          );
+        })}
+      </div>
+      {schnell && (() => {
+        const regel = vorlage.suchen.find((x) => x.key === schnell)?.regel ?? '';
+        const liste = treffer(einsaetze, regel, heuteTag);
+        const nameVon = (e: EinsatzRow) => e.mitarbeiter_id ? (() => { const m = monteure.find((x) => x.id === e.mitarbeiter_id); return m ? `${m.vorname} ${m.nachname}`.trim() : person; })() : e.inhaber_einsatz ? chefName : 'Unzugeordnet';
+        return (
+          <div style={{ ...styles.unzuCard, marginBottom: 14 }}>
+            {liste.length === 0 ? <div style={styles.unzuLeer}>Keine Einsätze für diese Suche.</div> : (
+              <div style={styles.unzuListe}>
+                {liste.slice(0, 60).map((e) => {
+                  const b = e.beginn_am ? new Date(e.beginn_am) : null;
+                  const si = statusInfo(e.status, statusLabel);
+                  return (
+                    <button key={e.id} onClick={() => oeffneEinsatz(e)} style={{ ...styles.chip, borderColor: si.farbe }}>
+                      <span style={{ fontWeight: 700 }}>{e.titel || 'Einsatz'}</span>
+                      <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim }}>
+                        {b ? `${WT_KURZ[b.getDay()]} ${pad(b.getDate())}.${pad(b.getMonth() + 1)}. · ${uhr(b)}` : 'ohne Datum'} · {nameVon(e)} · {si.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {erfolg && <div style={styles.ok}>{erfolg}</div>}
@@ -501,19 +564,19 @@ export default function DispoPage() {
         onDragOver={ablage(UNZUGEORDNET, null).onDragOver} onDragLeave={ablage(UNZUGEORDNET, null).onDragLeave} onDrop={ablage(UNZUGEORDNET, null).onDrop}>
         <div style={styles.unzuKopf}>
           <span style={{ fontWeight: 700 }}>Unzugeordnet</span>
-          <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{unzugeordnet.length} Einsatz(e) ohne Monteur</span>
+          <span style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>{unzugeordnet.length} Einsatz(e) ohne {person}</span>
         </div>
         {unzugeordnet.length === 0 ? (
-          <div style={styles.unzuLeer}>Alles verteilt. Neue Einsätze ohne Monteur erscheinen hier.</div>
+          <div style={styles.unzuLeer}>Alles verteilt. Neue Einsätze ohne {person} erscheinen hier.</div>
         ) : (
           <div style={styles.unzuListe}>
             {unzugeordnet.map((e) => {
               const b = e.beginn_am ? new Date(e.beginn_am) : null;
-              const si = statusInfo(e.status);
+              const si = statusInfo(e.status, statusLabel);
               return (
                 <button key={e.id} onClick={() => oeffneEinsatz(e)} style={{ ...styles.chip, borderColor: si.farbe, cursor: 'grab' }}
                   {...ziehbar(e)}
-                  title="Klicken zum Zuweisen / Bearbeiten — oder auf Monteur und Tag ziehen">
+                  title={`Klicken zum Zuweisen / Bearbeiten — oder auf ${person} und Tag ziehen`}>
                   <span style={{ fontWeight: 700 }}>{e.titel || 'Einsatz'}</span>
                   <span style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: C.textDim }}>
                     {b ? `${WT_KURZ[b.getDay()]} ${pad(b.getDate())}.${pad(b.getMonth() + 1)}. · ${uhr(b)}` : 'ohne Datum'}
@@ -533,7 +596,7 @@ export default function DispoPage() {
             <div style={{ minWidth: 860 }}>
               {/* Kopfzeile */}
               <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 6, marginBottom: 6 }}>
-                <div style={styles.eckZelle}>Monteur</div>
+                <div style={styles.eckZelle}>{person}</div>
                 {tagesDaten.map((d) => (
                   <div key={d.datum} style={{ ...styles.kopfZelle, borderColor: d.heute ? C.gold : C.border }}>
                     <span style={{ fontWeight: 700 }}>{d.wt}</span>
@@ -544,7 +607,7 @@ export default function DispoPage() {
 
               {/* Monteur-Zeilen */}
               {zeilen.length === 0 ? (
-                <div style={styles.hint}>Noch keine Mitarbeiter angelegt. Einsätze landen unter „Unzugeordnet", bis Monteure existieren.</div>
+                <div style={styles.hint}>Noch keine Mitarbeiter angelegt. Einsätze landen unter „Unzugeordnet", bis {personen} angelegt sind.</div>
               ) : zeilen.map((m) => {
                 const woStd = m.wochenstunden ?? 0;
                 const tagesziel = woStd > 0 ? woStd / 5 : 8;
@@ -579,7 +642,7 @@ export default function DispoPage() {
                         )}
                         {liste.map((e) => {
                           const b = e.beginn_am ? new Date(e.beginn_am) : null;
-                          const si = statusInfo(e.status);
+                          const si = statusInfo(e.status, statusLabel);
                           const abg = !belegend(e.status);
                           const anf = anfMap[e.id] ?? [];
                           const fehltQuali = !abg && anf.length > 0 && m.id !== CHEF && (() => { const pz = pruefeZuweisung(anf, qualis, m.id, d.datum); return pz.fehlt.length + pz.abgelaufen.length > 0; })();
@@ -587,13 +650,13 @@ export default function DispoPage() {
                             <button key={e.id} onClick={() => oeffneEinsatz(e)} {...ziehbar(e)}
                               style={{ ...styles.einsatzKachel, cursor: belegend(e.status) && (e.status ?? 'geplant') === 'geplant' ? 'grab' : 'pointer', borderColor: si.farbe, opacity: abg ? 0.5 : 1, textDecoration: abg ? 'line-through' : 'none' }}
                               title={`${e.titel ?? 'Einsatz'} · ${b ? uhr(b) : ''} · ${si.label}`}>
-                              <span style={{ fontWeight: 700 }}>{b ? uhr(b) : '—'}{fehltQuali && <span title="Dem Monteur fehlt eine verlangte Befähigung" style={{ color: C.danger, marginLeft: 4 }}>⚠</span>}</span>
+                              <span style={{ fontWeight: 700 }}>{b ? uhr(b) : '—'}{fehltQuali && <span title={`${person}: eine verlangte Befähigung fehlt`} style={{ color: C.danger, marginLeft: 4 }}>⚠</span>}</span>
                               <span style={{ fontSize: 'clamp(10.5px, 0.94vw, 15px)', color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.titel ?? 'Einsatz'}</span>
                             </button>
                           );
                         })}
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => neuerEinsatz(m.id, d.datum)} style={{ ...styles.plusBtn, flex: 1 }} title="Einsatz für diesen Monteur & Tag anlegen">+</button>
+                          <button onClick={() => neuerEinsatz(m.id, d.datum)} style={{ ...styles.plusBtn, flex: 1 }} title={`Einsatz für diese Person und diesen Tag anlegen`}>+</button>
                           {belegte.filter((x) => !!x.einsatzort).length > 0 && (
                             <button onClick={() => routeOeffnen(m.id, d.datum)} disabled={routeBusy === `${m.id}__${d.datum}`} style={{ ...styles.plusBtn, flex: 1 }} title="Tagesroute in Google Maps öffnen">{routeBusy === `${m.id}__${d.datum}` ? '…' : '🗺'}</button>
                           )}
@@ -629,7 +692,7 @@ export default function DispoPage() {
             <h2 style={styles.modalTitel}>{form.id ? 'Einsatz bearbeiten' : 'Neuer Einsatz'}</h2>
             <div style={styles.formGrid}>
               <Feld label="Titel" voll><input style={styles.input} value={form.titel} onChange={(e) => setF('titel', e.target.value)} placeholder="z. B. Wartung Heizung Meier / Baumfällung" /></Feld>
-              <Feld label="Monteur">
+              <Feld label={person}>
                 <select style={styles.input} value={form.mitarbeiterId} onChange={(e) => setF('mitarbeiterId', e.target.value)}>
                   <option value={CHEF}>👤 {chefName} (ich)</option>
                   <option value="">— Unzugeordnet —</option>
@@ -674,7 +737,7 @@ export default function DispoPage() {
               )}
               <Feld label="Status">
                 <select style={styles.input} value={form.status} onChange={(e) => setF('status', e.target.value)}>
-                  {STATUS_OPTIONEN.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                  {STATUS_OPTIONEN.map((s) => <option key={s.key} value={s.key}>{statusLabel(s.key)}</option>)}
                 </select>
               </Feld>
               <Feld label="Datum"><input type="date" style={styles.input} value={form.datum} onChange={(e) => setF('datum', e.target.value)} /></Feld>

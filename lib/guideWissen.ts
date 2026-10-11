@@ -360,7 +360,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     vorher: [{ text: 'Öffnungszeiten und Terminarten in Termine', href: '/dashboard/termine' }],
   },
   '/dashboard/dispo': {
-    zweck: 'Das Dispo-Board: Monteure als Zeilen, Wochentage als Spalten, Einsätze als Kacheln — mit Befähigungs-Warnung, Kapazitäts-Ampel und Route je Tag.',
+    zweck: 'Das Dispo-Board: Ihre Leute als Zeilen, Wochentage als Spalten, Einsätze als Kacheln — mit Befähigungs-Warnung, Kapazitäts-Ampel und Route je Tag. Wörter passen sich Ihrer Branche an (z. B. „Monteur“ und „Auf der Baustelle“ im Handwerk, „Reinigungskraft“ und „Im Objekt“ in der Reinigung). „Schnellsuche“ findet über alle Wochen: vorbei und nicht erledigt, heute, erledigt aber nicht abgerechnet. „⚙️ Ansicht“: Status-Namen und Wort für die Person (nur Geschäftsleitung).',
     wer: 'chef',
     werText: 'Der Chef (bzw. wer disponieren darf) plant. Der Monteur sieht seine Einsätze in „Meine Einsätze". „Absagen" setzt nur den Status, gelöscht wird nichts.',
     schritte: [

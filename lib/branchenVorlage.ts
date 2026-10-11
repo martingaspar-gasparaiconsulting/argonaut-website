@@ -42,6 +42,10 @@ export type Vorlage = {
   kundenWort?: string;
   /** … und das Betreuungs-Intervall für neue Kontakte (Tage bis zur nächsten Pflege). */
   intervallTage?: number;
+  /** Paket 313 (BV2 Einsätze): Wort für die Person, die einen Einsatz fährt („Monteur", „Reinigungskraft") … */
+  personWort?: string;
+  /** … und die Mehrzahl („Monteure"). */
+  personPlural?: string;
 };
 
 /** Was der Kunde je Modul speichern darf (alles optional). */
@@ -58,6 +62,8 @@ export type KundenEinstellung = {
   terminWort?: string;
   kundenWort?: string;
   intervallTage?: number;
+  personWort?: string;
+  personPlural?: string;
 };
 
 type Feinschliff = { name: string; passt: (branche: string) => boolean; aenderung: Partial<Vorlage> };
@@ -317,11 +323,58 @@ const KONTAKTE_FEINSCHLIFF: Feinschliff[] = [
     aenderung: { status: K_STATUS('Lead', 'Im Gespräch', 'Kunde', 'Inaktiv'), intervallTage: 30 } },
 ];
 
+// --- Grund-Vorlage: Einsätze im Dispo-Board (Paket 313, BV2 Einsätze) -------
+// Status-SCHLÜSSEL wie in der Datenbank und in „Meine Einsätze" (geplant,
+// unterwegs, vor_ort, erledigt, abgesagt); je Branche nur andere Wörter und
+// ein eigenes Wort für die Person, die den Einsatz fährt.
+const E_STATUS = (geplant: string, unterwegs: string, vorOrt: string, erledigt: string, abgesagt: string): VorlageStatus[] => [
+  { key: 'geplant', label: geplant, farbe: 'gold' },
+  { key: 'unterwegs', label: unterwegs, farbe: 'info' },
+  { key: 'vor_ort', label: vorOrt, farbe: 'warn' },
+  { key: 'erledigt', label: erledigt, farbe: 'ok' },
+  { key: 'abgesagt', label: abgesagt, farbe: 'bad' },
+];
+const E_SUCHEN: VorlageSuche[] = [
+  { key: 'vorbei', name: 'Vorbei, nicht erledigt', regel: 'ampel=rot' },
+  { key: 'heute', name: 'Heute', regel: 'tag=heute' },
+  { key: 'nichtAbgerechnet', name: 'Erledigt, nicht abgerechnet', regel: 'abgerechnet=nein' },
+];
+
+const EINSAETZE: Vorlage = {
+  modul: 'einsaetze',
+  titel: 'Dispo-Board',
+  einheit: 'Einsatz',
+  einheitPlural: 'Einsätze',
+  status: E_STATUS('Geplant', 'Unterwegs', 'Vor Ort', 'Erledigt', 'Abgesagt'),
+  sparten: [],
+  spalten: [],
+  ampel: { gruenBis: 0, gelbBis: 0 },
+  suchen: E_SUCHEN,
+  standkostenTag: 0,
+  personWort: 'Mitarbeiter',
+  personPlural: 'Mitarbeiter',
+};
+
+const RX_OBJEKT = /reinigung|gebäudeservice|gebäudedienst|gebäudemanagement|hausmeister|facility/i;
+
+/** Reinigung zuerst (sonst greift kein anderes Muster); danach wie Projekte. */
+const EINSAETZE_FEINSCHLIFF: Feinschliff[] = [
+  { name: 'Reinigung und Gebäudedienste', passt: (b) => RX_OBJEKT.test(b),
+    aenderung: { status: E_STATUS('Geplant', 'Unterwegs', 'Im Objekt', 'Erledigt', 'Abgesagt'), personWort: 'Reinigungskraft', personPlural: 'Reinigungskräfte' } },
+  { name: 'Veranstaltungen', passt: (b) => RX_EVENT.test(b),
+    aenderung: { status: E_STATUS('Geplant', 'Anreise', 'Vor Ort', 'Erledigt', 'Abgesagt'), personWort: 'Crew-Mitglied', personPlural: 'Crew' } },
+  { name: 'Handwerk und Bau', passt: (b) => RX_HANDWERK.test(b),
+    aenderung: { status: E_STATUS('Geplant', 'Unterwegs', 'Auf der Baustelle', 'Erledigt', 'Abgesagt'), personWort: 'Monteur', personPlural: 'Monteure' } },
+  { name: 'Agentur, IT und Beratung', passt: (b) => RX_AGENTUR.test(b),
+    aenderung: { status: E_STATUS('Geplant', 'Unterwegs', 'Beim Kunden', 'Erledigt', 'Abgesagt'), personWort: 'Techniker', personPlural: 'Techniker' } },
+];
+
 const VORLAGEN: Record<string, { grund: Vorlage; fein: Feinschliff[] }> = {
   'kfz-bestand': { grund: KFZ_BESTAND, fein: KFZ_FEINSCHLIFF },
   'projekte': { grund: PROJEKTE, fein: PROJEKTE_FEINSCHLIFF },
   'auftraege': { grund: AUFTRAEGE, fein: AUFTRAEGE_FEINSCHLIFF },
   'kontakte': { grund: KONTAKTE, fein: KONTAKTE_FEINSCHLIFF },
+  'einsaetze': { grund: EINSAETZE, fein: EINSAETZE_FEINSCHLIFF },
 };
 
 export function bekannteModule(): string[] {
@@ -410,6 +463,9 @@ export function mitKunde(v: Vorlage, k?: KundenEinstellung | null): Vorlage {
     const t = Math.trunc(zahlOder(k.intervallTage, e.intervallTage));
     e.intervallTage = Math.min(730, Math.max(1, t));
   }
+  // Paket 313: Personen-Wort der Einsätze (je max. 30 Zeichen)
+  if (typeof k.personWort === 'string' && k.personWort.trim() && e.personWort !== undefined) e.personWort = k.personWort.trim().slice(0, 30);
+  if (typeof k.personPlural === 'string' && k.personPlural.trim() && e.personPlural !== undefined) e.personPlural = k.personPlural.trim().slice(0, 30);
   return e;
 }
 

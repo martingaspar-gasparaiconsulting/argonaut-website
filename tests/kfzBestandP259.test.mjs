@@ -28,7 +28,7 @@ test('Vorlage Kfz: Grund-Vorlage vollständig, unbekanntes Modul = null', () => 
   assert.ok(v.spalten.find((s) => s.key === 'ek' && s.sichtbar === false), 'Einkaufspreis standardmäßig ausgeblendet');
   assert.ok(v.suchen.length >= 4);
   assert.equal(vorlageFuer('gibt-es-nicht', 'Kfz-Handel'), null);
-  assert.deepEqual(bekannteModule(), ['kfz-bestand', 'projekte', 'auftraege', 'kontakte']); // Paket 310: Projekte, 311: Auftraege, 312: Kontakte dazu
+  assert.deepEqual(bekannteModule(), ['kfz-bestand', 'projekte', 'auftraege', 'kontakte', 'einsaetze']); // Paket 310: Projekte, 311: Auftraege, 312: Kontakte, 313: Einsaetze dazu
 });
 
 test('Vorlage: Feinschliff je Branche (Motorrad, Boote, Caravan), Grund bleibt unberührt', () => {
