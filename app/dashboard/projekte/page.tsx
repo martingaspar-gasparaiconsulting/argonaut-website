@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { leseStandortCookie } from '@/lib/aktiverStandort';
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten';
@@ -9,6 +9,9 @@ import Leerzustand from "../_components/Leerzustand";
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
+import { vorlageFuer, mitKunde, feinschliffName, type KundenEinstellung } from '@/lib/branchenVorlage';
+import { projektAmpel, suchePasst, STATUS_FARBE } from '@/lib/projektVorlage';
+import ProjektAnsicht from './ProjektAnsicht';
 
 const MODUL = 'projekte';
 
@@ -56,27 +59,13 @@ function dStr(d: string | null | undefined): string {
   try { return new Date(d).toLocaleDateString('de-DE'); } catch { return d; }
 }
 
-// Health-Ampel eines Projekts (reine Eigenlogik aus Projekt + Aufgaben)
-function projektHealth(projekt: any, projektAufgaben: any[]): { key: string; label: string; farbe: string } {
-  if (projekt.status === 'abgeschlossen') return { key: 'neutral', label: 'Abgeschlossen', farbe: '#5A8DEE' };
-  if (projekt.status === 'abgebrochen') return { key: 'neutral', label: 'Abgebrochen', farbe: '#8FA3BE' };
-
-  const heute = new Date(new Date().toDateString());
-  const offene = projektAufgaben.filter((a) => !a.erledigt && a.status !== 'fertig');
-  const ueberfaellig = offene.filter((a) => a.faellig_am && new Date(a.faellig_am) < heute).length;
-  const gesamt = projektAufgaben.length;
-  const erledigt = projektAufgaben.filter((a) => a.erledigt || a.status === 'fertig').length;
-  const pct = gesamt > 0 ? Math.round((erledigt / gesamt) * 100) : 0;
-
-  const endeUeberschritten = projekt.end_datum && new Date(projekt.end_datum) < heute;
-  let tageBisEnde = Infinity;
-  if (projekt.end_datum) {
-    tageBisEnde = Math.round((new Date(projekt.end_datum).getTime() - heute.getTime()) / 86400000);
-  }
-
-  if (ueberfaellig > 0 || endeUeberschritten) return { key: 'rot', label: 'Kritisch', farbe: '#E06666' };
-  if (projekt.status === 'pausiert') return { key: 'gelb', label: 'Pausiert', farbe: '#E0A24C' };
-  if (tageBisEnde <= 14 && pct < 70) return { key: 'gelb', label: 'Achtung', farbe: '#E0A24C' };
+// Health-Ampel eines Projekts — Paket 310: Logik in lib/projektVorlage.ts,
+// Schwellen aus der Branchen-Vorlage bzw. den Einstellungen des Betriebs.
+function projektHealth(projekt: any, projektAufgaben: any[], heute: string, warnTage: number, warnProzent: number, statusLabel: (k: string) => string): { key: string; label: string; farbe: string } {
+  const a = projektAmpel(projekt, projektAufgaben, heute, warnTage, warnProzent);
+  if (a === 'neutral') return { key: 'neutral', label: statusLabel(projekt.status), farbe: projekt.status === 'abgebrochen' ? '#8FA3BE' : '#5A8DEE' };
+  if (a === 'rot') return { key: 'rot', label: 'Kritisch', farbe: '#E06666' };
+  if (a === 'gelb') return { key: 'gelb', label: projekt.status === 'pausiert' ? statusLabel('pausiert') : 'Achtung', farbe: '#E0A24C' };
   return { key: 'gruen', label: 'Im Plan', farbe: '#4CAF7D' };
 }
 
@@ -110,6 +99,13 @@ export default function ProjektePage() {
   const [projekte, setProjekte] = useState<Projekt[]>([]);
   const [aufgaben, setAufgaben] = useState<Aufgabe[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('alle');
+  // Paket 310 (BV2a): Branchen-Vorlage — Wörter, Status-Namen, Kartenfelder, Warnschwellen, Suchen
+  const [branche, setBranche] = useState('');
+  const [einstellung, setEinstellung] = useState<KundenEinstellung | null>(null);
+  const [betrieb, setBetrieb] = useState('');
+  const [istChef, setIstChef] = useState(false);
+  const [suche, setSuche] = useState<string | null>(null);
+  const [zeigeAnsicht, setZeigeAnsicht] = useState(false);
   const [zeigeArchiv, setZeigeArchiv] = useState(false);
 
   const [modal, setModal] = useState<any | null>(null);
@@ -141,6 +137,18 @@ export default function ProjektePage() {
       const uid = userData?.user?.id;
       if (!uid) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       setOwnerId(uid);
+      // Paket 310: Betrieb (Chef) bestimmen, Branche und Ansicht-Einstellungen laden (fail-open)
+      let chefId = uid;
+      try { const { data: c } = await supabase.rpc('mein_chef_id'); if (typeof c === 'string' && c) chefId = c; } catch { /* Chef selbst */ }
+      setBetrieb(chefId); setIstChef(chefId === uid);
+      try {
+        const [pr, me] = await Promise.all([
+          supabase.from('profiles').select('branche').eq('id', chefId).maybeSingle(),
+          supabase.from('modul_einstellung').select('einstellung').eq('owner_user_id', chefId).eq('modul', MODUL).maybeSingle(),
+        ]);
+        setBranche(String((pr.data as { branche?: string | null } | null)?.branche ?? ''));
+        setEinstellung(((me.data as { einstellung?: KundenEinstellung } | null)?.einstellung) ?? null);
+      } catch { /* ohne Vorlage-Einstellung: Grund-Vorlage */ }
 
       // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Projekte.
       const sid = konkreterStandort(leseStandortCookie());
@@ -148,7 +156,7 @@ export default function ProjektePage() {
       if (sid) pq = pq.or(standortOrFilter(sid));
       const [projRes, aufgRes, vorlRes, vAufgRes] = await Promise.all([
         pq.order('erstellt_am', { ascending: false }),
-        supabase.from('aufgaben').select('id,projekt_id,erledigt,status'),
+        supabase.from('aufgaben').select('id,projekt_id,erledigt,status,faellig_am'),
         supabase.from('projekt_vorlagen').select('*')
           .order('erstellt_am', { ascending: false }),
         supabase.from('vorlagen_aufgaben').select('id,vorlage_id')
@@ -179,6 +187,24 @@ export default function ProjektePage() {
     const pct = gesamt > 0 ? Math.round((erledigt / gesamt) * 100) : 0;
     return { erledigt, gesamt, pct };
   }
+
+  const vorlage = useMemo(() => {
+    const v = vorlageFuer(MODUL, branche);
+    return v ? mitKunde(v, einstellung) : null;
+  }, [branche, einstellung]);
+  const fein = useMemo(() => feinschliffName(MODUL, branche), [branche]);
+  const heuteTag = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
+  const warnTage = vorlage?.warnTage ?? 14;
+  const warnProzent = vorlage?.warnProzent ?? 70;
+  const statusMeta = (k: string): { label: string; farbe: string } => {
+    const v = vorlage?.status.find((x) => x.key === k);
+    if (v) return { label: v.label, farbe: STATUS_FARBE[v.farbe] || STATUS_META.aktiv.farbe };
+    return STATUS_META[k] || STATUS_META.aktiv;
+  };
+  const sichtbar = (k: string): boolean => vorlage?.spalten.find((x) => x.key === k)?.sichtbar ?? true;
+  const einheit = vorlage?.einheit || 'Projekt';
+  const titel = vorlage?.titel || 'Projekte';
+  const ampelVon = (p: any) => projektHealth(p, aufgaben.filter((a) => a.projekt_id === p.id), heuteTag, warnTage, warnProzent, (k) => statusMeta(k).label);
 
   function oeffneNeu() { setNmExtra({}); setModal(leeresProjekt()); }  function oeffneBearbeiten(p: Projekt) {
     setNmExtra(werteMap[p.id] ? { ...werteMap[p.id] } : {});
@@ -406,6 +432,10 @@ export default function ProjektePage() {
   const gefiltert = projekte.filter((p) => {
     if (p.archiviert !== zeigeArchiv) return false;
     if (filterStatus !== 'alle' && p.status !== filterStatus) return false;
+    if (suche) {
+      const r = vorlage?.suchen.find((x) => x.key === suche)?.regel ?? '';
+      if (!suchePasst(r, p, projektAmpel(p, aufgaben.filter((a) => a.projekt_id === p.id), heuteTag, warnTage, warnProzent), heuteTag)) return false;
+    }
     return true;
   });
 
@@ -415,13 +445,13 @@ export default function ProjektePage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 22 }}>
         <div>
           <p style={{ margin: 0, fontSize: 'clamp(13px, 1.13vw, 18px)', color: BRAND.gold, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700 }}>
-            ARGONAUT OS · Projekte
+            ARGONAUT OS · {titel}{fein ? ` · Vorlage ${fein}` : ''}
           </p>
           <h1 style={{ margin: '2px 0 0', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(28px, 2.44vw, 39px)', fontWeight: 800 }}>
-            Projekte
+            {titel}
           </h1>
           <p style={{ margin: '4px 0 0', color: BRAND.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-            Alle Projekte, Status und Fortschritt an einem Ort.
+            Alle {titel}, Status und Fortschritt an einem Ort.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -429,7 +459,7 @@ export default function ProjektePage() {
           {vorlagen.length > 0 && (
             <button style={btnGhost} onClick={() => setVorlagenModal(true)}>📋 Aus Vorlage erstellen</button>
           )}
-          <button style={btn} onClick={oeffneNeu}>+ Neues Projekt</button>
+          <button style={btn} onClick={oeffneNeu}>+ {einheit} anlegen</button>
         </div>
       </div>
 
@@ -442,7 +472,7 @@ export default function ProjektePage() {
         if (aktive.length === 0) return null;
         let gruen = 0, gelb = 0, rot = 0;
         aktive.forEach((p) => {
-          const h = projektHealth(p, aufgaben.filter((a) => a.projekt_id === p.id));
+          const h = ampelVon(p);
           if (h.key === 'rot') rot++; else if (h.key === 'gelb') gelb++; else if (h.key === 'gruen') gruen++;
         });
         const kachel = (zahl: number, label: string, farbe: string) => (
@@ -453,7 +483,7 @@ export default function ProjektePage() {
         );
         return (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
-            {kachel(aktive.length, 'Aktive Projekte', BRAND.cyan)}
+            {kachel(aktive.length, `Aktive ${titel}`, BRAND.cyan)}
             {kachel(gruen, '🟢 Im Plan', '#4CAF7D')}
             {kachel(gelb, '🟡 Achtung', '#E0A24C')}
             {kachel(rot, '🔴 Kritisch', '#E06666')}
@@ -475,7 +505,7 @@ export default function ProjektePage() {
               fontWeight: 700,
             }}
           >
-            {s === 'alle' ? 'Alle' : STATUS_META[s].label}
+            {s === 'alle' ? 'Alle' : statusMeta(s).label}
           </button>
         ))}
         <div style={{ flex: 1 }} />
@@ -483,9 +513,31 @@ export default function ProjektePage() {
           onClick={() => setZeigeArchiv(!zeigeArchiv)}
           style={{ ...btnGhost, color: zeigeArchiv ? BRAND.gold : BRAND.textDim }}
         >
-          {zeigeArchiv ? '← Aktive Projekte' : 'Archiv ansehen'}
+          {zeigeArchiv ? `← Aktive ${titel}` : 'Archiv ansehen'}
+        </button>
+        <button onClick={() => setZeigeAnsicht(!zeigeAnsicht)} style={{ ...btnGhost, color: zeigeAnsicht ? BRAND.gold : BRAND.textDim }}>
+          ⚙️ Ansicht
         </button>
       </div>
+
+      {/* Paket 310: gespeicherte Suchen der Branchen-Vorlage */}
+      {vorlage && vorlage.suchen.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 18, alignItems: 'center' }}>
+          <span style={{ color: BRAND.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)' }}>🔎 Schnellsuche:</span>
+          {vorlage.suchen.map((x) => (
+            <button key={x.key} onClick={() => setSuche(suche === x.key ? null : x.key)}
+              style={{ ...btnGhost, padding: '5px 12px', color: suche === x.key ? BRAND.navy : BRAND.textDim, background: suche === x.key ? BRAND.cyan : 'transparent', borderColor: suche === x.key ? BRAND.cyan : BRAND.border, fontWeight: 600 }}>
+              {x.name}
+            </button>
+          ))}
+          {suche && <button onClick={() => setSuche(null)} style={{ ...btnGhost, padding: '5px 12px', color: BRAND.textDim }}>✕ Suche aufheben</button>}
+        </div>
+      )}
+
+      {zeigeAnsicht && vorlage && betrieb && (
+        <ProjektAnsicht vorlage={vorlage} einstellung={einstellung} betrieb={betrieb} istChef={istChef} fein={fein}
+          onGespeichert={(e) => setEinstellung(e)} onSchliessen={() => setZeigeAnsicht(false)} />
+      )}
 
       {ownerId && (
         <div style={{ marginBottom: 18 }}>
@@ -501,11 +553,13 @@ export default function ProjektePage() {
         <div style={{ ...card, color: BRAND.textDim }}>Lade Projekte…</div>
       ) : gefiltert.length === 0 ? (
         zeigeArchiv ? (
-          <div style={{ ...card, color: BRAND.textDim, textAlign: 'center', padding: 40 }}>Keine archivierten Projekte.</div>
+          <div style={{ ...card, color: BRAND.textDim, textAlign: 'center', padding: 40 }}>Keine archivierten {titel}.</div>
+        ) : (suche || filterStatus !== 'alle') && projekte.some((p) => !p.archiviert) ? (
+          <div style={{ ...card, color: BRAND.textDim, textAlign: 'center', padding: 40 }}>Keine Treffer für diese Auswahl.</div>
         ) : (
           <Leerzustand
             icon="📁"
-            titel="Noch keine Projekte"
+            titel={`Noch keine ${titel}`}
             text="Planen Sie Ihre Vorhaben als Projekte — mit Aufgaben, Terminen und Verantwortlichen an einem Ort."
             schritte={["Projekt mit Enddatum anlegen", "Aufgaben und Verantwortliche zuweisen", "Fortschritt und Fristen im Blick behalten"]}
           />
@@ -514,9 +568,9 @@ export default function ProjektePage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
           {gefiltert.map((p) => {
             const fp = fortschritt(p.id);
-            const sm = STATUS_META[p.status] || STATUS_META.aktiv;
+            const sm = statusMeta(p.status);
             const pm = PRIO_META[p.prioritaet] || PRIO_META.normal;
-            const health = projektHealth(p, aufgaben.filter((a) => a.projekt_id === p.id));
+            const health = ampelVon(p);
             return (
               <div key={p.id} style={{ ...card, borderLeft: `4px solid ${p.farbe || BRAND.cyan}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -534,14 +588,14 @@ export default function ProjektePage() {
                   </div>
                 </div>
 
-                {p.beschreibung && (
+                {p.beschreibung && sichtbar('beschreibung') && (
                   <p style={{ margin: 0, color: BRAND.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {p.beschreibung}
                   </p>
                 )}
 
                 {/* Fortschritt */}
-                <div>
+                {sichtbar('fortschritt') && <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim, marginBottom: 4 }}>
                     <span>Fortschritt</span>
                     <span>{fp.erledigt}/{fp.gesamt} Aufgaben · {fp.pct}%</span>
@@ -549,16 +603,16 @@ export default function ProjektePage() {
                   <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 7, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${fp.pct}%`, background: fp.pct === 100 ? BRAND.green : BRAND.cyan, borderRadius: 999 }} />
                   </div>
-                </div>
+                </div>}
 
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>
-                  <span>📅 {dStr(p.start_datum)} – {dStr(p.end_datum)}</span>
-                  <span style={{ color: pm.farbe }}>● {pm.label}</span>
-                  {p.verantwortlich && <span>👤 {p.verantwortlich}</span>}
-                  {p.budget != null && <span>💶 {Number(p.budget).toLocaleString('de-DE')} €</span>}
+                  {sichtbar('zeitraum') && <span>📅 {dStr(p.start_datum)} – {dStr(p.end_datum)}</span>}
+                  {sichtbar('prioritaet') && <span style={{ color: pm.farbe }}>● {pm.label}</span>}
+                  {p.verantwortlich && sichtbar('verantwortlich') && <span>👤 {p.verantwortlich}</span>}
+                  {p.budget != null && sichtbar('budget') && <span>💶 {Number(p.budget).toLocaleString('de-DE')} €</span>}
                 </div>
 
-                <EigeneFelderAnzeige felder={felder} werte={werteMap[p.id]} />
+                {sichtbar('eigene') && <EigeneFelderAnzeige felder={felder} werte={werteMap[p.id]} />}
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <a href={`/dashboard/projekte/${p.id}`} style={{ ...btn, padding: '7px 14px', fontSize: 'clamp(13px, 1.13vw, 18px)', textDecoration: 'none', display: 'inline-block' }}>
@@ -581,7 +635,7 @@ export default function ProjektePage() {
           onClick={() => setModal(null)}>
           <div style={{ ...card, width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ margin: '0 0 16px', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 'clamp(20px, 1.75vw, 28px)' }}>
-              {modal.id ? 'Projekt bearbeiten' : 'Neues Projekt'}
+              {modal.id ? `${einheit} bearbeiten` : `${einheit} anlegen`}
             </h2>
 
             <div style={{ marginBottom: 12 }}>
@@ -598,7 +652,7 @@ export default function ProjektePage() {
               <div style={{ flex: 1 }}>
                 <label style={labelStil}>Status</label>
                 <select style={inputStil} value={modal.status} onChange={(e) => setModal({ ...modal, status: e.target.value })}>
-                  {Object.keys(STATUS_META).map((s) => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+                  {Object.keys(STATUS_META).map((s) => <option key={s} value={s}>{statusMeta(s).label}</option>)}
                 </select>
               </div>
               <NurVoll>

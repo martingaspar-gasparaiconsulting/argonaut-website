@@ -27,6 +27,20 @@ for sid,t,u,rows in S:
         tr.append(f'''<tr class="z-{st_cls(stat)}"><td class="nr" data-l="Nr">{esc(nr)}</td><td class="pak" data-l="Paket"><strong>{esc(pak)}</strong><span class="st st-{st_cls(stat)}">{'✓ erledigt' if stat=='live' else esc(stat)}</span></td><td class="heute" data-l="Heute: fehlt oder läuft falsch">{esc(heute)}</td><td class="loes" data-l="Lösung">{esc(loes)}</td><td class="wer" data-l="Wer"><span class="w w-{wc}">{wl}</span></td><td class="push" data-l="Pushes">{esc(push)}</td></tr>''')
     n=sum(int(r[5]) for r in rows if r[6]!="live")
     secs.append(f'''<section id="{sid}"><header class="sh"><h2>{esc(t)}</h2><p>{esc(u)} · <b>{n} offene Pushes</b></p></header><div class="tw"><table><thead><tr><th>Nr</th><th>Paket</th><th>Heute: fehlt oder läuft falsch</th><th>Lösung</th><th>Wer</th><th>Pushes</th></tr></thead><tbody>{"".join(tr)}</tbody></table></div></section>''')
+# Reiter „Offen“ (11.10.2026, Martins Wunsch): alles Offene auf einen Blick, nach Lage gruppiert
+_gruppen=[("Als Nächstes","next",lambda st: st in ("nächster","läuft")),("Frei baubar","open",lambda st: st_cls(st)=="open"),("Wartet auf jemanden","wait",lambda st: st_cls(st)=="wait")]
+_offen_html=[]
+_offen_summe=0
+for _t,_c,_f in _gruppen:
+    _z=[]
+    for sid,t,u,rows in S:
+        for nr,pak,heute,loes,wer,push,stat in rows:
+            if stat=="live" or not _f(stat): continue
+            wl,wc=WER[wer]; _offen_summe+=int(push)
+            _z.append(f'<tr class="z-{st_cls(stat)}"><td class="nr" data-l="Nr">{esc(nr)}</td><td class="pak" data-l="Paket"><strong>{esc(pak)}</strong><span class="st st-{st_cls(stat)}">{esc(stat)}</span></td><td class="heute" data-l="Bereich"><a href="#{sid}" style="color:inherit">{esc(t)}</a></td><td class="wer" data-l="Wer"><span class="w w-{wc}">{wl}</span></td><td class="push" data-l="Pushes">{esc(push)}</td></tr>')
+    if _z:
+        _offen_html.append(f'<h3 style="margin:8px 0 0;font-size:16px">{esc(_t)} · {len(_z)}</h3><div class="tw"><table><thead><tr><th>Nr</th><th>Paket</th><th>Bereich</th><th>Wer</th><th>Pushes</th></tr></thead><tbody>{"".join(_z)}</tbody></table></div>')
+OFFEN=f'<section id="offen"><header class="sh"><h2>Offen auf einen Blick</h2><p>Alles, was noch nicht live ist – oben das Nächste, dann frei baubar, dann was auf jemanden wartet · <b>{_offen_summe} offene Pushes</b></p></header>{"".join(_offen_html)}</section>'
 body=f'''<title>ARGONAUT Bauliste</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap">
@@ -44,6 +58,7 @@ body=f'''<title>ARGONAUT Bauliste</title>
 --g:#f0c060;--gbg:#3a2c0e;--c:#7cb6f5;--cbg:#132a44;--m:#bfaee6;--mbg:#2a2340;color-scheme:dark}}
 body{{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f)}}
 .wrap{{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:28px 60px;display:grid;gap:36px}}
+.wrap>*{{min-width:0}} section{{min-width:0;grid-template-columns:minmax(0,1fr)}}
 .kopf{{display:grid;gap:14px}}
 .eyebrow{{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}}
 h1{{font-size:clamp(26px,4vw,38px);line-height:1.1;margin:0;text-wrap:balance}}
@@ -94,7 +109,7 @@ tr.z-ok{{outline:2px solid var(--gold);outline-offset:-2px;box-shadow:0 0 14px c
  table{{min-width:0}} thead{{display:none}} .tw{{border:0;background:transparent;overflow:visible}}
  table,tbody,tr,td{{display:block;width:auto!important}}
  tr{{background:var(--fl);border:1px solid var(--line);border-radius:10px;margin-bottom:12px;padding:6px 0}}
- td{{border:0;padding:6px 14px}}
+ td{{border:0;padding:6px 14px;overflow-wrap:anywhere}}
  td.heute::before,td.loes::before,td.wer::before,td.push::before{{content:attr(data-l);display:block;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:2px}}
  td.push{{text-align:left}}
 }}
@@ -105,7 +120,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 11.10.2026 · _p309 unterwegs · SP1 Was ARGONAUT Ihnen gespart hat</div>
+<div class="eyebrow">ARGONAUT OS · Stand 11.10.2026 · _p310 unterwegs · BV2a Projekte nach Branchen-Vorlage</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
@@ -117,8 +132,9 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </div>
 <div class="fort"><span>{done} von {alle} Pushes erledigt · {proz} %</span><div class="balken" role="progressbar" aria-valuenow="{proz}" aria-valuemin="0" aria-valuemax="100"><i style="width:{proz}%"></i></div></div>
 <div class="leg">Wer: <span class="w w-g">gemeinsam</span><span class="w w-c">Claude</span><span class="w w-m">Martin</span> · Status: <span class="st st-ok">✓ erledigt</span><span class="st st-run">läuft</span><span class="st st-next">nächster</span><span class="st st-open">offen</span><span class="st st-wait">wartet</span></div>
-<nav class="sprung" aria-label="Abschnitte"><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#alle">Für alle</a><a href="#mob">Mobilität</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
+<nav class="sprung" aria-label="Abschnitte"><a href="#offen" style="border-color:var(--gold);font-weight:700">📌 Offen</a><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#alle">Für alle</a><a href="#mob">Mobilität</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
 </div>
+{OFFEN}
 {secs[0]}{secs[1]}{secs[2]}
 {"".join(secs[3:])}
 <section id="test"><header class="sh"><h2>Testtag · ganz zum Schluss</h2><p>Nach Stufe 3, externen Partnern und Dossiers – mit Schrift-Querschnitt</p></header>

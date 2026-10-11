@@ -561,10 +561,10 @@ export const WISSEN: Record<string, SeitenWissen> = {
     schritte: ['Marktplatz aufklappen', 'Zugangsdaten eintragen, „🔗 Speichern"', '„Trennen" entfernt den Zugang wieder'],
   },
   '/dashboard/projekte': {
-    zweck: 'Projekte mit Budget, Aufgaben und Ampel — neu, aus einer Vorlage oder per KI-Vorschlag angelegt.',
+    zweck: 'Projekte mit Budget, Aufgaben und Ampel — neu, aus einer Vorlage oder per KI-Vorschlag angelegt. Wörter und Status passen sich Ihrer Branche an (z. B. „Baustelle“ im Handwerk, „Mandat“ in der Kanzlei).',
     wer: 'beide',
-    werText: 'Wer das Modul hat. Projekte werden archiviert, nicht gelöscht.',
-    schritte: ['„+ Neues Projekt" oder „📋 Aus Vorlage erstellen"', 'Aufgaben mit Fälligkeit anlegen', 'Zeiten und Leistungen laufend erfassen', 'Abgeschlossen? Archivieren'],
+    werText: 'Wer das Modul hat. Projekte werden archiviert, nicht gelöscht. Die Ansicht („⚙️ Ansicht“) legt die Geschäftsleitung für alle fest.',
+    schritte: ['„+ … anlegen" oder „📋 Aus Vorlage erstellen"', 'Aufgaben mit Fälligkeit anlegen — überfällige Aufgaben machen die Ampel rot', '„🔎 Schnellsuche“: Kritisch, Achtung, Ende in 14 Tagen, Hoch und dringend, ohne Verantwortlichen', '„⚙️ Ansicht“: Status-Namen, Angaben auf der Karte und die Schwelle für „Achtung“ anpassen', 'Zeiten und Leistungen laufend erfassen', 'Abgeschlossen? Archivieren'],
     probe: { anlegen: 'Projekt „Test".', loeschen: 'Archivieren.' },
     landetIn: [{ text: 'Projekt-Abrechnung', href: '/dashboard/projekt-abrechnung' }, { text: 'Nachkalkulation', href: '/dashboard/nachkalkulation' }, { text: 'Chef-Blick → Frühwarnung', href: '/dashboard/chef-blick' }],
   },

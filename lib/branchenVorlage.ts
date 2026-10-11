@@ -32,6 +32,10 @@ export type Vorlage = {
   ampel: VorlageAmpel;
   suchen: VorlageSuche[];
   standkostenTag: number;   // € je Standtag (Planwert, Kunde stellt ein)
+  /** Paket 310 (BV2a): Projekte — „Achtung", wenn höchstens so viele Tage bis zum Ende … */
+  warnTage?: number;
+  /** … und weniger als so viel Prozent der Aufgaben erledigt sind. */
+  warnProzent?: number;
 };
 
 /** Was der Kunde je Modul speichern darf (alles optional). */
@@ -43,6 +47,8 @@ export type KundenEinstellung = {
   ampel?: Partial<VorlageAmpel>;
   suchen?: VorlageSuche[];
   standkostenTag?: number;
+  warnTage?: number;
+  warnProzent?: number;
 };
 
 type Feinschliff = { name: string; passt: (branche: string) => boolean; aenderung: Partial<Vorlage> };
@@ -102,8 +108,82 @@ const KFZ_FEINSCHLIFF: Feinschliff[] = [
     aenderung: { ampel: { gruenBis: 90, gelbBis: 150 }, standkostenTag: 18 } },
 ];
 
+// --- Grund-Vorlage: Projekte für alle Bereiche (Paket 310, BV2a) ------------
+// Status-SCHLÜSSEL bleiben in allen Branchen gleich (aktiv, pausiert,
+// abgeschlossen, abgebrochen — so stehen sie in der Datenbank); jede Branche
+// bekommt nur ihre eigenen Wörter. Spalten = Angaben auf der Projektkarte.
+const P_STATUS = (aktiv: string, pausiert: string, fertig: string, ab: string): VorlageStatus[] => [
+  { key: 'aktiv', label: aktiv, farbe: 'ok' },
+  { key: 'pausiert', label: pausiert, farbe: 'warn' },
+  { key: 'abgeschlossen', label: fertig, farbe: 'info' },
+  { key: 'abgebrochen', label: ab, farbe: 'bad' },
+];
+
+const PROJEKTE: Vorlage = {
+  modul: 'projekte',
+  titel: 'Projekte',
+  einheit: 'Projekt',
+  einheitPlural: 'Projekte',
+  status: P_STATUS('Aktiv', 'Pausiert', 'Abgeschlossen', 'Abgebrochen'),
+  sparten: [],
+  spalten: [
+    { key: 'beschreibung', label: 'Beschreibung', sichtbar: true },
+    { key: 'fortschritt', label: 'Fortschritt', sichtbar: true },
+    { key: 'zeitraum', label: 'Zeitraum', sichtbar: true },
+    { key: 'prioritaet', label: 'Priorität', sichtbar: true },
+    { key: 'verantwortlich', label: 'Verantwortlich', sichtbar: true },
+    { key: 'budget', label: 'Budget', sichtbar: true },
+    { key: 'eigene', label: 'Eigene Felder', sichtbar: true },
+  ],
+  ampel: { gruenBis: 0, gelbBis: 0 },
+  suchen: [
+    { key: 'kritisch', name: 'Kritisch', regel: 'ampel=rot' },
+    { key: 'achtung', name: 'Achtung', regel: 'ampel=gelb' },
+    { key: 'ende14', name: 'Ende in 14 Tagen', regel: 'ende<=14' },
+    { key: 'dringend', name: 'Hoch und dringend', regel: 'prio=hoch' },
+    { key: 'ohneVerantwortlich', name: 'Ohne Verantwortlichen', regel: 'verantwortlich=leer' },
+  ],
+  standkostenTag: 0,
+  warnTage: 14,
+  warnProzent: 70,
+};
+
+/** Reihenfolge zählt: der erste Treffer gewinnt. */
+const PROJEKTE_FEINSCHLIFF: Feinschliff[] = [
+  { name: 'Kanzlei und Beratung', passt: (b) => /steuer|anwalt|anwält|kanzlei|notar/i.test(b),
+    aenderung: { titel: 'Mandate', einheit: 'Mandat', einheitPlural: 'Mandate', status: P_STATUS('In Bearbeitung', 'Ruht', 'Erledigt', 'Beendet'),
+      suchen: [
+        { key: 'kritisch', name: 'Kritisch', regel: 'ampel=rot' },
+        { key: 'achtung', name: 'Achtung', regel: 'ampel=gelb' },
+        { key: 'ende14', name: 'Frist in 14 Tagen', regel: 'ende<=14' },
+        { key: 'dringend', name: 'Hoch und dringend', regel: 'prio=hoch' },
+        { key: 'ohneVerantwortlich', name: 'Ohne Bearbeiter', regel: 'verantwortlich=leer' },
+      ] } },
+  { name: 'Veranstaltungen', passt: (b) => /event|veranstalt|catering|hochzeit|messebau/i.test(b),
+    aenderung: { titel: 'Veranstaltungen', einheit: 'Veranstaltung', einheitPlural: 'Veranstaltungen', status: P_STATUS('In Planung', 'Pausiert', 'Durchgeführt', 'Abgesagt'),
+      suchen: [
+        { key: 'kritisch', name: 'Kritisch', regel: 'ampel=rot' },
+        { key: 'achtung', name: 'Achtung', regel: 'ampel=gelb' },
+        { key: 'ende14', name: 'Termin in 14 Tagen', regel: 'ende<=14' },
+        { key: 'dringend', name: 'Hoch und dringend', regel: 'prio=hoch' },
+        { key: 'ohneVerantwortlich', name: 'Ohne Verantwortlichen', regel: 'verantwortlich=leer' },
+      ] } },
+  { name: 'Handwerk und Bau', passt: (b) => /elektriker|elektrobetrieb|elektroinstall|elektrotechnik|elektrohandwerk|sanitär|heizung|(^|[^a-zäöüß])shk([^a-zäöüß]|$)|klima|maler|lackierer|schreiner|tischler|bauunternehm|hochbau|tiefbau|rohbau|dachdecker|bodenleger|raumausstatter|glaser|schlosser|schwei(ß|ss)|haustechnik|gebäudetechnik|gebäudeautomation|rollladen|sonnenschutz|trockenbau|innenausbau|estrich|fliese|gerüst|erdbau|bagger|parkett|zaunbau|pflaster|schwimmbad|gartengestaltung|landschaftsbau|zimmer(ei|er)|maurer|solar|photovoltaik|metallbau|stuckateur|kaminkehrer|schornstein|bauhandwerk|(^|[^a-zäöüß])bau([^a-zäöüß]|$)/i.test(b),
+    aenderung: { titel: 'Baustellen', einheit: 'Baustelle', einheitPlural: 'Baustellen', status: P_STATUS('In Ausführung', 'Ruht', 'Fertiggestellt', 'Storniert'),
+      suchen: [
+        { key: 'kritisch', name: 'Kritisch', regel: 'ampel=rot' },
+        { key: 'achtung', name: 'Achtung', regel: 'ampel=gelb' },
+        { key: 'ende14', name: 'Fertig in 14 Tagen', regel: 'ende<=14' },
+        { key: 'dringend', name: 'Hoch und dringend', regel: 'prio=hoch' },
+        { key: 'ohneVerantwortlich', name: 'Ohne Bauleiter', regel: 'verantwortlich=leer' },
+      ] } },
+  { name: 'Agentur, IT und Beratung', passt: (b) => /agentur|marketing|werbe|unternehmenskommunikation|(^|[^a-zäöüß])pr([^a-zäöüß]|$)|design|software|it-dienst|systemhaus|(^|[^a-zäöüß])it([^a-zäöüß]|$)|digital|spieleentwickl|webentwickl|medien|film|video|fotograf|unternehmensberat/i.test(b),
+    aenderung: { titel: 'Kundenprojekte', einheit: 'Kundenprojekt', einheitPlural: 'Kundenprojekte', status: P_STATUS('In Arbeit', 'Pausiert', 'Abgeschlossen', 'Abgebrochen') } },
+];
+
 const VORLAGEN: Record<string, { grund: Vorlage; fein: Feinschliff[] }> = {
   'kfz-bestand': { grund: KFZ_BESTAND, fein: KFZ_FEINSCHLIFF },
+  'projekte': { grund: PROJEKTE, fein: PROJEKTE_FEINSCHLIFF },
 };
 
 export function bekannteModule(): string[] {
@@ -181,6 +261,9 @@ export function mitKunde(v: Vorlage, k?: KundenEinstellung | null): Vorlage {
     }
   }
   if (k.standkostenTag !== undefined) e.standkostenTag = zahlOder(k.standkostenTag, e.standkostenTag);
+  // Paket 310: Warnschwellen der Projekte (Tage 0–365, Prozent 0–100)
+  if (k.warnTage !== undefined && e.warnTage !== undefined) e.warnTage = Math.min(365, Math.trunc(zahlOder(k.warnTage, e.warnTage)));
+  if (k.warnProzent !== undefined && e.warnProzent !== undefined) e.warnProzent = Math.min(100, Math.trunc(zahlOder(k.warnProzent, e.warnProzent)));
   return e;
 }
 
