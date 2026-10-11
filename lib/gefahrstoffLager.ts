@@ -225,3 +225,64 @@ export function lagerplatzSauber(s: unknown): string | null {
   const t = String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
   return t || null;
 }
+
+// ---------------------------------------------------------------------------
+// Paket 319 (G2a Teil 2): QR-Aushang am Lagerplatz + Handy-Ansicht
+// ---------------------------------------------------------------------------
+
+/** Pfad der Handy-Ansicht — unter „Mein Bereich", den jeder Beschäftigte öffnen darf (mit Login). */
+export const HANDY_PFAD = '/dashboard/mein-bereich/gefahrstoffe';
+
+/** Vergleichsschlüssel für Lagerplätze: Groß/klein und Leerzeichen egal. */
+export function platzSchluessel(s: unknown): string {
+  return String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/** Adresse hinter dem QR-Code eines Lagerplatzes. Ohne Herkunft: nur der Pfad. */
+export function platzUrl(herkunft: string, platz: string): string {
+  const basis = String(herkunft ?? '').replace(/\/+$/, '');
+  const p = lagerplatzSauber(platz);
+  return `${basis}${HANDY_PFAD}${p ? `?platz=${encodeURIComponent(p)}` : ''}`;
+}
+
+export type PlatzEintrag = { platz: string; anzahl: number };
+
+/** Alle Lagerplätze mit Anzahl Stoffe, alphabetisch; Schreibweise des ersten Eintrags gewinnt. */
+export function plaetzeMitAnzahl(liste: { lagerplatz?: string | null }[] | null | undefined): PlatzEintrag[] {
+  const m = new Map<string, PlatzEintrag>();
+  for (const g of liste ?? []) {
+    const p = lagerplatzSauber(g?.lagerplatz);
+    if (!p) continue;
+    const k = platzSchluessel(p);
+    const e = m.get(k);
+    if (e) e.anzahl++; else m.set(k, { platz: p, anzahl: 1 });
+  }
+  return [...m.values()].sort((a, b) => a.platz.localeCompare(b.platz, 'de'));
+}
+
+/** Stoffe an einem Platz (leerer Platz = alle), alphabetisch. */
+export function stoffeAmPlatz<T extends { lagerplatz?: string | null; bezeichnung?: string | null }>(liste: T[] | null | undefined, platz: unknown): T[] {
+  const k = platzSchluessel(platz);
+  return (liste ?? [])
+    .filter((g) => !k || platzSchluessel(g.lagerplatz) === k)
+    .sort((a, b) => String(a.bezeichnung ?? '').localeCompare(String(b.bezeichnung ?? ''), 'de'));
+}
+
+/** SVG-Pfad aus einer QR-Matrix (lib/qr.ts) mit Ruhezone von 4 Modulen. */
+export function qrSvg(matrix: boolean[][], dunkel = '#000000'): string {
+  const n = matrix.length;
+  if (!n) return '';
+  const rand = 4;
+  const g = n + rand * 2;
+  const felder: string[] = [];
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (matrix[y][x]) felder.push(`M${x + rand} ${y + rand}h1v1h-1z`);
+  const farbe = /^#[0-9a-fA-F]{6}$/.test(dunkel) ? dunkel : '#000000';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g} ${g}" shape-rendering="crispEdges"><rect width="${g}" height="${g}" fill="#ffffff"/><path d="${felder.join('')}" fill="${farbe}"/></svg>`;
+}
+
+/** Betriebsanweisung für die Handy-Ansicht — ehrlich: ARGONAUT hat nur das Datum, nicht das Dokument. */
+export function betriebsanweisungText(am: unknown): { ok: boolean; text: string } {
+  if (!istTag(am)) return { ok: false, text: 'Betriebsanweisung fehlt — bitte bei der Geschäftsleitung melden, bevor mit dem Stoff gearbeitet wird' };
+  const [j, m, t] = String(am).split('-');
+  return { ok: true, text: `Betriebsanweisung vom ${t}.${m}.${j} — hängt am Arbeitsplatz aus bzw. liegt bei der Geschäftsleitung` };
+}

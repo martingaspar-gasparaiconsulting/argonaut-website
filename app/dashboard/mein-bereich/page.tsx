@@ -398,6 +398,12 @@ export default function MeinBereichPage() {
         {!loading && <MeineUnterschrift />}
         {/* Paket 164: Zwei-Faktor-Anmeldung */}
         {!loading && <ZweiFaktorKarte zurueck="/dashboard/mein-bereich" />}
+        {/* Paket 319: Gefahrstoffe & Sicherheitsdatenblätter (GefStoffV) — fuer alle Beschaeftigten */}
+        {!loading && (
+          <div style={{ margin: '0 0 14px' }}>
+            <a href="/dashboard/mein-bereich/gefahrstoffe" style={styles.linkBtn}>☣️ Gefahrstoffe &amp; Sicherheitsdatenblätter</a>
+          </div>
+        )}
 
         {!loading && kontoOhneProfil && (
           <div style={styles.stateBox}>

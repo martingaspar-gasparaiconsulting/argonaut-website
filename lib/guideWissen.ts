@@ -338,7 +338,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     zweck: 'Das Gefahrstoffverzeichnis nach § 6 GefStoffV: je Stoff Einstufung, Menge, Arbeitsbereich, Sicherheitsdatenblatt, Betriebsanweisung, Lagerklasse (TRGS 510) und Lagerplatz. Verknüpft mit dem Artikel kommt die Menge aus dem Lager und das Sicherheitsdatenblatt aus den Produkt-Dokumenten. CMR-Stoffe werden erkannt.',
     wer: 'chef',
     werText: 'Der Chef pflegt das Verzeichnis. Alle Beschäftigten können es lesen und das Sicherheitsdatenblatt öffnen.',
-    schritte: ['Stoff anlegen: Name, H-Sätze, Piktogramme, Menge', 'Artikel verknüpfen: Bestand aus dem Lager, Vorschlag für den Mengenbereich, SDB aus den Produkt-Dokumenten', 'Ohne Artikel (z. B. Reinigungsmittel): eigene SDB-Datei als PDF hochladen', 'Lagerklasse und Lagerplatz aus Abschnitt 7 des Sicherheitsdatenblatts eintragen', 'Rot = Pflichtangabe fehlt, gelb = Hinweis; „🔔 Erinnern" bei altem Sicherheitsdatenblatt', '„⬇ CSV" oder „🖨 Drucken" für die Akte'],
+    schritte: ['Stoff anlegen: Name, H-Sätze, Piktogramme, Menge', 'Artikel verknüpfen: Bestand aus dem Lager, Vorschlag für den Mengenbereich, SDB aus den Produkt-Dokumenten', 'Ohne Artikel (z. B. Reinigungsmittel): eigene SDB-Datei als PDF hochladen', 'Lagerklasse und Lagerplatz aus Abschnitt 7 des Sicherheitsdatenblatts eintragen', 'Rot = Pflichtangabe fehlt, gelb = Hinweis; „🔔 Erinnern" bei altem Sicherheitsdatenblatt', '„⬇ CSV" oder „🖨 Drucken" für die Akte', '„🔳 QR-Aushang": je Lagerplatz ein Blatt zum Aufhängen — der QR öffnet die Handy-Ansicht'],
     probe: { anlegen: 'Stoff „Test" anlegen.', loeschen: '✕ am Stoff.' },
   },
 

@@ -11,6 +11,8 @@
 // Lager, SDB aus den Produkt-Dokumenten), eigene SDB-Datei für Stoffe ohne
 // Artikel, Lagerklasse nach TRGS 510 (nur Feld), Lagerplatz, Erinnerung bei
 // altem SDB. SDB öffnen über /api/gefahrstoff/sdb (60-Sekunden-Link).
+// Paket 319 (G2a Teil 2): „🔳 QR-Aushang" je Lagerplatz (Druckbogen) —
+// der QR führt auf die Handy-Ansicht unter Mein Bereich (Login, alle Beschäftigten).
 // Logik: lib/qualitaet.ts + lib/gefahrstoffLager.ts (getestet).
 // SQL: supabase-sql/ps2-qualitaet.sql + p318-gefahrstoff-2.sql.
 // Unterpfad von /dashboard/nachweise (erbt dessen Freigabe).
@@ -24,7 +26,9 @@ import { csvText } from '@/lib/csvSchreiben';
 import {
   LAGERKLASSEN, lagerklasseText, lagerInfo, besteArtikelSdb, sdbQuelle, sdbPfad, dateiPruefen,
   sdbIstAlt, sdbErinnerungsTag, erinnerungsTitel, zusatzHinweise, lagerplatzSauber, type ArtikelSdb,
+  plaetzeMitAnzahl, stoffeAmPlatz, platzUrl, qrSvg, HANDY_PFAD,
 } from '@/lib/gefahrstoffLager';
+import { qrMatrix } from '@/lib/qr';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -194,6 +198,31 @@ export default function GefahrstoffeSeite() {
     w.document.close(); w.focus(); w.print();
   }
 
+  function qrAushang() {
+    const plaetze = plaetzeMitAnzahl(zeilen);
+    if (plaetze.length === 0) { setFehler('Noch kein Lagerplatz eingetragen — bitte zuerst bei den Stoffen den Lagerplatz angeben.'); return; }
+    const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+    const herkunft = window.location.origin;
+    const seiten = plaetze.map((p) => {
+      const url = platzUrl(herkunft, p.platz);
+      let svg = '';
+      try { svg = qrSvg(qrMatrix(url)); } catch { svg = ''; }
+      const stoffe = stoffeAmPlatz(zeilen, p.platz).map((z) => `<li><b>${esc(String(z.bezeichnung ?? ''))}</b>${z.signalwort ? ` · ${esc(z.signalwort)}` : ''}${(z.piktogramme ?? []).length ? ` · ${esc((z.piktogramme ?? []).join(' '))}` : ''}${z.lagerklasse ? ` · LGK ${esc(z.lagerklasse)}` : ''}</li>`).join('');
+      return `<section><div class="kopf">GEFAHRSTOFFE</div><h1>${esc(p.platz)}</h1><div class="qr">${svg}</div>`
+        + `<p class="gross">QR-Code mit dem Handy scannen:<br>Sicherheitsdatenblatt und Betriebsanweisung</p>`
+        + `<p class="klein">Anmeldung mit dem ARGONAUT-Zugang nötig · ${esc(url.replace(/^https?:\/\//, ''))}</p>`
+        + `<ul>${stoffe}</ul><p class="klein">Stand ${datumDe(heute)} · Notfall: Abschnitt 4 und 5 des Sicherheitsdatenblatts · Notruf 112</p></section>`;
+    }).join('');
+    const w = window.open('', '_blank');
+    if (!w) { setFehler('Das Druckfenster wurde blockiert — bitte Pop-ups für ARGONAUT erlauben.'); return; }
+    w.document.write(`<html lang="de"><head><title>QR-Aushang Gefahrstoffe</title><style>`
+      + `body{font-family:Arial,sans-serif;color:#111;margin:0}section{page-break-after:always;padding:28px 36px;text-align:center}`
+      + `.kopf{display:inline-block;background:#c00;color:#fff;font-weight:800;letter-spacing:2px;padding:6px 16px;border-radius:4px}`
+      + `h1{font-size:34px;margin:14px 0}.qr svg{width:300px;height:300px}.gross{font-size:20px;font-weight:700}.klein{font-size:11px;color:#444}`
+      + `ul{text-align:left;max-width:520px;margin:14px auto;font-size:15px;line-height:1.5}</style></head><body>${seiten}</body></html>`);
+    w.document.close(); w.focus(); w.print();
+  }
+
   const bearbeiten = (z: Zeile) => { setDatei(null); setArtikelSuche(''); setForm({
     artikel_id: z.artikel_id ?? '', lagerklasse: z.lagerklasse ?? '', lagerplatz: z.lagerplatz ?? '',
     id: z.id, bezeichnung: z.bezeichnung ?? '', hersteller: z.hersteller ?? '', h_saetze: z.h_saetze ?? '', piktogramme: z.piktogramme ?? [],
@@ -228,6 +257,8 @@ export default function GefahrstoffeSeite() {
             {istChef && <button style={primaer} onClick={() => { setForm({ ...LEER }); setDatei(null); setArtikelSuche(''); setOk(null); }}>＋ Gefahrstoff</button>}
             {zeilen.length > 0 && <button style={knopf} onClick={csv}>⬇ CSV</button>}
             {zeilen.length > 0 && <button style={knopf} onClick={drucken}>🖨 Drucken</button>}
+            {istChef && zeilen.length > 0 && <button style={knopf} onClick={qrAushang} title="Je Lagerplatz ein Blatt mit QR-Code zum Aufhängen">🔳 QR-Aushang</button>}
+            <a style={{ ...knopf, textDecoration: 'none' }} href={HANDY_PFAD}>📱 Handy-Ansicht</a>
             <span style={{ color: rot ? C.danger : C.textDim, fontSize: 14 }}>{zeilen.length} Stoffe · {rot} mit fehlenden Angaben{cmr ? ` · ${cmr} CMR-Stoff${cmr === 1 ? '' : 'e'}` : ''}</span>
           </div>
 
