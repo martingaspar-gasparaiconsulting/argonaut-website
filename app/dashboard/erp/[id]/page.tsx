@@ -9,6 +9,7 @@ import {
   artText, RPC_BUCHEN, type BewegungAnzeige,
 } from "@/lib/lagerBuchung";
 import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
+import ProduktDokumente from './ProduktDokumente';
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · BLOCK 8 ERP · E3 Artikel-Detailseite
@@ -623,6 +624,9 @@ export default function ArtikelDetail() {
           labelStil={labelStil}
         />
       </div>
+
+      {/* Paket 315 (S1): Produkt-Dokumente */}
+      <ProduktDokumente artikelId={artikel.id} artikelName={artikel.bezeichnung} />
 
       {/* Historie */}
       <div style={{ ...card, padding: 0, overflowX: "auto" }}>

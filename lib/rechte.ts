@@ -326,6 +326,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📥 Einkauf', href: '/dashboard/einkauf', modul: 'einkauf', ebene: 3, sensibel: true, gruppe: 'lager' },
   { label: '📦 ERP/Lager', href: '/dashboard/erp', modul: 'erp', ebene: 3, gruppe: 'lager' },
   { label: '🏬 Lager je Filiale', href: '/dashboard/erp/lager', modul: 'erp', ebene: 3, gruppe: 'lager' },
+  // Paket 315 (S1): Datenblätter, Zertifikate, Anleitungen je Artikel; Shop-Download
+  { label: '📑 Produkt-Dokumente', href: '/dashboard/erp/dokumente', modul: 'erp', ebene: 3, gruppe: 'lager' },
   { label: '🪪 Führerscheinkontrolle', href: '/dashboard/erp/fuhrpark/fuehrerschein', modul: 'erp', ebene: 3, gruppe: 'lager' },
   { label: '📒 Fahrtenbuch', href: '/dashboard/erp/fuhrpark/fahrtenbuch', modul: 'erp', ebene: 3, gruppe: 'lager' },
   { label: '🧩 Varianten & Matrix', href: '/dashboard/varianten', modul: 'varianten', ebene: 3, gruppe: 'lager' },

@@ -847,6 +847,10 @@ function seiteCss(ci: CiWeb): string {
     '.ao-prod-body{padding:14px 16px;display:flex;flex-direction:column;gap:8px;flex:1}',
     '.ao-prod-name{font-weight:800;color:var(--p);font-size:17px}',
     '.ao-prod-text{color:#51606f;font-size:14px;line-height:1.5;flex:1}',
+    // Paket 315: Produkt-Dokumente (Datenblätter) unter der Beschreibung
+    '.ao-prod-doks{display:flex;flex-direction:column;gap:4px;margin:2px 0 6px}',
+    '.ao-prod-dok{font-size:13px;color:#2d3a48;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}',
+    '.ao-prod-dok-art{display:inline-block;font-size:11px;font-weight:700;border:1px solid #9aa6b4;border-radius:999px;padding:0 6px;margin-right:6px;text-decoration:none;color:#51606f}',
     '.ao-prod-fuss{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}',
     '.ao-prod-preis{font-weight:900;color:#1c2430;font-size:18px}',
     '.ao-prod-mwst{display:block;font-size:11px;color:#8290a0;font-weight:600;margin-top:1px}',

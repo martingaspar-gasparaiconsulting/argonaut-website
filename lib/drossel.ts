@@ -111,6 +111,8 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 10, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },
   ],
+  // Paket 315: Datenblatt-Download aus dem Shop (Link direkt aus dem Speicher)
+  'oeffentlich/produkt-dokument': [{ art: 'ip', max: 120, fensterSek: STUNDE }],
   'oeffentlich/shop-bestellung': [
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 5, fensterSek: TAG },

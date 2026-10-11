@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { oeffentlichBestellbar, shopMwst } from '@/lib/shopUebernahme';
+import { shopDokumente, type Dok } from '@/lib/produktDokumente';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,6 +63,21 @@ export async function GET(req: Request) {
 
     // Paket 204: nur aktive Artikel mit Preis über 0 (vorher auch 0,00 € und ausgelistete).
     const rows = ((antwort.data as unknown as ArtikelRow[]) ?? []).filter(oeffentlichBestellbar);
+
+    // Paket 315 (S1): Produkt-Dokumente zum Herunterladen — nur „im Shop", aktuell, nicht abgelaufen.
+    // Fehlt die Tabelle noch (SQL p315 nicht gelaufen), bleibt der Shop ohne Dokumente sichtbar.
+    const dokJe: Record<string, Dok[]> = {};
+    if (rows.length) {
+      const { data: doks, error: dokFehler } = await db.from('produkt_dokument')
+        .select('id, artikel_id, art, titel, sprache, version, gueltig_bis, im_shop, aktuell')
+        .eq('owner_user_id', inh.owner_user_id as string)
+        .eq('im_shop', true).eq('aktuell', true)
+        .in('artikel_id', rows.map((r) => r.id))
+        .limit(1000);
+      if (!dokFehler) for (const d of (doks as Dok[]) ?? []) (dokJe[String(d.artikel_id)] ??= []).push(d);
+    }
+    const heute = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
+
     const produkte = rows.map((r) => ({
       id: r.id,
       name: (r.bezeichnung || 'Produkt').toString(),
@@ -72,6 +88,7 @@ export async function GET(req: Request) {
       bild: (r.shop_bild_url || '').toString(),
       bestand: r.aktueller_bestand == null ? null : Number(r.aktueller_bestand),
       mwst: shopMwst(r.shop_mwst),
+      dokumente: shopDokumente(dokJe[r.id] ?? [], heute),
     }));
 
     return NextResponse.json({ produkte, anzahl: produkte.length });

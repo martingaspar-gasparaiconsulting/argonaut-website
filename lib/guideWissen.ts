@@ -616,6 +616,21 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Artikel „Test".', loeschen: 'Löschen-Knopf am Artikel.' },
     landetIn: [{ text: 'Kasse', href: '/dashboard/kasse' }, { text: 'Einkauf', href: '/dashboard/einkauf' }],
   },
+  '/dashboard/erp/dokumente': {
+    zweck: 'Datenblätter, Zertifikate und Anleitungen aller Artikel auf einen Blick: Sicherheitsdatenblatt, Technisches Merkblatt, Leistungserklärung, Konformitätserklärung, Spezifikation, Zertifikat, Anleitung — als PDF je Artikel mit Sprache, Version, Ausgabe und „gültig bis“. Eine Ampel zeigt abgelaufene und bald ablaufende Dokumente sowie Sicherheitsdatenblätter, deren Fassung älter als drei Jahre ist. Auf Wunsch stehen die Dokumente im Shop am Produkt zum Herunterladen und als Wissen fürs Team im Firmen-Wissen. ARGONAUT erstellt oder prüft keine Datenblätter — es verwaltet die Fassung, die der Betrieb hochlädt.',
+    wer: 'beide',
+    werText: 'Sehen: wer ERP/Lager hat. Hochladen, „in den Shop“, „als ersetzt markieren“, Erinnerung: mit Schreibrecht ERP/Lager. Löschen und „Ins Firmen-Wissen“ nur die Geschäftsleitung.',
+    schritte: [
+      'Hochgeladen wird in der Artikel-Akte (ERP/Lager → Artikel öffnen) bei „📑 Produkt-Dokumente“: „＋ Dokument hochladen“, PDF wählen (bis 20 MB), Art, Sprache, Version, Ausgabedatum und bei Zertifikaten „gültig bis“ angeben, „💾 Hochladen“',
+      'Der Haken „Im Shop am Produkt zum Herunterladen anbieten“ ist bei Sicherheitsdatenblatt, Merkblatt, Leistungs- und Konformitätserklärung und Anleitung vorbelegt. Im Shop erscheinen nur aktuelle, nicht abgelaufene Dokumente von Artikeln, die im Shop stehen',
+      'Neue Fassung: einfach neu hochladen. Bei Sicherheitsdatenblatt, Merkblatt, Leistungserklärung und Spezifikation setzt die Datenbank die alte Fassung derselben Sprache automatisch auf „ersetzt“',
+      'Diese Seite: „Handlungsbedarf“ zeigt rote und gelbe Dokumente; „Shop-Artikel ohne Dokument“ listet Shop-Artikel, an denen noch nichts hängt',
+      '„🔔 Erinnern“ an einem Dokument mit „gültig bis“ legt 30 Tage vorher eine Erinnerung an',
+      'Nur die Geschäftsleitung: „Ins Firmen-Wissen“ (fürs Team freigegeben, der Wissens-Chat kann daraus antworten) und „Löschen“ (mit Rückfrage)',
+    ],
+    probe: { anlegen: 'An einem Testartikel ein beliebiges PDF als „Sonstiges Dokument“ hochladen.', loeschen: 'In der Artikel-Akte als Chef „Löschen“, „Ja, löschen“.' },
+    landetIn: [{ text: 'ERP/Lager', href: '/dashboard/erp' }, { text: 'Shop', href: '/dashboard/shop' }, { text: 'Firmen-Wissen', href: '/dashboard/documents/wissen' }],
+  },
   '/dashboard/netzwerk': {
     zweck: 'Mit anderen Betrieben zusammenarbeiten, ohne Mail-Pingpong: Subunternehmer, andere Gewerke am Bau, Freelancer, Zulieferer, Reinigungs- und Hausmeisterdienste. Sie verbinden sich per Einladungs-Code und geben einander Aufträge an einem Projekt, Auftrag oder Objekt (im Kfz-Handel auch am Fahrzeug). Der Partner sieht nur den Namen und seine Aufgabe — nie Kunde, Adresse, Preise oder andere Aufträge — und nur, solange der Auftrag läuft. Beide Seiten schreiben Einträge mit Fotos, die sich nicht ändern lassen. Die Rechnung des Partners übernehmen Sie per Knopf in den Belegeingang.',
     wer: 'beide',

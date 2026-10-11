@@ -124,6 +124,18 @@
       }).catch(function () { set('Verbindung fehlgeschlagen. Bitte später erneut.', false); btn.disabled = false; btn.textContent = bt; });
   }
 
+  // --- Paket 315: Produkt-Dokumente (Datenblätter, Zertifikate) zum Herunterladen ---
+  function doks(p) {
+    var d = (p && p.dokumente) || [];
+    if (!d.length) return '';
+    var h = '<div class="ao-prod-doks">', i;
+    for (i = 0; i < d.length; i++) {
+      h += '<a class="ao-prod-dok" target="_blank" rel="noopener" href="/api/oeffentlich/produkt-dokument?seite=' + encodeURIComponent(seite) + '&amp;id=' + encodeURIComponent(d[i].id) + '">'
+        + '<span class="ao-prod-dok-art">' + esc(d[i].art) + '</span>' + esc(d[i].name) + ' (PDF)</a>';
+    }
+    return h + '</div>';
+  }
+
   // --- Produkt-Kacheln ---
   function karten() {
     var grid = c.querySelector('.ao-shop-grid'); if (!grid) return;
@@ -135,6 +147,7 @@
         + (p.bild ? '<div class="ao-prod-bild" style="background-image:url(' + encodeURI(p.bild) + ')"></div>' : '<div class="ao-prod-bild ao-prod-kein"></div>')
         + '<div class="ao-prod-body"><div class="ao-prod-name">' + esc(p.name) + '</div>'
         + (p.beschreibung ? '<div class="ao-prod-text">' + esc(p.beschreibung) + '</div>' : '')
+        + doks(p)
         + '<div class="ao-prod-fuss"><span class="ao-prod-preis">' + eur(p.preis) + '<span class="ao-prod-mwst">inkl. MwSt</span></span>'
         + '<button type="button" class="btn ao-prod-add" data-id="' + esc(p.id) + '">In den Warenkorb</button></div></div></div>';
     }

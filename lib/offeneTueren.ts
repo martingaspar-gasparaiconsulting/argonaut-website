@@ -64,6 +64,7 @@ export const OFFENE_TUEREN: OffeneTuer[] = [
   { pfad: 'oeffentlich/fahrzeugmappe/absenden', grund: 'Fahrzeugmappe absenden -> Ankauf In Bewertung beim Autohaus, Mail an Betrieb und Eingangsbestaetigung an den Verkaeufer', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/web-newsletter', grund: 'Newsletter-Anmeldung der Kundenwebseite (Double-Opt-in)', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/shop-produkte', grund: 'freigeschaltete Produkte eines Shops', schutz: 'seite', geprueft: true },
+  { pfad: 'oeffentlich/produkt-dokument', grund: 'Datenblatt/Zertifikat (PDF) eines Shop-Produkts herunterladen — nur im Shop freigegeben, aktuell, nicht abgelaufen, Artikel im Shop', schutz: 'seite', geprueft: true },
   { pfad: 'oeffentlich/shop-bestellung', grund: 'Bestellung im Shop des Betriebs', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/widerruf', grund: 'elektronischer Widerruf (Pflicht-Knopf)', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/buchung', grund: 'Terminbuchung auf der Kundenwebseite', schutz: 'formular', geprueft: true },
