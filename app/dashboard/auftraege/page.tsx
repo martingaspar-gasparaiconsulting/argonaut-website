@@ -9,11 +9,17 @@ import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 import { NurVoll } from "../_components/Ansicht";
 import Leerzustand from "../_components/Leerzustand";
+import AuftragAnsicht from "./AuftragAnsicht";
+import { useAuftragVorlage } from "./useAuftragVorlage";
+import { auftragAmpel, suchePasst, zaehlen, nichtAbgerechnet, type AmpelKey } from "@/lib/auftragVorlage";
 
 // ============================================================
 // ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Cockpit A2 + A5 + A6
 // Auftrags-Cockpit MIT "Aus Verkaufschance" (frische Phase, Doppel-Schutz)
 // Route: /dashboard/auftraege
+// Paket 311 (BV2 Aufträge): Wörter, Status-Namen, Spalten, Termin-Ampel und
+// gespeicherte Suchen nach Branchen-Vorlage (lib/branchenVorlage.ts,
+// Modul „auftraege"); die Geschäftsleitung passt die Ansicht an.
 // ============================================================
 
 const supabase = createBrowserClient(
@@ -87,7 +93,34 @@ type Auftrag = {
   brutto_summe: number | null;
   waehrung: string | null;
   created_at: string;
+  lieferdatum: string | null;
+  kontakt_id: string | null;
+  firma_id: string | null;
+  rechnung_id: string | null;
 };
+
+const AMPEL_FARBE: Record<AmpelKey, string> = { rot: C.danger, gelb: C.warn, gruen: C.green, neutral: C.textDim };
+
+function kontaktName(k: any): string {
+  return k?.anzeigename || [k?.vorname, k?.nachname].filter(Boolean).join(" ").trim() || k?.name || k?.email || "";
+}
+function firmaName(f: any): string {
+  return f?.name || f?.firmenname || f?.firma || "";
+}
+/** Namen nur für die Kunden der geladenen Aufträge holen — in Paketen, damit die Adresse kurz bleibt. */
+async function ladeNamen(tabelle: "kontakte" | "firmen", ids: string[], name: (r: any) => string): Promise<Record<string, string>> {
+  const aus: Record<string, string> = {};
+  const eindeutig = Array.from(new Set(ids.filter(Boolean)));
+  for (let i = 0; i < eindeutig.length; i += 80) {
+    const { data } = await supabase.from(tabelle).select("*").in("id", eindeutig.slice(i, i + 80));
+    for (const r of (data as any[]) || []) aus[r.id] = name(r);
+  }
+  return aus;
+}
+function datumKurz(d: string | null | undefined): string {
+  if (!d || !/^\d{4}-\d{2}-\d{2}/.test(d)) return "—";
+  return `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
+}
 
 type Chance = {
   id: string;
@@ -119,6 +152,14 @@ export default function AuftraegeCockpit() {
 
   const [suche, setSuche] = useState("");
   const [statusFilter, setStatusFilter] = useState<"alle" | StatusKey>("alle");
+  // Paket 311: Branchen-Vorlage, gespeicherte Suche, Kundennamen, Ansicht-Panel
+  const { vorlage, einstellung, setEinstellung, betrieb, istChef, fein, statusLabel, sichtbar, spaltenLabel } = useAuftragVorlage(supabase);
+  const [schnell, setSchnell] = useState<string | null>(null);
+  const [namen, setNamen] = useState<Record<string, string>>({});
+  const [zeigeAnsicht, setZeigeAnsicht] = useState(false);
+  const heuteTag = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+  const warnTage = vorlage.warnTage ?? 7;
+  const terminWort = vorlage.terminWort ?? "Lieferdatum";
 
   const [modalOffen, setModalOffen] = useState(false);
   const [neuTitel, setNeuTitel] = useState("");
@@ -141,7 +182,7 @@ export default function AuftraegeCockpit() {
     let q = supabase
       .from("auftraege")
       .select(
-        "id, auftragsnummer, titel, status, auftragsdatum, netto_summe, brutto_summe, waehrung, created_at"
+        "id, auftragsnummer, titel, status, auftragsdatum, netto_summe, brutto_summe, waehrung, created_at, lieferdatum, kontakt_id, firma_id, rechnung_id"
       );
     if (sid) q = q.or(standortOrFilter(sid));
     const { data, error } = await q.order("created_at", { ascending: false });
@@ -150,7 +191,16 @@ export default function AuftraegeCockpit() {
       setFehler(error.message);
       setAuftraege([]);
     } else {
-      setAuftraege((data as any) || []);
+      const liste = ((data as any) || []) as Auftrag[];
+      setAuftraege(liste);
+      // Kundennamen nachladen (fail-open: ohne Namen bleibt die Spalte leer)
+      try {
+        const [k, f] = await Promise.all([
+          ladeNamen("kontakte", liste.map((a) => a.kontakt_id || ""), kontaktName),
+          ladeNamen("firmen", liste.map((a) => a.firma_id || ""), firmaName),
+        ]);
+        setNamen({ ...k, ...f });
+      } catch { /* ohne Namen */ }
     }
     setLoading(false);
   }
@@ -159,30 +209,34 @@ export default function AuftraegeCockpit() {
     laden();
   }, []);
 
+  const kundeVon = (a: Auftrag): string => (a.firma_id && namen[a.firma_id]) || (a.kontakt_id && namen[a.kontakt_id]) || "";
+
   const kpi = useMemo(() => {
-    let offen = 0;
-    let inArbeit = 0;
-    let fertig = 0;
     let summeNetto = 0;
-    for (const a of auftraege) {
-      const s = a.status as StatusKey;
-      if (s === "entwurf" || s === "beauftragt") offen++;
-      if (s === "in_bearbeitung") inArbeit++;
-      if (s === "abgeschlossen") fertig++;
-      if (s !== "storniert") summeNetto += Number(a.netto_summe) || 0;
-    }
-    return { offen, inArbeit, fertig, summeNetto };
-  }, [auftraege]);
+    for (const a of auftraege) if (a.status !== "storniert") summeNetto += Number(a.netto_summe) || 0;
+    return { ...zaehlen(auftraege, heuteTag, warnTage), summeNetto: r2(summeNetto) };
+  }, [auftraege, heuteTag, warnTage]);
 
   const gefiltert = useMemo(() => {
     const q = suche.trim().toLowerCase();
+    const regel = schnell ? vorlage.suchen.find((x) => x.key === schnell)?.regel ?? null : null;
     return auftraege.filter((a) => {
       if (statusFilter !== "alle" && a.status !== statusFilter) return false;
+      if (regel && !suchePasst(regel, a, auftragAmpel(a, heuteTag, warnTage), heuteTag)) return false;
       if (!q) return true;
-      const heu = `${a.titel} ${a.auftragsnummer || ""}`.toLowerCase();
+      const heu = `${a.titel} ${a.auftragsnummer || ""} ${kundeVon(a)}`.toLowerCase();
       return heu.includes(q);
     });
-  }, [auftraege, suche, statusFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auftraege, suche, statusFilter, schnell, vorlage, heuteTag, warnTage, namen]);
+
+  // Spalten der Liste: Titel und Status immer, der Rest nach Ansicht
+  const SP_BREITE: Record<string, string> = { nummer: "130px", kunde: "minmax(140px, 1fr)", datum: "110px", termin: "130px", netto: "130px", abrechnung: "110px" };
+  const extraSpalten = vorlage.spalten.filter((x) => x.sichtbar && SP_BREITE[x.key]).map((x) => x.key);
+  const vorTitel = extraSpalten.filter((k) => k === "nummer");
+  const nachStatus = extraSpalten.filter((k) => k !== "nummer");
+  const raster = [...vorTitel.map((k) => SP_BREITE[k]), "minmax(180px, 2fr)", "160px", ...nachStatus.map((k) => SP_BREITE[k]), "44px"].join(" ");
+  const rasterBreite = 180 + 160 + 44 + extraSpalten.reduce((n, k) => n + (k === "kunde" ? 140 : parseInt(SP_BREITE[k], 10)), 0) + 12 * (extraSpalten.length + 2) + 36;
 
   async function anlegen() {
     const titel = neuTitel.trim();
@@ -380,11 +434,11 @@ export default function AuftraegeCockpit() {
                 letterSpacing: "-0.5px",
               }}
             >
-              📄 Aufträge
+              📄 {vorlage.titel}
             </h1>
             <p style={{ color: C.textDim, margin: "6px 0 0", fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
-              Verträge & Aufträge verwalten — von der Beauftragung bis zum
-              Abschluss.
+              {vorlage.einheitPlural} verwalten — von der Beauftragung bis zur Rechnung.
+              {fein ? ` · Vorlage ${fein}` : ""}
             </p>
           </div>
 
@@ -421,7 +475,24 @@ export default function AuftraegeCockpit() {
                 fontFamily: "'DM Sans', sans-serif",
               }}
             >
-              + Neuer Auftrag
+              + {vorlage.einheit} anlegen
+            </button>
+            <button
+              onClick={() => setZeigeAnsicht((x) => !x)}
+              title="Status-Namen, Spalten und Termin-Ampel"
+              style={{
+                background: "transparent",
+                color: C.textDim,
+                border: `1px solid ${C.border}`,
+                borderRadius: 10,
+                padding: "12px 14px",
+                fontSize: 'clamp(14px, 1.25vw, 20px)',
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              ⚙️ Ansicht
             </button>
           </div>
         </div>
@@ -434,10 +505,10 @@ export default function AuftraegeCockpit() {
             marginBottom: 28,
           }}
         >
-          <KpiKarte label="Offen" wert={String(kpi.offen)} hint="Entwurf + Beauftragt" farbe={C.cyan} />
-          <KpiKarte label="In Bearbeitung" wert={String(kpi.inArbeit)} hint="laufende Aufträge" farbe={C.green} />
-          <KpiKarte label="Abgeschlossen" wert={String(kpi.fertig)} hint="fertige Aufträge" farbe={C.gold} />
-          <KpiKarte label="Auftragswert" wert={geld(kpi.summeNetto)} hint="netto, ohne stornierte" farbe={C.lila} />
+          <KpiKarte label="Offen" wert={String(kpi.offen)} hint={`${statusLabel("entwurf")} + ${statusLabel("beauftragt")}`} farbe={C.cyan} />
+          <KpiKarte label={statusLabel("in_bearbeitung")} wert={String(kpi.inArbeit)} hint={kpi.ueberfaellig > 0 ? `${kpi.ueberfaellig} mit ${terminWort} überschritten` : `laufende ${vorlage.einheitPlural}`} farbe={kpi.ueberfaellig > 0 ? C.danger : C.green} />
+          <KpiKarte label={statusLabel("abgeschlossen")} wert={String(kpi.fertig)} hint={kpi.offenAbrechnung > 0 ? `davon ${kpi.offenAbrechnung} nicht abgerechnet` : "alle abgerechnet"} farbe={kpi.offenAbrechnung > 0 ? C.warn : C.gold} />
+          <KpiKarte label="Auftragswert" wert={geld(kpi.summeNetto)} hint={`netto, ohne ${statusLabel("storniert").toLowerCase()}`} farbe={C.lila} />
         </div>
 
         <div
@@ -452,7 +523,7 @@ export default function AuftraegeCockpit() {
           <input
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
-            placeholder="🔍 Suche nach Titel oder Auftragsnummer…"
+            placeholder={`🔍 Suche nach Titel, Nummer oder ${spaltenLabel("kunde")}…`}
             style={{
               flex: "1 1 260px",
               background: C.navy2,
@@ -468,10 +539,23 @@ export default function AuftraegeCockpit() {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <FilterChip aktiv={statusFilter === "alle"} onClick={() => setStatusFilter("alle")} label="Alle" farbe={C.textDim} />
             {STATUS_REIHENFOLGE.map((s) => (
-              <FilterChip key={s} aktiv={statusFilter === s} onClick={() => setStatusFilter(s)} label={STATUS[s].label} farbe={STATUS[s].farbe} />
+              <FilterChip key={s} aktiv={statusFilter === s} onClick={() => setStatusFilter(s)} label={statusLabel(s)} farbe={STATUS[s].farbe} />
             ))}
           </div>
         </div>
+
+        {/* Paket 311: gespeicherte Suchen der Branchen-Vorlage */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 18 }}>
+          <span style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>Schnellsuche:</span>
+          {vorlage.suchen.map((x) => (
+            <FilterChip key={x.key} aktiv={schnell === x.key} onClick={() => setSchnell(schnell === x.key ? null : x.key)} label={x.name} farbe={x.regel === "ampel=rot" ? C.danger : C.gold} />
+          ))}
+        </div>
+
+        {zeigeAnsicht && betrieb && (
+          <AuftragAnsicht vorlage={vorlage} einstellung={einstellung} betrieb={betrieb} istChef={istChef} fein={fein}
+            onGespeichert={(e) => setEinstellung(e)} onSchliessen={() => setZeigeAnsicht(false)} />
+        )}
 
         {fehler && (
           <div
@@ -494,13 +578,14 @@ export default function AuftraegeCockpit() {
             background: C.navy2,
             border: `1px solid ${C.border}`,
             borderRadius: 14,
-            overflow: "hidden",
+            overflowX: "auto",
           }}
         >
+          <div style={{ minWidth: rasterBreite }}>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "140px 1fr 160px 150px 44px",
+              gridTemplateColumns: raster,
               gap: 12,
               padding: "14px 18px",
               borderBottom: `1px solid ${C.border}`,
@@ -511,10 +596,12 @@ export default function AuftraegeCockpit() {
               letterSpacing: "0.5px",
             }}
           >
-            <div>Nummer</div>
+            {vorTitel.map((k) => <div key={k}>{spaltenLabel(k)}</div>)}
             <div>Titel</div>
             <div>Status</div>
-            <div style={{ textAlign: "right" }}>Netto</div>
+            {nachStatus.map((k) => (
+              <div key={k} style={{ textAlign: k === "netto" ? "right" : "left" }}>{k === "termin" ? terminWort : spaltenLabel(k)}</div>
+            ))}
             <div></div>
           </div>
 
@@ -526,7 +613,7 @@ export default function AuftraegeCockpit() {
             auftraege.length === 0 ? (
               <Leerzustand
                 icon="📄"
-                titel="Noch keine Aufträge"
+                titel={`Noch keine ${vorlage.einheitPlural}`}
                 text="Der Auftrag ist die Mitte Ihres Betriebs: Aus ihm entstehen Termine, Material, Zeiten und am Ende die Rechnung."
                 schritte={["Oben rechts einen Auftrag anlegen", "Kunde und Leistung eintragen", "Aus dem fertigen Auftrag die Rechnung erzeugen"]}
               />
@@ -534,20 +621,39 @@ export default function AuftraegeCockpit() {
               <div style={{ padding: 48, textAlign: "center" }}>
                 <div style={{ fontSize: 'clamp(40px, 3.5vw, 56px)', marginBottom: 12 }}>🔍</div>
                 <div style={{ color: C.textDim, fontSize: 'clamp(15px, 1.31vw, 21px)' }}>
-                  Keine Aufträge passen zu Suche und Filter.
+                  Keine {vorlage.einheitPlural} passen zu Suche und Filter.
                 </div>
               </div>
             )
           ) : (
             gefiltert.map((a) => {
               const s = (STATUS[a.status as StatusKey] || STATUS.entwurf) as (typeof STATUS)[StatusKey];
+              const ampel = auftragAmpel(a, heuteTag, warnTage);
+              const zelle = (k: string) => {
+                if (k === "nummer") return <div key={k} style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: "monospace" }}>{a.auftragsnummer || "—"}</div>;
+                if (k === "kunde") return <div key={k} style={{ color: kundeVon(a) ? "#fff" : C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{kundeVon(a) || "—"}</div>;
+                if (k === "datum") return <div key={k} style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)' }}>{datumKurz(a.auftragsdatum)}</div>;
+                if (k === "termin") return (
+                  <div key={k} style={{ color: a.lieferdatum ? AMPEL_FARBE[ampel] : C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: ampel === "rot" || ampel === "gelb" ? 700 : 400 }}
+                    title={ampel === "rot" ? `${terminWort} überschritten` : ampel === "gelb" ? `${terminWort} bald` : undefined}>
+                    {ampel === "rot" ? "● " : ampel === "gelb" ? "○ " : ""}{datumKurz(a.lieferdatum)}
+                  </div>
+                );
+                if (k === "netto") return <div key={k} style={{ textAlign: "right", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>{geld(a.netto_summe, a.waehrung || "EUR")}</div>;
+                if (k === "abrechnung") return (
+                  <div key={k} style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: a.rechnung_id ? C.green : nichtAbgerechnet(a) ? C.warn : C.textDim, fontWeight: nichtAbgerechnet(a) ? 700 : 400 }}>
+                    {a.rechnung_id ? "✓ Rechnung" : nichtAbgerechnet(a) ? "offen" : "—"}
+                  </div>
+                );
+                return null;
+              };
               return (
                 <div
                   key={a.id}
                   onClick={() => router.push(`/dashboard/auftraege/${a.id}`)}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "140px 1fr 160px 150px 44px",
+                    gridTemplateColumns: raster,
                     gap: 12,
                     padding: "16px 18px",
                     borderBottom: `1px solid ${C.border}`,
@@ -558,10 +664,8 @@ export default function AuftraegeCockpit() {
                   onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <div style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', fontFamily: "monospace" }}>
-                    {a.auftragsnummer || "—"}
-                  </div>
-                  <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 600 }}>{a.titel}</div>
+                  {vorTitel.map(zelle)}
+                  <div style={{ fontSize: 'clamp(15px, 1.31vw, 21px)', fontWeight: 600, minWidth: 0, overflowWrap: "anywhere" }}>{a.titel}</div>
                   <div>
                     <span
                       style={{
@@ -577,12 +681,10 @@ export default function AuftraegeCockpit() {
                         fontWeight: 600,
                       }}
                     >
-                      {s.icon} {s.label}
+                      {s.icon} {statusLabel(a.status || "entwurf")}
                     </span>
                   </div>
-                  <div style={{ textAlign: "right", fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 600 }}>
-                    {geld(a.netto_summe, a.waehrung || "EUR")}
-                  </div>
+                  {nachStatus.map(zelle)}
                   <div style={{ textAlign: "right" }}>
                     <button
                       onClick={(e) => {
@@ -608,10 +710,11 @@ export default function AuftraegeCockpit() {
               );
             })
           )}
+          </div>
         </div>
 
         <p style={{ color: C.textDim, fontSize: 'clamp(12.5px, 1.13vw, 18px)', marginTop: 14, textAlign: "center" }}>
-          {gefiltert.length} von {auftraege.length} Aufträgen
+          {gefiltert.length} von {auftraege.length} {vorlage.einheitPlural}
         </p>
       </div>
 
@@ -642,7 +745,7 @@ export default function AuftraegeCockpit() {
             }}
           >
             <h2 style={{ fontFamily: "var(--font-dm-sans), sans-serif", fontSize: 'clamp(20px, 1.75vw, 28px)', fontWeight: 700, margin: "0 0 4px" }}>
-              Neuer Auftrag
+              {vorlage.einheit} anlegen
             </h2>
             <p style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: "0 0 20px" }}>
               Kopf-Daten anlegen — Positionen fügen Sie danach auf der Detailseite hinzu.
@@ -665,7 +768,7 @@ export default function AuftraegeCockpit() {
               <select value={neuStatus} onChange={(e) => setNeuStatus(e.target.value as StatusKey)} style={inputStyle}>
                 {STATUS_REIHENFOLGE.map((s) => (
                   <option key={s} value={s} style={{ background: C.navy2 }}>
-                    {STATUS[s].label}
+                    {statusLabel(s)}
                   </option>
                 ))}
               </select>
@@ -746,7 +849,7 @@ export default function AuftraegeCockpit() {
               Auftrag aus Verkaufschance
             </h2>
             <p style={{ color: C.textDim, fontSize: 'clamp(13px, 1.13vw, 18px)', margin: "0 0 20px" }}>
-              Wähle eine Chance — Titel, Kontakt, Firma & Wert werden übernommen. Gewonnene stehen oben.
+              Titel, Kontakt, Firma und Wert der gewählten Chance werden übernommen. Gewonnene stehen oben.
             </p>
 
             <div style={{ overflowY: "auto", flex: 1, margin: "0 -4px" }}>
@@ -758,7 +861,7 @@ export default function AuftraegeCockpit() {
                 <div style={{ padding: 30, textAlign: "center", color: C.textDim, fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
                   Keine offenen Verkaufschancen ohne Auftrag gefunden.
                   <br />
-                  Markiere im CRM eine Chance als „gewonnen" — dann taucht sie hier auf.
+                  Eine im CRM als „gewonnen" markierte Chance erscheint hier.
                 </div>
               ) : (
                 chancen.map((ch) => {

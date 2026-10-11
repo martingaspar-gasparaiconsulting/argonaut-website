@@ -540,10 +540,10 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Eine Anfrage an sich selbst.', loeschen: '„Stornieren" oder „Löschen".' },
   },
   '/dashboard/auftraege': {
-    zweck: 'Beauftragte Arbeiten mit Status. Ein Auftrag entsteht neu oder „Aus Verkaufschance" und verbindet Angebot, Termine, Einsätze und Rechnung.',
+    zweck: 'Beauftragte Arbeiten mit Status. Ein Auftrag entsteht neu oder „Aus Verkaufschance" und verbindet Angebot, Termine, Einsätze und Rechnung. Wörter und Status passen sich Ihrer Branche an (z. B. „Ausführungstermin“ und „Fertiggestellt“ im Handwerk, „Frist“ in der Kanzlei, „Buchung“ bei Veranstaltern).',
     wer: 'beide',
-    werText: 'Wer das Modul hat.',
-    schritte: ['„📥 Aus Verkaufschance" oder neuen Auftrag anlegen', 'Status pflegen', 'Einsätze im Dispo-Board planen', 'Zum Schluss abrechnen'],
+    werText: 'Wer das Modul hat. Die Ansicht („⚙️ Ansicht“) legt die Geschäftsleitung für alle fest.',
+    schritte: ['„📥 Aus Verkaufschance" oder „+ … anlegen"', 'Status und Termin pflegen — ein überschrittener Termin färbt sich rot', '„Schnellsuche“: Termin überschritten, Termin in 7 Tagen, fertig aber nicht abgerechnet, ohne Kunde, alte Entwürfe', '„⚙️ Ansicht“: Status-Namen, Spalten, Wort für den Termin und die Schwelle für „Achtung“ anpassen', 'Einsätze im Dispo-Board planen', 'Zum Schluss abrechnen'],
     probe: { anlegen: 'Auftrag „Test".', loeschen: 'Löschen-Knopf am Auftrag (mit Rückfrage).' },
     landetIn: [{ text: 'Dispo-Board', href: '/dashboard/dispo' }, { text: 'Rechnungen', href: '/dashboard/rechnungen' }],
   },

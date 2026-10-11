@@ -36,6 +36,8 @@ export type Vorlage = {
   warnTage?: number;
   /** … und weniger als so viel Prozent der Aufgaben erledigt sind. */
   warnProzent?: number;
+  /** Paket 311 (BV2 Aufträge): Aufträge — Wort für den Termin („Lieferdatum", „Ausführungstermin", „Frist"). */
+  terminWort?: string;
 };
 
 /** Was der Kunde je Modul speichern darf (alles optional). */
@@ -49,6 +51,7 @@ export type KundenEinstellung = {
   standkostenTag?: number;
   warnTage?: number;
   warnProzent?: number;
+  terminWort?: string;
 };
 
 type Feinschliff = { name: string; passt: (branche: string) => boolean; aenderung: Partial<Vorlage> };
@@ -108,6 +111,13 @@ const KFZ_FEINSCHLIFF: Feinschliff[] = [
     aenderung: { ampel: { gruenBis: 90, gelbBis: 150 }, standkostenTag: 18 } },
 ];
 
+// --- Branchen-Erkennung, gemeinsam für Projekte und Aufträge (Paket 311) ----
+// Umlautfeste Wortgrenzen: (^|[^a-zäöüß]) statt \b (\b kennt keine Umlaute).
+const RX_KANZLEI = /steuer|anwalt|anwält|kanzlei|notar/i;
+const RX_EVENT = /event|veranstalt|catering|hochzeit|messebau/i;
+const RX_HANDWERK = /elektriker|elektrobetrieb|elektroinstall|elektrotechnik|elektrohandwerk|sanitär|heizung|(^|[^a-zäöüß])shk([^a-zäöüß]|$)|klima|maler|lackierer|schreiner|tischler|bauunternehm|hochbau|tiefbau|rohbau|dachdecker|bodenleger|raumausstatter|glaser|schlosser|schwei(ß|ss)|haustechnik|gebäudetechnik|gebäudeautomation|rollladen|sonnenschutz|trockenbau|innenausbau|estrich|fliese|gerüst|erdbau|bagger|parkett|zaunbau|pflaster|schwimmbad|gartengestaltung|landschaftsbau|zimmer(ei|er)|maurer|solar|photovoltaik|metallbau|stuckateur|kaminkehrer|schornstein|bauhandwerk|(^|[^a-zäöüß])bau([^a-zäöüß]|$)/i;
+const RX_AGENTUR = /agentur|marketing|werbe|unternehmenskommunikation|(^|[^a-zäöüß])pr([^a-zäöüß]|$)|design|software|it-dienst|systemhaus|(^|[^a-zäöüß])it([^a-zäöüß]|$)|digital|spieleentwickl|webentwickl|medien|film|video|fotograf|unternehmensberat/i;
+
 // --- Grund-Vorlage: Projekte für alle Bereiche (Paket 310, BV2a) ------------
 // Status-SCHLÜSSEL bleiben in allen Branchen gleich (aktiv, pausiert,
 // abgeschlossen, abgebrochen — so stehen sie in der Datenbank); jede Branche
@@ -150,7 +160,7 @@ const PROJEKTE: Vorlage = {
 
 /** Reihenfolge zählt: der erste Treffer gewinnt. */
 const PROJEKTE_FEINSCHLIFF: Feinschliff[] = [
-  { name: 'Kanzlei und Beratung', passt: (b) => /steuer|anwalt|anwält|kanzlei|notar/i.test(b),
+  { name: 'Kanzlei und Beratung', passt: (b) => RX_KANZLEI.test(b),
     aenderung: { titel: 'Mandate', einheit: 'Mandat', einheitPlural: 'Mandate', status: P_STATUS('In Bearbeitung', 'Ruht', 'Erledigt', 'Beendet'),
       suchen: [
         { key: 'kritisch', name: 'Kritisch', regel: 'ampel=rot' },
@@ -159,7 +169,7 @@ const PROJEKTE_FEINSCHLIFF: Feinschliff[] = [
         { key: 'dringend', name: 'Hoch und dringend', regel: 'prio=hoch' },
         { key: 'ohneVerantwortlich', name: 'Ohne Bearbeiter', regel: 'verantwortlich=leer' },
       ] } },
-  { name: 'Veranstaltungen', passt: (b) => /event|veranstalt|catering|hochzeit|messebau/i.test(b),
+  { name: 'Veranstaltungen', passt: (b) => RX_EVENT.test(b),
     aenderung: { titel: 'Veranstaltungen', einheit: 'Veranstaltung', einheitPlural: 'Veranstaltungen', status: P_STATUS('In Planung', 'Pausiert', 'Durchgeführt', 'Abgesagt'),
       suchen: [
         { key: 'kritisch', name: 'Kritisch', regel: 'ampel=rot' },
@@ -168,7 +178,7 @@ const PROJEKTE_FEINSCHLIFF: Feinschliff[] = [
         { key: 'dringend', name: 'Hoch und dringend', regel: 'prio=hoch' },
         { key: 'ohneVerantwortlich', name: 'Ohne Verantwortlichen', regel: 'verantwortlich=leer' },
       ] } },
-  { name: 'Handwerk und Bau', passt: (b) => /elektriker|elektrobetrieb|elektroinstall|elektrotechnik|elektrohandwerk|sanitär|heizung|(^|[^a-zäöüß])shk([^a-zäöüß]|$)|klima|maler|lackierer|schreiner|tischler|bauunternehm|hochbau|tiefbau|rohbau|dachdecker|bodenleger|raumausstatter|glaser|schlosser|schwei(ß|ss)|haustechnik|gebäudetechnik|gebäudeautomation|rollladen|sonnenschutz|trockenbau|innenausbau|estrich|fliese|gerüst|erdbau|bagger|parkett|zaunbau|pflaster|schwimmbad|gartengestaltung|landschaftsbau|zimmer(ei|er)|maurer|solar|photovoltaik|metallbau|stuckateur|kaminkehrer|schornstein|bauhandwerk|(^|[^a-zäöüß])bau([^a-zäöüß]|$)/i.test(b),
+  { name: 'Handwerk und Bau', passt: (b) => RX_HANDWERK.test(b),
     aenderung: { titel: 'Baustellen', einheit: 'Baustelle', einheitPlural: 'Baustellen', status: P_STATUS('In Ausführung', 'Ruht', 'Fertiggestellt', 'Storniert'),
       suchen: [
         { key: 'kritisch', name: 'Kritisch', regel: 'ampel=rot' },
@@ -177,13 +187,80 @@ const PROJEKTE_FEINSCHLIFF: Feinschliff[] = [
         { key: 'dringend', name: 'Hoch und dringend', regel: 'prio=hoch' },
         { key: 'ohneVerantwortlich', name: 'Ohne Bauleiter', regel: 'verantwortlich=leer' },
       ] } },
-  { name: 'Agentur, IT und Beratung', passt: (b) => /agentur|marketing|werbe|unternehmenskommunikation|(^|[^a-zäöüß])pr([^a-zäöüß]|$)|design|software|it-dienst|systemhaus|(^|[^a-zäöüß])it([^a-zäöüß]|$)|digital|spieleentwickl|webentwickl|medien|film|video|fotograf|unternehmensberat/i.test(b),
+  { name: 'Agentur, IT und Beratung', passt: (b) => RX_AGENTUR.test(b),
     aenderung: { titel: 'Kundenprojekte', einheit: 'Kundenprojekt', einheitPlural: 'Kundenprojekte', status: P_STATUS('In Arbeit', 'Pausiert', 'Abgeschlossen', 'Abgebrochen') } },
+];
+
+// --- Grund-Vorlage: Aufträge für alle Bereiche (Paket 311, BV2 Aufträge) ------------
+// Status-SCHLÜSSEL wie in der Datenbank und in der Auftrags-Akte (entwurf,
+// beauftragt, in_bearbeitung, abgeschlossen, storniert) — nur die Wörter
+// wechseln je Branche. Ampel: Termin vorbei = rot, Termin in warnTage = gelb.
+const A_STATUS = (entwurf: string, beauftragt: string, arbeit: string, fertig: string, storno: string): VorlageStatus[] => [
+  { key: 'entwurf', label: entwurf, farbe: 'gold' },
+  { key: 'beauftragt', label: beauftragt, farbe: 'info' },
+  { key: 'in_bearbeitung', label: arbeit, farbe: 'ok' },
+  { key: 'abgeschlossen', label: fertig, farbe: 'ok' },
+  { key: 'storniert', label: storno, farbe: 'dim' },
+];
+const A_SPALTEN = (kunde: string, termin: string): VorlageSpalte[] => [
+  { key: 'nummer', label: 'Nummer', sichtbar: true },
+  { key: 'kunde', label: kunde, sichtbar: true },
+  { key: 'datum', label: 'Auftragsdatum', sichtbar: false },
+  { key: 'termin', label: termin, sichtbar: true },
+  { key: 'netto', label: 'Netto', sichtbar: true },
+  { key: 'abrechnung', label: 'Abgerechnet', sichtbar: true },
+];
+const A_SUCHEN = (termin: string, fertig: string, kunde: string): VorlageSuche[] => [
+  { key: 'ueberfaellig', name: `${termin} überschritten`, regel: 'ampel=rot' },
+  { key: 'bald', name: `${termin} in 7 Tagen`, regel: 'termin<=7' },
+  { key: 'nichtAbgerechnet', name: `${fertig}, nicht abgerechnet`, regel: 'abgerechnet=nein' },
+  { key: 'ohneKunde', name: `Ohne ${kunde}`, regel: 'kunde=leer' },
+  { key: 'liegt', name: 'Entwurf seit über 30 Tagen', regel: 'entwurf>30' },
+];
+
+const AUFTRAEGE: Vorlage = {
+  modul: 'auftraege',
+  titel: 'Aufträge',
+  einheit: 'Auftrag',
+  einheitPlural: 'Aufträge',
+  status: A_STATUS('Entwurf', 'Beauftragt', 'In Bearbeitung', 'Abgeschlossen', 'Storniert'),
+  sparten: [],
+  spalten: A_SPALTEN('Kunde', 'Lieferdatum'),
+  ampel: { gruenBis: 0, gelbBis: 0 },
+  suchen: A_SUCHEN('Lieferdatum', 'Abgeschlossen', 'Kunde'),
+  standkostenTag: 0,
+  warnTage: 7,
+  terminWort: 'Lieferdatum',
+};
+
+/** Reihenfolge wie bei den Projekten: der erste Treffer gewinnt. */
+const AUFTRAEGE_FEINSCHLIFF: Feinschliff[] = [
+  { name: 'Kanzlei und Beratung', passt: (b) => RX_KANZLEI.test(b),
+    aenderung: { status: A_STATUS('Entwurf', 'Erteilt', 'In Bearbeitung', 'Erledigt', 'Zurückgezogen'), terminWort: 'Frist',
+      spalten: A_SPALTEN('Mandant', 'Frist'), suchen: A_SUCHEN('Frist', 'Erledigt', 'Mandant') } },
+  { name: 'Veranstaltungen', passt: (b) => RX_EVENT.test(b),
+    aenderung: { titel: 'Buchungen', einheit: 'Buchung', einheitPlural: 'Buchungen', warnTage: 14,
+      status: A_STATUS('Option', 'Gebucht', 'In Vorbereitung', 'Durchgeführt', 'Abgesagt'), terminWort: 'Veranstaltungstag',
+      spalten: A_SPALTEN('Kunde', 'Veranstaltungstag'),
+      suchen: [
+        { key: 'ueberfaellig', name: 'Termin vorbei, nicht abgeschlossen', regel: 'ampel=rot' },
+        { key: 'bald', name: 'Veranstaltung in 14 Tagen', regel: 'termin<=14' },
+        { key: 'nichtAbgerechnet', name: 'Durchgeführt, nicht abgerechnet', regel: 'abgerechnet=nein' },
+        { key: 'ohneKunde', name: 'Ohne Kunde', regel: 'kunde=leer' },
+        { key: 'liegt', name: 'Option seit über 30 Tagen', regel: 'entwurf>30' },
+      ] } },
+  { name: 'Handwerk und Bau', passt: (b) => RX_HANDWERK.test(b),
+    aenderung: { status: A_STATUS('Entwurf', 'Beauftragt', 'In Ausführung', 'Fertiggestellt', 'Storniert'), terminWort: 'Ausführungstermin',
+      spalten: A_SPALTEN('Kunde', 'Ausführungstermin'), suchen: A_SUCHEN('Ausführungstermin', 'Fertiggestellt', 'Kunde') } },
+  { name: 'Agentur, IT und Beratung', passt: (b) => RX_AGENTUR.test(b),
+    aenderung: { status: A_STATUS('Entwurf', 'Beauftragt', 'In Arbeit', 'Abgenommen', 'Storniert'), terminWort: 'Abgabetermin',
+      spalten: A_SPALTEN('Kunde', 'Abgabetermin'), suchen: A_SUCHEN('Abgabetermin', 'Abgenommen', 'Kunde') } },
 ];
 
 const VORLAGEN: Record<string, { grund: Vorlage; fein: Feinschliff[] }> = {
   'kfz-bestand': { grund: KFZ_BESTAND, fein: KFZ_FEINSCHLIFF },
   'projekte': { grund: PROJEKTE, fein: PROJEKTE_FEINSCHLIFF },
+  'auftraege': { grund: AUFTRAEGE, fein: AUFTRAEGE_FEINSCHLIFF },
 };
 
 export function bekannteModule(): string[] {
@@ -264,6 +341,8 @@ export function mitKunde(v: Vorlage, k?: KundenEinstellung | null): Vorlage {
   // Paket 310: Warnschwellen der Projekte (Tage 0–365, Prozent 0–100)
   if (k.warnTage !== undefined && e.warnTage !== undefined) e.warnTage = Math.min(365, Math.trunc(zahlOder(k.warnTage, e.warnTage)));
   if (k.warnProzent !== undefined && e.warnProzent !== undefined) e.warnProzent = Math.min(100, Math.trunc(zahlOder(k.warnProzent, e.warnProzent)));
+  // Paket 311: Termin-Wort der Aufträge (nur wo die Vorlage eins hat)
+  if (typeof k.terminWort === 'string' && k.terminWort.trim() && e.terminWort !== undefined) e.terminWort = k.terminWort.trim().slice(0, 30);
   return e;
 }
 

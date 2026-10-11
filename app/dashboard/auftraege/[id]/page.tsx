@@ -9,12 +9,15 @@ import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
 import PartnerKnopf from "../../netzwerk/PartnerKnopf";
 import { useDarfAbrechnen } from "../../_components/useDarfAbrechnen";
 import { leseZahlOder, centRunden } from '@/lib/zahlen';
+import { useAuftragVorlage } from "../useAuftragVorlage";
 
 // ============================================================
 // ARGONAUT OS · Modul 5 · Detailseite A3+A4+A6+A7+A8+A9
 // Positionen, Live-Summen, Status-Workflow, PDF, KI-Assistent (RAG + Voice)
 // A9: Andock-Nahtstelle Modul 6 "Rechnung" (Rechnung-erstellen-Stub)
 // Route: /dashboard/auftraege/[id]
+// Paket 311 (BV2 Aufträge): Status-Namen und Wort für den Termin aus der
+// Branchen-Vorlage (Modul „auftraege") — Schlüssel bleiben gleich.
 //
 // P46-A3 (14.07.26): <VerknuepfungsLeiste> unter dem Kopf ergänzt — gibt einen
 // klickbaren Sprung zu Kunde + Rechnung. Schließt die Lücke, dass das
@@ -111,6 +114,8 @@ export default function AuftragDetail() {
   const params = useParams();
   // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
   const darfAbrechnen = useDarfAbrechnen();
+  const { statusLabel, vorlage } = useAuftragVorlage(supabase);
+  const S = (k: StatusKey) => ({ ...STATUS[k], label: statusLabel(k) });
   const id = Array.isArray(params.id) ? params.id[0] : (params.id as string);
 
   const [loading, setLoading] = useState(true);
@@ -782,17 +787,17 @@ export default function AuftragDetail() {
                 fontSize: 'clamp(14px, 1.25vw, 20px)',
               }}
             >
-              ⚪ Storniert
+              ⚪ {statusLabel("storniert")}
             </span>
             <span style={{ color: C.textDim, fontSize: 'clamp(13.5px, 1.19vw, 19px)' }}>
-              Zählt nicht zum Auftragswert. Mit „Reaktivieren" zurück in den Entwurf.
+              Zählt nicht zum Auftragswert. Mit „Reaktivieren" zurück auf „{statusLabel("entwurf")}".
             </span>
           </div>
         ) : (
           <>
             <div style={{ display: "flex", alignItems: "flex-start", overflowX: "auto", paddingBottom: 4 }}>
               {FLUSS.map((s, i) => {
-                const info = STATUS[s];
+                const info = S(s);
                 const erledigt = i < aktIndex;
                 const aktuell = i === aktIndex;
                 const istNaechster = i === aktIndex + 1;
@@ -886,14 +891,14 @@ export default function AuftragDetail() {
               <div style={{ marginTop: 14, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.textDim }}>
                 Nächster Schritt:{" "}
                 <span style={{ color: C.gold, fontWeight: 600 }}>
-                  {STATUS[naechster].icon} {STATUS[naechster].label}
+                  {S(naechster).icon} {S(naechster).label}
                 </span>{" "}
                 — oder frei eine Stufe anklicken.
               </div>
             )}
             {!naechster && aktIndex === FLUSS.length - 1 && (
               <div style={{ marginTop: 14, fontSize: 'clamp(13px, 1.13vw, 18px)', color: C.green, fontWeight: 600 }}>
-                ✓ Auftrag abgeschlossen.
+                ✓ {vorlage.einheit}: {statusLabel("abgeschlossen")}.
               </div>
             )}
           </>
@@ -918,7 +923,7 @@ export default function AuftragDetail() {
               <input type="date" value={auftragsdatum} onChange={(e) => aendern(setAuftragsdatum, e.target.value)} style={inputStyle} />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Lieferdatum</label>
+              <label style={labelStyle}>{vorlage.terminWort ?? "Lieferdatum"}</label>
               <input type="date" value={lieferdatum} onChange={(e) => aendern(setLieferdatum, e.target.value)} style={inputStyle} />
             </div>
           </div>
