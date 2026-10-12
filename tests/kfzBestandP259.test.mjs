@@ -174,7 +174,9 @@ test('SQL 259: additiv, Besitzer = Betrieb, Preisverlauf nur per Auslöser, Lös
 
 test('Seite, Menü, Hub und Wissen', async () => {
   const p = lies('app/dashboard/kfz/bestand/page.tsx');
-  assert.match(p, /finPruefen\(form\.fin\)/);
+  // Paket 333: FIN-Prüfung zog nach lib/einzelstueckBestand (stueckZeile), gilt dort für Kfz-Arten
+  assert.match(p, /stueckZeile\(form,/);
+  assert.match(lies('lib/einzelstueckBestand.ts'), /finPruefen\(f\.fin\)/);
   assert.match(p, /vorlageFuer\(MODUL, branche\)/);
   assert.match(p, /mitKunde\(v, einstellung\)/);
   assert.match(p, /insert\(\{ \.\.\.zeile, owner_user_id: besitzer, interne_nr: nr \}\)/, 'Neues Fahrzeug gehört dem Betrieb');

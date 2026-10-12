@@ -99,11 +99,11 @@ export function ezAusEingabe(roh: string | null | undefined): string | null {
   return null;
 }
 
-/** Freitextsuche über Marke, Modell, Variante, Kennzeichen, FIN, interne Nr. */
+/** Freitextsuche über Marke, Modell, Variante, Kennzeichen, FIN, interne Nr., Seriennummer (P333). */
 export function passtSuche(b: Bestand, q: string): boolean {
   const s = q.trim().toLowerCase();
   if (!s) return true;
-  const heu = [b.marke, b.modell, b.variante, b.kennzeichen, b.fin, b.interne_nr].map((x) => String(x ?? '').toLowerCase()).join(' ');
+  const heu = [b.marke, b.modell, b.variante, b.kennzeichen, b.fin, b.interne_nr, b.seriennr].map((x) => String(x ?? '').toLowerCase()).join(' ');
   return s.split(/\s+/).every((w) => heu.includes(w));
 }
 
@@ -229,14 +229,16 @@ export type ListenZeile = { nr: string; fahrzeug: string; ezKm: string; kennzeic
 export function listenZeilen(
   liste: Bestand[], heuteIso: string,
   standortName: (id: string | null) => string, statusLabel: (key: string) => string,
+  /** Paket 333 (BV2b): Wörter der Art — „2019 · 1.250 Bh" statt „EZ · km", Kennung statt Kennzeichen. Fehlt = Kfz wie bisher. */
+  nachArt?: { datumZaehler: (b: Bestand) => string; kennung?: (b: Bestand) => string },
 ): ListenZeile[] {
   return liste.map((b) => {
     const t = standtage(b, heuteIso);
     return {
       nr: b.interne_nr ?? '—',
       fahrzeug: [b.marke, b.modell, b.variante].filter(Boolean).join(' ') || '—',
-      ezKm: `${ezText(b.erstzulassung)} · ${b.km_stand !== null && b.km_stand !== undefined ? `${b.km_stand.toLocaleString('de-DE')} km` : '—'}`,
-      kennzeichen: b.kennzeichen ?? '—',
+      ezKm: nachArt ? nachArt.datumZaehler(b) : `${ezText(b.erstzulassung)} · ${b.km_stand !== null && b.km_stand !== undefined ? `${b.km_stand.toLocaleString('de-DE')} km` : '—'}`,
+      kennzeichen: nachArt?.kennung ? nachArt.kennung(b) : b.kennzeichen ?? '—',
       standort: standortName(b.standort_id),
       standtage: t === null ? (b.status === 'zulauf' ? 'Zulauf' : '—') : `${t}`,
       vk: euro(b.vk_brutto),

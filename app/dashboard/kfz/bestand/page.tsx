@@ -14,14 +14,24 @@
 // Paket 262 (K3): Titelbild je Fahrzeug in der Kartenansicht.
 // Paket 261 (K2): Klick auf ein Fahrzeug öffnet die Handelsakte
 // (/dashboard/kfz/bestand/[id]); „✎" bzw. ?bearbeiten=<id> öffnet das Formular.
+// Paket 333 (BV2b Teil 2): Liste und Formular nach Art des Einzelstücks
+// (lib/einzelstueckBestand.ts): Boot, Maschine, Uhr/Schmuck, Kunst/Antik,
+// Fahrrad, Gebrauchtware — eigene Wörter, Seriennummer statt FIN, Betriebs-
+// stunden statt km, Merkmale je Art. Ausgeblendete Felder bleiben unberührt.
+// Ohne SQL p332 (Spalte art fehlt) läuft alles wie bisher als Kfz.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties, type ReactNode } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { leseZahl, centRunden } from '@/lib/zahlen';
+import { artDef, istArt, type Art } from '@/lib/einzelstueck';
+import {
+  SPALTEN_P332, ART_SYMBOL, artAuswahl, stueckArt, formFelder, datumLabel, datumPlatzhalter, datumFuerForm, datumZaehler,
+  kennungText, merkmaleKurz, spaltenNachArt, suchPlatzhalter, stueckZeile, merkmaleFuerForm,
+} from '@/lib/einzelstueckBestand';
 import { vorlageFuer, mitKunde, feinschliffName, standtageAmpel, type KundenEinstellung, type Vorlage } from '@/lib/branchenVorlage';
 import {
-  standtage, finPruefen, ezText, ezAusEingabe, passtSuche, regelPasst, summen,
+  standtage, ezText, passtSuche, regelPasst, summen,
   preisNachProzent, naechsteNr, euro, psAusKw, finTreffer, listenZeilen, type Bestand, type FinTreffer,
 } from '@/lib/kfzBestand';
 import { bestandslistePdf } from '@/lib/kfzBestandPdf';
@@ -44,19 +54,22 @@ const FARBE: Record<string, string> = { ok: C.ok, warn: C.warn, bad: C.bad, info
 const SPALTEN = 'id, interne_nr, status, sparte, marke, modell, variante, fin, kennzeichen, erstzulassung, km_stand, leistung_kw, kraftstoff, farbe, farbcode, standort_id, eingang_am, verkauft_am, ek_netto, vk_brutto, besteuerung, inseriert, notiz';
 
 type Standort = { id: string; name: string };
-type Form = Record<'marke' | 'modell' | 'variante' | 'sparte' | 'status' | 'fin' | 'kennzeichen' | 'ez' | 'km' | 'kw' | 'kraftstoff' | 'farbe' | 'farbcode' | 'standort_id' | 'eingang_am' | 'ek' | 'vk' | 'besteuerung' | 'notiz', string>;
+type Form = Record<'art' | 'marke' | 'modell' | 'variante' | 'sparte' | 'status' | 'fin' | 'seriennr' | 'kennzeichen' | 'ez' | 'km' | 'bh' | 'kw' | 'kraftstoff' | 'farbe' | 'farbcode' | 'standort_id' | 'eingang_am' | 'ek' | 'vk' | 'besteuerung' | 'notiz', string> & { merkmale: Record<string, string | boolean> };
 
 function heute(): string { return new Date().toISOString().slice(0, 10); }
 function leer(v: Vorlage | null): Form {
-  return { marke: '', modell: '', variante: '', sparte: v?.sparten[0] ?? '', status: 'bestand', fin: '', kennzeichen: '', ez: '', km: '', kw: '', kraftstoff: '', farbe: '', farbcode: '', standort_id: '', eingang_am: heute(), ek: '', vk: '', besteuerung: '25a', notiz: '' };
+  const vArt = v?.art;
+  return { art: istArt(vArt) ? vArt : 'kfz', marke: '', modell: '', variante: '', sparte: v?.sparten[0] ?? '', status: 'bestand', fin: '', seriennr: '', kennzeichen: '', ez: '', km: '', bh: '', kw: '', kraftstoff: '', farbe: '', farbcode: '', standort_id: '', eingang_am: heute(), ek: '', vk: '', besteuerung: '25a', notiz: '', merkmale: {} };
 }
-function ausBestand(b: Bestand): Form {
-  const z = (n: number | null) => (n === null || n === undefined ? '' : String(n).replace('.', ','));
+function ausBestand(b: Bestand, betriebArt: Art): Form {
+  const z = (n: number | null | undefined) => (n === null || n === undefined ? '' : String(n).replace('.', ','));
+  const art = stueckArt(b, betriebArt);
   return {
-    marke: b.marke ?? '', modell: b.modell ?? '', variante: b.variante ?? '', sparte: b.sparte ?? '', status: b.status, fin: b.fin ?? '',
-    kennzeichen: b.kennzeichen ?? '', ez: b.erstzulassung ? ezText(b.erstzulassung) : '', km: z(b.km_stand), kw: z(b.leistung_kw),
+    art, marke: b.marke ?? '', modell: b.modell ?? '', variante: b.variante ?? '', sparte: b.sparte ?? '', status: b.status, fin: b.fin ?? '', seriennr: b.seriennr ?? '',
+    kennzeichen: b.kennzeichen ?? '', ez: datumFuerForm(art, b.erstzulassung), km: z(b.km_stand), bh: z(b.betriebsstunden), kw: z(b.leistung_kw),
     kraftstoff: b.kraftstoff ?? '', farbe: b.farbe ?? '', farbcode: b.farbcode ?? '', standort_id: b.standort_id ?? '',
     eingang_am: b.eingang_am ?? '', ek: z(b.ek_netto), vk: z(b.vk_brutto), besteuerung: b.besteuerung ?? '', notiz: b.notiz ?? '',
+    merkmale: merkmaleFuerForm(art, b.merkmale),
   };
 }
 function ganz(t: string): number | null { const n = leseZahl(t); return n === null || n < 0 ? null : Math.round(n); }
@@ -94,21 +107,33 @@ export default function FahrzeugbestandPage() {
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
   const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
   const [titelbild, setTitelbild] = useState<Record<string, string>>({});
+  const [mitArt, setMitArt] = useState(true); // P333: false, solange SQL p332 fehlt
 
   const vorlage = useMemo(() => {
     const v = vorlageFuer(MODUL, branche);
     return v ? mitKunde(v, einstellung) : null;
   }, [branche, einstellung]);
   const fein = useMemo(() => feinschliffName(MODUL, branche), [branche]);
+  const vorlageArt = vorlage?.art;
+  const betriebArt: Art = mitArt && istArt(vorlageArt) ? vorlageArt : 'kfz';
+  const spalten = useMemo(() => (vorlage ? spaltenNachArt(vorlage.spalten, betriebArt, mitArt, einstellung?.spaltenSichtbar) : []), [vorlage, betriebArt, mitArt, einstellung]);
+  const ff = formFelder(form.art, mitArt);
+  const fDef = artDef(mitArt ? form.art : 'kfz');
   const tag = heute();
 
   const ladeAlles = useCallback(async (betrieb: string) => {
-    const [b, s, e, p] = await Promise.all([
-      supabase.from('kfz_bestand').select(SPALTEN).order('eingang_am', { ascending: true, nullsFirst: false }),
+    const [b0, s, e, p] = await Promise.all([
+      supabase.from('kfz_bestand').select(`${SPALTEN}, ${SPALTEN_P332}`).order('eingang_am', { ascending: true, nullsFirst: false }),
       supabase.from('standorte').select('id, name').eq('aktiv', true).order('name'),
       supabase.from('modul_einstellung').select('einstellung').eq('owner_user_id', betrieb).eq('modul', MODUL).maybeSingle(),
       supabase.from('profiles').select('branche').eq('id', betrieb).maybeSingle(),
     ]);
+    // P333: ohne SQL p332 fehlen art/merkmale/betriebsstunden/seriennr -> wie bisher als Kfz weiter
+    let b = b0;
+    if (b0.error) {
+      const alt = await supabase.from('kfz_bestand').select(SPALTEN).order('eingang_am', { ascending: true, nullsFirst: false });
+      if (!alt.error) { b = alt as unknown as typeof b0; setMitArt(false); }
+    } else setMitArt(true);
     if (b.error) setFehler('Der Fahrzeugbestand ist noch nicht eingerichtet (SQL Paket 259 fehlt) oder Ihnen fehlt das Recht „KFZ".');
     setListe(((b.data as unknown) as Bestand[]) ?? []);
     setStandorte(((s.data as unknown) as Standort[]) ?? []);
@@ -172,41 +197,33 @@ export default function FahrzeugbestandPage() {
       && (fStatus || regel ? true : b.status !== 'archiv'));
   }, [liste, suche, fStatus, fSparte, fStandort, aktiveSuche, vorlage, tag]);
   const sum = useMemo(() => summen(gefiltert, tag), [gefiltert, tag]);
-  const sichtbar = (k: string) => vorlage?.spalten.find((s) => s.key === k)?.sichtbar ?? false;
+  const sichtbar = (k: string) => spalten.find((s) => s.key === k)?.sichtbar ?? false;
 
   function neuOeffnen() { setBearbeite(null); setNmExtra({}); setForm(leer(vorlage)); setFormOffen(true); setFehler(null); setOk(null); }
   function akteOeffnen(b: Bestand) { if (typeof window !== 'undefined') window.location.href = `/dashboard/kfz/bestand/${b.id}`; }
-  function bearbeiten(b: Bestand) { setBearbeite(b.id); setNmExtra({ ...(werteMap[b.id] ?? {}) }); setForm(ausBestand(b)); setFormOffen(true); setFehler(null); setOk(null); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  function bearbeiten(b: Bestand) { setBearbeite(b.id); setNmExtra({ ...(werteMap[b.id] ?? {}) }); setForm(ausBestand(b, betriebArt)); setFormOffen(true); setFehler(null); setOk(null); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
   async function speichern() {
     if (!uid || !besitzer) return;
-    if (!form.marke.trim() && !form.modell.trim()) { setFehler('Bitte mindestens Marke oder Modell angeben.'); return; }
-    const f = finPruefen(form.fin);
-    if (!f.ok) { setFehler(f.fehler); return; }
-    const ez = form.ez.trim() ? ezAusEingabe(form.ez) : null;
-    if (form.ez.trim() && !ez) { setFehler('Erstzulassung bitte als Monat/Jahr eingeben, z. B. 03/2022.'); return; }
-    const zeile = {
-      status: form.status || 'bestand', sparte: form.sparte || null, marke: form.marke.trim() || null, modell: form.modell.trim() || null,
-      variante: form.variante.trim() || null, fin: f.fin, kennzeichen: form.kennzeichen.trim().toUpperCase() || null, erstzulassung: ez,
-      km_stand: ganz(form.km), leistung_kw: ganz(form.kw), kraftstoff: form.kraftstoff.trim() || null, farbe: form.farbe.trim() || null,
-      farbcode: form.farbcode.trim() || null, standort_id: form.standort_id || null, eingang_am: form.eingang_am || null,
-      verkauft_am: form.status === 'verkauft' ? (liste.find((x) => x.id === bearbeite)?.verkauft_am ?? tag) : null,
-      ek_netto: geld(form.ek), vk_brutto: geld(form.vk), besteuerung: form.besteuerung || null, notiz: form.notiz.trim() || null,
-      aktualisiert_am: new Date().toISOString(),
-    };
+    // P333: Prüfen und Zeile bauen in lib/einzelstueckBestand (FIN nur bei Kfz-Arten über finPruefen,
+    // sonst Seriennummer; nur sichtbare Felder werden geschrieben, Ausgeblendetes bleibt unberührt).
+    const erg = stueckZeile(form, { mitArt, heute: tag, verkauftAmAlt: bearbeite ? (liste.find((x) => x.id === bearbeite)?.verkauft_am ?? null) : null });
+    if (!erg.ok) { setFehler(erg.fehler); return; }
+    const zeile = { ...erg.zeile, aktualisiert_am: new Date().toISOString() };
+    const wort = artDef(mitArt ? form.art : 'kfz').begriffe.einheit;
     setBusy(true); setFehler(null); setOk(null);
     try {
       if (bearbeite) {
         const { error } = await supabase.from('kfz_bestand').update(zeile).eq('id', bearbeite);
         if (error) { setFehler('Speichern fehlgeschlagen. Haben Sie das Schreibrecht für „KFZ"?'); return; }
         try { await speichereWerte(FELD_MODUL, bearbeite, besitzer, nmExtra); } catch { /* Eigene Felder optional */ }
-        setOk('Fahrzeug gespeichert.');
+        setOk(`${wort} gespeichert.`);
       } else {
         const nr = naechsteNr(liste.map((x) => x.interne_nr));
         const { data: neu, error } = await supabase.from('kfz_bestand').insert({ ...zeile, owner_user_id: besitzer, interne_nr: nr }).select('id').single();
         if (error) { setFehler(/duplicate|unique/i.test(error.message) ? 'Diese interne Nummer gibt es schon. Bitte die Seite neu laden.' : 'Speichern fehlgeschlagen. Haben Sie das Schreibrecht für „KFZ"?'); return; }
         try { if (neu) await speichereWerte(FELD_MODUL, (neu as { id: string }).id, besitzer, nmExtra); } catch { /* Eigene Felder optional */ }
-        setOk(`Fahrzeug ${nr} aufgenommen.`);
+        setOk(`${wort} ${nr} aufgenommen.`);
       }
       setFormOffen(false); setBearbeite(null);
       await ladeAlles(besitzer);
@@ -217,9 +234,9 @@ export default function FahrzeugbestandPage() {
     if (!besitzer) return;
     const { error } = await supabase.from('kfz_bestand').delete().eq('id', id);
     setLoeschFrage(null);
-    if (error) { setFehler('Löschen fehlgeschlagen. Nur die Geschäftsleitung kann Fahrzeuge löschen.'); return; }
+    if (error) { setFehler(`Löschen fehlgeschlagen. Nur die Geschäftsleitung kann ${vorlage?.einheitPlural ?? 'Einträge'} löschen.`); return; }
     setListe((l) => l.filter((x) => x.id !== id));
-    setOk('Fahrzeug gelöscht. Tipp: Statt zu löschen können Sie es auf „Archiv" setzen.');
+    setOk('Eintrag gelöscht. Tipp: Statt zu löschen können Sie ihn auf „Archiv" setzen.');
   }
 
   async function massen(art: 'status' | 'standort' | 'preis', wert: string) {
@@ -245,15 +262,15 @@ export default function FahrzeugbestandPage() {
       }
       await ladeAlles(besitzer);
       setAuswahl(new Set());
-      if (fehlerZahl) setFehler(`${fehlerZahl} von ${ids.length} Fahrzeugen konnten nicht geändert werden (Schreibrecht „KFZ"?).`);
-      else setOk(`${ids.length - uebersprungen} Fahrzeuge geändert${uebersprungen ? `, ${uebersprungen} ohne Verkaufspreis übersprungen` : ''}.`);
+      if (fehlerZahl) setFehler(`${fehlerZahl} von ${ids.length} Einträgen konnten nicht geändert werden (Schreibrecht „KFZ"?).`);
+      else setOk(`${ids.length - uebersprungen} ${vorlage?.einheitPlural ?? 'Einträge'} geändert${uebersprungen ? `, ${uebersprungen} ohne Verkaufspreis übersprungen` : ''}.`);
     } finally { setBusy(false); }
   }
 
   function einstOeffnen() {
     if (!vorlage) return;
     setEntwurf({
-      spaltenSichtbar: Object.fromEntries(vorlage.spalten.map((s) => [s.key, s.sichtbar])),
+      spaltenSichtbar: Object.fromEntries(spalten.map((s) => [s.key, s.sichtbar])),
       ampel: { ...vorlage.ampel },
       statusLabels: Object.fromEntries(vorlage.status.map((s) => [s.key, s.label])),
       sparten: [...vorlage.sparten],
@@ -299,9 +316,18 @@ export default function FahrzeugbestandPage() {
       fStandort ? `Standort ${standortName(fStandort)}` : null,
       suche.trim() ? `Suche „${suche.trim()}"` : null,
     ].filter(Boolean).join(' · ');
+    const bDef = artDef(betriebArt);
+    const ohneKz = mitArt && !bDef.kfzTeile.zulassung;
     bestandslistePdf({
       titel: vorlage.titel, standIso: tag, filterText: filter, mitEk: sichtbar('ek'),
-      zeilen: listenZeilen(gefiltert, tag, standortName, (k) => statusInfo(k).label),
+      woerter: mitArt && betriebArt !== 'kfz' ? {
+        fahrzeug: bDef.begriffe.einheit, ezKm: spalten.find((x) => x.key === 'ez_km')?.label, kennzeichen: ohneKz ? 'Kennung' : undefined,
+        leer: 'Keine Einträge in dieser Auswahl.',
+      } : undefined,
+      zeilen: listenZeilen(gefiltert, tag, standortName, (k) => statusInfo(k).label, mitArt ? {
+        datumZaehler: (b) => datumZaehler(stueckArt(b, betriebArt), b),
+        kennung: ohneKz ? (b) => kennungText(stueckArt(b, betriebArt), b) : undefined,
+      } : undefined),
       summeVk: euro(sum.vkSumme), summeEk: sum.ekSumme === null ? null : euro(sum.ekSumme),
     });
   }
@@ -318,7 +344,7 @@ export default function FahrzeugbestandPage() {
       <div style={s.kopf}>
         <div style={{ minWidth: 0 }}>
           <a href="/dashboard/kfz" style={s.zurueck}>← KFZ-Fachpaket</a>
-          <h1 style={s.h1}>🚘 {vorlage.titel}</h1>
+          <h1 style={s.h1}>{ART_SYMBOL[betriebArt]} {vorlage.titel}</h1>
           <div style={s.dim}>Vorlage: {fein ?? 'Kfz-Handel'}{einstellung ? ' · angepasst' : ''}</div>
         </div>
         <div style={s.knopfReihe}>
@@ -336,27 +362,46 @@ export default function FahrzeugbestandPage() {
 
       {formOffen && (
         <div style={s.karte}>
-          <div style={{ fontWeight: 800, marginBottom: 8 }}>{bearbeite ? `${vorlage.einheit} bearbeiten` : `Neues ${vorlage.einheit}`}</div>
+          <div style={{ fontWeight: 800, marginBottom: 8 }}>{bearbeite ? `${fDef.begriffe.einheit} bearbeiten` : `${fDef.begriffe.einheit} aufnehmen`}</div>
           <div style={s.raster}>
-            <Feld l="Marke" v={form.marke} on={(v) => setForm({ ...form, marke: v })} />
-            <Feld l="Modell" v={form.modell} on={(v) => setForm({ ...form, modell: v })} />
-            <Feld l="Ausführung" v={form.variante} on={(v) => setForm({ ...form, variante: v })} ph="z. B. AMG Line" />
+            {mitArt && <Wahl l="Art" v={form.art} on={(v) => setForm({ ...form, art: v })} opt={artAuswahl()} />}
+            <Feld l={mitArt ? fDef.begriffe.herstellerWort : 'Marke'} v={form.marke} on={(v) => setForm({ ...form, marke: v })} />
+            <Feld l={mitArt ? fDef.begriffe.modellWort : 'Modell'} v={form.modell} on={(v) => setForm({ ...form, modell: v })} />
+            <Feld l="Ausführung" v={form.variante} on={(v) => setForm({ ...form, variante: v })} ph={ff.kfzTechnik ? 'z. B. AMG Line' : undefined} />
             <Wahl l="Sparte" v={form.sparte} on={(v) => setForm({ ...form, sparte: v })} opt={vorlage.sparten.map((x) => [x, x])} />
             <Wahl l="Status" v={form.status} on={(v) => setForm({ ...form, status: v })} opt={vorlage.status.map((x) => [x.key, x.label])} />
-            <Feld l="FIN (17 Zeichen)" v={form.fin} on={(v) => setForm({ ...form, fin: v })} mono />
-            <Feld l="Kennzeichen" v={form.kennzeichen} on={(v) => setForm({ ...form, kennzeichen: v })} ph="leer = ohne" />
-            <Feld l="Erstzulassung" v={form.ez} on={(v) => setForm({ ...form, ez: v })} ph="MM/JJJJ" />
-            <Feld l="Kilometer" v={form.km} on={(v) => setForm({ ...form, km: v })} num />
-            <Feld l="Leistung (kW)" v={form.kw} on={(v) => setForm({ ...form, kw: v })} num />
-            <Feld l="Kraftstoff" v={form.kraftstoff} on={(v) => setForm({ ...form, kraftstoff: v })} ph="Benzin, Diesel, Elektro …" />
+            {ff.fin && <Feld l="FIN (17 Zeichen)" v={form.fin} on={(v) => setForm({ ...form, fin: v })} mono />}
+            {ff.seriennr && <Feld l={fDef.begriffe.ident} v={form.seriennr} on={(v) => setForm({ ...form, seriennr: v })} mono />}
+            {ff.kennzeichen && <Feld l="Kennzeichen" v={form.kennzeichen} on={(v) => setForm({ ...form, kennzeichen: v })} ph="leer = ohne" />}
+            <Feld l={mitArt ? datumLabel(form.art) : 'Erstzulassung'} v={form.ez} on={(v) => setForm({ ...form, ez: v })} ph={mitArt ? datumPlatzhalter(form.art) : 'MM/JJJJ'} />
+            {ff.km && <Feld l="Kilometer" v={form.km} on={(v) => setForm({ ...form, km: v })} num />}
+            {ff.bh && <Feld l="Betriebsstunden" v={form.bh} on={(v) => setForm({ ...form, bh: v })} num />}
+            {ff.kfzTechnik && <Feld l="Leistung (kW)" v={form.kw} on={(v) => setForm({ ...form, kw: v })} num />}
+            {ff.kfzTechnik && <Feld l="Kraftstoff" v={form.kraftstoff} on={(v) => setForm({ ...form, kraftstoff: v })} ph="Benzin, Diesel, Elektro …" />}
             <Feld l="Farbe" v={form.farbe} on={(v) => setForm({ ...form, farbe: v })} />
-            <Feld l="Farbcode" v={form.farbcode} on={(v) => setForm({ ...form, farbcode: v })} mono />
+            {ff.kfzTechnik && <Feld l="Farbcode" v={form.farbcode} on={(v) => setForm({ ...form, farbcode: v })} mono />}
             <Wahl l="Standort" v={form.standort_id} on={(v) => setForm({ ...form, standort_id: v })} opt={[['', '—'], ...standorte.map((x) => [x.id, x.name] as [string, string])]} />
             <label style={s.lab}>Eingang<input type="date" style={s.inp} value={form.eingang_am} onChange={(e) => setForm({ ...form, eingang_am: e.target.value })} /></label>
             <Feld l="Einkaufspreis netto (€)" v={form.ek} on={(v) => setForm({ ...form, ek: v })} num />
             <Feld l="Verkaufspreis brutto (€)" v={form.vk} on={(v) => setForm({ ...form, vk: v })} num />
             <Wahl l="Besteuerung" v={form.besteuerung} on={(v) => setForm({ ...form, besteuerung: v })} opt={[['25a', 'differenzbesteuert (§ 25a)'], ['regel', 'Regelsteuer'], ['', 'noch offen']]} />
           </div>
+          {mitArt && fDef.merkmale.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={s.tag}>Merkmale · {fDef.label}</div>
+              <div style={s.raster}>
+                {fDef.merkmale.map((m) => {
+                  const v = form.merkmale[m.key];
+                  const setze = (w: string | boolean) => setForm({ ...form, merkmale: { ...form.merkmale, [m.key]: w } });
+                  const titel = `${m.label}${m.einheit ? ` (${m.einheit})` : ''}${m.oeffentlich ? '' : ' · intern'}`;
+                  if (m.typ === 'ja_nein') return <label key={m.key} style={s.haken}><input type="checkbox" checked={v === true} onChange={(e) => setze(e.target.checked)} /> {titel}</label>;
+                  if (m.typ === 'auswahl') return <Wahl key={m.key} l={titel} v={typeof v === 'string' ? v : ''} on={setze} opt={[['', '—'], ...(m.optionen ?? []).map((o) => [o, o] as [string, string])]} />;
+                  return <Feld key={m.key} l={titel} v={typeof v === 'string' ? v : ''} on={setze} num={m.typ === 'zahl'} />;
+                })}
+              </div>
+              <div style={{ ...s.dim, marginTop: 6 }}>Mit „intern" markierte Merkmale erscheinen nie in Börse oder Inserat.</div>
+            </div>
+          )}
           <label style={{ ...s.lab, marginTop: 8 }}>Notiz<textarea style={{ ...s.inp, minHeight: 60 }} value={form.notiz} onChange={(e) => setForm({ ...form, notiz: e.target.value })} /></label>
           {felder.length > 0 && <div style={{ ...s.raster, marginTop: 8 }}><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((x) => ({ ...x, [fid]: w }))} inpStyle={s.inp} labStyle={s.lab} /></div>}
           {bearbeite && treffer[bearbeite] && <div style={{ ...s.hinweis, marginTop: 8 }}>🔧 Diese FIN kennt Ihre Werkstatt: {treffer[bearbeite].auftraege} {treffer[bearbeite].auftraege === 1 ? 'Auftrag' : 'Aufträge'} in der <a href="/dashboard/fahrzeugakte" style={{ color: C.info }}>Fahrzeugakte</a>.</div>}
@@ -367,7 +412,7 @@ export default function FahrzeugbestandPage() {
               ? <><span style={s.dim}>Wirklich löschen? Das lässt sich nicht rückgängig machen.</span><button style={s.rot} onClick={() => loeschen(bearbeite)}>Ja, löschen</button><button style={s.btn} onClick={() => setLoeschFrage(null)}>Nein</button></>
               : <button style={s.btn} onClick={() => setLoeschFrage(bearbeite)}>🗑 Löschen</button>)}
           </div>
-          <div style={{ ...s.dim, marginTop: 8 }}>Jede Änderung am Verkaufspreis landet automatisch im Preisverlauf.</div>
+          <div style={{ ...s.dim, marginTop: 8 }}>Jede Änderung am Verkaufspreis landet automatisch im Preisverlauf.{mitArt && bearbeite ? ' Felder, die für diese Art ausgeblendet sind, bleiben unverändert gespeichert.' : ''}</div>
         </div>
       )}
 
@@ -378,7 +423,7 @@ export default function FahrzeugbestandPage() {
           <div style={s.raster}>
             <div>
               <div style={s.tag}>Sichtbare Spalten</div>
-              {vorlage.spalten.map((sp) => (
+              {spalten.map((sp) => (
                 <label key={sp.key} style={s.haken}>
                   <input type="checkbox" checked={entwurf.spaltenSichtbar?.[sp.key] ?? sp.sichtbar}
                     onChange={(e) => setEntwurf({ ...entwurf, spaltenSichtbar: { ...(entwurf.spaltenSichtbar ?? {}), [sp.key]: e.target.checked } })} /> {sp.label}
@@ -421,7 +466,7 @@ export default function FahrzeugbestandPage() {
       )}
 
       <div style={s.leiste}>
-        <input style={{ ...s.inp, flex: '1 1 240px' }} value={suche} onChange={(e) => setSuche(e.target.value)} placeholder="Suchen: Marke, Modell, Kennzeichen, FIN, Nr. …" aria-label="Bestand durchsuchen" />
+        <input style={{ ...s.inp, flex: '1 1 240px' }} value={suche} onChange={(e) => setSuche(e.target.value)} placeholder={suchPlatzhalter(betriebArt, mitArt)} aria-label="Bestand durchsuchen" />
         <select style={s.inp} value={fStatus} onChange={(e) => setFStatus(e.target.value)} aria-label="Status"><option value="">Alle im Bestand</option>{vorlage.status.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}</select>
         <select style={s.inp} value={fSparte} onChange={(e) => setFSparte(e.target.value)} aria-label="Sparte"><option value="">Alle Sparten</option>{vorlage.sparten.map((x) => <option key={x} value={x}>{x}</option>)}</select>
         {standorte.length > 0 && <select style={s.inp} value={fStandort} onChange={(e) => setFStandort(e.target.value)} aria-label="Standort"><option value="">Alle Standorte</option>{standorte.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>}
@@ -466,7 +511,7 @@ export default function FahrzeugbestandPage() {
 
       {laden ? <p style={s.dim}>Lädt …</p> : gefiltert.length === 0 ? (
         <div style={s.karte}>
-          <div style={{ fontWeight: 700 }}>{liste.length === 0 ? `Noch kein ${vorlage.einheit} im Bestand.` : 'Keine Treffer für diese Auswahl.'}</div>
+          <div style={{ fontWeight: 700 }}>{liste.length === 0 ? 'Der Bestand ist noch leer.' : 'Keine Treffer für diese Auswahl.'}</div>
           <div style={s.dim}>{liste.length === 0 ? `Über „＋ ${vorlage.einheit} aufnehmen" legen Sie das erste an. Status, Sparten und Ampel sind für Ihre Branche schon vorbelegt.` : 'Filter oder gespeicherte Suche zurücksetzen.'}</div>
         </div>
       ) : ansicht === 'liste' ? (
@@ -474,26 +519,28 @@ export default function FahrzeugbestandPage() {
           <table style={s.tab}>
             <thead><tr>
               <th style={s.th}><input type="checkbox" checked={alleGewaehlt} aria-label="Alle auswählen" onChange={(e) => setAuswahl(e.target.checked ? new Set(gefiltert.map((b) => b.id)) : new Set())} /></th>
-              {vorlage.spalten.filter((x) => x.sichtbar).map((x) => <th key={x.key} style={x.key === 'vk' || x.key === 'ek' ? s.thR : s.th}>{x.label}</th>)}
+              {spalten.filter((x) => x.sichtbar).map((x) => <th key={x.key} style={x.key === 'vk' || x.key === 'ek' ? s.thR : s.th}>{x.label}</th>)}
             </tr></thead>
             <tbody>
               {gefiltert.map((b) => {
                 const st = statusInfo(b.status);
                 const t = standtage(b, tag);
                 const amp = standtageAmpel(t, vorlage.ampel);
-                const ps = psAusKw(b.leistung_kw);
+                const art = stueckArt(b, betriebArt);
+                const ps = art === 'kfz' ? psAusKw(b.leistung_kw) : null;
                 const zelle: Record<string, ReactNode> = {
-                  fahrzeug: <div><b>{[b.marke, b.modell].filter(Boolean).join(' ') || '—'}</b><div style={s.klein}>{b.interne_nr ?? ''}{b.variante ? ` · ${b.variante}` : ''}{b.sparte ? ` · ${b.sparte}` : ''}{ps ? ` · ${ps} PS` : ''}</div>
+                  fahrzeug: <div><b>{mitArt && art !== betriebArt ? `${ART_SYMBOL[art]} ` : ''}{[b.marke, b.modell].filter(Boolean).join(' ') || '—'}</b><div style={s.klein}>{b.interne_nr ?? ''}{b.variante ? ` · ${b.variante}` : ''}{b.sparte ? ` · ${b.sparte}` : ''}{ps ? ` · ${ps} PS` : ''}</div>
                     {treffer[b.id] && <div style={{ ...s.klein, color: C.info }}>🔧 aus der Werkstatt bekannt · {treffer[b.id].auftraege} {treffer[b.id].auftraege === 1 ? 'Auftrag' : 'Aufträge'}</div>}
                     <EigeneFelderAnzeige felder={felder} werte={werteMap[b.id]} /></div>,
                   status: <span style={{ ...s.pill, color: FARBE[st.farbe] }}>{st.label}</span>,
-                  ez_km: <span>{ezText(b.erstzulassung)}<div style={s.klein}>{b.km_stand !== null ? `${b.km_stand.toLocaleString('de-DE')} km` : '—'}</div></span>,
+                  ez_km: mitArt ? <span>{datumZaehler(art, b)}</span> : <span>{ezText(b.erstzulassung)}<div style={s.klein}>{b.km_stand !== null ? `${b.km_stand.toLocaleString('de-DE')} km` : '—'}</div></span>,
+                  merkmale: <span style={s.klein}>{merkmaleKurz(art, b.merkmale) || '—'}</span>,
                   kennzeichen: <span style={s.mono}>{b.kennzeichen ?? '—'}</span>,
                   standort: standortName(b.standort_id),
                   vk: <b>{euro(b.vk_brutto)}</b>,
                   ek: euro(b.ek_netto),
                   standtage: <span style={{ ...s.pill, color: FARBE[amp] }}>{t === null ? (b.status === 'zulauf' ? 'Zulauf' : '—') : `${t} Tage`}</span>,
-                  fin: <span style={s.mono}>{b.fin ?? '—'}</span>,
+                  fin: <span style={s.mono}>{mitArt ? kennungText(art, b) : b.fin ?? '—'}</span>,
                   farbe: <span>{b.farbe ?? '—'}{b.farbcode ? <div style={s.klein}>{b.farbcode}</div> : null}</span>,
                   besteuerung: b.besteuerung === '25a' ? '§ 25a' : b.besteuerung === 'regel' ? 'Regelsteuer' : '—',
                 };
@@ -501,7 +548,7 @@ export default function FahrzeugbestandPage() {
                   <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => akteOeffnen(b)}>
                     <td style={s.td} onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={auswahl.has(b.id)} onChange={() => umschalten(b.id)} aria-label={`${b.marke ?? ''} ${b.modell ?? ''} auswählen`} />
                       <button style={s.stift} title="Stammdaten bearbeiten" aria-label="Stammdaten bearbeiten" onClick={() => bearbeiten(b)}>✎</button></td>
-                    {vorlage.spalten.filter((x) => x.sichtbar).map((x) => <td key={x.key} style={x.key === 'vk' || x.key === 'ek' ? s.tdR : s.td}>{zelle[x.key] ?? '—'}</td>)}
+                    {spalten.filter((x) => x.sichtbar).map((x) => <td key={x.key} style={x.key === 'vk' || x.key === 'ek' ? s.tdR : s.td}>{zelle[x.key] ?? '—'}</td>)}
                   </tr>
                 );
               })}
@@ -518,7 +565,7 @@ export default function FahrzeugbestandPage() {
                 {titelbild[b.id] ? <img src={titelbild[b.id]} alt={[b.marke, b.modell].filter(Boolean).join(' ')} style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', display: 'block', maxWidth: '100%' }} /> : <div style={s.bild}>{(b.marke ?? vorlage.einheit).toUpperCase()}</div>}
                 <div style={{ padding: '10px 12px', display: 'grid', gap: 4 }}>
                   <b>{[b.marke, b.modell].filter(Boolean).join(' ') || '—'}</b>
-                  <div style={s.zeile}><span style={s.klein}>{ezText(b.erstzulassung)} · {b.km_stand !== null ? `${b.km_stand.toLocaleString('de-DE')} km` : '—'}</span><span style={{ ...s.pill, color: FARBE[st.farbe] }}>{st.label}</span></div>
+                  <div style={s.zeile}><span style={s.klein}>{mitArt ? datumZaehler(stueckArt(b, betriebArt), b) : `${ezText(b.erstzulassung)} · ${b.km_stand !== null ? `${b.km_stand.toLocaleString('de-DE')} km` : '—'}`}</span><span style={{ ...s.pill, color: FARBE[st.farbe] }}>{st.label}</span></div>
                   <div style={s.zeile}><b style={{ color: C.gold, fontSize: 17 }}>{euro(b.vk_brutto)}</b><span style={{ ...s.pill, color: FARBE[standtageAmpel(t, vorlage.ampel)] }}>{t === null ? '—' : `${t} T`}</span></div>
                   <div style={s.zeile}><span style={s.klein}>{standortName(b.standort_id)}</span><span style={s.mono}>{b.kennzeichen ?? b.interne_nr ?? ''}</span></div>
                 </div>

@@ -18,6 +18,8 @@ export type BestandslisteDaten = {
   zeilen: ListenZeile[];
   summeVk: string;
   summeEk: string | null;
+  /** Paket 333 (BV2b): Spaltenköpfe in den Wörtern der Art (Boot, Baujahr · Bh, Rumpfnummer). Fehlt = Kfz. */
+  woerter?: { fahrzeug?: string; ezKm?: string; kennzeichen?: string; leer?: string };
 };
 
 const NAVY = '#0A1628', GOLD = '#C9A84C', GREY = '#5A6B82';
@@ -41,9 +43,9 @@ export function bestandslistePdf(d: BestandslisteDaten): void {
 
   const spalten: { k: keyof ListenZeile; t: string; x: number; b: number; rechts?: boolean }[] = [
     { k: 'nr', t: 'Nr.', x: L, b: 16 },
-    { k: 'fahrzeug', t: 'Fahrzeug', x: L + 18, b: 70 },
-    { k: 'ezKm', t: 'EZ · km', x: L + 90, b: 36 },
-    { k: 'kennzeichen', t: 'Kennzeichen', x: L + 128, b: 26 },
+    { k: 'fahrzeug', t: d.woerter?.fahrzeug ?? 'Fahrzeug', x: L + 18, b: 70 },
+    { k: 'ezKm', t: d.woerter?.ezKm ?? 'EZ · km', x: L + 90, b: 36 },
+    { k: 'kennzeichen', t: d.woerter?.kennzeichen ?? 'Kennzeichen', x: L + 128, b: 26 },
     { k: 'standort', t: 'Standort', x: L + 156, b: 30 },
     { k: 'status', t: 'Status', x: L + 188, b: 24 },
     { k: 'standtage', t: 'Tage', x: L + 222, b: 10, rechts: true },
@@ -62,7 +64,7 @@ export function bestandslistePdf(d: BestandslisteDaten): void {
   doc.setFontSize(9.5);
   if (d.zeilen.length === 0) {
     doc.setFont('helvetica', 'italic'); doc.setTextColor(GREY);
-    doc.text('Keine Fahrzeuge in dieser Auswahl.', L, y);
+    doc.text(d.woerter?.leer ?? 'Keine Fahrzeuge in dieser Auswahl.', L, y);
     y += 8;
   }
   for (const z of d.zeilen) {
