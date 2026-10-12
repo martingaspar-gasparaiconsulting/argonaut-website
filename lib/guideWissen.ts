@@ -732,6 +732,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
     ],
     landetIn: [{ text: 'Shop / Marktplatz', href: '/dashboard/shop' }, { text: 'Vertrieb/CRM', href: '/dashboard/crm' }, { text: 'Rechnungen', href: '/dashboard/rechnungen' }],
   },
+  '/dashboard/shop/sprachen': {
+    zweck: 'Shop mehrsprachig: Ihren Shop in bis zu 24 Sprachen anbieten (u. a. Englisch, Französisch, Polnisch, Türkisch, Arabisch mit Schrift von rechts). Die KI schlägt Produktnamen, Beschreibungen und die Texte der Shop-Oberfläche vor — mit wörtlicher Rückübersetzung ins Deutsche zum Prüfen. Im Shop erscheint nur, was die Geschäftsleitung freigibt. Englisch ist schon eingebaut. Preise, Währung und Zahlen werden nie übersetzt; Rechtstexte bleiben deutsch.',
+    wer: 'beide',
+    werText: 'Vorschläge anlegen und bearbeiten: wer den Shop ändern darf. Freigeben und Sprachen im Shop anbieten: nur die Geschäftsleitung.',
+    schritte: [
+      'Reiter „🔤 Shop-Oberfläche“: Sprache wählen, „fehlende Texte vorschlagen lassen“, lesen (Rückübersetzung), dann „Oberfläche freigeben“ — bei Englisch nicht nötig',
+      'Reiter „🛍️ Produkt-Texte“: „fehlende/veraltete vorschlagen lassen“, je Produkt lesen und bei Bedarf anpassen, dann „Freigeben“',
+      'Reiter „🌐 Sprachen“: Haken „Im Shop“ setzen — dann erscheint die Sprache im Sprach-Umschalter des Shops',
+      'Ändern Sie später den deutschen Text eines Produkts, steht es auf „veraltet“ und der Shop zeigt dafür wieder Deutsch, bis Sie neu freigeben',
+      'Datenblätter (z. B. Sicherheitsdatenblatt) je Sprache laden Sie unter Produkt-Dokumente hoch — die Spalte „Dokumente“ zeigt, wo eine Sprache fehlt',
+    ],
+    landetIn: [{ text: 'Shop / Marktplatz', href: '/dashboard/shop' }, { text: 'Produkt-Dokumente', href: '/dashboard/erp/dokumente' }, { text: 'Geschäftskunden-Shop', href: '/dashboard/shop/geschaeftskunden' }],
+  },
   '/dashboard/shop/retouren': {
     zweck: 'Widerruf, Reklamation oder Kulanz zu einer Bestellung erfassen: Frist prüfen, Erstattung rechnen, Ware zurück ins Lager, Kundentexte zum Kopieren. Gutschriften machen Sie in Rechnungen.',
     wer: 'beide',

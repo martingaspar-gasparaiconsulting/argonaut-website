@@ -1,7 +1,7 @@
 // ============================================================================
 // ARGONAUT OS · app/api/uebersetzen/route.ts — Übersetzen (Paket PM, B25)
 //
-//   POST { ziel, modus: 'chat' | 'anweisung', texte: string[] }
+//   POST { ziel, modus: 'chat' | 'anweisung' | 'shop', texte: string[] }
 //     -> { ok, ziel, ergebnisse: [{ text, rueck, hinweise[] } | null], hinweise[] }
 //
 // Genutzt vom Team-Chat (Nachricht in die eigene Sprache / Deutsch mitsenden)
@@ -19,7 +19,7 @@ import { kiFetch } from '@/lib/ki';
 import { createClient } from '@/lib/supabase-server';
 import {
   spracheFuer, pruefeEingabe, uebersetzSystem, uebersetzNutzer, leseUebersetzung, pruefeUebersetzung,
-  UEBERSETZ_MODELL, type Modus,
+  UEBERSETZ_MODELL, mitRueckuebersetzung, type Modus,
 } from '@/lib/mehrsprachig';
 
 export const runtime = 'nodejs';
@@ -41,7 +41,9 @@ export async function POST(req: Request) {
 
   const ziel = spracheFuer(body.ziel);
   if (!ziel) return fehler('Unbekannte Zielsprache.');
-  const modus: Modus = body.modus === 'anweisung' ? 'anweisung' : 'chat';
+  // Paket 323 (S4): Modus „shop“ für Shop-Texte, ebenfalls mit Rückübersetzung.
+  const modus: Modus = body.modus === 'anweisung' ? 'anweisung' : body.modus === 'shop' ? 'shop' : 'chat';
+  const mitRueck = mitRueckuebersetzung(modus);
   const eingabe = pruefeEingabe(body.texte);
   if (eingabe.fehler) return fehler(eingabe.fehler);
   const texte = eingabe.texte;
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
   // Leere Texte (z. B. Datei-Nachricht ohne Text) gar nicht erst schicken.
   const zuSenden = texte.map((t, i) => ({ t, i })).filter((x) => x.t);
   const gesamt = zuSenden.reduce((s, x) => s + x.t.length, 0);
-  const maxTokens = Math.min(8000, Math.max(600, Math.ceil(gesamt * (modus === 'anweisung' ? 2.2 : 1.2)) + 300));
+  const maxTokens = Math.min(8000, Math.max(600, Math.ceil(gesamt * (mitRueck ? 2.2 : 1.2)) + 300));
 
   try {
     const res = await kiFetch('uebersetzen', {
@@ -68,7 +70,7 @@ export async function POST(req: Request) {
     const data = await res.json();
     const bloecke: Array<{ type?: string; text?: string }> = Array.isArray(data?.content) ? data.content : [];
     const roh = bloecke.filter((b) => b.type === 'text').map((b) => b.text || '').join('');
-    const gelesen = leseUebersetzung(roh, zuSenden.length, modus === 'anweisung');
+    const gelesen = leseUebersetzung(roh, zuSenden.length, mitRueck);
     if (gelesen.ergebnisse.every((e) => e === null)) {
       return fehler('Die Übersetzung war nicht lesbar. Bitte erneut versuchen.', 502);
     }

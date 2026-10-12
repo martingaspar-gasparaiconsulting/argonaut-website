@@ -340,6 +340,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '↩️ Retouren & Widerruf', href: '/dashboard/shop/retouren', ebene: 3, gruppe: 'lager' },
   // Paket 316 (11.10.26): S3a Geschäftskunden-Shop — Unterpfad von /dashboard/shop, erbt dessen Freigabe.
   { label: '🏢 Geschäftskunden-Shop', href: '/dashboard/shop/geschaeftskunden', ebene: 3, gruppe: 'lager' },
+  // Paket 323 (11.10.26): S4 Shop mehrsprachig — Unterpfad von /dashboard/shop, erbt dessen Freigabe.
+  { label: '🌐 Shop mehrsprachig', href: '/dashboard/shop/sprachen', ebene: 3, gruppe: 'lager' },
   // Alt-Hinweis (15.07.26): Der Punkt „Agenten/Automatisierungen" war ein Schaufenster
   // ohne Funktion und flog raus. Seit 15.08.26 gibt es unter „Verwaltung" den echten
   // Automations-Bauer (/dashboard/automationen) — Regel-Engine mit Cron-Motor und
