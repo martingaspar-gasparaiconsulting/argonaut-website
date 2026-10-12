@@ -163,6 +163,7 @@ export default function LebensmittelPage() {
       </div>
       <p style={styles.sub}>Chargen mit Rückverfolgung, HACCP-Kontrollplan und Eigenkontrollen — Dokumentationswerkzeug, ersetzt keine amtliche HACCP-Beratung.</p>
       <p style={{ margin: '0 0 12px' }}><a href="/dashboard/lebensmittel/qualitaet" style={{ color: C.cyan, fontSize: 14 }}>🧪 Qualität &amp; Rückruf: Reklamationen, Lieferanten-Bewertung, Rückruf-Assistent →</a></p>
+      <p style={{ margin: '0 0 12px' }}><a href="/dashboard/lebensmittel/reife" style={{ color: C.cyan, fontSize: 14 }}>⏳ Reife-Uhr: Dry-Aged, Schinken, Salami, Käse, Wein — Reifetage, Reifeverlust, Klima →</a></p>
 
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}

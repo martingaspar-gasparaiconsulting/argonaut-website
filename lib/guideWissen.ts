@@ -2647,6 +2647,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Eine Reklamation mit Art „Interner Fehler" und „Worum geht es?" = „Test" anlegen.', loeschen: 'Löschen gibt es hier nicht. Eine Reklamation verschwindet aus der Liste „offen" erst nach „✓ D8 Abschließen" (nur Chef); mit „Auch abgeschlossene zeigen" bleibt sie sichtbar.' },
     vorher: [{ text: 'Lebensmittel-Chargen', href: '/dashboard/lebensmittel' }, { text: 'Chargen & Prüfplan', href: '/dashboard/chargen' }],
   },
+  '/dashboard/lebensmittel/reife': {
+    zweck: 'Die Reife-Uhr für Manufakturen: je Reifestück (Dry-Aged, Rohschinken, Rohwurst, Käse, Wein, Confiserie) Tag X von Ziel, Mindest- und Höchstreife mit Ampel, Reifeverlust aus Ihren Wiegungen und Klima-Messungen mit Abweichung vom Soll. Die Werte je Art sind Startwerte — keine Rezeptur und keine Aussage zur Lebensmittelsicherheit; die bleibt bei Ihrem HACCP-Konzept.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „Lebensmittel" sehen die Reife-Uhr; mit Schreibrecht legen sie Chargen an, erfassen Messungen und schließen ab. Messungen werden nicht geändert; eine Fehleingabe löscht nur die Geschäftsleitung. Chargen werden nicht gelöscht, sondern „verworfen".',
+    schritte: [
+      '„+ Reife-Charge anlegen": Art wählen — Mindestreife, Ziel, Höchstreife, Einheit und Soll-Klima (Temperatur, Luftfeuchte) werden mit Startwerten vorbelegt und sind änderbar. Produkt, Start der Reifung, Lagerort und Startmenge (Gewicht beim Einlagern) eintragen, „Anlegen". Die Nummer RF-JJJJ-001 … vergibt ARGONAUT',
+      'Die Karte zeigt den Balken bis zum Ziel und die Ampel: „reift (jung)" vor der Mindestreife, „reift" ab der Mindestreife, „bereit" ab dem Ziel, „überreif" nach der Höchstreife; dazu die Daten „Mindestreife ab", „Ziel am" und „spätestens". Oben zählen die Kacheln, was bereit oder überreif ist',
+      'Karte aufklappen → „Messung erfassen": Datum, Gewicht, Temperatur und/oder Luftfeuchte, Notiz (z. B. gewendet). Der Reifeverlust in Prozent kommt aus Startmenge und letzter Wiegung; liegt eine Messung außerhalb des Soll-Klimas, steht sie gelb mit „⚠" da. Nach 7 Tagen ohne Messung erscheint ein Hinweis',
+      '„✓ Als bereit markieren", „Reifung abschließen" (mit Endmenge für den endgültigen Reifeverlust) oder „Verwerfen". „Wieder öffnen" holt eine Charge zurück. Filter: Laufend, Bereit / überreif, Abgeschlossen, Alle',
+    ],
+    probe: { anlegen: 'Eine Reife-Charge „Test" Art Dry-Aged mit Start vor 25 Tagen und 10 kg anlegen, dann eine Messung mit 9,2 kg und 5 °C erfassen — Reifeverlust 8 %, Temperatur gelb.', loeschen: 'Messung mit ✕ löschen (nur Geschäftsleitung); die Charge „Verwerfen".' },
+    vorher: [{ text: 'Lebensmittel (Chargen, HACCP)', href: '/dashboard/lebensmittel' }],
+  },
   '/dashboard/etiketten': {
     zweck: 'Etiketten nach LMIV: Zutaten mit hervorgehobenen Allergenen (14 Pflichtallergene), Nährwerte je 100 g oder 100 ml, laufende Prüfung der Pflichtangaben und Etikett als PDF. Bei loser Ware werden nur die Allergene verlangt.',
     wer: 'beide',
