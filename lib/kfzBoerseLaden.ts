@@ -14,6 +14,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { istBot } from './kfzPreis';
+import { vorlageFuer } from './branchenVorlage';
 import { BOERSE_MODUL, BOERSE_SPALTEN, BOERSE_SPALTEN_P332, BOERSE_SPALTEN_OHNE_HISTORIE, BOERSE_STATUS, boerseEinstellung, kennungGueltig, idGueltig, oeffentlich, hostSauber, type BoerseEinstellung, type BoerseFahrzeug } from './kfzBoerse';
 
 export function boerseDb() {
@@ -98,6 +99,20 @@ export async function firmaZu(db: BoerseDb, betrieb: string): Promise<Firma> {
     akzent: /^#[0-9a-fA-F]{6}$/.test(s(c.farbe_akzent)) ? s(c.farbe_akzent) : '#0A1628',
     logo: /^https:\/\/[^\s"'<>]+$/.test(logo) ? logo : null,
   };
+}
+
+/**
+ * Paket 338 (BV2b): Art des Betriebs für die Wörter der Börse (Boote, Maschinen, Uhren …).
+ * Liest nur die Branche aus dem Profil; jeder Fehler -> 'kfz' (Börse sieht dann aus wie bisher).
+ */
+export async function betriebArt(db: BoerseDb, betrieb: string): Promise<string> {
+  try {
+    const { data, error } = await db.from('profiles').select('branche').eq('id', betrieb).maybeSingle();
+    if (error) return 'kfz';
+    return vorlageFuer('kfz-bestand', ((data as { branche?: string | null } | null)?.branche) ?? null)?.art ?? 'kfz';
+  } catch {
+    return 'kfz';
+  }
 }
 
 type MedienZeile = { id: string; bestand_id: string; position: number | null };

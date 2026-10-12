@@ -11,7 +11,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { domainPfad, filterLesen, hostSauber } from '@/lib/kfzBoerse';
-import { betriebZuDomain, boerseDb, firmaZu, sichtbareFahrzeuge } from '@/lib/kfzBoerseLaden';
+import { betriebZuDomain, boerseDb, firmaZu, sichtbareFahrzeuge, betriebArt } from '@/lib/kfzBoerseLaden';
 import { ListeAnsicht, listeMeta, NICHT_GEFUNDEN_META, type BoerseKontext } from '../../fahrzeuge/BoerseAnsichten';
 
 export const dynamic = 'force-dynamic';
@@ -24,9 +24,9 @@ const lade = cache(async (hostRoh: string) => {
   const db = boerseDb();
   const b = await betriebZuDomain(db, host);
   if (!b) return null;
-  const [firma, liste] = await Promise.all([firmaZu(db, b.betrieb), sichtbareFahrzeuge(db, b.betrieb)]);
+  const [firma, liste, art] = await Promise.all([firmaZu(db, b.betrieb), sichtbareFahrzeuge(db, b.betrieb), betriebArt(db, b.betrieb)]);
   const basis = `https://${b.domain}`;
-  const ctx: BoerseKontext = { kennung: b.kennung, einst: b.einst, firma, basis, pfad: domainPfad, kanon: (id) => basis + domainPfad(id) };
+  const ctx: BoerseKontext = { kennung: b.kennung, einst: b.einst, firma, basis, art, pfad: domainPfad, kanon: (id) => basis + domainPfad(id) };
   return { ctx, liste };
 });
 

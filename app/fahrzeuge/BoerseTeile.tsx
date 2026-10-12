@@ -27,18 +27,19 @@ export const BOERSE_CSS = `
 .bx-filter select,.bx-filter input{border:1px solid ${F.linie};border-radius:8px;padding:9px 10px;font-size:14px;background:#fff;color:${F.text};min-width:0}
 `;
 
-export function BoerseSeite({ firma, children, fussHinweis }: { firma: Firma; children: ReactNode; fussHinweis?: string }) {
+export function BoerseSeite({ firma, children, fussHinweis, angebot }: { firma: Firma; children: ReactNode; fussHinweis?: string; angebot?: string }) {
   return (
     <main style={{ minHeight: '100vh', background: F.bg, color: F.text, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}>
       <style>{BOERSE_CSS}</style>
-      <BoerseKopf firma={firma} />
+      <BoerseKopf firma={firma} angebot={angebot} />
       <div style={{ maxWidth: 1180, margin: '0 auto', padding: '20px 16px 40px' }}>{children}</div>
       <BoerseFuss firma={firma} hinweis={fussHinweis} />
     </main>
   );
 }
 
-function BoerseKopf({ firma }: { firma: Firma }) {
+// Paket 338: angebot = Ersatzname ohne Firmenname (Börse nach Art; sonst „Fahrzeugangebot" wie bisher)
+function BoerseKopf({ firma, angebot }: { firma: Firma; angebot?: string }) {
   const vorne = textAuf(firma.akzent);
   return (
     <header style={{ background: firma.akzent, color: vorne }}>
@@ -47,7 +48,7 @@ function BoerseKopf({ firma }: { firma: Firma }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {firma.logo && <img src={firma.logo} alt="" style={{ height: 40, width: 'auto', maxWidth: 160, objectFit: 'contain', background: '#fff', borderRadius: 6, padding: 3 }} />}
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 19, lineHeight: 1.2 }}>{firma.name || 'Fahrzeugangebot'}</div>
+            <div style={{ fontWeight: 800, fontSize: 19, lineHeight: 1.2 }}>{firma.name || angebot || 'Fahrzeugangebot'}</div>
             {(firma.ort || firma.plz) && <div style={{ fontSize: 13, opacity: 0.85 }}>{[firma.strasse, [firma.plz, firma.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ')}</div>}
           </div>
         </div>

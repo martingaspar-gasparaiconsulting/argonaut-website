@@ -371,3 +371,64 @@ export function hubNachArt(art: unknown): HubNachArt {
     chefBlick: '📈 Chef-Blick Handel',
   };
 }
+
+// --- Paket 338 (BV2b Feinschliff) ---------------------------------------------
+
+/**
+ * Inserats-Ampel im Preis-Cockpit wie in der Akte (P334): Einzelstücke ohne
+ * CO₂-Pflicht zählen ihre Merkmale statt „Energie und CO₂". Ohne SQL p332
+ * (mitArt = false) bleibt alles wie bisher (null = Kfz-Wertung).
+ */
+export function ampelEinzelstueck(
+  b: { art?: string | null; merkmale?: Record<string, unknown> | null } | null | undefined,
+  betriebArt: string | null | undefined,
+  mitArt: boolean,
+): { merkmale: number } | null {
+  if (!mitArt) return null;
+  const art = stueckArt(b, betriebArt);
+  return akteTeile(art, true).energie ? null : { merkmale: merkmaleZahl(art, b?.merkmale ?? null) };
+}
+
+/** Wörter der öffentlichen Börse (app/fahrzeuge) in der Sprache der Art des Betriebs. Kfz: wortgleich wie bisher. */
+export type BoerseWoerter = {
+  angebot: string;        // Ersatz für den Firmennamen im Kopf
+  ueberschrift: string;   // „Unsere Fahrzeuge"
+  anzahl: (n: number) => string;
+  keine: string;          // leere Börse
+  keinPasst: string;      // Filter ohne Treffer
+  alle: string;           // Zurück-Link
+  anfrage: string;        // Überschrift Anfrage-Kasten
+  metaTitel: string;      // „Fahrzeuge von"
+  metaPlural: string;     // „Fahrzeuge" in der Google-Beschreibung
+  hersteller: string;     // Filter-Beschriftung „Marke"
+  kmSort: boolean;        // Sortierung „Kilometer aufsteigend" anbieten
+  kraftstoff: boolean;    // Filter „Kraftstoff" anbieten
+};
+
+/** Weibliche Einheiten (nur „Maschine") — für „Keine Maschine passt", „zu dieser Maschine". */
+const WEIBLICH: ReadonlySet<Art> = new Set<Art>(['maschine']);
+
+export function boerseWoerter(art: unknown): BoerseWoerter {
+  const d = artDef(art);
+  if (d.art === 'kfz') {
+    return {
+      angebot: 'Fahrzeugangebot', ueberschrift: 'Unsere Fahrzeuge',
+      anzahl: (n) => (n === 1 ? '1 Fahrzeug' : `${n} Fahrzeuge`),
+      keine: 'Zurzeit sind keine Fahrzeuge eingestellt. Rufen Sie uns gern an — vieles ist auch kurzfristig verfügbar.',
+      keinPasst: 'Kein Fahrzeug passt zu diesem Filter.',
+      alle: '← Alle Fahrzeuge', anfrage: 'Anfrage zu diesem Fahrzeug',
+      metaTitel: 'Fahrzeuge von', metaPlural: 'Fahrzeuge', hersteller: 'Marke', kmSort: true, kraftstoff: true,
+    };
+  }
+  const { einheit, einheitPlural: plural } = d.begriffe;
+  const w = WEIBLICH.has(d.art);
+  return {
+    angebot: 'Unser Angebot', ueberschrift: `Unsere ${plural}`,
+    anzahl: (n) => (n === 1 ? `1 ${einheit}` : `${n} ${plural}`),
+    keine: `Zurzeit sind keine ${plural} eingestellt. Rufen Sie uns gern an — vieles ist auch kurzfristig verfügbar.`,
+    keinPasst: `${w ? 'Keine' : 'Kein'} ${einheit} passt zu diesem Filter.`,
+    alle: `← Alle ${plural}`, anfrage: `Anfrage zu ${w ? 'dieser' : 'diesem'} ${einheit}`,
+    metaTitel: `${plural} von`, metaPlural: plural,
+    hersteller: d.begriffe.herstellerWort, kmSort: d.begriffe.zaehler === 'km', kraftstoff: false,
+  };
+}

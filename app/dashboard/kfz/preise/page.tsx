@@ -18,6 +18,7 @@ import { vorlageFuer, mitKunde, standtageAmpel, type KundenEinstellung } from '@
 import { standtage as standtageVon, imBestand, euro } from '@/lib/kfzBestand';
 import { kostenSummen, type Kosten } from '@/lib/kfzKalkulation';
 import { inseratAmpel, type AkteFelder } from '@/lib/kfzAkte';
+import { ampelEinzelstueck } from '@/lib/einzelstueckBestand';
 import {
   PREIS_MODUL, standardRegeln, regelnLesen, untergrenze, tageSeitPreis, vorschlag, aufrufeJe, anfragenJe, diagnose,
   standzeitVerteilung, uebernahmeListe, type PreisRegeln, type Vorschlag, type Diagnose, type Aufruf, type AnfrageMini,
@@ -40,6 +41,8 @@ type Fz = AkteFelder & {
   id: string; owner_user_id: string; interne_nr: string | null; variante: string | null;
   eingang_am: string | null; verkauft_am: string | null; ek_netto: number | null; besteuerung: string | null;
   erstzulassung: string | null; km_stand: number | null;
+  // Paket 338: nur mit SQL p332 vorhanden
+  art?: string | null; merkmale?: Record<string, unknown> | null;
 };
 type Zeile = {
   f: Fz; tage: number | null; grenze: number | null; seit: number | null; aufrufe: number; anfragen: number;
@@ -58,6 +61,8 @@ export default function PreisePage() {
   const [aufrufe, setAufrufe] = useState<Aufruf[]>([]);
   const [anfragen, setAnfragen] = useState<AnfrageMini[]>([]);
   const [fotos, setFotos] = useState<Record<string, number>>({});
+  // Paket 338 (BV2b): Art des Betriebs + ob Spalte art da ist — Ampel wie in der Akte (Merkmale statt CO₂)
+  const [artInfo, setArtInfo] = useState<{ betriebArt: string | null; mitArt: boolean }>({ betriebArt: null, mitArt: false });
   const [vergleiche, setVergleiche] = useState<(Vergleich & { bestand_id: string })[]>([]);
   // Paket 283: Bewertung DAT/Schwacke (eigene Abfrage — ohne SQL 283 einfach leer)
   const [bewertungen, setBewertungen] = useState<Record<string, Partial<Bewertung>>>({});
@@ -85,8 +90,8 @@ export default function PreisePage() {
     const b = typeof chef === 'string' && chef ? chef : uid;
     setBetrieb(b); setIstChef(b === uid);
     const ab = vorTagen(40);
-    const [f, k, pr, au, an, me, e, p, mv, bw] = await Promise.all([
-      supabase.from('kfz_bestand').select(SPALTEN).not('status', 'in', '("verkauft","archiv")').limit(2000),
+    const [f0, k, pr, au, an, me, e, p, mv, bw] = await Promise.all([
+      supabase.from('kfz_bestand').select(SPALTEN + ', art, merkmale').not('status', 'in', '("verkauft","archiv")').limit(2000),
       supabase.from('kfz_bestand_kosten').select('bestand_id, art, betrag_netto, plan').limit(10000),
       supabase.from('kfz_bestand_preis').select('bestand_id, geaendert_am').order('geaendert_am', { ascending: false }).limit(10000),
       supabase.from('kfz_boerse_aufruf').select('bestand_id, tag, anzahl').gte('tag', ab).limit(20000),
@@ -97,6 +102,9 @@ export default function PreisePage() {
       supabase.from('kfz_marktvergleich').select('bestand_id, preis, km, erstzulassung, erfasst_am').gte('erfasst_am', ab).limit(20000),
       supabase.from('kfz_bestand').select('id, bewertung_anbieter, bewertung_ek, bewertung_vk, bewertung_am').not('status', 'in', '("verkauft","archiv")').not('bewertung_am', 'is', null).limit(2000),
     ]);
+    // ohne SQL p332 (Spalten art/merkmale fehlen): wie bisher ohne sie laden
+    const mitArt = !f0.error;
+    const f = mitArt ? f0 : await supabase.from('kfz_bestand').select(SPALTEN).not('status', 'in', '("verkauft","archiv")').limit(2000);
     if (f.error) { setFehler('Der Fahrzeugbestand lässt sich nicht laden. Ist SQL Paket 259 ausgeführt und haben Sie das Recht „KFZ"?'); setLaden(false); return; }
     setFz((((f.data as unknown) as Fz[]) ?? []).filter((x) => imBestand(x.status)));
     setKosten(((k.data as unknown) as (Kosten & { bestand_id: string })[]) ?? []);
@@ -117,6 +125,7 @@ export default function PreisePage() {
     setBewertungen(bwJe);
     const einst = ((e.data as unknown) as { modul: string; einstellung: Record<string, unknown> }[]) ?? [];
     const v = vorlageFuer('kfz-bestand', ((p.data as { branche?: string | null } | null)?.branche) ?? null);
+    setArtInfo({ betriebArt: mitArt ? (v?.art ?? null) : null, mitArt });
     const vk = v ? mitKunde(v, (einst.find((x) => x.modul === 'kfz-bestand')?.einstellung as KundenEinstellung | undefined) ?? null) : null;
     setStandkostenTag(vk?.standkostenTag ?? 0);
     const ag = vk?.ampel ?? { gruenBis: 60, gelbBis: 90 };
@@ -141,7 +150,7 @@ export default function PreisePage() {
       const plan = kostenSummen(kostenJe[f.id] ?? []).plan;
       const grenze = untergrenze({ besteuerung: f.besteuerung, ek: f.ek_netto, kosten: plan, standkosten: (tage ?? 0) * standkostenTag, mindestRohertrag: regeln.mindestRohertrag });
       const seit = tageSeitPreis(preisAm[f.id] ?? [], tag);
-      const ampel = inseratAmpel({ ...f, fotos: fotos[f.id] ?? 0 }).prozent;
+      const ampel = inseratAmpel({ ...f, fotos: fotos[f.id] ?? 0 }, ampelEinzelstueck(f, artInfo.betriebArt, artInfo.mitArt)).prozent;
       const a = auf[f.id] ?? 0, q = anf[f.id] ?? 0;
       return {
         f, tage, grenze, seit, aufrufe: a, anfragen: q, ampel,
@@ -151,7 +160,7 @@ export default function PreisePage() {
         bewertung: bewertungLage(bewertungen[f.id], f.vk_brutto, tag),
       };
     }).sort((x, y) => (y.tage ?? -1) - (x.tage ?? -1));
-  }, [fz, kosten, preisAm, aufrufe, anfragen, fotos, vergleiche, bewertungen, standkostenTag, regeln, tag]);
+  }, [fz, kosten, preisAm, aufrufe, anfragen, fotos, vergleiche, bewertungen, standkostenTag, regeln, tag, artInfo]);
 
   const gezeigt = zeilen.filter((z) => filter === 'alle' ? true
     : filter === 'senken' ? z.v.art === 'senken'

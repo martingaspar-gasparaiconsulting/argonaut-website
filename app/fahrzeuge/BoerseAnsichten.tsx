@@ -15,6 +15,7 @@ import {
 } from '@/lib/kfzBoerse';
 import type { Firma } from '@/lib/kfzBoerseLaden';
 import { historieText } from '@/lib/partnerAnbindung';
+import { boerseWoerter } from '@/lib/einzelstueckBestand';
 import { BoerseSeite, F, st } from './BoerseTeile';
 import AnfrageFormular from './[kennung]/[id]/AnfrageFormular';
 import { FINANZ_KEY, EXTRAS_KEY, finanzEinstellung, boerseBereit, beispiel, pflichtZeilen, extrasLesen, BEISPIEL_HINWEIS } from '@/lib/kfzFinanzierung';
@@ -31,15 +32,18 @@ export type BoerseKontext = {
   basis: string;
   /** Paket 282: Einstellung roh (Zusatzleistungen, Finanzierungsbeispiel). */
   roh?: unknown;
+  /** Paket 338: Art des Betriebs (Wörter der Börse); fehlt sie, gilt Kfz. */
+  art?: string;
 };
 
 const NICHT_FINDEN = { index: false, follow: false } as const;
 
 export function listeMeta(ctx: BoerseKontext, anzahl: number): Metadata {
-  const name = ctx.firma.name || 'Fahrzeugangebot';
+  const w = boerseWoerter(ctx.art);
+  const name = ctx.firma.name || w.angebot;
   return {
-    title: `Fahrzeuge von ${name}${ctx.firma.ort ? ' in ' + ctx.firma.ort : ''}`,
-    description: `${anzahl} Fahrzeuge im Angebot von ${name}${ctx.firma.ort ? ', ' + ctx.firma.ort : ''}. Fotos, Ausstattung, Preise und direkte Anfrage.`,
+    title: `${w.metaTitel} ${name}${ctx.firma.ort ? ' in ' + ctx.firma.ort : ''}`,
+    description: `${anzahl} ${w.metaPlural} im Angebot von ${name}${ctx.firma.ort ? ', ' + ctx.firma.ort : ''}. Fotos, Ausstattung, Preise und direkte Anfrage.`,
     robots: ctx.einst.google ? { index: true, follow: true } : NICHT_FINDEN,
     alternates: ctx.einst.google ? { canonical: ctx.kanon() } : undefined,
   };
@@ -65,27 +69,29 @@ export function ListeAnsicht({ ctx, liste, filter }: { ctx: BoerseKontext; liste
   const marken = auswahlWerte(alle, 'marke');
   const kraftstoffe = auswahlWerte(alle, 'kraftstoff');
   const gefiltert = !!(filter.marke || filter.kraftstoff || filter.preisBis);
+  const w = boerseWoerter(ctx.art);
+  const mitKraftstoff = w.kraftstoff || kraftstoffe.length > 0;
 
   return (
-    <BoerseSeite firma={ctx.firma}>
-      <h1 style={st.h1}>Unsere Fahrzeuge</h1>
-      <p style={{ ...st.dim, margin: '0 0 16px' }}>{alle.length === 1 ? '1 Fahrzeug' : `${alle.length} Fahrzeuge`} im Angebot{gefiltert ? ` · ${zeigen.length} passend` : ''}</p>
+    <BoerseSeite firma={ctx.firma} angebot={w.angebot}>
+      <h1 style={st.h1}>{w.ueberschrift}</h1>
+      <p style={{ ...st.dim, margin: '0 0 16px' }}>{w.anzahl(alle.length)} im Angebot{gefiltert ? ` · ${zeigen.length} passend` : ''}</p>
 
       {alle.length > 0 && (
         <form method="get" className="bx-filter" style={{ ...st.box, marginBottom: 18 }}>
-          <label>Marke<select name="marke" defaultValue={filter.marke ?? ''}><option value="">alle</option>{marken.map((m) => <option key={m} value={m}>{m}</option>)}</select></label>
-          <label>Kraftstoff<select name="kraftstoff" defaultValue={filter.kraftstoff ?? ''}><option value="">alle</option>{kraftstoffe.map((m) => <option key={m} value={m}>{m}</option>)}</select></label>
+          <label>{w.hersteller}<select name="marke" defaultValue={filter.marke ?? ''}><option value="">alle</option>{marken.map((m) => <option key={m} value={m}>{m}</option>)}</select></label>
+          {mitKraftstoff && <label>Kraftstoff<select name="kraftstoff" defaultValue={filter.kraftstoff ?? ''}><option value="">alle</option>{kraftstoffe.map((m) => <option key={m} value={m}>{m}</option>)}</select></label>}
           <label>Preis bis (€)<input name="bis" inputMode="numeric" defaultValue={filter.preisBis ? String(filter.preisBis) : ''} placeholder="z. B. 25000" style={{ width: 130 }} /></label>
           <label>Sortieren<select name="sort" defaultValue={filter.sort}>
-            <option value="neu">Neueste zuerst</option><option value="preis_auf">Preis aufsteigend</option><option value="preis_ab">Preis absteigend</option><option value="km">Kilometer aufsteigend</option>
+            <option value="neu">Neueste zuerst</option><option value="preis_auf">Preis aufsteigend</option><option value="preis_ab">Preis absteigend</option>{w.kmSort && <option value="km">Kilometer aufsteigend</option>}
           </select></label>
           <button type="submit" style={{ background: ctx.firma.akzent, color: textAuf(ctx.firma.akzent), border: 0, borderRadius: 8, padding: '10px 16px', fontWeight: 700, cursor: 'pointer' }}>Anzeigen</button>
           {gefiltert && <a href={ctx.pfad()} style={{ color: F.dim, fontSize: 13.5, padding: '10px 4px' }}>Filter zurücksetzen</a>}
         </form>
       )}
 
-      {alle.length === 0 && <div style={st.box}><p style={{ margin: 0 }}>Zurzeit sind keine Fahrzeuge eingestellt. Rufen Sie uns gern an — vieles ist auch kurzfristig verfügbar.</p></div>}
-      {alle.length > 0 && zeigen.length === 0 && <div style={st.box}><p style={{ margin: 0 }}>Kein Fahrzeug passt zu diesem Filter.</p></div>}
+      {alle.length === 0 && <div style={st.box}><p style={{ margin: 0 }}>{w.keine}</p></div>}
+      {alle.length > 0 && zeigen.length === 0 && <div style={st.box}><p style={{ margin: 0 }}>{w.keinPasst}</p></div>}
 
       <div className="bx-raster">
         {zeigen.map((f) => {
@@ -125,14 +131,15 @@ export function DetailAnsicht({ ctx, f, bilder }: { ctx: BoerseKontext; f: Boers
   const fe = finanzEinstellung(roh[FINANZ_KEY]);
   const fb = boerseBereit(fe) ? beispiel(f.vk_brutto, fe) : null;
   const energie = energieZeilen(f);
+  const w = boerseWoerter(ctx.art);
   const daten = ctx.einst.google
     ? jsonSicher(strukturDaten(f, { basis: ctx.basis, url: ctx.kanon(f.id), bilder: bilder.map((b) => bildPfad(ctx.kennung, b)), firma: ctx.firma.name || null, ort: ctx.firma.ort || null }))
     : null;
 
   return (
-    <BoerseSeite firma={ctx.firma}>
+    <BoerseSeite firma={ctx.firma} angebot={w.angebot}>
       {daten && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: daten }} />}
-      <a href={ctx.pfad()} style={{ color: F.dim, fontSize: 13.5, textDecoration: 'none' }}>← Alle Fahrzeuge</a>
+      <a href={ctx.pfad()} style={{ color: F.dim, fontSize: 13.5, textDecoration: 'none' }}>{w.alle}</a>
       <div style={{ margin: '8px 0 16px' }}>
         {hinweis && <span style={{ ...st.pill, marginBottom: 6 }}>{hinweis}</span>}
         <h1 style={st.h1}>{titel(f)}</h1>
@@ -209,7 +216,7 @@ export function DetailAnsicht({ ctx, f, bilder }: { ctx: BoerseKontext; f: Boers
             </section>
           )}
           <section style={st.box}>
-            <h2 style={{ fontSize: 17, margin: '0 0 8px' }}>Anfrage zu diesem Fahrzeug</h2>
+            <h2 style={{ fontSize: 17, margin: '0 0 8px' }}>{w.anfrage}</h2>
             <AnfrageFormular k={ctx.kennung} id={f.id} firma={ctx.firma.name || null} akzent={ctx.firma.akzent} hinweis={datenschutzHinweis(ctx.firma)} extras={extras} preis={f.vk_brutto} />
           </section>
         </aside>

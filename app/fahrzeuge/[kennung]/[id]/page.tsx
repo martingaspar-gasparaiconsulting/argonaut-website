@@ -11,7 +11,7 @@ import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import { cache } from 'react';
 import { boersePfad, kanonisch } from '@/lib/kfzBoerse';
-import { aufrufZaehlen, basisAdresse, betriebZuKennung, boerseDb, firmaZu, sichtbaresFahrzeug, verbundeneDomain } from '@/lib/kfzBoerseLaden';
+import { aufrufZaehlen, basisAdresse, betriebZuKennung, boerseDb, firmaZu, sichtbaresFahrzeug, verbundeneDomain, betriebArt } from '@/lib/kfzBoerseLaden';
 import { DetailAnsicht, detailMeta, NICHT_GEFUNDEN_META, type BoerseKontext } from '../../BoerseAnsichten';
 
 export const dynamic = 'force-dynamic';
@@ -22,11 +22,11 @@ const lade = cache(async (k: string, id: string) => {
   const db = boerseDb();
   const b = await betriebZuKennung(db, k);
   if (!b) return null;
-  const [firma, fz, domain] = await Promise.all([firmaZu(db, b.betrieb), sichtbaresFahrzeug(db, b.betrieb, id), verbundeneDomain(db, b.betrieb)]);
+  const [firma, fz, domain, art] = await Promise.all([firmaZu(db, b.betrieb), sichtbaresFahrzeug(db, b.betrieb, id), verbundeneDomain(db, b.betrieb), betriebArt(db, b.betrieb)]);
   if (!fz) return null;
   const basis = basisAdresse();
   const ctx: BoerseKontext = {
-    kennung: k, einst: b.einst, firma, basis, roh: b.roh,
+    kennung: k, einst: b.einst, firma, basis, art, roh: b.roh,
     pfad: (fid) => boersePfad(k, fid),
     kanon: (fid) => kanonisch({ kennung: k, fahrzeugId: fid, domain, basis }),
   };
