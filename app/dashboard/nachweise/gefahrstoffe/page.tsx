@@ -14,7 +14,8 @@
 // Paket 319 (G2a Teil 2): „🔳 QR-Aushang" je Lagerplatz (Druckbogen) —
 // der QR führt auf die Handy-Ansicht unter Mein Bereich (Login, alle Beschäftigten).
 // Paket 329 (G2b): „📋 Betriebsanweisung" je Stoff → [id]/betriebsanweisung (TRGS 555).
-// Logik: lib/qualitaet.ts + lib/gefahrstoffLager.ts (getestet).
+// Paket 330 (G2c): Zusammenlagerungs-Ampel je Lagerplatz (TRGS 510) — erst nach Freigabe sichtbar.
+// Logik: lib/qualitaet.ts + lib/gefahrstoffLager.ts + lib/zusammenlagerung.ts (getestet).
 // SQL: supabase-sql/ps2-qualitaet.sql + p318-gefahrstoff-2.sql.
 // Unterpfad von /dashboard/nachweise (erbt dessen Freigabe).
 // Pfad: app/dashboard/nachweise/gefahrstoffe/page.tsx
@@ -30,6 +31,8 @@ import {
   plaetzeMitAnzahl, stoffeAmPlatz, platzUrl, qrSvg, HANDY_PFAD,
 } from '@/lib/gefahrstoffLager';
 import { qrMatrix } from '@/lib/qr';
+import { platzAmpel, konfliktText, STUFE_TEXT, type Stufe } from '@/lib/zusammenlagerung';
+import { startFrei, startSperrGrund } from '@/lib/startSperre';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -56,6 +59,8 @@ const knopf: CSSProperties = { background: 'transparent', color: C.cyan, border:
 const primaer: CSSProperties = { ...knopf, background: C.gold, color: C.navy, border: 'none', fontWeight: 800 };
 const lab: CSSProperties = { display: 'block', color: C.textDim, fontSize: 13, fontWeight: 700, marginTop: 8 };
 const FARBE = { rot: C.danger, gelb: C.warn, gruen: C.green } as const;
+const AMPEL_FARBE: Record<Stufe, string> = { rot: C.danger, gelb: C.warn, gruen: C.green, grau: C.textDim };
+const ZL_FREI = startFrei('zusammenlagerung');
 
 export default function GefahrstoffeSeite() {
   const [zeilen, setZeilen] = useState<Zeile[]>([]);
@@ -106,6 +111,7 @@ export default function GefahrstoffeSeite() {
   const plaetze = useMemo(() => [...new Set(zeilen.map((z) => String(z.lagerplatz ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de')), [zeilen]);
   const bewertet = useMemo(() => zeilen.map((z) => ({ z, p: pruefeGefahrstoff(z, heute) }))
     .sort((a, b) => ({ rot: 0, gelb: 1, gruen: 2 }[a.p.stufe] - { rot: 0, gelb: 1, gruen: 2 }[b.p.stufe]) || String(a.z.bezeichnung).localeCompare(String(b.z.bezeichnung), 'de')), [zeilen, heute]);
+  const ampeln = useMemo(() => (ZL_FREI ? plaetzeMitAnzahl(zeilen).map((p) => ({ platz: p.platz, a: platzAmpel(stoffeAmPlatz(zeilen, p.platz)) })) : []), [zeilen]);
   const rot = bewertet.filter((x) => x.p.stufe === 'rot').length;
   const cmr = bewertet.filter((x) => x.p.cmr).length;
   const vorschau = form ? pruefeGefahrstoff({ ...form, id: undefined, sdb_datum: form.sdb_datum || null, betriebsanweisung_am: form.betriebsanweisung_am || null, ersatz_geprueft_am: form.ersatz_geprueft_am || null }, heute) : null;
@@ -262,6 +268,24 @@ export default function GefahrstoffeSeite() {
             <a style={{ ...knopf, textDecoration: 'none' }} href={HANDY_PFAD}>📱 Handy-Ansicht</a>
             <span style={{ color: rot ? C.danger : C.textDim, fontSize: 14 }}>{zeilen.length} Stoffe · {rot} mit fehlenden Angaben{cmr ? ` · ${cmr} CMR-Stoff${cmr === 1 ? '' : 'e'}` : ''}</span>
           </div>
+
+          {zeilen.length > 0 && (
+            <div style={karte}>
+              <b>🚦 Zusammenlagerung je Lagerplatz (TRGS 510)</b>
+              {!ZL_FREI
+                ? <div style={{ color: C.textDim, fontSize: 13.5, marginTop: 4 }}>{startSperrGrund('zusammenlagerung')}</div>
+                : ampeln.length === 0
+                  ? <div style={{ color: C.textDim, fontSize: 13.5, marginTop: 4 }}>Noch kein Lagerplatz eingetragen.</div>
+                  : ampeln.map(({ platz, a }) => (
+                    <div key={platz} style={{ borderLeft: `4px solid ${AMPEL_FARBE[a.stufe]}`, paddingLeft: 10, marginTop: 10 }}>
+                      <div><b>📍 {platz}</b> <span style={{ color: AMPEL_FARBE[a.stufe], fontWeight: 700 }}>· {STUFE_TEXT[a.stufe]}</span> <span style={{ color: C.textDim, fontSize: 13 }}>({a.anzahl} Stoffe)</span></div>
+                      {a.konflikte.map((k) => <div key={`${k.a}|${k.b}|${k.ka}|${k.kb}`} style={{ color: k.stufe === 'rot' ? C.danger : C.warn, fontSize: 13 }}>{k.stufe === 'rot' ? '✕' : '⚠'} {konfliktText(k)}</div>)}
+                      {a.ohneKlasse.length > 0 && <div style={{ color: C.textDim, fontSize: 13 }}>Ohne Lagerklasse, nicht geprüft: {a.ohneKlasse.join(', ')}</div>}
+                    </div>
+                  ))}
+              <div style={{ color: C.textDim, fontSize: 12, marginTop: 8 }}>Prüft nur die Lagerklassen nach der Zusammenlagerungstabelle — keine Mengen, keine Kleinmengen-Ausnahmen, keine Bedingungstexte. Maßgeblich bleibt TRGS 510 und Ihre Gefährdungsbeurteilung.</div>
+            </div>
+          )}
 
           {form && (
             <div style={{ ...karte, borderColor: C.gold }}>

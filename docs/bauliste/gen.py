@@ -121,7 +121,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 12.10.2026 · _p329 unterwegs · G2b Betriebsanweisungs-Entwurf (Freigabe aus bis R49) · nächster G2c Zusammenlagerungs-Ampel</div>
+<div class="eyebrow">ARGONAUT OS · Stand 12.10.2026 · _p330 unterwegs · G2c Zusammenlagerungs-Ampel (aus bis R49) · Chemie-Bausteine komplett · nächster PS-1 Preis-Spiegel</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

@@ -33,6 +33,7 @@ SCHALTER startSperre.gefahrstoffShop = aus
 SCHALTER startSperre.gewerbeNachweis = aus
 SCHALTER startSperre.sdbVersand = aus
 SCHALTER startSperre.betriebsanweisung = aus
+SCHALTER startSperre.zusammenlagerung = aus
 
 | Bereich | Was ist aus | Wo im Code | Anwalt-Fragen | Mitziehen beim Öffnen |
 |---|---|---|---|---|
@@ -43,6 +44,7 @@ SCHALTER startSperre.betriebsanweisung = aus
 | **Nur Gewerbekunden** (`gewerbeNachweis`, Paket 327) | Der Schalter „Nur an geprüfte Geschäftskunden verkaufen“ wirkt nicht (Shop bleibt für alle); Nachweise (USt-IdNr., Gewerbeanmeldung, Handelsregister) erfassen und als geprüft markieren geht schon | `lib/shopGewerbe.ts`, `app/dashboard/shop/geschaeftskunden` (Reiter Preis-Basis & Schalter), `app/api/oeffentlich/shop-bestellung`, `app/api/oeffentlich/shop-produkte`, `public/shop.js` | R49 (ChemVerbotsV § 8 Abgabe nur an Wiederverkäufer/berufsmäßige Verwender mit Identitätsprüfung; REACH Anhang XVII) | Klären, ob Formprüfung + BZSt-Vermerk + Kundenlink genügen oder eine Identitäts-/Verwendungszweckprüfung je Bestellung nötig ist; ggf. Artikel-genauer Schalter statt shopweit. |
 | **SDB mit der Bestellbestätigung** (`sdbVersand`, Paket 328) | Sicherheitsdatenblätter hängen nicht an der Bestellbestätigung, kein Nachweis-Eintrag, Nachversand-Knopf gesperrt | `lib/sdbVersand.ts`, `app/api/oeffentlich/shop-bestellung`, `app/api/shop/sdb-nachversand`, `app/dashboard/shop/gefahrstoffe` | R49 (REACH Art. 31 Abs. 8/9: Form „elektronisch per Mail-Anhang“ genügt? Nachweis ausreichend? Nachversand an Empfänger der letzten 12 Monate) | Datenschutz: Empfänger-Mail im Nachweis (Aufbewahrungsfrist klären), Hinweis in der Bestellbestätigung. |
 | **Betriebsanweisung freigeben** (`betriebsanweisung`, Paket 329) | Freigabe-Knopf gesperrt, Druck immer mit „ENTWURF“; Entwürfe anlegen und speichern geht | `lib/betriebsanweisung.ts`, `app/dashboard/nachweise/gefahrstoffe/[id]/betriebsanweisung` | R49 (Haftung: Vorbefüllung aus SDB-Wortlaut, Aufbau TRGS 555, keine eigenen Mustertexte — reicht das?) | Hinweis „Entwurf ersetzt keine Gefährdungsbeurteilung“ prüfen; Unterweisung (§ 14 Abs. 2 GefStoffV) bleibt in Nachweise. |
+| **Zusammenlagerungs-Ampel** (`zusammenlagerung`, Paket 330) | Ampel je Lagerplatz im Gefahrstoffverzeichnis wird nicht angezeigt; Lagerklasse und Lagerplatz erfassen geht | `lib/zusammenlagerung.ts`, `app/dashboard/nachweise/gefahrstoffe` | R49 (Haftung bei falscher Ampel; Tabelle aus Abbild der TRGS 510 abgelesen) | Tabelle Zelle für Zelle mit der amtlichen TRGS 510 (Abschnitt 13) abgleichen, Bedeutung der Spalten 10*–13* klären, Wortlaut der Bedingungen 1–8 einbauen, Kleinmengen-Regel (400 kg/200 kg) ergänzen. |
 | **WhatsApp-Werbung** (`whatsappWerbung`) | Anmeldung und Kampagnen-Versand per WhatsApp | `app/api/marketing/whatsapp-senden`, `app/api/oeffentlich/whatsapp-optin` | 2.07, 2.08, 2.53, 1.64 | Einwilligungstext, Klausel für von Hand eingetragene Nummern, Meldung „abgemeldet" nach STOP ergänzen. |
 
 ## 2 · Import-Sperren (`lib/anwaltFreigabe.ts`, `ANWALT_FREIGABE`)
