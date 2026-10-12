@@ -196,6 +196,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🚲 Zweirad & E-Bike', href: '/dashboard/werkstatt/zweirad', ebene: 3, gruppe: 'betrieb' },
   { label: '💼 Dienstrad-Leasing', href: '/dashboard/werkstatt/zweirad/dienstrad', ebene: 3, gruppe: 'betrieb' },
   { label: '🧰 Leistungskatalog', href: '/dashboard/leistungskatalog', modul: 'leistungskatalog', ebene: 3, gruppe: 'betrieb' },
+  // Paket 331: PS-1 Preis-Spiegel — Unterpfad, erbt die Freigabe „Leistungskatalog"
+  { label: '📊 Preis-Spiegel', href: '/dashboard/leistungskatalog/preis-spiegel', ebene: 3, gruppe: 'betrieb' },
   { label: '📇 Fahrzeugakte', href: '/dashboard/fahrzeugakte', modul: 'fahrzeugakte', ebene: 3, gruppe: 'betrieb' },
   { label: '🚗 KFZ-Fachpaket', href: '/dashboard/kfz', modul: 'kfz', ebene: 3, gruppe: 'betrieb' },
   // Paket PS3 (25.09.26): Schadenabwicklung mit Versicherern — Unterpfad von /dashboard/kfz, erbt dessen Freigabe.

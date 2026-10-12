@@ -1593,6 +1593,21 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Werkstatt', href: '/dashboard/werkstatt' }, { text: 'Kalkulator', href: '/dashboard/kalkulator' }, { text: 'Aufmaß', href: '/dashboard/aufmass' }],
     vorher: [{ text: 'Branche im Betriebsprofil für „✨ Typische Leistungen"', href: '/dashboard/einstellungen' }],
   },
+  '/dashboard/leistungskatalog/preis-spiegel': {
+    zweck: 'Wo liegen Ihre Preise im Umfeld? Für ausgewählte Leistungen (oder freie Posten wie ein Gericht) erfassen Sie Preise von Mitbewerbern selbst — vom Aushang, der Webseite, der Speisekarte. Ab drei Mitbewerbern zeigt ARGONAUT Marktmitte, Spanne, Preisklasse und den Abstand Ihres Preises. Keine fremden Seiten, keine KI-Schätzung, keine Personennamen.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „Leistungskatalog" sehen den Preis-Spiegel; mit Schreibrecht legen sie Posten an, erfassen Mitbewerber-Preise, löschen Fehleingaben und blenden Posten aus. Die eigenen Preise kommen aus dem Leistungskatalog.',
+    schritte: [
+      '„+ Posten vergleichen": entweder „Aus dem Leistungskatalog" eine Leistung wählen (Ihr Preis wird brutto daraus berechnet: Pauschale, sonst Standardmenge × Stundensatz, bei Mengen je Einheit) oder „Freier Posten" mit Bezeichnung, Ihrem Bruttopreis und dem Steuersatz',
+      'Posten aufklappen und „Mitbewerber-Preis erfassen": Kennung wie „Mitbewerber A" oder „Salon Innenstadt" (keine Personennamen, Telefonnummern oder E-Mail-Adressen), Preis, brutto oder netto, Quelle, Entfernung, Datum, optional Link (https://) und Notiz',
+      'Ab 3 verschiedenen Mitbewerbern: Marktmitte, Spanne, Balken mit Ihrem Preis, Preisklasse (untere, mittlere, obere) und wie viele Mitbewerber günstiger sind. Je Mitbewerber zählt nur der neueste Eintrag der letzten 180 Tage; ältere stehen blass in der Liste',
+      'Farben: Gelb = mehr als 15 % über der Mitte (zeigen Sie, was Ihre Leistung besonders macht), Blau = mehr als 10 % darunter (möglicherweise verschenkter Ertrag), Grün = im Rahmen. Oben die Übersicht über alle Posten und die Filter',
+      '„✕" löscht einen falsch erfassten Mitbewerber-Preis (mit Rückfrage); „Posten ausblenden" nimmt den Posten aus der Liste, die Einträge bleiben gespeichert',
+    ],
+    probe: { anlegen: 'Leistung „Test" (Pauschale 25,21 € netto) als Posten wählen, dann drei Mitbewerber A, B, C mit 25, 30, 35 € brutto erfassen — Ihr Preis 30 € liegt genau in der Mitte.', loeschen: 'Die drei Einträge mit „✕" löschen und den Posten über „Posten ausblenden" entfernen.' },
+    landetIn: [{ text: 'Leistungskatalog (Preise ändern)', href: '/dashboard/leistungskatalog' }],
+    vorher: [{ text: 'Leistungen mit Preisen im Leistungskatalog', href: '/dashboard/leistungskatalog' }],
+  },
   '/dashboard/fahrzeugakte': {
     zweck: 'Die Lebensakte je Fahrzeug, über die FIN geführt: Stammdaten, nächste HU mit Ampel, Halter-Historie, alle Werkstattbesuche mit Positionen und Kosten sowie Anhänge wie HU-Bericht oder Papiere.',
     wer: 'beide',

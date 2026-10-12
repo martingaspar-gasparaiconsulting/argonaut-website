@@ -433,6 +433,8 @@ export default function LeistungskatalogPage() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button onClick={ladeStartkatalog} disabled={startBusy} style={styles.ghostBtn}>{startBusy ? '…' : '✨ Typische Leistungen'}</button>
           <button onClick={impOeffnen} style={styles.ghostBtn}>📥 CSV-Import</button>
+          {/* Paket 331: PS-1 Preis-Spiegel — eigene Preise gegen selbst erfasste Mitbewerber-Preise */}
+          <a href="/dashboard/leistungskatalog/preis-spiegel" style={{ ...styles.ghostBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>📊 Preis-Spiegel</a>
           <button onClick={neu} style={styles.primaerBtn}>+ Neue Leistung</button>
         </div>
       </div>
