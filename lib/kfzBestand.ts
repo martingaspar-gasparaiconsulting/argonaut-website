@@ -40,6 +40,11 @@ export type Bestand = {
   besteuerung: string | null;     // '25a' | 'regel'
   inseriert: boolean | null;
   notiz: string | null;
+  /** Paket 332 (BV2b): Einzelstück-Art, Merkmale, Zähler, Kennung — optional, alter Bestand hat sie nicht. */
+  art?: string | null;
+  merkmale?: Record<string, unknown> | null;
+  betriebsstunden?: number | null;
+  seriennr?: string | null;
 };
 
 const TAG = 86400000;
@@ -121,6 +126,8 @@ export function regelPasst(b: Bestand, regel: string, heuteIso: string): boolean
       case 'vk': ist = b.vk_brutto; break;
       case 'ek': ist = b.ek_netto; break;
       case 'km': ist = b.km_stand; break;
+      case 'bh': ist = b.betriebsstunden ?? null; break;   // Paket 332: Betriebsstunden
+      case 'art': ist = b.art ?? 'kfz'; break;
       case 'status': ist = b.status; break;
       case 'sparte': ist = b.sparte; break;
       case 'besteuerung': ist = b.besteuerung; break;

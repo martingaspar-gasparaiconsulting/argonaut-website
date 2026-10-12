@@ -46,6 +46,8 @@ export type Vorlage = {
   personWort?: string;
   /** … und die Mehrzahl („Monteure"). */
   personPlural?: string;
+  /** Paket 332 (BV2b): Sorte Einzelstück im Bestand (kfz, boot, maschine, uhr_schmuck, kunst_antik, fahrrad, sonstig) — Definition in lib/einzelstueck.ts. Fehlt = kfz. */
+  art?: string;
 };
 
 /** Was der Kunde je Modul speichern darf (alles optional). */
@@ -117,8 +119,23 @@ const KFZ_FEINSCHLIFF: Feinschliff[] = [
     aenderung: { sparten: ['Wohnmobil', 'Kastenwagen', 'Wohnwagen', 'Alkoven'], standkostenTag: 12, ampel: { gruenBis: 90, gelbBis: 150 } } },
   { name: 'Oldtimer', passt: (b) => /oldtimer|klassik/i.test(b),
     aenderung: { sparten: ['Oldtimer (H-Kennzeichen)', 'Youngtimer', 'Pkw'], ampel: { gruenBis: 120, gelbBis: 240 } } },
-  { name: 'Boote', passt: (b) => /boot|yacht/i.test(b),
-    aenderung: { einheit: 'Boot', einheitPlural: 'Boote', titel: 'Bootsbestand', sparten: ['Motorboot', 'Segelboot', 'Schlauchboot', 'Trailer'], standkostenTag: 6, ampel: { gruenBis: 90, gelbBis: 180 } } },
+  // Paket 332 (BV2b): Boote mit art 'boot' und umlautfester Wortgrenze („Bootcamp" ist kein Bootshandel)
+  { name: 'Boote', passt: (b) => /(^|[^a-zäöüß])boot(e|s|shandel|sh[aä]ndler|sbau|sservice)?([^a-zäöüß]|$)|yacht|werft/i.test(b),
+    aenderung: { art: 'boot', einheit: 'Boot', einheitPlural: 'Boote', titel: 'Bootsbestand', sparten: ['Motorboot', 'Segelboot', 'Schlauchboot', 'Trailer'], standkostenTag: 6, ampel: { gruenBis: 90, gelbBis: 180 } } },
+  // Paket 332 (BV2b): weitere Einzelstück-Arten — Merkmale, Kennung, Zähler in lib/einzelstueck.ts
+  { name: 'Land- und Baumaschinen, Stapler', passt: (b) => /landmaschin|baumaschin|stapler|flurf[öo]rder|landtechnik|kommunaltechnik|forsttechnik|arbeitsb[üu]hne/i.test(b),
+    aenderung: { art: 'maschine', einheit: 'Maschine', einheitPlural: 'Maschinen', titel: 'Maschinenbestand', sparten: ['Landmaschine', 'Baumaschine', 'Stapler / Flurförderzeug', 'Anbaugerät', 'Kommunaltechnik'], standkostenTag: 8, ampel: { gruenBis: 120, gelbBis: 240 },
+      suchen: [{ key: 'ueber120', name: 'Über 120 Standtage', regel: 'standtage>120' }, { key: 'viele_bh', name: 'Über 5.000 Betriebsstunden', regel: 'bh>5000' }, { key: 'ohneInserat', name: 'Ohne Inserat', regel: 'inseriert=nein' }, { key: 'reserviert', name: 'Reserviert', regel: 'status=reserviert' }] } },
+  { name: 'Uhren und Schmuck', passt: (b) => /juwelier|uhrmacher|uhrenhandel|(^|[^a-zäöüß])uhren([^a-zäöüß]|$)|schmuck|goldankauf|edelmetall|goldschmied/i.test(b),
+    aenderung: { art: 'uhr_schmuck', einheit: 'Stück', einheitPlural: 'Stücke', titel: 'Uhren und Schmuck', sparten: ['Uhren', 'Schmuck', 'Edelmetall', 'Sonstiges'], standkostenTag: 0, ampel: { gruenBis: 180, gelbBis: 365 },
+      suchen: [{ key: 'ueber180', name: 'Über 180 Tage', regel: 'standtage>180' }, { key: 'ab5000', name: 'Ab 5.000 €', regel: 'vk>=5000' }, { key: 'diff', name: 'Differenzbesteuert', regel: 'besteuerung=25a' }, { key: 'reserviert', name: 'Reserviert', regel: 'status=reserviert' }] } },
+  { name: 'Kunst und Antiquitäten', passt: (b) => /antiquit|kunsthandel|kunsthändler|galerie|kunstauktion|auktionshaus|(^|[^a-zäöüß])antik([^a-zäöüß]|$)/i.test(b),
+    aenderung: { art: 'kunst_antik', einheit: 'Objekt', einheitPlural: 'Objekte', titel: 'Kunst und Antiquitäten', sparten: ['Gemälde und Grafik', 'Skulptur', 'Möbel', 'Porzellan, Glas, Silber', 'Sonstiges'], standkostenTag: 0, ampel: { gruenBis: 365, gelbBis: 730 },
+      suchen: [{ key: 'ueber365', name: 'Über ein Jahr', regel: 'standtage>365' }, { key: 'ab10000', name: 'Ab 10.000 € (GwG)', regel: 'vk>=10000' }, { key: 'diff', name: 'Differenzbesteuert', regel: 'besteuerung=25a' }, { key: 'reserviert', name: 'Reserviert', regel: 'status=reserviert' }] } },
+  { name: 'Fahrräder und E-Bikes', passt: (b) => /fahrrad|e-bike|ebike|radsport|radhandel|pedelec|lastenrad/i.test(b),
+    aenderung: { art: 'fahrrad', einheit: 'Rad', einheitPlural: 'Räder', titel: 'Radbestand', sparten: ['Gebrauchtrad', 'E-Bike', 'Lastenrad', 'Kinderrad'], standkostenTag: 0.5, ampel: { gruenBis: 60, gelbBis: 120 } } },
+  { name: 'Second Hand', passt: (b) => /second.?hand|gebrauchtwaren|vintage|trödel|sozialkaufhaus/i.test(b),
+    aenderung: { art: 'sonstig', einheit: 'Artikel', einheitPlural: 'Artikel', titel: 'Bestand Einzelstücke', sparten: ['Kleidung', 'Möbel', 'Elektro', 'Sonstiges'], standkostenTag: 0, ampel: { gruenBis: 60, gelbBis: 120 } } },
   { name: 'Luxus und Premium', passt: (b) => /luxus|premium|sportwagen/i.test(b),
     aenderung: { ampel: { gruenBis: 90, gelbBis: 150 }, standkostenTag: 18 } },
 ];
