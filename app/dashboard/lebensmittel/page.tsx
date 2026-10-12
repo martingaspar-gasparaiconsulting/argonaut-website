@@ -165,6 +165,7 @@ export default function LebensmittelPage() {
       <p style={{ margin: '0 0 12px' }}><a href="/dashboard/lebensmittel/qualitaet" style={{ color: C.cyan, fontSize: 14 }}>🧪 Qualität &amp; Rückruf: Reklamationen, Lieferanten-Bewertung, Rückruf-Assistent →</a></p>
       <p style={{ margin: '0 0 12px' }}><a href="/dashboard/lebensmittel/reife" style={{ color: C.cyan, fontSize: 14 }}>⏳ Reife-Uhr: Dry-Aged, Schinken, Salami, Käse, Wein — Reifetage, Reifeverlust, Klima →</a></p>
       <p style={{ margin: '0 0 12px' }}><a href="/dashboard/lebensmittel/vorbestellung" style={{ color: C.cyan, fontSize: 14 }}>🧺 Vorbestellung & Vormerkliste: knappe Ware mit Abholtermin, nie überbucht →</a></p>
+      <p style={{ margin: '0 0 12px' }}><a href="/dashboard/lebensmittel/boxen" style={{ color: C.cyan, fontSize: 14 }}>🎁 Box-Konfigurator: Geschenkkiste, Präsentkorb, Grillpaket — mit Auswahl, Aufpreisen und Boxen je Tag →</a></p>
 
       {ok && <div style={styles.ok}>{ok}</div>}
       {fehler && <div style={styles.err}>{fehler}</div>}

@@ -2679,6 +2679,22 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Eine Aktion „Test-Gans" mit 2 Stk, höchstens 1 je Kunde und Abholung nächste Woche anlegen und öffnen. Zwei Vorbestellungen à 1 Stk anlegen — die Aktion ist ausgebucht. Einen dritten Kunden mit Häkchen auf die Vormerkliste setzen, dann eine Vorbestellung stornieren: der Vorgemerkte ist „als Nächstes dran".', loeschen: 'Vorbestellung „stornieren", Vormerkung „abmelden", danach die Aktion „Für neue Vorbestellungen schließen" und nach dem Abholzeitraum „Aktion abschließen".' },
     vorher: [{ text: 'Reife-Uhr', href: '/dashboard/lebensmittel/reife' }, { text: 'Lebensmittel (Chargen, HACCP)', href: '/dashboard/lebensmittel' }, { text: 'Etiketten (Pflichtangaben für den Shop)', href: '/dashboard/etiketten' }],
   },
+  '/dashboard/lebensmittel/boxen': {
+    zweck: 'Der Box-Konfigurator für Geschenkkisten, Präsentkörbe und Grillpakete: Grundpreis, Fächer wie „2 Käse nach Wahl" und je Fach Artikel mit Aufpreis; dazu die Kapazität je Tag (wie viele Boxen Sie packen können) und der Bestellschluss. ARGONAUT rechnet den Preis selbst und lässt je Tag nie mehr Boxen zu, als Sie packen können — auch nicht, wenn zwei gleichzeitig buchen. Die Packliste zeigt je Tag, welche Artikel Sie brauchen.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „Lebensmittel" sehen Boxen und Bestellungen; mit Schreibrecht legen sie Boxen, Fächer, Kapazität und Bestellungen an und ändern den Status. Gelöscht wird nichts — Bestellungen werden „storniert", Boxen „archiviert", Artikel „nicht mehr angeboten". Fächer und leere Kapazitätstage entfernt nur die Geschäftsleitung.',
+    schritte: [
+      '„+ Neue Box": Name, Grundpreis (brutto, für Kiste, Verpackung und alles fest Enthaltene), Umsatzsteuer und Bestellschluss in Tagen vor der Abholung eintragen, „Anlegen"',
+      'Box aufklappen → „Fächer und Auswahl": ein Fach benennen (z. B. „Käse nach Wahl"), daneben eintragen, wie viele der Kunde wählt, „＋ Fach". Je Fach Artikel aus dem Lager wählen, Aufpreis eintragen (leer = ohne Aufpreis), „＋ zur Wahl stellen". Darunter stehen die Allergene, die je nach Wahl drin sein können — aus den Etiketten der Artikel',
+      '„Kapazität (Boxen je Tag)": Zeitraum von – bis, Wochentage und Boxen je Tag eintragen, „＋ Tage anlegen". Vorhandene Tage bleiben, wie sie sind; in der Liste ändern Sie einen Tag einzeln. Weniger Boxen als schon gebucht geht nicht',
+      '„✓ bestellbar machen" — geht erst, wenn jedes Fach mindestens einen Artikel hat und ab heute Kapazität eingetragen ist; der Kasten nennt, was fehlt. Haben Artikel verschiedene Steuersätze (z. B. Wein 19 %, Käse 7 %), erscheint ein Hinweis — bitte mit Ihrer Steuerberatung klären',
+      'Reiter „Bestellungen" → „+ Box-Bestellung": Box, Abholtag (nur Tage mit freien Boxen), Anzahl, je Fach die Wahl des Kunden, Name, Telefon/E-Mail und „Bestellt über". Preis, Allergene der gewählten Box und Hinweise erscheinen sofort; „Bestellung eintragen". Den Preis setzt ARGONAUT, nicht das Formular',
+      'In der Liste „gepackt", „✓ abgeholt", nach dem Abholtag „nicht abgeholt" oder „stornieren" — Stornierte und nicht Abgeholte geben die Box für den Tag wieder frei',
+      'Reiter „Packliste": je Abholtag die Summe je Artikel über alle offenen Boxen und darunter jede Bestellung zum Abhaken; „🖨 Drucken"',
+    ],
+    probe: { anlegen: 'Eine Box „Test-Kiste" mit 10 € Grundpreis anlegen, ein Fach „Test" mit 1 nach Wahl und einem Artikel mit 2 € Aufpreis, Kapazität morgen 1 Box. Bestellbar machen, eine Bestellung eintragen (12 €) — der Tag ist voll, eine zweite wird abgelehnt.', loeschen: 'Bestellung „stornieren", die Box „archivieren".' },
+    vorher: [{ text: 'Artikel im Lager', href: '/dashboard/erp' }, { text: 'Etiketten (Allergene der Artikel)', href: '/dashboard/etiketten' }, { text: 'Vorbestellung & Vormerkliste', href: '/dashboard/lebensmittel/vorbestellung' }],
+  },
   '/dashboard/etiketten': {
     zweck: 'Etiketten nach LMIV: Zutaten mit hervorgehobenen Allergenen (14 Pflichtallergene), Nährwerte je 100 g oder 100 ml, laufende Prüfung der Pflichtangaben und Etikett als PDF. Bei loser Ware werden nur die Allergene verlangt.',
     wer: 'beide',

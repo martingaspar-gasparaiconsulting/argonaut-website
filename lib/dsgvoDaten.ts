@@ -101,6 +101,8 @@ export const DATEN_ORTE: DatenOrt[] = [
   // Paket 342 (BV3b): Vorbestellungen knapper Ware und Vormerkliste (mit Einwilligung)
   { tabelle: 'vorbestell_posten', label: 'Vorbestellungen', spalte: 'kontakt_id', art: 'loeschen', begruendung: REIN_PERSONENBEZOGEN, imExport: true },
   { tabelle: 'vormerkung', label: 'Vormerkliste (Benachrichtigung bei freier Ware)', spalte: 'kontakt_id', art: 'loeschen', begruendung: REIN_PERSONENBEZOGEN, imExport: true },
+  // Paket 344 (BV3b): Box-Bestellungen (Geschenkkiste, Präsentkorb)
+  { tabelle: 'box_bestellung', label: 'Box-Bestellungen', spalte: 'kontakt_id', art: 'loeschen', begruendung: REIN_PERSONENBEZOGEN, imExport: true },
 
   // --- Die Datenbank regelt es selbst ---------------------------------------
   { tabelle: 'kontakt_aktivitaeten', label: 'Gesprächsverlauf', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
