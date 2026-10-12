@@ -269,6 +269,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🧪 Qualität & Rückruf', href: '/dashboard/lebensmittel/qualitaet', ebene: 3, gruppe: 'betrieb' },
   // Paket 339 (BV3a): Unterpfad von /dashboard/lebensmittel, erbt dessen Freigabe
   { label: '⏳ Reife-Uhr', href: '/dashboard/lebensmittel/reife', ebene: 3, gruppe: 'betrieb' },
+  // Paket 342 (BV3b): Unterpfad von /dashboard/lebensmittel, erbt dessen Freigabe
+  { label: '🧺 Vorbestellung & Vormerkliste', href: '/dashboard/lebensmittel/vorbestellung', ebene: 3, gruppe: 'betrieb' },
   { label: '🏷️ Etiketten & LMIV', href: '/dashboard/etiketten', modul: 'etiketten', ebene: 3, gruppe: 'betrieb' },
   { label: '🧮 Rezeptur & Ausbeute', href: '/dashboard/rezeptur', modul: 'rezeptur', ebene: 3, gruppe: 'betrieb' },
   // Vorkalkulation: Material + Zeit + Energie -> Selbstkosten je Einheit.

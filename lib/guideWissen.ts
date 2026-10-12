@@ -2663,6 +2663,21 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Eine Reife-Charge „Test" Art Dry-Aged mit Start vor 25 Tagen und 10 kg anlegen, dann eine Messung mit 9,2 kg und 5 °C erfassen — Reifeverlust 8 %, Temperatur gelb. Dann Kalkulation: Einkauf 18,50 je kg, 25 % erwarteter Verlust, 15 % Parieren, 40 % Marge — Einstand und Vorschlag erscheinen.', loeschen: 'Messung mit ✕ löschen (nur Geschäftsleitung); die Charge „Verwerfen".' },
     vorher: [{ text: 'Lebensmittel (Chargen, HACCP)', href: '/dashboard/lebensmittel' }],
   },
+  '/dashboard/lebensmittel/vorbestellung': {
+    zweck: 'Vorbestellung und Vormerkliste für knappe Ware — zum Beispiel Dry-Aged aus der Reife-Uhr, Weihnachtsgänse oder Saison-Pralinen: Gesamtmenge, Abholzeitraum, Bestellschluss und Höchstmenge je Kunde. ARGONAUT lässt nie mehr Vorbestellungen zu, als da ist — auch nicht, wenn zwei gleichzeitig buchen. Ist alles vergeben, kommt der Kunde auf die Vormerkliste, aber nur mit seiner Einwilligung in die Benachrichtigung.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „Lebensmittel" sehen Aktionen, Vorbestellungen und Vormerkliste; mit Schreibrecht legen sie an und ändern den Status. Gelöscht wird nichts — Vorbestellungen werden „storniert", Vormerkungen „abgemeldet". Erledigte Vormerkungen nach 30 Tagen löscht nur die Geschäftsleitung.',
+    schritte: [
+      '„+ Vorbestell-Aktion": Ware benennen (optional eine Reife-Charge aus der Reife-Uhr wählen — Name und Einheit werden übernommen), verfügbare Gesamtmenge mit Einheit, „Höchstens je Kunde", Abholzeitraum von – bis und Bestellschluss eintragen. „Anlegen und zum Vorbestellen öffnen" oder „Als Entwurf anlegen"',
+      'Karte aufklappen → „+ Vorbestellung": Name, Telefon und/oder E-Mail, Menge, Abholtag und „Bestellt über" (Theke, Telefon, E-Mail). Der Balken zeigt, wie viel vergeben ist; „frei" sinkt mit jeder Vorbestellung. Mehr als frei, mehr als die Höchstmenge oder ein Abholtag außerhalb des Zeitraums wird abgelehnt',
+      'Ausgebucht? → „+ Auf die Vormerkliste": Name, Telefon oder E-Mail, gewünschte Menge — und das Häkchen „Der Kunde ist einverstanden" erst setzen, wenn der Kunde dem vorgelesenen Text zugestimmt hat. Ohne Häkchen keine Vormerkung; Wortlaut und Zeitpunkt werden gespeichert',
+      'Storniert ein Kunde oder holt nicht ab („nicht abgeholt" erscheint nach dem Abholtag), wird Ware frei. Die Vormerkliste zeigt dann „als Nächstes ist … dran" — der Reihe nach; wer mehr möchte, als frei ist, wird übersprungen, aber angezeigt. „📞 anrufen" oder „✉ E-Mail" öffnet Ihr Telefon bzw. Ihr Mailprogramm mit fertigem Text („Text" zeigt ihn zum Vorlesen); danach „benachrichtigt" — die Ware wird 48 Stunden zurückgehalten',
+      'Sagt der Kunde zu: „→ Vorbestellung" übernimmt ihn mit seiner Menge (höchstens, was frei ist). Keine Antwort nach 48 Stunden: „keine Antwort" — dann ist der Nächste dran. „abmelden", wenn der Kunde nicht mehr möchte',
+      'Reiter „Abholliste": alle Vorbestellungen je Abholtag mit Kunde, Ware und Menge — „bereit" beim Herrichten, „✓ abgeholt" an der Theke. Nach dem Abholzeitraum „Aktion abschließen"',
+    ],
+    probe: { anlegen: 'Eine Aktion „Test-Gans" mit 2 Stk, höchstens 1 je Kunde und Abholung nächste Woche anlegen und öffnen. Zwei Vorbestellungen à 1 Stk anlegen — die Aktion ist ausgebucht. Einen dritten Kunden mit Häkchen auf die Vormerkliste setzen, dann eine Vorbestellung stornieren: der Vorgemerkte ist „als Nächstes dran".', loeschen: 'Vorbestellung „stornieren", Vormerkung „abmelden", danach die Aktion „Für neue Vorbestellungen schließen" und nach dem Abholzeitraum „Aktion abschließen".' },
+    vorher: [{ text: 'Reife-Uhr', href: '/dashboard/lebensmittel/reife' }, { text: 'Lebensmittel (Chargen, HACCP)', href: '/dashboard/lebensmittel' }],
+  },
   '/dashboard/etiketten': {
     zweck: 'Etiketten nach LMIV: Zutaten mit hervorgehobenen Allergenen (14 Pflichtallergene), Nährwerte je 100 g oder 100 ml, laufende Prüfung der Pflichtangaben und Etikett als PDF. Bei loser Ware werden nur die Allergene verlangt.',
     wer: 'beide',
