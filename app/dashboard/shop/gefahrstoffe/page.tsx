@@ -20,6 +20,7 @@ import {
   PIKTOGRAMME, LEER, STATUS_TEXT, ausVerzeichnis, bestaetigFehler, gefahrStatus, kurzText, plausiHinweise, sauber,
   type GefahrAngaben, type GefahrStatus, type Satz,
 } from "@/lib/shopGefahr";
+import { STATUS_TEXT as VERSAND_TEXT } from "@/lib/sdbVersand";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -58,6 +59,7 @@ function datum(s: string | null): string {
 
 export default function ShopGefahrSeite() {
   const [betrieb, setBetrieb] = useState<string | null>(null);
+  const [istChef, setIstChef] = useState(false);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [meldung, setMeldung] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export default function ShopGefahrSeite() {
     let chef: string | null = null;
     try { chef = ((await supabase.rpc("mein_chef_id")).data as string | null) ?? null; } catch { chef = null; }
     setBetrieb(chef || user.id);
+    setIstChef(!chef);
     const [a, g, d, v] = await Promise.all([
       alleSeiten<Artikel>((x, y) => supabase.from("artikel").select("id, bezeichnung, artikelnummer").eq("im_shop", true)
         .order("bezeichnung", { ascending: true }).order("id", { ascending: true }).range(x, y)),
@@ -145,8 +148,11 @@ export default function ShopGefahrSeite() {
                 </span>
               </div>
               {offen === a.id && (
-                <Editor key={a.id + (z?.id ?? "") + (z?.status ?? "")} artikel={a} zeile={z} sdb={sdb[a.id] ?? []} verz={verz[a.id] ?? null} betrieb={betrieb}
-                  onGespeichert={async (t) => { setMeldung(t); await neuLaden(); }} />
+                <>
+                  <Editor key={a.id + (z?.id ?? "") + (z?.status ?? "")} artikel={a} zeile={z} sdb={sdb[a.id] ?? []} verz={verz[a.id] ?? null} betrieb={betrieb}
+                    onGespeichert={async (t) => { setMeldung(t); await neuLaden(); }} />
+                  <SdbVersand artikel={a} istChef={istChef} hatSdb={(sdb[a.id] ?? []).length > 0} setMeldung={setMeldung} />
+                </>
               )}
             </div>
           ))}
@@ -276,6 +282,75 @@ function Editor({ artikel, zeile, sdb, verz, betrieb, onGespeichert }: {
       <p style={{ color: C.textDim, fontSize: 12, marginTop: 8 }}>
         Jede Änderung braucht eine neue Bestätigung. Gespeichert wird, wer wann bestätigt hat.
       </p>
+    </div>
+  );
+}
+
+// ------------------------------------------- SDB-Versand-Nachweis (P328) ---
+type Versand = { id: string; empfaenger_email: string | null; empfaenger_name: string | null; anlass: string; status: string; versendet_am: string; sprache: string; dokument_version: string | null };
+
+function SdbVersand({ artikel, istChef, hatSdb, setMeldung }: { artikel: Artikel; istChef: boolean; hatSdb: boolean; setMeldung: (t: string | null) => void }) {
+  const [liste, setListe] = useState<Versand[] | null>(null);
+  const [nach, setNach] = useState<{ empfaenger: { email: string; name: string | null; sprache: string; fassung: string | null }[]; frei: boolean; grund: string | null } | null>(null);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const laden = useCallback(async () => {
+    const { data, error } = await supabase.from("sdb_versand")
+      .select("id, empfaenger_email, empfaenger_name, anlass, status, versendet_am, sprache, dokument_version")
+      .eq("artikel_id", artikel.id).order("versendet_am", { ascending: false }).limit(50);
+    setListe(error ? [] : ((data as Versand[]) ?? []));
+    if (istChef) {
+      const r = await fetch(`/api/shop/sdb-nachversand?artikelId=${encodeURIComponent(artikel.id)}`);
+      const d = await r.json().catch(() => null);
+      setNach(r.ok && d ? d : null);
+    }
+  }, [artikel.id, istChef]);
+  useEffect(() => { void laden(); }, [laden]);
+
+  async function nachsenden() {
+    if (!nach?.empfaenger.length) return;
+    if (!window.confirm(`Die aktuelle Fassung an ${nach.empfaenger.length} Empfänger der letzten 12 Monate senden?`)) return;
+    setBusy(true); setFehler(null);
+    const r = await fetch("/api/shop/sdb-nachversand", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ artikelId: artikel.id }) });
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) { setFehler(d.error || "Der Nachversand hat nicht geklappt."); return; }
+    setMeldung(`${artikel.bezeichnung}: ${d.gesendet} gesendet${d.fehler ? `, ${d.fehler} fehlgeschlagen (bitte selbst senden)` : ""}.`);
+    await laden();
+  }
+
+  return (
+    <div style={{ marginTop: 14, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+      <b>📨 Sicherheitsdatenblatt-Versand</b>
+      <span style={{ color: C.textDim, fontSize: 13 }}> — geht mit der Bestellbestätigung mit (spätestens bei der ersten Lieferung, REACH Art. 31)</span>
+      {!startFrei("sdbVersand") && <div style={{ color: C.warn, fontSize: 13, marginTop: 6 }}>Der automatische Versand wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin senden Sie die Datenblätter bitte selbst.</div>}
+      {!hatSdb && <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>Kein Sicherheitsdatenblatt hinterlegt — dann geht nichts mit, und die Bestell-Mail an Sie weist darauf hin.</div>}
+      {fehler && <div style={S.fehler}>{fehler}</div>}
+      {liste === null ? <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>Wird geladen …</div> : liste.length === 0 ? (
+        <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>Noch nichts versendet.</div>
+      ) : (
+        <div style={{ marginTop: 8, display: "grid", gap: 4, fontSize: 13 }}>
+          {liste.slice(0, 12).map((v) => (
+            <div key={v.id} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ color: C.textDim, minWidth: 92 }}>{datum(v.versendet_am)}</span>
+              <span>{v.empfaenger_name || v.empfaenger_email || "ohne E-Mail"}</span>
+              <span style={{ color: C.textDim }}>{v.anlass === "nachversand" ? "Nachversand" : "Bestellung"} · {(v.sprache || "de").toUpperCase()}{v.dokument_version ? ` · V${v.dokument_version}` : ""}</span>
+              <span style={{ color: v.status === "versendet" ? C.green : C.warn }}>{VERSAND_TEXT[v.status] ?? v.status}</span>
+            </div>
+          ))}
+          {liste.length > 12 && <div style={{ color: C.textDim }}>… und {liste.length - 12} weitere</div>}
+        </div>
+      )}
+      {istChef && nach && (
+        <div style={{ marginTop: 10 }}>
+          {nach.empfaenger.length === 0
+            ? <span style={{ color: C.textDim, fontSize: 13 }}>Alle Empfänger der letzten 12 Monate haben die aktuelle Fassung.</span>
+            : <button style={S.knopf} disabled={busy || !nach.frei} title={nach.frei ? "" : nach.grund ?? ""} onClick={() => void nachsenden()}>
+                🔁 Aktuelle Fassung an {nach.empfaenger.length} Empfänger der letzten 12 Monate senden
+              </button>}
+        </div>
+      )}
     </div>
   );
 }

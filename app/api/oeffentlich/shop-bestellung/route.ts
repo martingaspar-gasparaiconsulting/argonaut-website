@@ -25,6 +25,9 @@ import {
 } from '@/lib/shopB2b';
 import { kundeAusToken, ladeNurGewerbe, ladePreisBasis, tokenAus } from '@/lib/shopB2bServer';
 import { bestellungErlaubt } from '@/lib/shopGewerbe';
+import { startFrei } from '@/lib/startSperre';
+import { pfadPasst } from '@/lib/produktDokumente';
+import { anhangName, protokollZeilen, versandPlan, STATUS_TEXT, type Plan, type SdbDok } from '@/lib/sdbVersand';
 import { sprachName } from '@/lib/mehrsprachig';
 import { bestellSprache, fuellen, mailTexte, type MailTexte } from '@/lib/shopSprachen';
 
@@ -196,12 +199,14 @@ export async function POST(req: Request) {
     };
     if (kunde) Object.assign(zeile, { shop_kunde_id: kunde.id, kontakt_id: kunde.kontakt_id, zahlart, netto_summe: netto });
     if (kSprache) zeile.sprache = kSprache;
-    let { error: insErr } = await db.from('shop_bestellungen').insert(zeile);
+    // Paket 328: Kennung der Bestellung mitlesen (für den SDB-Versand-Nachweis).
+    let { data: neuBest, error: insErr } = await db.from('shop_bestellungen').insert(zeile).select('id').maybeSingle();
     // Paket 324: Fehlt die Spalte sprache (SQL p323 offen), ohne sie speichern — die Sprache steht dann nur in der Notiz.
     if (insErr && kSprache) {
       delete zeile.sprache;
-      ({ error: insErr } = await db.from('shop_bestellungen').insert(zeile));
+      ({ data: neuBest, error: insErr } = await db.from('shop_bestellungen').insert(zeile).select('id').maybeSingle());
     }
+    const bestellungId = (neuBest as { id?: string } | null)?.id ?? null;
     if (insErr) {
       console.error('shop-bestellung Insert:', insErr);
       return NextResponse.json({ error: 'Bestellung konnte nicht gespeichert werden.' }, { status: 500 });
@@ -212,6 +217,9 @@ export async function POST(req: Request) {
     const ci = ciRow as { firma?: string; email?: string } | null;
     const firma = (ci?.firma || '').toString().trim();
     const betriebMail = (ci?.email || '').toString().trim();
+
+    // Paket 328 (S5): Sicherheitsdatenblätter mit der Bestätigung (REACH Art. 31) — erst nach Freigabe R49.
+    const sdb = startFrei('sdbVersand') ? await sdbVorbereiten() : null;
 
     type MailPos = { menge: number; bezeichnung: string; einzelpreis: number; einzelpreis_netto?: number };
     // Paket 324: Tabelle und Summen in der Sprache der Mail (Betrieb immer Deutsch, Käufer je Bestell-Sprache).
@@ -235,7 +243,8 @@ export async function POST(req: Request) {
          <table style="border-collapse:collapse;font-size:14px;">${posTab}
          ${summenZeilen}</table>
          <p style="margin:16px 0 0;font-size:14px;">Besteller: <b>${escapeHtml(besteller)}</b>${email ? ` · ${escapeHtml(email)}` : ''}${telefon ? ` · ${escapeHtml(telefon)}` : ''}${kSprache ? ` · Sprache: <b>${escapeHtml(sprachName(kSprache))}</b>` : ''}</p>
-         ${nachricht ? `<p style="margin:8px 0 0;color:#6b7688;font-size:13px;">${escapeHtml(nachricht).replace(/\n/g, '<br>')}</p>` : ''}`,
+         ${nachricht ? `<p style="margin:8px 0 0;color:#6b7688;font-size:13px;">${escapeHtml(nachricht).replace(/\n/g, '<br>')}</p>` : ''}
+         ${sdb ? sdbBetriebHinweis(sdb.plan) : ''}`,
       );
       const r = await sendeMail({ an: betriebMail, betreff: `Neue Shop-Bestellung: ${besteller}`, html, ...(email ? { antwortAn: email } : {}) });
       if (!r.ok) console.error('shop-bestellung Betriebs-Mail:', r.fehler);
@@ -251,15 +260,78 @@ export async function POST(req: Request) {
          <p style="margin:0 0 14px;">${firma ? fuellen(escapeHtml(m.dankBei), { firma: escapeHtml(firma) }) : escapeHtml(m.dank)}</p>
          <table style="border-collapse:collapse;font-size:14px;margin:0 0 12px;">${posTabIn(kSprache)}
          ${summenIn(m, kSprache)}</table>
+         ${sdb && sdb.anhaenge.length ? `<p style="margin:8px 0 0;font-size:13px;">${kSprache === 'en' ? 'Attached: safety data sheet(s) for your order.' : 'Im Anhang: Sicherheitsdatenblatt bzw. Sicherheitsdatenblätter zu Ihrer Bestellung.'}</p>` : ''}
          <p style="margin:8px 0 0;">${escapeHtml(m.gruss)}${firma ? '<br>' + escapeHtml(firma) : ''}</p>`,
       );
+      let kaeuferOk = false;
       try {
-        const r = await sendeMail({ an: email, betreff: firma ? fuellen(m.betreffBei, { firma }) : m.betreff, html });
+        const r = await sendeMail({ an: email, betreff: firma ? fuellen(m.betreffBei, { firma }) : m.betreff, html, ...(sdb && sdb.anhaenge.length ? { anhaenge: sdb.anhaenge } : {}) });
+        kaeuferOk = r.ok;
         if (!r.ok) console.error('shop-bestellung Käufer-Mail:', r.fehler);
       } catch (e) { console.error('shop-bestellung Käufer-Mail-Versand:', e); }
+      if (sdb) await sdbProtokoll(sdb.plan, kaeuferOk);
+    } else if (sdb) {
+      await sdbProtokoll(sdb.plan, false);
     }
 
     return NextResponse.json({ ok: true });
+
+    /** Paket 328: Plan und Anhänge — nur aktuelle SDB des Betriebs, Pfad geprüft; Fehler nie zum Kunden durchreichen. */
+    async function sdbVorbereiten(): Promise<{ plan: Plan; anhaenge: { dateiname: string; inhalt: Buffer; typ: string }[] } | null> {
+      try {
+        const ids = artikel.filter((a) => (wunsch.get(a.id) || 0) > 0).map((a) => a.id);
+        if (!ids.length) return null;
+        const [{ data: doks }, { data: bisher }, { data: gef }] = await Promise.all([
+          db.from('produkt_dokument').select('id, artikel_id, sprache, version, datei_bytes, datei_pfad')
+            .eq('owner_user_id', ownerId).eq('art', 'sdb').eq('aktuell', true).in('artikel_id', ids).limit(500),
+          email ? db.from('sdb_versand').select('dokument_id, empfaenger_email, status').eq('owner_user_id', ownerId).eq('empfaenger_email', email.toLowerCase()).in('artikel_id', ids).limit(1000) : Promise.resolve({ data: [] }),
+          db.from('artikel_gefahr').select('artikel_id, keine_kennzeichnung, status').eq('owner_user_id', ownerId).eq('status', 'bestaetigt').in('artikel_id', ids).limit(500),
+        ]);
+        const sdbJe: Record<string, SdbDok[]> = {};
+        for (const d of (doks as SdbDok[]) ?? []) (sdbJe[d.artikel_id] ??= []).push(d);
+        const mitKennz = ((gef as { artikel_id: string; keine_kennzeichnung: boolean }[]) ?? []).filter((g) => !g.keine_kennzeichnung).map((g) => g.artikel_id);
+        const plan = versandPlan(ids, sdbJe, (bisher as { dokument_id: string | null; empfaenger_email: string | null; status: string }[]) ?? [], email, kSprache ?? 'de', mitKennz);
+        const anhaenge: { dateiname: string; inhalt: Buffer; typ: string }[] = [];
+        if (email) {
+          for (const e of [...plan.anhaengen]) {
+            const pfad = String(e.dok.datei_pfad ?? '');
+            const ok = pfadPasst(pfad, ownerId, e.artikel_id);
+            const dl = ok ? await db.storage.from('produkt-dokumente').download(pfad) : { data: null };
+            const buf = dl.data ? Buffer.from(await (dl.data as Blob).arrayBuffer()) : null;
+            if (!buf || buf.subarray(0, 5).toString('latin1') !== '%PDF-') {
+              plan.anhaengen = plan.anhaengen.filter((x) => x !== e);
+              plan.zuGross.push(e);
+              continue;
+            }
+            const art = artikel.find((a) => a.id === e.artikel_id);
+            anhaenge.push({ dateiname: anhangName(art?.bezeichnung, e.dok), inhalt: buf, typ: 'application/pdf' });
+          }
+        }
+        return { plan, anhaenge };
+      } catch (e) {
+        console.error('shop-bestellung SDB:', e instanceof Error ? e.message : 'unbekannt');
+        return null;
+      }
+    }
+
+    /** Paket 328: Nachweis schreiben (nur Server). Fehlt die Tabelle (SQL p328 offen), nur Protokoll-Zeile im Log. */
+    async function sdbProtokoll(plan: Plan, mailOk: boolean) {
+      const zeilen = protokollZeilen(plan, email, besteller, bestellungId, kSprache ?? 'de', mailOk).map((z) => ({ owner_user_id: ownerId, ...z }));
+      if (!zeilen.length) return;
+      const { error } = await db.from('sdb_versand').insert(zeilen);
+      if (error) console.error('shop-bestellung SDB-Nachweis:', error.message);
+    }
+
+    /** Paket 328: Hinweis in der Mail an den Betrieb, was mit den Datenblättern passiert ist. */
+    function sdbBetriebHinweis(plan: Plan): string {
+      const name = (id: string) => escapeHtml(String(artikel.find((a) => a.id === id)?.bezeichnung ?? 'Artikel'));
+      const zeilen: string[] = [];
+      for (const e of plan.anhaengen) zeilen.push(`${name(e.artikel_id)}: ${email ? 'Sicherheitsdatenblatt mitgeschickt' : STATUS_TEXT.ohne_mail}`);
+      for (const e of plan.schonErhalten) zeilen.push(`${name(e.artikel_id)}: diese Fassung hat der Kunde schon bekommen`);
+      for (const e of plan.zuGross) zeilen.push(`${name(e.artikel_id)}: ${email ? STATUS_TEXT.zu_gross : STATUS_TEXT.ohne_mail}`);
+      for (const id of plan.ohneSdb) zeilen.push(`<b>${name(id)}: kein Sicherheitsdatenblatt hinterlegt — bitte selbst senden und unter Produkt-Dokumente hochladen</b>`);
+      return zeilen.length ? `<p style="margin:12px 0 0;font-size:13px;"><b>Sicherheitsdatenblätter</b><br>${zeilen.join('<br>')}</p>` : '';
+    }
   } catch (err) {
     console.error('shop-bestellung Fehler:', err);
     return NextResponse.json({ error: 'Interner Fehler.' }, { status: 500 });

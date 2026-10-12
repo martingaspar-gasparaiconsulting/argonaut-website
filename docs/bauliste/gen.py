@@ -11,7 +11,7 @@ for sid,_,_,rows in S:
         p=int(r[5])
         if r[6]=="live": done+=p; continue
         if sid in("s0","s1","s2"): tot_bis_test+=p
-        elif sid in ("s3","s5"): tot_s3+=p
+        elif sid in ("s3","s5","s6"): tot_s3+=p
         elif sid=="kfz": tot_kfz+=p
         elif sid=="mob": tot_mob+=p
         elif sid=="alle": tot_alle+=p
@@ -121,7 +121,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 12.10.2026 · _p327 unterwegs · S3b nur Gewerbekunden (aus bis R49) · nächster S5 SDB mit der Bestellbestätigung</div>
+<div class="eyebrow">ARGONAUT OS · Stand 12.10.2026 · _p328 unterwegs · S5 SDB mit der Bestellbestätigung (aus bis R49) · nächster G2b Betriebsanweisungs-Entwurf</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
@@ -133,7 +133,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </div>
 <div class="fort"><span>{done} von {alle} Pushes erledigt · {proz} %</span><div class="balken" role="progressbar" aria-valuenow="{proz}" aria-valuemin="0" aria-valuemax="100"><i style="width:{proz}%"></i></div></div>
 <div class="leg">Wer: <span class="w w-g">gemeinsam</span><span class="w w-c">Claude</span><span class="w w-m">Martin</span> · Status: <span class="st st-ok">✓ erledigt</span><span class="st st-run">läuft</span><span class="st st-next">nächster</span><span class="st st-open">offen</span><span class="st st-wait">wartet</span></div>
-<nav class="sprung" aria-label="Abschnitte"><a href="#offen" style="border-color:var(--gold);font-weight:700">📌 Offen</a><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#alle">Für alle</a><a href="#mob">Mobilität</a><a href="#chem">Chemie und Shop</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
+<nav class="sprung" aria-label="Abschnitte"><a href="#offen" style="border-color:var(--gold);font-weight:700">📌 Offen</a><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#alle">Für alle</a><a href="#mob">Mobilität</a><a href="#chem">Chemie und Shop</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#s6">Erste Kunden</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
 </div>
 {OFFEN}
 {secs[0]}{secs[1]}{secs[2]}

@@ -20,7 +20,8 @@ export type StartBereich =
   | 'fernhilfe'       // Bildschirm teilen mit ARGONAUT oder dem Chef (Paket 3)
   | 'whatsappWerbung' // WhatsApp-Anmeldung und Kampagnen-Versand (Paket 3)
   | 'gefahrstoffShop' // Paket 325 (S2): Gefahr-Angaben (CLP) am Shop-Produkt und vor dem Bestellknopf (R49)
-  | 'gewerbeNachweis'; // Paket 327 (S3b): Schalter „nur Gewerbekunden“ im Shop (R49)
+  | 'gewerbeNachweis' // Paket 327 (S3b): Schalter „nur Gewerbekunden“ im Shop (R49)
+  | 'sdbVersand'; // Paket 328 (S5): Sicherheitsdatenblatt mit der Bestellbestätigung und Nachversand (R49)
 
 /** Der Schalter. false = abgeschaltet bis zur Freigabe durch den Anwalt. */
 export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.freeze({
@@ -30,6 +31,7 @@ export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.fr
   whatsappWerbung: false,
   gefahrstoffShop: false,
   gewerbeNachweis: false,
+  sdbVersand: false,
 });
 
 const GRUND: Record<StartBereich, string> = {
@@ -39,6 +41,7 @@ const GRUND: Record<StartBereich, string> = {
   whatsappWerbung: 'WhatsApp-Werbung wird in Kürze freigeschaltet. Bis dahin können Sie Newsletter per E-Mail versenden.',
   gefahrstoffShop: 'Die Anzeige der Gefahr-Angaben im Shop wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie die Angaben vorbereiten und bestätigen.',
   gewerbeNachweis: 'Der Schalter „nur Gewerbekunden“ wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie Nachweise schon erfassen und prüfen.',
+  sdbVersand: 'Der automatische Versand der Sicherheitsdatenblätter wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin senden Sie die Datenblätter bitte selbst.',
 };
 
 /** true, wenn der Bereich freigeschaltet ist. `freigabe` nur für Tests. */
