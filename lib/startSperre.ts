@@ -18,7 +18,8 @@ export type StartBereich =
   | 'shop'            // Webshop der Betriebe: Bestellungen auf Kunden-Websites (Anwalt-Paket 2)
   | 'kiBeraterFremd'  // KI-Berater auf FREMDEN Websites (eigene ARGONAUT-Seiten bleiben) (Paket 3)
   | 'fernhilfe'       // Bildschirm teilen mit ARGONAUT oder dem Chef (Paket 3)
-  | 'whatsappWerbung'; // WhatsApp-Anmeldung und Kampagnen-Versand (Paket 3)
+  | 'whatsappWerbung' // WhatsApp-Anmeldung und Kampagnen-Versand (Paket 3)
+  | 'gefahrstoffShop'; // Paket 325 (S2): Gefahr-Angaben (CLP) am Shop-Produkt und vor dem Bestellknopf (R49)
 
 /** Der Schalter. false = abgeschaltet bis zur Freigabe durch den Anwalt. */
 export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.freeze({
@@ -26,6 +27,7 @@ export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.fr
   kiBeraterFremd: false,
   fernhilfe: false,
   whatsappWerbung: false,
+  gefahrstoffShop: false,
 });
 
 const GRUND: Record<StartBereich, string> = {
@@ -33,6 +35,7 @@ const GRUND: Record<StartBereich, string> = {
   kiBeraterFremd: 'Der Berater auf Ihrer eigenen Website wird in Kürze freigeschaltet. Auf Ihrer ARGONAUT-Website läuft er bereits.',
   fernhilfe: 'Die Fernhilfe wird in Kürze freigeschaltet. Bis dahin helfen wir Ihnen gern per Telefon oder E-Mail.',
   whatsappWerbung: 'WhatsApp-Werbung wird in Kürze freigeschaltet. Bis dahin können Sie Newsletter per E-Mail versenden.',
+  gefahrstoffShop: 'Die Anzeige der Gefahr-Angaben im Shop wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie die Angaben vorbereiten und bestätigen.',
 };
 
 /** true, wenn der Bereich freigeschaltet ist. `freigabe` nur für Tests. */

@@ -56,6 +56,7 @@ export const KI_AUFGABEN = {
 
   // ── professionell: Kunden lesen es / muss nach Qualität aussehen ──────
   'beleg.nachpruefen': 'professionell',
+  'chemie.sdb.lesen': 'professionell', // Paket 325 (S2): Kennzeichnung aus dem Sicherheitsdatenblatt ablesen (nur Vorschlag, ein Mensch bestätigt)
   'ki.auge': 'professionell',
   'kunde.followup': 'professionell',
   'kunde.ticketantwort': 'professionell',

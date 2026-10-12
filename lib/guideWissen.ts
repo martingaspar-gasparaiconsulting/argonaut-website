@@ -745,6 +745,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
     ],
     landetIn: [{ text: 'Shop / Marktplatz', href: '/dashboard/shop' }, { text: 'Produkt-Dokumente', href: '/dashboard/erp/dokumente' }, { text: 'Geschäftskunden-Shop', href: '/dashboard/shop/geschaeftskunden' }],
   },
+  '/dashboard/shop/gefahrstoffe': {
+    zweck: 'Gefahr-Angaben am Shop-Produkt: Piktogramme, Signalwort, Gefahren- und Sicherheitshinweise (H/EUH/P) mit Wortlaut, UN-Nummer und UFI — genau wie im Sicherheitsdatenblatt (Abschnitt 2.2 und 14). Die KI liest das SDB nur ab und schlägt vor; ein Mensch vergleicht und bestätigt. ARGONAUT stuft nichts selbst ein. Im Shop erscheinen die Angaben erst nach der rechtlichen Prüfung.',
+    wer: 'beide',
+    werText: 'Anlegen, bearbeiten und bestätigen: Geschäftsleitung und Mitarbeiter mit „Shop ändern“. Gespeichert wird, wer wann bestätigt hat.',
+    schritte: [
+      'Zuerst das Sicherheitsdatenblatt (PDF, möglichst auf Deutsch) unter Produkt-Dokumente am Artikel hochladen',
+      'Artikel „Bearbeiten“ → „📄 Aus dem Sicherheitsdatenblatt lesen“: die KI füllt Piktogramme, Signalwort, Sätze mit Wortlaut, UN-Nummer und UFI vor',
+      'Ist der Stoff im Gefahrstoffverzeichnis mit dem Artikel verknüpft, geht auch „📋 Aus dem Gefahrstoffverzeichnis“ (nur Codes, Wortlaut aus dem SDB ergänzen)',
+      'Mit dem SDB vergleichen, Haken „verglichen“ setzen, „✓ Geprüft und bestätigen“ — jede spätere Änderung braucht eine neue Bestätigung',
+      'Ohne Kennzeichnung: Haken „Nicht kennzeichnungspflichtig“, wenn Abschnitt 2.2 das so sagt',
+    ],
+    landetIn: [{ text: 'Shop / Marktplatz', href: '/dashboard/shop' }, { text: 'Produkt-Dokumente', href: '/dashboard/erp/dokumente' }],
+  },
   '/dashboard/shop/retouren': {
     zweck: 'Widerruf, Reklamation oder Kulanz zu einer Bestellung erfassen: Frist prüfen, Erstattung rechnen, Ware zurück ins Lager, Kundentexte zum Kopieren. Gutschriften machen Sie in Rechnungen.',
     wer: 'beide',

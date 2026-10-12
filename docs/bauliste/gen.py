@@ -121,7 +121,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 12.10.2026 · _p324 unterwegs · S4 Shop mehrsprachig komplett · nächster S2 Dokument-Auslese und Pflichtangaben</div>
+<div class="eyebrow">ARGONAUT OS · Stand 12.10.2026 · _p325 unterwegs · S2 Teil 1 Gefahr-Angaben aus dem SDB · nächster S2 Anzeige im Shop</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

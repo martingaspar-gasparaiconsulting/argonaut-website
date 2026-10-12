@@ -269,6 +269,7 @@ export default function ShopPage() {
           <a href="/dashboard/shop/zahlung" style={styles.zahlungBtn}>💳 Online-Zahlung einrichten →</a>
           <a href="/dashboard/shop/geschaeftskunden" style={styles.zahlungBtn}>🏢 Geschäftskunden-Shop →</a>
           <a href="/dashboard/shop/sprachen" style={styles.zahlungBtn}>🌐 Shop mehrsprachig →</a>
+          <a href="/dashboard/shop/gefahrstoffe" style={styles.zahlungBtn}>⚠️ Gefahr-Angaben →</a>
         </div>
       </div>
 

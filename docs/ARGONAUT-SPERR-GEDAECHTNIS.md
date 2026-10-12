@@ -29,12 +29,14 @@ SCHALTER startSperre.shop = aus
 SCHALTER startSperre.kiBeraterFremd = aus
 SCHALTER startSperre.fernhilfe = aus
 SCHALTER startSperre.whatsappWerbung = aus
+SCHALTER startSperre.gefahrstoffShop = aus
 
 | Bereich | Was ist aus | Wo im Code | Anwalt-Fragen | Mitziehen beim Öffnen |
 |---|---|---|---|---|
 | **Webshop** (`shop`) | Bestellungen über Kunden-Websites | `app/api/oeffentlich/shop-bestellung`, `app/dashboard/shop`, `lib/webBloecke.ts` | 2.01–2.04, 2.20, 2.30–2.34 | Widerrufsbelehrung, Bestellbestätigung, Versandkosten/Lieferzeit, Shop-AGB, Retouren-Texte, Datenschutz-Baustein „Shop" (1.67), Steuersätze (S.13). **Zahlung bleibt getrennt** (`ZAHLUNG_LIVE`, Abschnitt 3). Danach die 🟡-Teilbereiche der Dossiers prüfen (Abschnitt 4). |
 | **KI-Berater auf fremden Websites** (`kiBeraterFremd`) | Berater auf Adressen außerhalb der ARGONAUT-Websites; auf eigenen `/p/`-Seiten läuft er | `app/api/oeffentlich/chat`, `app/dashboard/webseiten` | 2.06, 2.35, 2.52 | AGB-Klausel Aufpreis/Mengengrenze (1.53), Passage für die Datenschutzerklärung des Betriebs, Bestätigung vor Freigabe einer fremden Adresse, AV-Vertrag (1.54). |
 | **Fernhilfe** (`fernhilfe`) | Bildschirm teilen mit Betreiber oder Chef | `app/api/fernhilfe`, `app/dashboard/layout.tsx` (Knopf) | 2.51 | Hinweis in Datenschutzerklärung und AV-Vertrag (Live-Bild, keine Speicherung, Google-STUN erfährt IP), ggf. TURN-Server für Firmennetze. |
+| **Gefahr-Angaben im Shop** (`gefahrstoffShop`, Paket 325/326) | Anzeige von Piktogrammen, Signalwort, H-/P-Sätzen, UN-Nummer und UFI am Shop-Produkt und vor dem Bestellknopf; Pflegen und Bestätigen unter Shop → Gefahr-Angaben geht schon | `lib/shopGefahr.ts`, `app/dashboard/shop/gefahrstoffe`, `app/api/shop/gefahr-auslesen`, Anzeige `app/api/oeffentlich/shop-produkte` + `public/shop.js` (Paket 326) | R49 (Haftung für abgelesene Angaben, CLP Art. 48 Abs. 2 Fernabsatz) | Hinweis in den Shop-AGB „Angaben aus dem SDB des Herstellers“, offizielle GHS-Piktogramm-Grafiken einbinden, S3b/S5/G2b/G2c gemeinsam prüfen. |
 | **WhatsApp-Werbung** (`whatsappWerbung`) | Anmeldung und Kampagnen-Versand per WhatsApp | `app/api/marketing/whatsapp-senden`, `app/api/oeffentlich/whatsapp-optin` | 2.07, 2.08, 2.53, 1.64 | Einwilligungstext, Klausel für von Hand eingetragene Nummern, Meldung „abgemeldet" nach STOP ergänzen. |
 
 ## 2 · Import-Sperren (`lib/anwaltFreigabe.ts`, `ANWALT_FREIGABE`)
