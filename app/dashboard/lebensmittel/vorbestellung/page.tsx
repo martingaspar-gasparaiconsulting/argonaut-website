@@ -11,6 +11,12 @@
 // Rechnen und Prüfen: lib/vorbestellAktion.ts (tests/vorbestellungP342).
 // Die Datenbank (SQL p342) lässt nie mehr zu, als da ist.
 // Pfad: Unterpfad von /dashboard/lebensmittel, erbt dessen Freigabe.
+//
+// Paket 343 (BV3b Teil 2): Aktion mit Artikel verknüpfen (Preis und
+// LMIV-Pflichtangaben kommen vom Artikel bzw. seinem Etikett) und „im Shop
+// zeigen“. Die Karte zeigt, was für den Shop noch fehlt (lib/vorbestellShop,
+// dieselbe Regel wie der Server). Kundenseitig erst nach Start-Freigabe
+// „shop“ + „vorbestellShop“ (Anwalt R52/R53).
 // ============================================================
 
 import { useState, useEffect, useMemo, useCallback, CSSProperties } from 'react';
@@ -24,6 +30,8 @@ import {
   type Aktion, type Posten, type Vormerkung, type AktionStand, type Phase,
 } from '@/lib/vorbestellAktion';
 import Leerzustand from '../../_components/Leerzustand';
+import { etikettZumArtikel, shopBereitschaft, type EtikettZeile, type ShopArtikel } from '@/lib/vorbestellShop';
+import { startFrei, startSperrGrund } from '@/lib/startSperre';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -40,7 +48,7 @@ const VM_TEXT: Record<string, [string, string]> = {
 };
 const QUELLE_TEXT: Record<string, string> = { theke: 'Theke', telefon: 'Telefon', mail: 'E-Mail', shop: 'Shop', vormerkliste: 'Vormerkliste' };
 
-type AktionZeile = Aktion & { id: string; reife_charge_id: string | null; notiz: string | null };
+type AktionZeile = Aktion & { id: string; reife_charge_id: string | null; notiz: string | null; artikel_id?: string | null; im_shop?: boolean | null };
 type PostenZeile = Posten & { id: string; aktion_id: string; notiz: string | null; kunde_tel: string | null; kunde_mail: string | null };
 type VmZeile = Vormerkung & { id: string; aktion_id: string; kunde_tel: string | null; kunde_mail: string | null; aktualisiert_am: string | null; notiz: string | null };
 type Charge = { id: string; nummer: string; produkt: string; einheit: string; start_menge: number | null; end_menge: number | null; status: string };
@@ -53,8 +61,11 @@ const num = (x: unknown) => (x === null || x === undefined ? null : Number(x));
 const zahlOderNull = (t: string) => (t.trim() ? leseZahl(t) : null);
 const leerTxt = (n: number | null | undefined) => (n === null || n === undefined ? '' : String(n).replace('.', ','));
 
-type AEntwurf = { id: string | null; titel: string; charge: string; menge: string; einheit: string; max: string; von: string; bis: string; schluss: string; notiz: string };
-const leereAktion = (): AEntwurf => ({ id: null, titel: '', charge: '', menge: '', einheit: 'kg', max: '', von: '', bis: '', schluss: '', notiz: '' });
+type AEntwurf = { id: string | null; titel: string; charge: string; artikel: string; menge: string; einheit: string; max: string; von: string; bis: string; schluss: string; notiz: string };
+const leereAktion = (): AEntwurf => ({ id: null, titel: '', charge: '', artikel: '', menge: '', einheit: 'kg', max: '', von: '', bis: '', schluss: '', notiz: '' });
+const AKTION_FELDER = 'id, titel, reife_charge_id, menge_gesamt, einheit, max_je_kunde, abhol_von, abhol_bis, bestell_schluss, status, notiz';
+// Kundenseitig erst nach rechtlicher Freigabe (Webshop UND Vorbestellung im Shop)
+const SHOP_SPERRE = startFrei('shop') ? startSperrGrund('vorbestellShop') : startSperrGrund('shop');
 type KEntwurf = { name: string; tel: string; mail: string; menge: string; tag: string; quelle: string; notiz: string; einwilligung: boolean };
 const leererKunde = (tag = ''): KEntwurf => ({ name: '', tel: '', mail: '', menge: '', tag, quelle: 'theke', notiz: '', einwilligung: false });
 
@@ -78,6 +89,9 @@ export default function VorbestellungPage() {
   const [kunde, setKunde] = useState<KEntwurf>(leererKunde());
   const [kundeArt, setKundeArt] = useState<'posten' | 'vormerkung' | null>(null);
   const [textFuer, setTextFuer] = useState<string | null>(null);
+  const [mitShop, setMitShop] = useState(false);
+  const [artikel, setArtikel] = useState<ShopArtikel[]>([]);
+  const [etiketten, setEtiketten] = useState<EtikettZeile[]>([]);
 
   function melde(f: string | null, o: string | null = null) { setFehler(f); setOk(o); }
 
@@ -89,11 +103,15 @@ export default function VorbestellungPage() {
     try { chef = (await supabase.rpc('mein_chef_id')).data; } catch { chef = null; }
     const betriebId = typeof chef === 'string' && chef ? chef : uid;
     setIstChef(betriebId === uid);
-    const [a, p, v] = await Promise.all([
-      supabase.from('vorbestell_aktion').select('id, titel, reife_charge_id, menge_gesamt, einheit, max_je_kunde, abhol_von, abhol_bis, bestell_schluss, status, notiz').order('abhol_von', { ascending: true }).limit(2000),
+    // Paket 343: artikel_id und im_shop mitlesen; fehlt die Spalte im_shop (SQL p343 offen), ohne Shop-Teil.
+    const ladeA = (felder: string) => supabase.from('vorbestell_aktion').select(felder).order('abhol_von', { ascending: true }).limit(2000);
+    const [a0, p, v] = await Promise.all([
+      ladeA(AKTION_FELDER + ', artikel_id, im_shop'),
       supabase.from('vorbestell_posten').select('id, aktion_id, kunde_name, kunde_tel, kunde_mail, menge, abhol_tag, status, quelle, notiz').order('erstellt_am', { ascending: true }).limit(20000),
       supabase.from('vormerkung').select('id, aktion_id, kunde_name, kunde_tel, kunde_mail, menge_wunsch, status, erstellt_am, benachrichtigt_am, frist_bis, aktualisiert_am, notiz').order('erstellt_am', { ascending: true }).limit(20000),
     ]);
+    const a = a0.error ? await ladeA(AKTION_FELDER) : a0;
+    setMitShop(!a0.error);
     if (a.error || p.error || v.error) { setSqlFehlt(true); setLaden(false); return; }
     setSqlFehlt(false);
     setAktionen((((a.data as unknown) as AktionZeile[]) ?? []).map((z) => ({ ...z, menge_gesamt: Number(z.menge_gesamt), max_je_kunde: num(z.max_je_kunde) })));
@@ -102,6 +120,13 @@ export default function VorbestellungPage() {
     // Reife-Chargen (Paket 339) zum Verknüpfen — fehlen Recht oder SQL, geht es ohne
     const c = await supabase.from('reife_charge').select('id, nummer, produkt, einheit, start_menge, end_menge, status').in('status', ['reift', 'bereit', 'abgeschlossen']).order('start_datum', { ascending: false }).limit(500);
     setChargen(c.error ? [] : (((c.data as unknown) as Charge[]) ?? []).map((z) => ({ ...z, start_menge: num(z.start_menge), end_menge: num(z.end_menge) })));
+    // Paket 343: Artikel (Preis, Einheit) und Etiketten (LMIV) für die Shop-Bereitschaft — fehlt das Recht, geht es ohne.
+    const [ar, et] = await Promise.all([
+      supabase.from('artikel').select('id, bezeichnung, verkaufspreis, einheit, aktiv, shop_mwst').order('bezeichnung', { ascending: true }).limit(2000),
+      supabase.from('etikett_produkt').select('id, artikel_id, status, art, bezeichnung, zutaten, allergene, nettomenge, mhd, verantwortlicher, energie_kj, energie_kcal, fett, gesaettigt, kohlenhydrate, zucker, eiweiss, salz').not('artikel_id', 'is', null).limit(2000),
+    ]);
+    setArtikel(ar.error ? [] : (((ar.data as unknown) as ShopArtikel[]) ?? []));
+    setEtiketten(et.error ? [] : (((et.data as unknown) as EtikettZeile[]) ?? []));
     const pr = await supabase.from('profiles').select('firma_name').eq('id', betriebId).maybeSingle();
     setBetrieb(String((pr.data as { firma_name?: string } | null)?.firma_name ?? ''));
     setLaden(false);
@@ -139,6 +164,7 @@ export default function VorbestellungPage() {
     setBusy(true); melde(null);
     try {
       const felder: Record<string, unknown> = { ...r.felder, reife_charge_id: form.charge || null };
+      if (mitShop) felder.artikel_id = form.artikel || null;
       if (status) felder.status = status;
       const q = form.id
         ? supabase.from('vorbestell_aktion').update(felder).eq('id', form.id).select('id')
@@ -156,6 +182,16 @@ export default function VorbestellungPage() {
       const { data, error } = await supabase.from('vorbestell_aktion').update({ status }).eq('id', a.id).select('id');
       if (error || nichtsGeschrieben(data)) { melde('Nicht gespeichert — dafür brauchen Sie das Schreibrecht „Lebensmittel".'); return; }
       melde(null, `„${a.titel}": ${status === 'offen' ? 'zum Vorbestellen geöffnet' : status === 'geschlossen' ? 'für neue Vorbestellungen geschlossen' : status === 'abgeschlossen' ? 'abgeschlossen' : 'zurück auf Entwurf'}.`);
+      await lade();
+    } finally { setBusy(false); }
+  }
+
+  async function shopSchalten(a: AktionZeile, an: boolean) {
+    setBusy(true); melde(null);
+    try {
+      const { data, error } = await supabase.from('vorbestell_aktion').update({ im_shop: an }).eq('id', a.id).select('id');
+      if (error || nichtsGeschrieben(data)) { melde('Nicht gespeichert — dafür brauchen Sie das Schreibrecht „Lebensmittel“ (und SQL Paket 343).'); return; }
+      melde(null, an ? `„${a.titel}“ wird im Shop gezeigt${SHOP_SPERRE ? ', sobald die Vorbestellung im Shop freigeschaltet ist' : ''}.` : `„${a.titel}“ wird nicht mehr im Shop gezeigt.`);
       await lade();
     } finally { setBusy(false); }
   }
@@ -291,6 +327,14 @@ export default function VorbestellungPage() {
                   </select>
                 </label>
               )}
+              {mitShop && (
+                <label style={{ ...s.feld, gridColumn: 'span 2' }}>Artikel (Preis und Pflichtangaben für den Shop, optional)
+                  <select style={s.input} value={form.artikel} onChange={(e) => setForm({ ...form, artikel: e.target.value })}>
+                    <option value="">— ohne Artikel (nur Theke, Telefon, E-Mail) —</option>
+                    {artikel.filter((x) => x.aktiv !== false || x.id === form.artikel).map((x) => <option key={x.id} value={x.id}>{x.bezeichnung ?? 'Artikel'}{x.einheit ? ` · je ${x.einheit}` : ''}</option>)}
+                  </select>
+                </label>
+              )}
               <label style={s.feld}>Verfügbare Gesamtmenge
                 <span style={{ display: 'flex', gap: 4 }}>
                   <input style={{ ...s.input, flex: 1, minWidth: 0 }} inputMode="decimal" value={form.menge} onChange={(e) => setForm({ ...form, menge: e.target.value })} />
@@ -399,10 +443,33 @@ export default function VorbestellungPage() {
                         {a.status === 'entwurf' && <button style={s.btnAus} disabled={busy} onClick={() => void aktionStatus(a, 'offen')}>Zum Vorbestellen öffnen</button>}
                         {a.status === 'offen' && <button style={s.btnAus} disabled={busy} onClick={() => void aktionStatus(a, 'geschlossen')}>Für neue Vorbestellungen schließen</button>}
                         {a.status === 'geschlossen' && <button style={s.btnAus} disabled={busy} onClick={() => void aktionStatus(a, 'offen')}>Wieder öffnen</button>}
-                        {a.status !== 'abgeschlossen' && <button style={s.btnAus} onClick={() => setForm({ id: a.id, titel: a.titel, charge: a.reife_charge_id ?? '', menge: leerTxt(a.menge_gesamt), einheit: a.einheit, max: leerTxt(a.max_je_kunde), von: a.abhol_von, bis: a.abhol_bis, schluss: a.bestell_schluss ?? '', notiz: a.notiz ?? '' })}>Ändern</button>}
+                        {a.status !== 'abgeschlossen' && <button style={s.btnAus} onClick={() => setForm({ id: a.id, titel: a.titel, charge: a.reife_charge_id ?? '', artikel: a.artikel_id ?? '', menge: leerTxt(a.menge_gesamt), einheit: a.einheit, max: leerTxt(a.max_je_kunde), von: a.abhol_von, bis: a.abhol_bis, schluss: a.bestell_schluss ?? '', notiz: a.notiz ?? '' })}>Ändern</button>}
                         {a.status !== 'abgeschlossen' && (st.phase === 'vorbei' || st.phase === 'abholung') && <button style={s.btnAus} disabled={busy} onClick={() => void aktionStatus(a, 'abgeschlossen')}>Aktion abschließen</button>}
                         {a.status === 'abgeschlossen' && <button style={s.btnAus} disabled={busy} onClick={() => void aktionStatus(a, 'geschlossen')}>Wieder aufnehmen</button>}
                       </div>
+
+                      {mitShop && a.status !== 'abgeschlossen' && (() => {
+                        const art = artikel.find((x) => x.id === a.artikel_id) ?? null;
+                        const gruende = shopBereitschaft(a, art, etikettZumArtikel(etiketten, a.artikel_id));
+                        return (
+                          <div style={{ ...s.box, borderColor: a.im_shop ? (gruende.length ? C.warn : C.ok) : C.border }}>
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <b style={{ fontSize: 14 }}>🛒 Im Online-Shop</b>
+                              <label style={{ ...s.klein, display: 'flex', gap: 6, alignItems: 'center', color: C.text }}>
+                                <input type="checkbox" checked={!!a.im_shop} disabled={busy} onChange={(e) => void shopSchalten(a, e.target.checked)} /> im Shop zeigen
+                              </label>
+                              {a.im_shop && !gruende.length && a.status === 'offen' && <span style={{ ...s.klein, color: C.ok }}>{SHOP_SPERRE ? 'bereit — erscheint nach der Freischaltung' : 'steht im Shop'}</span>}
+                            </div>
+                            {gruende.length > 0 && (
+                              <ul style={{ ...s.klein, margin: '6px 0 0', paddingLeft: 18 }}>
+                                {gruende.map((g) => <li key={g}>{g}</li>)}
+                              </ul>
+                            )}
+                            {a.status !== 'offen' && <p style={{ ...s.klein, marginTop: 4 }}>Im Shop steht die Aktion nur, solange sie zum Vorbestellen geöffnet ist (ausgebucht: mit Vormerkliste).</p>}
+                            {SHOP_SPERRE && <p style={{ ...s.klein, marginTop: 4 }}>{SHOP_SPERRE}</p>}
+                          </div>
+                        );
+                      })()}
 
                       {kundeArt && (
                         <div style={s.box}>

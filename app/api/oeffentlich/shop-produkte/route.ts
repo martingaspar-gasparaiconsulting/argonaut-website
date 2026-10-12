@@ -25,6 +25,8 @@ import {
 } from '@/lib/shopSprachen';
 import { gefahrFuerShop } from '@/lib/shopGefahr';
 import { startFrei } from '@/lib/startSperre';
+import { einwilligungText } from '@/lib/vorbestellAktion';
+import { fuerSchaufenster, ladeAktionen } from '@/lib/vorbestellShopServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -137,6 +139,19 @@ export async function GET(req: Request) {
     // Paket 327 (S3b): nur geprüfte Geschäftskunden? (wirkt erst nach Freigabe R49)
     const nurGewerbe = await ladeNurGewerbe(db, betrieb);
 
+    // Paket 343 (BV3b): Vorbestellung und Vormerkliste — nur mit Start-Freigabe „shop“ UND „vorbestellShop“ (R52/R53).
+    const vorbestellung = startFrei('shop') && startFrei('vorbestellShop')
+      ? fuerSchaufenster(await ladeAktionen(db, betrieb, heute, basis))
+      : [];
+    let einwilligung = '';
+    if (vorbestellung.length) {
+      const [{ data: ciRow }, { data: prRow }] = await Promise.all([
+        db.from('web_ci').select('firma').eq('owner_user_id', betrieb).maybeSingle(),
+        db.from('profiles').select('firma_name').eq('id', betrieb).maybeSingle(),
+      ]);
+      einwilligung = einwilligungText(String((ciRow as { firma?: string } | null)?.firma || (prRow as { firma_name?: string } | null)?.firma_name || '').trim());
+    }
+
     const produkte = rows.map((r) => ({
       id: r.id,
       ...text(r),
@@ -162,6 +177,7 @@ export async function GET(req: Request) {
       ...(kunde ? { konto: { name: kunde.name, netto: true, auf_rechnung: kunde.auf_rechnung, zahlungsziel: kunde.zahlungsziel_tage, nachweis: kunde.nachweis_ok } } : {}),
       ...(nurGewerbe ? { nur_gewerbe: true } : {}),
       ...(token && !kunde ? { konto_ungueltig: true } : {}),
+      ...(vorbestellung.length ? { vorbestellung, vb_einwilligung: einwilligung } : {}),
     }, { headers: { 'Cache-Control': 'no-store' } });
 
     /** Paket 326: Gefahr-Angaben (deutsch) — nur wenn vorhanden. */

@@ -117,6 +117,11 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 5, fensterSek: TAG },
   ],
+  // Paket 343: Vorbestellung und Vormerkliste aus dem Shop — wie die Bestellung, je Absender und je Kunde+Shop.
+  'oeffentlich/vorbestellung': [
+    { art: 'ip', max: 5, fensterSek: STUNDE },
+    { art: 'ziel', max: 5, fensterSek: TAG },
+  ],
   'oeffentlich/widerruf': [
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 5, fensterSek: TAG },

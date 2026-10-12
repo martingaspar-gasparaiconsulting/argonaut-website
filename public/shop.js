@@ -95,7 +95,35 @@
     dok_zertifikat: "Zertifikat",
     dok_anleitung: "Anleitung",
     dok_sonstiges: "Dokument",
-    nur_gewerbe: "Bestellungen nur für geprüfte Geschäftskunden. Für ein Kundenkonto wenden Sie sich bitte an uns."
+    nur_gewerbe: "Bestellungen nur für geprüfte Geschäftskunden. Für ein Kundenkonto wenden Sie sich bitte an uns.",
+    vb_titel: "Jetzt vorbestellen",
+    vb_info: "Knappe Ware: verbindlich vorbestellen, im Laden abholen, bei der Abholung bezahlen.",
+    vb_frei: "noch {n} frei",
+    vb_ausgebucht: "ausgebucht",
+    vb_abholung: "Abholung vom {von} bis {bis}",
+    vb_schluss: "Bestellschluss {datum}",
+    vb_max: "höchstens {n} je Kunde",
+    vb_je: "je {einheit}",
+    vb_gewicht: "Der Endpreis richtet sich nach dem Gewicht bei der Abholung.",
+    vb_zahlung: "Bezahlung bei der Abholung.",
+    vb_pflicht: "Pflichtangaben (Zutaten, Allergene, Nährwerte)",
+    vb_menge: "Menge ({einheit})",
+    vb_wunsch: "Gewünschte Menge ({einheit})",
+    vb_tag: "Abholtag",
+    vb_voraus: "voraussichtlich {summe}",
+    vb_knopf: "Vorbestellen",
+    vb_bestellen: "Zahlungspflichtig vorbestellen",
+    vb_danke: "✓ Vielen Dank! Ihre Vorbestellung ist eingegangen.",
+    vb_vormerken_knopf: "Auf die Vormerkliste",
+    vb_vormerken_info: "Wird wieder etwas frei, benachrichtigen wir Sie der Reihe nach.",
+    vb_vormerken: "Vormerken",
+    vb_einwilligung: "Ich willige ein:",
+    vb_fehler_einwilligung: "Bitte bestätigen Sie, dass wir Sie benachrichtigen dürfen.",
+    vb_vormerk_danke: "✓ Sie stehen auf der Vormerkliste. Wir melden uns, sobald etwas frei ist.",
+    vb_fehler_menge: "Bitte eine gültige Menge eintragen.",
+    vb_fehler_tag: "Bitte einen Abholtag wählen.",
+    vb_fehler: "Das hat nicht geklappt. Bitte später erneut.",
+    vb_abbrechen: "Abbrechen"
   };
   /** Text in der Sprache des Shops, Platzhalter {n}, {summe}, {name} gefüllt (Werte schon fertig). */
   function T(k, w) {
@@ -415,6 +443,134 @@
     grid.innerHTML = h;
   }
 
+  // --- Paket 343 (BV3b): Vorbestellung und Vormerkliste für knappe Ware ---
+  // Kommt nur, wenn der Server die Start-Schalter „shop“ UND „vorbestellShop“ frei hat und die Aktion
+  // vollständig ist (Artikel mit Preis, passende Einheit, LMIV-Pflichtangaben). Preis, Menge und Restmenge
+  // prüft immer der Server; die Pflichtangaben stehen bewusst auf Deutsch (Kennzeichnung in der Landessprache).
+  var vb = [], vbEinw = '', vbBox = null, vbOffen = null, vbDanke = {};
+  function vbAktion(id) { for (var i = 0; i < vb.length; i++) { if (vb[i].id === id) return vb[i]; } return null; }
+  function datum(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || '')); if (!m) return ''; try { return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).toLocaleDateString(fmt(), { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return m[3] + '.' + m[2] + '.' + m[1]; } }
+  function menge(n, einheit) { var z; try { z = (Number(n) || 0).toLocaleString(fmt(), { maximumFractionDigits: 3 }); } catch (e) { z = String(n); } return z + ' ' + einheit; }
+  function lmivHtml(l) {
+    if (!l) return '';
+    var h = '<details class="ao-vb-pflicht"><summary>' + TH('vb_pflicht') + '</summary><div lang="de" dir="ltr">', i;
+    h += '<div><b>' + esc(l.bezeichnung) + '</b></div>';
+    if (l.zutaten && l.zutaten.length) {
+      h += '<div>Zutaten: ';
+      for (i = 0; i < l.zutaten.length; i++) h += l.zutaten[i].b ? '<b>' + esc(l.zutaten[i].t) + '</b>' : esc(l.zutaten[i].t);
+      h += '</div>';
+    }
+    h += '<div>Allergene: ' + (l.allergene && l.allergene.length ? '<b>' + esc(l.allergene.join(', ')) + '</b>' : 'keine kennzeichnungspflichtigen') + '</div>';
+    if (l.spuren) h += '<div>Kann Spuren enthalten von: ' + esc(l.spuren) + '</div>';
+    if (l.nettomenge) h += '<div>Nettofüllmenge: ' + esc(l.nettomenge) + '</div>';
+    if (l.aufbewahrung) h += '<div>Aufbewahrung: ' + esc(l.aufbewahrung) + '</div>';
+    if (l.verantwortlicher) h += '<div>Lebensmittelunternehmer: ' + esc(l.verantwortlicher) + '</div>';
+    if (l.naehrwerte && l.naehrwerte.length) {
+      h += '<table class="ao-vb-nw"><caption>Nährwerte je ' + esc(l.naehrwert_basis || '100 g') + '</caption>';
+      for (i = 0; i < l.naehrwerte.length; i++) h += '<tr><td' + (l.naehrwerte[i].unter ? ' class="ao-vb-unter"' : '') + '>' + esc(l.naehrwerte[i].label) + '</td><td>' + esc(l.naehrwerte[i].wert) + '</td></tr>';
+      h += '</table>';
+    }
+    return h + '</div></details>';
+  }
+  function vbFormular(a) {
+    var aus = a.phase === 'ausgebucht';
+    var step = a.einheit === 'Stk' ? '1' : '0.001';
+    var h = '<form class="ao-vb-form" data-id="' + esc(a.id) + '" novalidate>'
+      + (aus ? '<div class="ao-vb-hinweis">' + TH('vb_vormerken_info') + '</div>' : '')
+      + '<div class="ao-wk-zwei"><div class="ao-wk-feld"><label>' + TH(aus ? 'vb_wunsch' : 'vb_menge', { einheit: esc(a.einheit) }) + '</label><input type="number" name="menge" min="0" step="' + step + '"' + (a.max_je_kunde ? ' max="' + esc(a.max_je_kunde) + '"' : '') + ' inputmode="decimal" dir="ltr"></div>'
+      + (aus ? '' : '<div class="ao-wk-feld"><label>' + TH('vb_tag') + '</label><input type="date" name="abhol_tag" min="' + esc(a.abhol_von) + '" max="' + esc(a.abhol_bis) + '" value="' + esc(a.abhol_von) + '" dir="ltr"></div>')
+      + '</div>'
+      + (aus ? '' : '<div class="ao-vb-voraus" aria-live="polite"></div>')
+      + '<div class="ao-wk-feld"><label>' + TH('feld_name') + '</label><input name="name" autocomplete="name" maxlength="120"></div>'
+      + '<div class="ao-wk-zwei"><div class="ao-wk-feld"><label>' + TH('feld_email') + '</label><input type="email" name="email" autocomplete="email" dir="ltr" maxlength="160"></div><div class="ao-wk-feld"><label>' + TH('feld_telefon') + '</label><input name="telefon" autocomplete="tel" dir="ltr" maxlength="40"></div></div>'
+      + (aus ? '<label class="ao-wk-dsgvo"><input type="checkbox" name="einwilligung"><span>' + TH('vb_einwilligung') + ' <span lang="de" dir="ltr">' + esc(vbEinw) + '</span>*</span></label>' : '')
+      + '<label class="ao-wk-dsgvo"><input type="checkbox" name="privacy"><span>' + TH('datenschutz', { link: '<a href="#datenschutz">', '/link': '</a>' }) + '</span></label>'
+      + '<input type="text" name="firma_hp" class="ao-wk-hp" tabindex="-1" autocomplete="off" aria-hidden="true">'
+      + (aus ? '' : '<div class="ao-wk-rechtshinweis">' + TH('vb_zahlung') + (a.nach_gewicht ? ' ' + TH('vb_gewicht') : '') + '</div>')
+      + '<div class="ao-vb-knoepfe"><button type="submit" class="btn ao-vb-senden">' + TH(aus ? 'vb_vormerken' : 'vb_bestellen') + '</button>'
+      + '<button type="button" class="ao-vb-ab">' + TH('vb_abbrechen') + '</button></div>'
+      + '<div class="ao-wk-msg" role="status"></div></form>';
+    return h;
+  }
+  function zeigeVorbestellung() {
+    if (!vbBox) {
+      vbBox = document.createElement('div'); vbBox.className = 'ao-vb';
+      var gr = c.querySelector('.ao-shop-grid'); if (gr) { c.insertBefore(vbBox, gr); } else { c.appendChild(vbBox); }
+      vbBox.addEventListener('click', vbKlick);
+      vbBox.addEventListener('submit', vbSenden);
+      vbBox.addEventListener('input', vbRechne);
+    }
+    if (!vb.length) { vbBox.innerHTML = ''; vbBox.style.display = 'none'; return; }
+    vbBox.style.display = '';
+    var h = '<div class="ao-vb-kopf"><b>' + TH('vb_titel') + '</b><span>' + TH('vb_info') + '</span></div>', i;
+    for (i = 0; i < vb.length; i++) {
+      var a = vb[i], aus = a.phase === 'ausgebucht';
+      h += '<div class="ao-vb-karte' + (aus ? ' ao-vb-aus' : '') + '">'
+        + (a.bild ? '<div class="ao-vb-bild" style="background-image:url(' + encodeURI(a.bild) + ')"></div>' : '')
+        + '<div class="ao-vb-body"><div class="ao-prod-name" lang="de" dir="auto">' + esc(a.titel) + '</div>'
+        + (a.beschreibung ? '<div class="ao-prod-text" lang="de" dir="auto">' + esc(a.beschreibung) + '</div>' : '')
+        + '<div class="ao-vb-fakten"><span class="ao-vb-stand">' + (aus ? TH('vb_ausgebucht') : TH('vb_frei', { n: esc(menge(a.frei, a.einheit)) })) + '</span>'
+        + '<span>' + TH('vb_abholung', { von: esc(datum(a.abhol_von)), bis: esc(datum(a.abhol_bis)) }) + '</span>'
+        + (a.bestell_schluss ? '<span>' + TH('vb_schluss', { datum: esc(datum(a.bestell_schluss)) }) + '</span>' : '')
+        + (a.max_je_kunde ? '<span>' + TH('vb_max', { n: esc(menge(a.max_je_kunde, a.einheit)) }) + '</span>' : '') + '</div>'
+        + lmivHtml(a.lmiv)
+        + '<div class="ao-prod-fuss"><span class="ao-prod-preis">' + eur(a.preis) + ' <span class="ao-prod-mwst">' + TH('vb_je', { einheit: esc(a.einheit) }) + ' · ' + TH('inkl_mwst') + '</span></span>'
+        + (vbOffen === a.id || vbDanke[a.id] ? '' : '<button type="button" class="btn ao-vb-auf" data-id="' + esc(a.id) + '">' + TH(aus ? 'vb_vormerken_knopf' : 'vb_knopf') + '</button>') + '</div>'
+        + (vbDanke[a.id] ? '<div class="ao-wk-danke">' + TH(vbDanke[a.id]) + '</div>' : '')
+        + (a.nach_gewicht && !aus ? '<div class="ao-prod-menge">' + TH('vb_gewicht') + '</div>' : '')
+        + (vbOffen === a.id ? vbFormular(a) : '')
+        + '</div></div>';
+    }
+    if (sprache !== 'de') h += '<div class="ao-wk-rechtshinweis">' + TH('rechtstexte') + '</div>';
+    vbBox.innerHTML = h;
+  }
+  function vbKlick(e) {
+    var t = e.target;
+    var auf = t.closest ? t.closest('.ao-vb-auf') : null;
+    if (auf) { vbOffen = auf.getAttribute('data-id'); zeigeVorbestellung(); var f = vbBox.querySelector('.ao-vb-form input[name="menge"]'); if (f) f.focus(); return; }
+    if (t.closest && t.closest('.ao-vb-ab')) { vbOffen = null; zeigeVorbestellung(); }
+  }
+  function vbRechne(e) {
+    var f = e.target.form; if (!f || !f.classList.contains('ao-vb-form')) return;
+    var a = vbAktion(f.getAttribute('data-id')), z = f.querySelector('.ao-vb-voraus');
+    if (!a || !z) return;
+    var m = f.elements.menge.valueAsNumber;
+    z.textContent = m > 0 ? T('vb_voraus', { summe: eur(m * a.preis) }) : '';
+  }
+  function vbSenden(e) {
+    e.preventDefault();
+    var f = e.target, el = f.elements, msg = f.querySelector('.ao-wk-msg');
+    var a = vbAktion(f.getAttribute('data-id')); if (!a) return;
+    var aus = a.phase === 'ausgebucht';
+    function set(t, ok) { msg.textContent = t; msg.className = 'ao-wk-msg ' + (ok ? 'ok' : 'err'); }
+    if (el.firma_hp && el.firma_hp.value) return;
+    var m = el.menge.valueAsNumber;
+    var name = (el.name.value || '').trim(), email = (el.email.value || '').trim(), tel = (el.telefon.value || '').trim();
+    if (!(m > 0)) { set(T('vb_fehler_menge'), false); return; }
+    if (!aus && !el.abhol_tag.value) { set(T('vb_fehler_tag'), false); return; }
+    if (!name) { set(T('fehler_name'), false); return; }
+    if (!email && !tel) { set(T('fehler_kontakt'), false); return; }
+    if (aus && !el.einwilligung.checked) { set(T('vb_fehler_einwilligung'), false); return; }
+    if (!el.privacy.checked) { set(T('fehler_datenschutz'), false); return; }
+    var btn = f.querySelector('.ao-vb-senden'); btn.disabled = true; var bt = btn.textContent; btn.textContent = T('senden');
+    var body = { seite: seite, aktion: a.id, art: aus ? 'vormerken' : 'vorbestellen', menge: m, abhol_tag: aus ? '' : el.abhol_tag.value, name: name, email: email, telefon: tel, privacy: true, einwilligung: aus ? true : false, firma_hp: '', sprache: sprache };
+    fetch('/api/oeffentlich/vorbestellung', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (x) {
+        if (x.ok) {
+          // Danke bleibt an der Karte stehen; neu laden zeigt die neue Restmenge.
+          vbDanke[a.id] = aus ? 'vb_vormerk_danke' : 'vb_danke';
+          vbOffen = null;
+          lade();
+        } else {
+          var fm = (x.d && x.d.error) || '';
+          set(sprache === 'de' ? (fm || T('vb_fehler')) : T('vb_fehler') + (fm ? ' (' + fm + ')' : ''), false);
+          btn.disabled = false; btn.textContent = bt;
+          if (x.d && x.d.neu_laden) setTimeout(function () { vbOffen = null; lade(); }, 2500);
+        }
+      }).catch(function () { set(T('fehler_verbindung'), false); btn.disabled = false; btn.textContent = bt; });
+  }
+
   // --- Paket 324: Sprach-Umschalter (nur wenn der Betrieb mehr als Deutsch anbietet) ---
   function zeigeUmschalter() {
     var alt = c.querySelector('.ao-sprache'); if (alt) alt.parentNode.removeChild(alt);
@@ -443,9 +599,12 @@
         sprachen = (d && d.sprachen) || [];
         texte = (d && d.texte) || null;
         nurGewerbe = !!(d && d.nur_gewerbe);
+        vb = (d && d.vorbestellung) || [];
+        vbEinw = (d && typeof d.vb_einwilligung === 'string') ? d.vb_einwilligung : '';
+        if (vbOffen && !vbAktion(vbOffen)) vbOffen = null;
         if (d && d.konto_ungueltig) { setToken(null); kontoHinweis = 'link_ungueltig'; }
         if (konto) kontoHinweis = '';
-        richtung(); zeigeKonto(); zeigeUmschalter(); karten(); zeigeBar(); zeigeDrawer();
+        richtung(); zeigeKonto(); zeigeUmschalter(); zeigeVorbestellung(); karten(); zeigeBar(); zeigeDrawer();
       })
       .catch(function () {});
   }

@@ -24,7 +24,8 @@ export type StartBereich =
   | 'sdbVersand' // Paket 328 (S5): Sicherheitsdatenblatt mit der Bestellbestätigung und Nachversand (R49)
   | 'betriebsanweisung' // Paket 329 (G2b): Betriebsanweisung freigeben und ohne „ENTWURF“ drucken (R49)
   | 'zusammenlagerung' // Paket 330 (G2c): Zusammenlagerungs-Ampel je Lagerplatz nach TRGS 510 (R49)
-  | 'reifePreisTreppe'; // Paket 341 (BV3a): Preis-Treppe nach Reife/MHD auf dem Preisschild, Streichpreis (R51)
+  | 'reifePreisTreppe' // Paket 341 (BV3a): Preis-Treppe nach Reife/MHD auf dem Preisschild, Streichpreis (R51)
+  | 'vorbestellShop'; // Paket 343 (BV3b): Vorbestellung und Vormerkliste im Shop-Schaufenster (R52, R53) — wirkt nur mit „shop“
 
 /** Der Schalter. false = abgeschaltet bis zur Freigabe durch den Anwalt. */
 export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.freeze({
@@ -38,6 +39,7 @@ export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.fr
   betriebsanweisung: false,
   zusammenlagerung: false,
   reifePreisTreppe: false,
+  vorbestellShop: false,
 });
 
 const GRUND: Record<StartBereich, string> = {
@@ -51,6 +53,7 @@ const GRUND: Record<StartBereich, string> = {
   betriebsanweisung: 'Das Freigeben von Betriebsanweisungen wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie Entwürfe vorbereiten; der Druck trägt „ENTWURF“.',
   zusammenlagerung: 'Die Zusammenlagerungs-Ampel (TRGS 510) wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin tragen Sie bitte Lagerklasse und Lagerplatz je Stoff ein.',
   reifePreisTreppe: 'Das Preisschild mit der Preis-Treppe nach Reife und Mindesthaltbarkeit wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie die Stufen einrichten und den Preis von heute intern ansehen; der Druck trägt „ENTWURF“.',
+  vorbestellShop: 'Vorbestellungen im Online-Shop werden nach der rechtlichen Prüfung freigeschaltet. Bis dahin nehmen Sie Vorbestellungen an der Theke, am Telefon oder per E-Mail auf; die Aktionen können Sie für den Shop schon vorbereiten.',
 };
 
 /** true, wenn der Bereich freigeschaltet ist. `freigabe` nur für Tests. */

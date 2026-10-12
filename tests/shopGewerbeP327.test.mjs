@@ -52,9 +52,10 @@ test('Schalter wirkt nur mit Einstellung UND Freigabe; Bestellung nur mit geprü
 });
 
 test('Neuer Shop-Text ist Zusatz: freigegebene Sprachen fallen nicht heraus', () => {
-  assert.deepEqual(TEXT_ZUSATZ_KEYS, ['nur_gewerbe']);
+  // Paket 343: weitere Zusatz-Texte (vb_* Vorbestellung) kamen dazu — nur_gewerbe bleibt der erste.
+  assert.equal(TEXT_ZUSATZ_KEYS[0], 'nur_gewerbe');
   assert.ok(!TEXT_PFLICHT_KEYS.includes('nur_gewerbe'));
-  const altFreigegeben = { ...TEXT_EN }; delete altFreigegeben.nur_gewerbe;
+  const altFreigegeben = { ...TEXT_EN }; for (const k of TEXT_ZUSATZ_KEYS) delete altFreigegeben[k];
   assert.deepEqual(pruefeOberflaeche(altFreigegeben), []);
   const pl = oberflaecheFuer('pl', { sprache: 'pl', status: 'freigegeben', texte: altFreigegeben });
   assert.ok(pl, 'Sprache bleibt nutzbar');

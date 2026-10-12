@@ -66,6 +66,8 @@ export const OFFENE_TUEREN: OffeneTuer[] = [
   { pfad: 'oeffentlich/shop-produkte', grund: 'freigeschaltete Produkte eines Shops', schutz: 'seite', geprueft: true },
   { pfad: 'oeffentlich/produkt-dokument', grund: 'Datenblatt/Zertifikat (PDF) eines Shop-Produkts herunterladen — nur im Shop freigegeben, aktuell, nicht abgelaufen, Artikel im Shop', schutz: 'seite', geprueft: true },
   { pfad: 'oeffentlich/shop-bestellung', grund: 'Bestellung im Shop des Betriebs', schutz: 'formular', geprueft: true },
+  // Paket 343 (12.10.26): Vorbestellung bzw. Vormerkliste aus dem Shop -> vorbestell_posten / vormerkung des Betriebs. Gesperrt bis Start-Schalter shop UND vorbestellShop frei (403); Betrieb nur ueber veroeffentlichte Seite; Menge, Preis und Pflichtangaben prueft der Server, Wachter p342 haelt die Menge.
+  { pfad: 'oeffentlich/vorbestellung', grund: 'Vorbestellung oder Vormerkliste im Shop des Betriebs (knappe Ware, Abholung im Laden)', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/widerruf', grund: 'elektronischer Widerruf (Pflicht-Knopf)', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/buchung', grund: 'Terminbuchung auf der Kundenwebseite', schutz: 'formular', geprueft: true },
   { pfad: 'oeffentlich/buchung-info', grund: 'freie Zeiten für die Terminbuchung', schutz: 'nur-lesen', geprueft: true },
