@@ -26,6 +26,8 @@ import { leseZahl, centRunden } from './zahlen';
 import { psAusKw, ezText } from './kfzBestand';
 import { istElektro } from './kfzAkte';
 import { historieFuerBoerse, type HistorieOeffentlich } from './partnerAnbindung';
+import { artDef, istArt, oeffentlicheMerkmale, type Art } from './einzelstueck';
+import { datumText, zaehlerText } from './einzelstueckBestand';
 
 /** Paket 273: offener Hinweis „Präsentiert mit ARGONAUT OS" — nur die Marke, keine Suchbegriffe im Linktext. */
 export const ARGONAUT_LINK = 'https://argonaut-os.com';
@@ -43,11 +45,17 @@ export const BOERSE_STATUS = ['bestand', 'aufbereitung', 'zulauf'];
  */
 export const BOERSE_SPALTEN = 'id, interne_nr, status, sparte, marke, modell, variante, erstzulassung, km_stand, leistung_kw, kraftstoff, farbe, vk_brutto, besteuerung, inseriert, ausstattung, polster, vorbesitzer, hu_bis, vorschaden, vorschaden_text, inserat_titel, inserat_text, verbrauch_komb, verbrauch_einheit, co2_g_km, co2_klasse, aktualisiert_am, historie_url, historie_anbieter, historie_am, historie_oeffentlich';
 
+/**
+ * Paket 335 (BV2b Teil 4): zusätzlich Art, Merkmale und Betriebsstunden der Einzelstücke.
+ * Die Seriennummer gehört NICHT dazu (NIE_OEFFENTLICH). Rückfall ohne SQL p332: BOERSE_SPALTEN.
+ */
+export const BOERSE_SPALTEN_P332 = 'id, interne_nr, status, sparte, marke, modell, variante, erstzulassung, km_stand, leistung_kw, kraftstoff, farbe, vk_brutto, besteuerung, inseriert, ausstattung, polster, vorbesitzer, hu_bis, vorschaden, vorschaden_text, inserat_titel, inserat_text, verbrauch_komb, verbrauch_einheit, co2_g_km, co2_klasse, aktualisiert_am, historie_url, historie_anbieter, historie_am, historie_oeffentlich, art, merkmale, betriebsstunden';
+
 /** Paket 274: dieselbe Liste ohne die Historie-Spalten — Rückfall, solange SQL 274 noch nicht gelaufen ist. */
 export const BOERSE_SPALTEN_OHNE_HISTORIE = 'id, interne_nr, status, sparte, marke, modell, variante, erstzulassung, km_stand, leistung_kw, kraftstoff, farbe, vk_brutto, besteuerung, inseriert, ausstattung, polster, vorbesitzer, hu_bis, vorschaden, vorschaden_text, inserat_titel, inserat_text, verbrauch_komb, verbrauch_einheit, co2_g_km, co2_klasse, aktualisiert_am';
 
 /** Felder, die verboten sind — Wächter für Tests und für oeffentlich(). */
-export const NIE_OEFFENTLICH = ['ek_netto', 'fin', 'kennzeichen', 'notiz', 'standort_id', 'farbcode', 'erstellt_von', 'owner_user_id'];
+export const NIE_OEFFENTLICH = ['ek_netto', 'fin', 'kennzeichen', 'notiz', 'standort_id', 'farbcode', 'erstellt_von', 'owner_user_id', 'seriennr'];
 
 // --- Einstellung ------------------------------------------------------------------
 
@@ -90,6 +98,10 @@ export type BoerseFahrzeug = {
   aktualisiert_am: string | null;
   /** Paket 274: Bericht zur Fahrzeughistorie, nur mit Freigabe des Betriebs. */
   historie: HistorieOeffentlich | null;
+  /** Paket 335 (BV2b): Art des Einzelstücks, Betriebsstunden, öffentliche Merkmale (nur Positivliste). Fehlt die Art = kfz. */
+  art?: Art;
+  betriebsstunden?: number | null;
+  merkmale?: { label: string; text: string }[];
 };
 
 function txt(v: unknown, max: number): string | null {
@@ -117,7 +129,12 @@ export function oeffentlich(roh: unknown): BoerseFahrzeug | null {
   const vorschaden = r.vorschaden === 'keine_bekannt' || r.vorschaden === 'ja' || r.vorschaden === 'unbekannt' ? r.vorschaden : null;
   const klasse = typeof r.co2_klasse === 'string' && /^[A-G]$/.test(r.co2_klasse) ? r.co2_klasse : null;
   const einheit = r.verbrauch_einheit === 'l' || r.verbrauch_einheit === 'kwh' || r.verbrauch_einheit === 'kg' ? r.verbrauch_einheit : null;
-  return {
+  // Paket 335: Einzelstücke zeigen nur, was zu ihrer Art gehört — keine CO₂-, kW-, Kraftstoff-, Polster-Angaben
+  // bei Boot, Uhr oder Kunst, km nur bei km-Zähler, HU nur mit Zulassung, Historie nur mit FIN.
+  const art: Art = istArt(r.art) ? r.art : 'kfz';
+  const d = artDef(art);
+  const kfz = art === 'kfz';
+  const basis: BoerseFahrzeug = {
     id: r.id, interne_nr: txt(r.interne_nr, 40), status: r.status as string, sparte: txt(r.sparte, 40),
     marke: txt(r.marke, 60), modell: txt(r.modell, 80), variante: txt(r.variante, 80),
     erstzulassung: tag(r.erstzulassung), km_stand: zahl(r.km_stand), leistung_kw: zahl(r.leistung_kw),
@@ -131,12 +148,25 @@ export function oeffentlich(roh: unknown): BoerseFahrzeug | null {
     aktualisiert_am: typeof r.aktualisiert_am === 'string' ? r.aktualisiert_am : null,
     historie: historieFuerBoerse(r),
   };
+  if (kfz) return basis;
+  return {
+    ...basis,
+    leistung_kw: null, kraftstoff: null, polster: null,
+    verbrauch_komb: null, verbrauch_einheit: null, co2_g_km: null, co2_klasse: null,
+    km_stand: d.begriffe.zaehler === 'km' ? basis.km_stand : null,
+    hu_bis: d.kfzTeile.zulassung ? basis.hu_bis : null,
+    historie: d.kfzTeile.fin ? basis.historie : null,
+    art,
+    betriebsstunden: d.begriffe.zaehler === 'betriebsstunden' ? zahl(r.betriebsstunden) : null,
+    merkmale: oeffentlicheMerkmale(art, r.merkmale && typeof r.merkmale === 'object' ? r.merkmale as Record<string, unknown> : null)
+      .map((m) => ({ label: m.label, text: m.text.slice(0, 120) })),
+  };
 }
 
 // --- Anzeige ----------------------------------------------------------------------------
 
-export function fahrzeugName(f: Pick<BoerseFahrzeug, 'marke' | 'modell' | 'variante'>): string {
-  return [f.marke, f.modell, f.variante].filter(Boolean).join(' ') || 'Fahrzeug';
+export function fahrzeugName(f: Pick<BoerseFahrzeug, 'marke' | 'modell' | 'variante'> & { art?: Art }): string {
+  return [f.marke, f.modell, f.variante].filter(Boolean).join(' ') || artDef(f.art ?? 'kfz').begriffe.einheit;
 }
 
 /** Überschrift: Inseratstitel, sonst Marke Modell Ausführung. */
@@ -187,6 +217,24 @@ export function statusHinweis(status: string): string | null {
 
 /** Kerndaten als Zeilen [Bezeichnung, Wert] — leere fallen weg. */
 export function fakten(f: BoerseFahrzeug): [string, string][] {
+  // Paket 335: Einzelstücke mit eigenen Wörtern, Zähler und öffentlichen Merkmalen
+  if (f.art && f.art !== 'kfz') {
+    const d = artDef(f.art);
+    const fahrzeugArt = d.begriffe.zaehler !== null;
+    const zaehler = zaehlerText(f.art, f);
+    const vs = vorschadenText(f);
+    const y: [string, string | null][] = [
+      [d.begriffe.datumWort, f.erstzulassung ? datumText(f.art, f.erstzulassung) : null],
+      [d.begriffe.zaehler === 'km' ? 'Kilometerstand' : 'Betriebsstunden', zaehler && zaehler !== '—' ? zaehler : null],
+      ...(f.merkmale ?? []).map((m) => [m.label, m.text] as [string, string]),
+      ['Farbe', f.farbe],
+      ['Vorbesitzer', f.vorbesitzer === null ? null : String(Math.round(f.vorbesitzer))],
+      ['HU bis', f.hu_bis ? ezText(f.hu_bis) : null],
+      [fahrzeugArt ? 'Unfall' : 'Schäden', fahrzeugArt ? vs : vs.replace('Unfallschäden', 'Schäden')],
+      ['Nr.', f.interne_nr],
+    ];
+    return y.filter((x): x is [string, string] => !!x[1]);
+  }
   const z: [string, string | null][] = [
     ['Erstzulassung', f.erstzulassung ? ezText(f.erstzulassung) : null],
     ['Kilometerstand', kmText(f.km_stand)],
@@ -222,6 +270,11 @@ export function energieZeilen(f: Pick<BoerseFahrzeug, 'verbrauch_komb' | 'verbra
 
 /** Kurzzeile für Karten in der Liste: „03/2021 · 45.000 km · 110 kW (150 PS) · Diesel". */
 export function kurzZeile(f: BoerseFahrzeug): string {
+  if (f.art && f.art !== 'kfz') {
+    const d = artDef(f.art);
+    const z = zaehlerText(f.art, f);
+    return [f.erstzulassung ? `${d.begriffe.datumWort} ${datumText(f.art, f.erstzulassung)}` : null, z && z !== '—' ? z : null, ...(f.merkmale ?? []).slice(0, 2).map((m) => m.text)].filter(Boolean).join(' · ');
+  }
   return [f.erstzulassung ? `EZ ${ezText(f.erstzulassung)}` : null, kmText(f.km_stand), leistungText(f.leistung_kw), f.kraftstoff].filter(Boolean).join(' · ');
 }
 
@@ -377,9 +430,11 @@ function kraftstoffSchema(k: string | null): string | null {
 export function strukturDaten(f: BoerseFahrzeug, o: { basis: string; url: string; bilder: string[]; firma: string | null; ort: string | null }): Record<string, unknown> {
   const basis = o.basis.replace(/\/+$/, '');
   const url = o.url;
+  // Paket 335: Einzelstücke als schema.org/Product (ohne Zulassungs-, km- und Motordaten)
+  const einzel = !!f.art && f.art !== 'kfz';
   const d: Record<string, unknown> = {
     '@context': 'https://schema.org',
-    '@type': 'Car',
+    '@type': einzel ? 'Product' : 'Car',
     name: titel(f),
     url,
     itemCondition: 'https://schema.org/UsedCondition',
@@ -388,7 +443,7 @@ export function strukturDaten(f: BoerseFahrzeug, o: { basis: string; url: string
   if (f.modell) d.model = f.modell;
   if (f.inserat_text) d.description = f.inserat_text.slice(0, 5000);
   if (o.bilder.length) d.image = o.bilder.map((b) => (b.startsWith('http') ? b : basis + b));
-  if (f.erstzulassung) d.dateVehicleFirstRegistered = f.erstzulassung;
+  if (f.erstzulassung && !einzel) d.dateVehicleFirstRegistered = f.erstzulassung;
   if (f.km_stand !== null) d.mileageFromOdometer = { '@type': 'QuantitativeValue', value: Math.round(f.km_stand), unitCode: 'KMT' };
   const ks = kraftstoffSchema(f.kraftstoff);
   if (ks) d.fuelType = ks;
@@ -401,7 +456,7 @@ export function strukturDaten(f: BoerseFahrzeug, o: { basis: string; url: string
       priceCurrency: 'EUR', url,
       availability: f.status === 'zulauf' ? 'https://schema.org/PreOrder' : 'https://schema.org/InStock',
       itemCondition: 'https://schema.org/UsedCondition',
-      ...(o.firma ? { seller: { '@type': 'AutoDealer', name: o.firma, ...(o.ort ? { address: { '@type': 'PostalAddress', addressLocality: o.ort, addressCountry: 'DE' } } : {}) } } : {}),
+      ...(o.firma ? { seller: { '@type': einzel ? 'Organization' : 'AutoDealer', name: o.firma, ...(o.ort ? { address: { '@type': 'PostalAddress', addressLocality: o.ort, addressCountry: 'DE' } } : {}) } } : {}),
     };
   }
   return d;

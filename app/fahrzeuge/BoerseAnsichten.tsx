@@ -154,7 +154,7 @@ export function DetailAnsicht({ ctx, f, bilder }: { ctx: BoerseKontext; f: Boers
             : <div className="bx-leer" style={{ borderRadius: 14 }}>FOTOS FOLGEN</div>}
 
           <section style={st.box}>
-            <h2 style={{ fontSize: 17, margin: '0 0 8px' }}>Fahrzeugdaten</h2>
+            <h2 style={{ fontSize: 17, margin: '0 0 8px' }}>{f.art && f.art !== 'kfz' ? 'Daten' : 'Fahrzeugdaten'}</h2>
             <table style={st.tab}><tbody>
               {fakten(f).map(([a, b]) => <tr key={a}><th style={st.th}>{a}</th><td style={st.td}>{b}</td></tr>)}
             </tbody></table>
@@ -194,7 +194,7 @@ export function DetailAnsicht({ ctx, f, bilder }: { ctx: BoerseKontext; f: Boers
             {(ctx.firma.telefon || ctx.firma.email) && (
               <div style={{ marginTop: 12, display: 'grid', gap: 4, fontSize: 14 }}>
                 {ctx.firma.telefon && <a href={`tel:${ctx.firma.telefon.replace(/[^+0-9]/g, '')}`} style={{ color: F.text, fontWeight: 700 }}>☎ {ctx.firma.telefon}</a>}
-                {f.interne_nr && <span style={st.klein}>Bitte nennen Sie die Fahrzeug-Nr. {f.interne_nr}</span>}
+                {f.interne_nr && <span style={st.klein}>Bitte nennen Sie die {f.art && f.art !== 'kfz' ? 'Nr.' : 'Fahrzeug-Nr.'} {f.interne_nr}</span>}
               </div>
             )}
           </section>

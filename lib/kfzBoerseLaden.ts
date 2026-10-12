@@ -14,7 +14,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { istBot } from './kfzPreis';
-import { BOERSE_MODUL, BOERSE_SPALTEN, BOERSE_SPALTEN_OHNE_HISTORIE, BOERSE_STATUS, boerseEinstellung, kennungGueltig, idGueltig, oeffentlich, hostSauber, type BoerseEinstellung, type BoerseFahrzeug } from './kfzBoerse';
+import { BOERSE_MODUL, BOERSE_SPALTEN, BOERSE_SPALTEN_P332, BOERSE_SPALTEN_OHNE_HISTORIE, BOERSE_STATUS, boerseEinstellung, kennungGueltig, idGueltig, oeffentlich, hostSauber, type BoerseEinstellung, type BoerseFahrzeug } from './kfzBoerse';
 
 export function boerseDb() {
   return createClient(
@@ -104,7 +104,10 @@ type MedienZeile = { id: string; bestand_id: string; position: number | null };
 
 /** Alle sichtbaren Fahrzeuge des Betriebs mit Titelbild-ID (erstes Foto nach Reihenfolge). */
 export async function sichtbareFahrzeuge(db: BoerseDb, betrieb: string): Promise<{ f: BoerseFahrzeug; bild: string | null }[]> {
-  const voll = await db.from('kfz_bestand').select(BOERSE_SPALTEN)
+  // Paket 335: zuerst mit Art und Merkmalen (SQL p332), sonst wie bisher
+  const mitArt = await db.from('kfz_bestand').select(BOERSE_SPALTEN_P332)
+    .eq('owner_user_id', betrieb).eq('inseriert', true).in('status', BOERSE_STATUS).limit(500);
+  const voll = !mitArt.error ? mitArt : await db.from('kfz_bestand').select(BOERSE_SPALTEN)
     .eq('owner_user_id', betrieb).eq('inseriert', true).in('status', BOERSE_STATUS).limit(500);
   // Paket 274: SQL noch nicht gelaufen -> ohne Historie-Spalten weiter
   const data: unknown = voll.error
@@ -124,7 +127,8 @@ export async function sichtbareFahrzeuge(db: BoerseDb, betrieb: string): Promise
 /** Ein sichtbares Fahrzeug mit allen Foto-IDs (Reihenfolge der Akte). Nicht sichtbar -> null. */
 export async function sichtbaresFahrzeug(db: BoerseDb, betrieb: string, id: string): Promise<{ f: BoerseFahrzeug; bilder: string[] } | null> {
   if (!idGueltig(id)) return null;
-  const voll = await db.from('kfz_bestand').select(BOERSE_SPALTEN).eq('owner_user_id', betrieb).eq('id', id).maybeSingle();
+  const mitArt = await db.from('kfz_bestand').select(BOERSE_SPALTEN_P332).eq('owner_user_id', betrieb).eq('id', id).maybeSingle();
+  const voll = !mitArt.error ? mitArt : await db.from('kfz_bestand').select(BOERSE_SPALTEN).eq('owner_user_id', betrieb).eq('id', id).maybeSingle();
   const data: unknown = voll.error
     ? (await db.from('kfz_bestand').select(BOERSE_SPALTEN_OHNE_HISTORIE).eq('owner_user_id', betrieb).eq('id', id).maybeSingle()).data
     : voll.data;
