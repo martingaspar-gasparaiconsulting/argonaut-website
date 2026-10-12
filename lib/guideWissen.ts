@@ -729,6 +729,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Reiter „🏢 Geschäftskunden“: Kontakt suchen, „Als Geschäftskunde anlegen“, dann „Bearbeiten“: Preisliste, Kauf auf Rechnung, Zahlungsziel (0–90 Tage) und optional Kreditrahmen',
       '„✉️ Link per E-Mail senden“ schickt den persönlichen Shop-Link an die E-Mail des Kontakts; „🔗 Link nur anzeigen“ zeigt ihn einmal zum Kopieren. „⛔ Link sperren“ macht ihn sofort ungültig',
       'Reiter „📦 Gebinde & Mindestmenge“: z. B. Gebinde 6 und Mindestmenge 12 — dann sind nur 12, 18, 24 … bestellbar',
+      'Nur an Gewerbe verkaufen: je Kunde unter „Bearbeiten“ den Gewerbenachweis eintragen (USt-IdNr. mit Vermerk der BZSt-Bestätigung, Gewerbeanmeldung oder Handelsregisterauszug) und „geprüft“ setzen; im Reiter „⚙️ Preis-Basis“ den Schalter „Nur geprüfte Geschäftskunden“ — er wirkt erst nach der rechtlichen Freigabe',
     ],
     landetIn: [{ text: 'Shop / Marktplatz', href: '/dashboard/shop' }, { text: 'Vertrieb/CRM', href: '/dashboard/crm' }, { text: 'Rechnungen', href: '/dashboard/rechnungen' }],
   },

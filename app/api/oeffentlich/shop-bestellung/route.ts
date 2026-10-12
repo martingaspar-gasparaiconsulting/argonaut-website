@@ -23,7 +23,8 @@ import {
   baueB2bBestellung, centText, leseWunschMenge, endkundenPreis, euro, mengenRegel, mengePruefen, offenAusBestellungen,
   offenAusRechnungen, rahmenPruefen, zahlartPruefen, type B2bArtikel,
 } from '@/lib/shopB2b';
-import { kundeAusToken, ladePreisBasis, tokenAus } from '@/lib/shopB2bServer';
+import { kundeAusToken, ladeNurGewerbe, ladePreisBasis, tokenAus } from '@/lib/shopB2bServer';
+import { bestellungErlaubt } from '@/lib/shopGewerbe';
 import { sprachName } from '@/lib/mehrsprachig';
 import { bestellSprache, fuellen, mailTexte, type MailTexte } from '@/lib/shopSprachen';
 
@@ -121,6 +122,9 @@ export async function POST(req: Request) {
     if (tokenAus(req, b.konto) && !kunde) {
       return NextResponse.json({ error: 'Ihr Kundenlink ist nicht mehr gültig. Bitte fordern Sie beim Anbieter einen neuen an oder bestellen Sie ohne Firmenkonto.', konto_ungueltig: true }, { status: 403 });
     }
+    // Paket 327 (S3b): Shop nur für geprüfte Geschäftskunden — der Server entscheidet, nicht der Browser.
+    const erlaubt = bestellungErlaubt(await ladeNurGewerbe(db, ownerId), kunde);
+    if (!erlaubt.ok) return NextResponse.json({ error: erlaubt.grund, nur_gewerbe: true }, { status: 403 });
     const bestellnr = clean(b.bestellnummer, 60);
 
     let positionen: object[];

@@ -30,6 +30,7 @@ SCHALTER startSperre.kiBeraterFremd = aus
 SCHALTER startSperre.fernhilfe = aus
 SCHALTER startSperre.whatsappWerbung = aus
 SCHALTER startSperre.gefahrstoffShop = aus
+SCHALTER startSperre.gewerbeNachweis = aus
 
 | Bereich | Was ist aus | Wo im Code | Anwalt-Fragen | Mitziehen beim Öffnen |
 |---|---|---|---|---|
@@ -37,6 +38,7 @@ SCHALTER startSperre.gefahrstoffShop = aus
 | **KI-Berater auf fremden Websites** (`kiBeraterFremd`) | Berater auf Adressen außerhalb der ARGONAUT-Websites; auf eigenen `/p/`-Seiten läuft er | `app/api/oeffentlich/chat`, `app/dashboard/webseiten` | 2.06, 2.35, 2.52 | AGB-Klausel Aufpreis/Mengengrenze (1.53), Passage für die Datenschutzerklärung des Betriebs, Bestätigung vor Freigabe einer fremden Adresse, AV-Vertrag (1.54). |
 | **Fernhilfe** (`fernhilfe`) | Bildschirm teilen mit Betreiber oder Chef | `app/api/fernhilfe`, `app/dashboard/layout.tsx` (Knopf) | 2.51 | Hinweis in Datenschutzerklärung und AV-Vertrag (Live-Bild, keine Speicherung, Google-STUN erfährt IP), ggf. TURN-Server für Firmennetze. |
 | **Gefahr-Angaben im Shop** (`gefahrstoffShop`, Paket 325/326) | Anzeige von Piktogrammen, Signalwort, H-/P-Sätzen, UN-Nummer und UFI am Shop-Produkt und vor dem Bestellknopf; Pflegen und Bestätigen unter Shop → Gefahr-Angaben geht schon | `lib/shopGefahr.ts`, `app/dashboard/shop/gefahrstoffe`, `app/api/shop/gefahr-auslesen`, Anzeige `app/api/oeffentlich/shop-produkte` + `public/shop.js` (Paket 326) | R49 (Haftung für abgelesene Angaben, CLP Art. 48 Abs. 2 Fernabsatz) | Hinweis in den Shop-AGB „Angaben aus dem SDB des Herstellers“, offizielle GHS-Piktogramm-Grafiken einbinden, S3b/S5/G2b/G2c gemeinsam prüfen. |
+| **Nur Gewerbekunden** (`gewerbeNachweis`, Paket 327) | Der Schalter „Nur an geprüfte Geschäftskunden verkaufen“ wirkt nicht (Shop bleibt für alle); Nachweise (USt-IdNr., Gewerbeanmeldung, Handelsregister) erfassen und als geprüft markieren geht schon | `lib/shopGewerbe.ts`, `app/dashboard/shop/geschaeftskunden` (Reiter Preis-Basis & Schalter), `app/api/oeffentlich/shop-bestellung`, `app/api/oeffentlich/shop-produkte`, `public/shop.js` | R49 (ChemVerbotsV § 8 Abgabe nur an Wiederverkäufer/berufsmäßige Verwender mit Identitätsprüfung; REACH Anhang XVII) | Klären, ob Formprüfung + BZSt-Vermerk + Kundenlink genügen oder eine Identitäts-/Verwendungszweckprüfung je Bestellung nötig ist; ggf. Artikel-genauer Schalter statt shopweit. |
 | **WhatsApp-Werbung** (`whatsappWerbung`) | Anmeldung und Kampagnen-Versand per WhatsApp | `app/api/marketing/whatsapp-senden`, `app/api/oeffentlich/whatsapp-optin` | 2.07, 2.08, 2.53, 1.64 | Einwilligungstext, Klausel für von Hand eingetragene Nummern, Meldung „abgemeldet" nach STOP ergänzen. |
 
 ## 2 · Import-Sperren (`lib/anwaltFreigabe.ts`, `ANWALT_FREIGABE`)

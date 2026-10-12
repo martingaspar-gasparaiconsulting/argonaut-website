@@ -17,7 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 import { oeffentlichBestellbar, shopMwst } from '@/lib/shopUebernahme';
 import { shopDokumente, type Dok } from '@/lib/produktDokumente';
 import { basisNettoCent, endkundenPreis, euro, mengenRegel, schaufensterStaffeln } from '@/lib/shopB2b';
-import { kundeAusToken, ladePreisBasis, tokenAus } from '@/lib/shopB2bServer';
+import { kundeAusToken, ladeNurGewerbe, ladePreisBasis, tokenAus } from '@/lib/shopB2bServer';
 import { spracheFuer } from '@/lib/mehrsprachig';
 import {
   TEXT_DE, angeboteneSprachen, oberflaecheFuer, produktText, waehleSprache,
@@ -134,6 +134,8 @@ export async function GET(req: Request) {
     const basis = await ladePreisBasis(db, betrieb);
     const token = tokenAus(req);
     const kunde = token ? await kundeAusToken(db, betrieb, token, rows.map((r) => r.id)) : null;
+    // Paket 327 (S3b): nur geprüfte Geschäftskunden? (wirkt erst nach Freigabe R49)
+    const nurGewerbe = await ladeNurGewerbe(db, betrieb);
 
     const produkte = rows.map((r) => ({
       id: r.id,
@@ -157,7 +159,8 @@ export async function GET(req: Request) {
       rtl: !!info.rtl,
       sprachen: angeboten.map((c) => { const s = spracheFuer(c)!; return { code: s.code, name: s.eigen, rtl: !!s.rtl }; }),
       texte,
-      ...(kunde ? { konto: { name: kunde.name, netto: true, auf_rechnung: kunde.auf_rechnung, zahlungsziel: kunde.zahlungsziel_tage } } : {}),
+      ...(kunde ? { konto: { name: kunde.name, netto: true, auf_rechnung: kunde.auf_rechnung, zahlungsziel: kunde.zahlungsziel_tage, nachweis: kunde.nachweis_ok } } : {}),
+      ...(nurGewerbe ? { nur_gewerbe: true } : {}),
       ...(token && !kunde ? { konto_ungueltig: true } : {}),
     }, { headers: { 'Cache-Control': 'no-store' } });
 

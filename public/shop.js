@@ -34,6 +34,9 @@
   var konto = null;
   var kontoHinweis = '';
   var sprache = 'de', bcp = 'de-DE', rtl = false, sprachen = [], texte = null;
+  // Paket 327 (S3b): Shop nur für geprüfte Geschäftskunden — dann ohne Konto keine Warenkorb-Knöpfe (der Server lehnt ohnehin ab).
+  var nurGewerbe = false;
+  function gesperrt() { return nurGewerbe && !(konto && konto.nachweis); }
   var DE = {
     sprache: "Sprache",
     warenkorb: "Warenkorb",
@@ -91,7 +94,8 @@
     dok_spezifikation: "Produktspezifikation",
     dok_zertifikat: "Zertifikat",
     dok_anleitung: "Anleitung",
-    dok_sonstiges: "Dokument"
+    dok_sonstiges: "Dokument",
+    nur_gewerbe: "Bestellungen nur für geprüfte Geschäftskunden. Für ein Kundenkonto wenden Sie sich bitte an uns."
   };
   /** Text in der Sprache des Shops, Platzhalter {n}, {summe}, {name} gefüllt (Werte schon fertig). */
   function T(k, w) {
@@ -148,7 +152,7 @@
 
   function add(id) {
     var p = produkt(id);
-    if (!p) return;
+    if (!p || gesperrt()) return;
     var w = ladeWk(), f = null, j; for (j = 0; j < w.length; j++) { if (w[j].id === id) { f = w[j]; break; } }
     if (f) { f.menge += gebinde(p); } else { w.push({ id: p.id, name: p.name, preis: p.preis, menge: mindest(p) }); }
     saveWk(w); zeigeBar(); zeigeDrawer();
@@ -172,13 +176,19 @@
   function zeigeBar() {
     if (!bar) return;
     var w = ladeWk(), a = anzahl(w);
-    if (a > 0) { bar.style.display = ''; var t = bar.querySelector('.ao-wk-text'); if (t) { t.textContent = '🛒 ' + T(konto ? 'warenkorb_leiste_netto' : 'warenkorb_leiste', { n: zahl(a), summe: eur(summe(w)) }); } }
+    if (a > 0 && !gesperrt()) { bar.style.display = ''; var t = bar.querySelector('.ao-wk-text'); if (t) { t.textContent = '🛒 ' + T(konto ? 'warenkorb_leiste_netto' : 'warenkorb_leiste', { n: zahl(a), summe: eur(summe(w)) }); } }
     else { bar.style.display = 'none'; }
   }
 
   // --- Konto-Leiste über den Produkten ---
   function zeigeKonto() {
     var alt = c.querySelector('.ao-konto'); if (alt) alt.parentNode.removeChild(alt);
+    if (gesperrt()) {
+      var g = document.createElement('div'); g.className = 'ao-konto ao-konto-alt ao-nur-gewerbe';
+      g.innerHTML = '<span>🏢 ' + TH('nur_gewerbe') + '</span>';
+      c.insertBefore(g, c.firstChild);
+      return;
+    }
     if (!konto && !kontoHinweis) return;
     var d = document.createElement('div');
     d.className = 'ao-konto' + (konto ? '' : ' ao-konto-alt');
@@ -400,7 +410,7 @@
         + staffeln(p)
         + mengeHinweis(p)
         + '<div class="ao-prod-fuss"><span class="ao-prod-preis">' + preis + '</span>'
-        + '<button type="button" class="btn ao-prod-add" data-id="' + esc(p.id) + '">' + TH('in_warenkorb') + '</button></div></div></div>';
+        + (gesperrt() ? '' : '<button type="button" class="btn ao-prod-add" data-id="' + esc(p.id) + '">' + TH('in_warenkorb') + '</button>') + '</div></div></div>';
     }
     grid.innerHTML = h;
   }
@@ -432,6 +442,7 @@
         rtl = !!(d && d.rtl);
         sprachen = (d && d.sprachen) || [];
         texte = (d && d.texte) || null;
+        nurGewerbe = !!(d && d.nur_gewerbe);
         if (d && d.konto_ungueltig) { setToken(null); kontoHinweis = 'link_ungueltig'; }
         if (konto) kontoHinweis = '';
         richtung(); zeigeKonto(); zeigeUmschalter(); karten(); zeigeBar(); zeigeDrawer();

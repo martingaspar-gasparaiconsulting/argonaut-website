@@ -105,11 +105,21 @@ export const TEXT_DE = {
   dok_zertifikat: 'Zertifikat',
   dok_anleitung: 'Anleitung',
   dok_sonstiges: 'Dokument',
+  // Paket 327 (S3b) — Zusatz-Text: fehlt er in einer freigegebenen Sprache, steht dort Deutsch (siehe TEXT_ZUSATZ_KEYS).
+  nur_gewerbe: 'Bestellungen nur für geprüfte Geschäftskunden. Für ein Kundenkonto wenden Sie sich bitte an uns.',
 } as const;
 
 export type TextKey = keyof typeof TEXT_DE;
 export type Texte = Record<TextKey, string>;
 export const TEXT_KEYS = Object.keys(TEXT_DE) as TextKey[];
+/**
+ * Paket 327: Texte, die NACH der ersten Freigabe dazukamen. Sie sind keine
+ * Pflicht für die Freigabe einer Sprache — sonst fiele jede schon freigegebene
+ * Sprache aus dem Shop, sobald ein neuer Knopf dazukommt. Fehlt so ein Text,
+ * zeigt der Shop ihn auf Deutsch.
+ */
+export const TEXT_ZUSATZ_KEYS: TextKey[] = ['nur_gewerbe'];
+export const TEXT_PFLICHT_KEYS: TextKey[] = TEXT_KEYS.filter((k) => !TEXT_ZUSATZ_KEYS.includes(k));
 
 /** Fest eingebaute englische Oberfläche (geprüft, für den ersten Export-Kunden). */
 export const TEXT_EN: Texte = {
@@ -170,6 +180,7 @@ export const TEXT_EN: Texte = {
   dok_zertifikat: 'Certificate',
   dok_anleitung: 'Instructions',
   dok_sonstiges: 'Document',
+  nur_gewerbe: 'Orders only for verified business customers. Please contact us to request a customer account.',
 };
 
 /** Platzhalter eines Textes, sortiert ({n}, {summe}, {name}, {link}, {/link}). */
@@ -189,13 +200,13 @@ export function saubereTexte(roh: unknown): Partial<Texte> {
 }
 
 /**
- * Freigabe-Sperre für eine Oberfläche: jeder Text muss da sein, die Platzhalter
+ * Freigabe-Sperre für eine Oberfläche: jeder Pflicht-Text muss da sein, die Platzhalter
  * genau wie im Deutschen. Liefert die Gründe (leer = freigabefähig).
  */
 export function pruefeOberflaeche(roh: unknown): string[] {
   const t = saubereTexte(roh);
   const f: string[] = [];
-  const fehlen = TEXT_KEYS.filter((k) => !t[k]);
+  const fehlen = TEXT_PFLICHT_KEYS.filter((k) => !t[k]);
   if (fehlen.length) f.push(`${fehlen.length} Text${fehlen.length === 1 ? '' : 'e'} fehlen noch: ${fehlen.slice(0, 5).join(', ')}${fehlen.length > 5 ? ' …' : ''}`);
   for (const k of TEXT_KEYS) {
     if (!t[k]) continue;

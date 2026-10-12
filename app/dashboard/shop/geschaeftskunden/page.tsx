@@ -17,6 +17,7 @@ import {
   SHOP_B2B_MODUL, basisNettoCent, centText, kundeName, mengenRegel, preisBasis, preisZeilePruefen,
   regelEingabePruefen, schaufensterStaffeln, zahlungsziel, type PreisBasis, type Preisliste,
 } from "@/lib/shopB2b";
+import { NACHWEIS_ARTEN, nachweisFehler, nachweisZeile, ustIdPruefen } from "@/lib/shopGewerbe";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,6 +42,8 @@ type Kunde = {
   id: string; kontakt_id: string; preisliste_id: string | null; auf_rechnung: boolean; zahlungsziel_tage: number;
   kreditrahmen_cent: number | null; aktiv: boolean; token_hash: string | null; link_erstellt_am: string | null;
   zuletzt_da_am: string | null; notiz: string | null;
+  // Paket 327 (S3b): Gewerbenachweis (fehlt, solange SQL p327 nicht gelaufen ist)
+  nachweis_art?: string | null; ust_id?: string | null; nachweis_notiz?: string | null; nachweis_ok?: boolean | null; nachweis_geprueft_am?: string | null;
 };
 type Kontakt = { id: string; firma: string | null; vorname: string | null; nachname: string | null; email: string | null };
 type Liste = { id: string; name: string; rabatt_prozent: number; notiz: string | null };
@@ -82,6 +85,7 @@ export default function GeschaeftskundenSeite() {
   const [preise, setPreise] = useState<Preis[]>([]);
   const [artikel, setArtikel] = useState<Artikel[]>([]);
   const [basis, setBasis] = useState<PreisBasis>("brutto");
+  const [nurGewerbe, setNurGewerbe] = useState(false);
 
   const neuLaden = useCallback(async () => {
     setFehler(null);
@@ -93,15 +97,18 @@ export default function GeschaeftskundenSeite() {
     setIstChef(!chef);
     const betrieb = chef || user.id;
 
-    const [k, l, p] = await Promise.all([
-      alleSeiten<Kunde>((v, b) => supabase.from("shop_kunde")
-        .select("id, kontakt_id, preisliste_id, auf_rechnung, zahlungsziel_tage, kreditrahmen_cent, aktiv, token_hash, link_erstellt_am, zuletzt_da_am, notiz")
-        .order("angelegt_am", { ascending: true }).order("id", { ascending: true }).range(v, b)),
+    const kundenFelder = "id, kontakt_id, preisliste_id, auf_rechnung, zahlungsziel_tage, kreditrahmen_cent, aktiv, token_hash, link_erstellt_am, zuletzt_da_am, notiz";
+    const ladeKunden = (felder: string) => alleSeiten<Kunde>((v, b) => supabase.from("shop_kunde").select(felder)
+      .order("angelegt_am", { ascending: true }).order("id", { ascending: true }).range(v, b));
+    const [k0, l, p] = await Promise.all([
+      // Paket 327: Nachweis-Spalten mitlesen; fehlen sie (SQL p327 offen), ohne sie.
+      ladeKunden(kundenFelder + ", nachweis_art, ust_id, nachweis_notiz, nachweis_ok, nachweis_geprueft_am"),
       alleSeiten<Liste>((v, b) => supabase.from("shop_preisliste").select("id, name, rabatt_prozent, notiz")
         .order("name", { ascending: true }).order("id", { ascending: true }).range(v, b)),
       alleSeiten<Preis>((v, b) => supabase.from("shop_preis").select("id, preisliste_id, artikel_id, ab_menge, netto_cent")
         .order("ab_menge", { ascending: true }).order("id", { ascending: true }).range(v, b)),
     ]);
+    const k = k0.fehler ? await ladeKunden(kundenFelder) : k0;
     if (k.fehler || l.fehler || p.fehler) {
       setFehler("Die Geschäftskunden konnten nicht geladen werden. Läuft das SQL zu Paket 316 schon?");
     }
@@ -123,6 +130,7 @@ export default function GeschaeftskundenSeite() {
     const { data: me } = await supabase.from("modul_einstellung").select("einstellung")
       .eq("owner_user_id", betrieb).eq("modul", SHOP_B2B_MODUL).maybeSingle();
     setBasis(preisBasis((me as { einstellung?: { preisbasis?: unknown } } | null)?.einstellung?.preisbasis));
+    setNurGewerbe((me as { einstellung?: { nur_gewerbe?: unknown } } | null)?.einstellung?.nur_gewerbe === true);
     setLaden(false);
   }, []);
 
@@ -164,7 +172,11 @@ export default function GeschaeftskundenSeite() {
           )}
           {reiter === "mengen" && <MengenTeil artikel={artikel} istChef={istChef} onNeu={neuLaden} setMeldung={setMeldung} />}
           {reiter === "einstellung" && (
-            <BasisTeil basis={basis} istChef={istChef} uid={uid} onGespeichert={(b) => { setBasis(b); setMeldung("Preis-Basis gespeichert."); }} />
+            <>
+              <BasisTeil basis={basis} istChef={istChef} uid={uid} onGespeichert={(b) => { setBasis(b); setMeldung("Preis-Basis gespeichert."); }} />
+              <GewerbeSchalter an={nurGewerbe} istChef={istChef} uid={uid} kunden={kunden}
+                onGespeichert={(a) => { setNurGewerbe(a); setMeldung(a ? "Gespeichert: Der Shop soll nur an geprüfte Geschäftskunden verkaufen." : "Gespeichert: Der Shop verkauft an alle."); }} />
+            </>
           )}
         </>
       )}
@@ -270,7 +282,7 @@ function KundenTeil({ kunden, kontakte, listen, listeName, istChef, uid, onNeu, 
           <table style={S.tabelle}>
             <thead><tr>
               <th style={S.th}>Kunde</th><th style={S.th}>Preisliste</th><th style={S.th}>Zahlung</th>
-              <th style={S.th}>Kreditrahmen</th><th style={S.th}>Link</th><th style={S.th}>Zuletzt im Shop</th><th style={S.th}></th>
+              <th style={S.th}>Kreditrahmen</th><th style={S.th}>Gewerbe</th><th style={S.th}>Link</th><th style={S.th}>Zuletzt im Shop</th><th style={S.th}></th>
             </tr></thead>
             <tbody>
               {kunden.map((k) => {
@@ -281,6 +293,7 @@ function KundenTeil({ kunden, kontakte, listen, listeName, istChef, uid, onNeu, 
                     <td style={S.td}>{k.preisliste_id ? listeName[k.preisliste_id] ?? "—" : <span style={{ color: C.textDim }}>Standardpreise</span>}</td>
                     <td style={S.td}>{k.auf_rechnung ? `Auf Rechnung · ${k.zahlungsziel_tage} Tage` : "Vorkasse"}</td>
                     <td style={S.td}>{k.kreditrahmen_cent ? centText(k.kreditrahmen_cent) : "—"}</td>
+                    <td style={S.td}>{k.nachweis_ok ? <span style={{ color: C.green }}>✓ geprüft{k.ust_id ? ` · ${k.ust_id}` : ""}</span> : <span style={{ color: C.textDim }}>offen</span>}</td>
                     <td style={S.td}>{k.token_hash ? <span style={{ color: C.green }}>aktiv seit {datum(k.link_erstellt_am)}</span> : <span style={{ color: C.warn }}>kein Link</span>}</td>
                     <td style={S.td}>{datum(k.zuletzt_da_am)}</td>
                     <td style={S.td}><button style={S.knopfKlein} onClick={() => setOffen(offen === k.id ? null : k.id)}>{offen === k.id ? "Schließen" : istChef ? "Bearbeiten" : "Ansehen"}</button></td>
@@ -359,6 +372,7 @@ function KundeBearbeiten({ kunde, name, listen, istChef, busy, link, onLink, onS
       {aufRechnung && kunde.kreditrahmen_cent == null && !rahmen.trim() && (
         <div style={{ color: C.warn, fontSize: 13, marginTop: 6 }}>Hinweis: ohne Kreditrahmen kann der Kunde unbegrenzt auf Rechnung bestellen.</div>
       )}
+      <NachweisTeil kunde={kunde} istChef={istChef} onGespeichert={onGespeichert} />
       {istChef && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
           <button style={S.knopfGold} onClick={speichern} disabled={busy}>💾 Speichern</button>
@@ -377,6 +391,67 @@ function KundeBearbeiten({ kunde, name, listen, istChef, busy, link, onLink, onS
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ------------------------------------------------- Gewerbenachweis (P327) ---
+function NachweisTeil({ kunde, istChef, onGespeichert }: { kunde: Kunde; istChef: boolean; onGespeichert: () => Promise<void> }) {
+  const [art, setArt] = useState(kunde.nachweis_art ?? "");
+  const [ust, setUst] = useState(kunde.ust_id ?? "");
+  const [notiz, setNotiz] = useState(kunde.nachweis_notiz ?? "");
+  const [ok, setOk] = useState(!!kunde.nachweis_ok);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const pruef = nachweisFehler({ nachweis_art: art, ust_id: ust, nachweis_notiz: notiz });
+  const ustHinweis = art === "ustid" && ust.trim() ? ustIdPruefen(ust).fehler : null;
+
+  async function speichern() {
+    setFehler(null);
+    if (ok && pruef.length) { setFehler(pruef[0]); return; }
+    if (art === "ustid" && ust.trim() && ustHinweis) { setFehler(ustHinweis); return; }
+    setBusy(true);
+    const zeile = nachweisZeile({ nachweis_art: art || null, ust_id: ust, nachweis_notiz: notiz, nachweis_ok: ok });
+    const { data, error } = await supabase.from("shop_kunde").update(zeile).eq("id", kunde.id).select("id");
+    setBusy(false);
+    if (error || !data?.length) { setFehler(error?.message?.includes("nachweis") ? "Läuft das SQL zu Paket 327 schon?" : "Speichern hat nicht geklappt."); return; }
+    await onGespeichert();
+  }
+
+  return (
+    <div style={{ marginTop: 14, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+      <b>🏷 Gewerbenachweis</b>
+      <span style={{ color: C.textDim, fontSize: 13 }}> — nötig, wenn der Shop nur an Geschäftskunden verkauft</span>
+      {fehler && <div style={S.fehler}>{fehler}</div>}
+      <div style={S.raster}>
+        <label style={S.label}>Art des Nachweises
+          <select style={S.input} value={art} disabled={!istChef} onChange={(e) => { setArt(e.target.value); setOk(false); }}>
+            <option value="">— bitte wählen —</option>
+            {NACHWEIS_ARTEN.map((a) => <option key={a.key} value={a.key}>{a.label}</option>)}
+          </select>
+        </label>
+        {art === "ustid" && (
+          <label style={S.label}>USt-IdNr.
+            <input style={S.input} value={ust} disabled={!istChef} placeholder="z. B. DE136695976" onChange={(e) => { setUst(e.target.value); setOk(false); }} />
+            {ustHinweis && <span style={{ color: C.warn, fontSize: 12 }}>{ustHinweis}</span>}
+          </label>
+        )}
+      </div>
+      <label style={S.label}>Vermerk (was vorgelegt bzw. wann beim Bundeszentralamt für Steuern bestätigt)
+        <input style={S.input} value={notiz} maxLength={300} disabled={!istChef} placeholder={art === "ustid" ? "z. B. BZSt qualifiziert bestätigt am 12.10.2026" : "z. B. Gewerbeanmeldung Stadt Böblingen vom 01.03.2020 gesehen"}
+          onChange={(e) => { setNotiz(e.target.value); setOk(false); }} />
+      </label>
+      {art === "ustid" && (
+        <div style={{ color: C.textDim, fontSize: 12, marginTop: 6 }}>
+          ARGONAUT prüft nur die Form und bei deutschen Nummern die Prüfziffer. Ob die Nummer gültig ist und zur Firma gehört, zeigt die Bestätigungsabfrage beim Bundeszentralamt für Steuern (bzst.de) — bitte dort prüfen und hier vermerken.
+        </div>
+      )}
+      <label style={S.haken}>
+        <input type="checkbox" checked={ok} disabled={!istChef || pruef.length > 0} onChange={(e) => setOk(e.target.checked)} />
+        Nachweis geprüft {kunde.nachweis_ok && kunde.nachweis_geprueft_am ? <span style={{ color: C.textDim, fontSize: 13 }}>(zuletzt am {datum(kunde.nachweis_geprueft_am)})</span> : null}
+      </label>
+      {pruef.length > 0 && <div style={{ color: C.textDim, fontSize: 12, marginTop: 4 }}>Vor dem Haken: {pruef.join(" ")}</div>}
+      {istChef && <button style={{ ...S.knopf, marginTop: 10 }} disabled={busy} onClick={() => void speichern()}>💾 Nachweis speichern</button>}
     </div>
   );
 }
@@ -645,6 +720,45 @@ function BasisTeil({ basis, istChef, uid, onGespeichert }: { basis: PreisBasis; 
       <label style={S.haken}><input type="radio" name="basis" checked={wahl === "netto"} disabled={!istChef} onChange={() => setWahl("netto")} /> Netto (zzgl. MwSt)</label>
       {istChef && <button style={{ ...S.knopfGold, marginTop: 10 }} disabled={wahl === basis} onClick={speichern}>💾 Speichern</button>}
       <div style={{ color: C.textDim, fontSize: 13, marginTop: 10 }}>Beispiel bei 19 %: Verkaufspreis 11,90 → als Brutto gelesen sind das 10,00 netto, als Netto gelesen 14,16 brutto.</div>
+    </div>
+  );
+}
+
+// ------------------------------------------- Schalter nur Gewerbe (P327) ---
+function GewerbeSchalter({ an, istChef, uid, kunden, onGespeichert }: {
+  an: boolean; istChef: boolean; uid: string | null; kunden: Kunde[]; onGespeichert: (an: boolean) => void;
+}) {
+  const [fehler, setFehler] = useState<string | null>(null);
+  const frei = startFrei("gewerbeNachweis");
+  const geprueft = kunden.filter((k) => k.aktiv && k.nachweis_ok).length;
+
+  async function setzen(neu: boolean) {
+    if (!uid) return;
+    if (neu && !window.confirm(`Nur noch geprüfte Geschäftskunden können bestellen (${geprueft} von ${kunden.length} geprüft). Alle anderen sehen die Produkte, können aber nicht bestellen. Einschalten?`)) return;
+    setFehler(null);
+    const r0 = await supabase.from("modul_einstellung").select("einstellung").eq("owner_user_id", uid).eq("modul", SHOP_B2B_MODUL).maybeSingle();
+    const alt = ((r0.data as { einstellung?: Record<string, unknown> } | null)?.einstellung) ?? {};
+    const { error } = await supabase.from("modul_einstellung").upsert(
+      { owner_user_id: uid, modul: SHOP_B2B_MODUL, einstellung: { ...alt, nur_gewerbe: neu }, aktualisiert_am: new Date().toISOString() },
+      { onConflict: "owner_user_id,modul" });
+    if (error) { setFehler("Speichern hat nicht geklappt."); return; }
+    onGespeichert(neu);
+  }
+
+  return (
+    <div style={S.karte}>
+      {fehler && <div style={S.fehler}>{fehler}</div>}
+      <h3 style={{ marginTop: 0 }}>🏷 Nur an Geschäftskunden verkaufen</h3>
+      <p style={{ color: C.textDim, marginTop: 0 }}>
+        Für Waren, die nicht an Privatleute abgegeben werden dürfen (z. B. nach Chemikalien-Verbotsverordnung): Bestellen können dann nur Geschäftskunden
+        mit persönlichem Link, deren Gewerbenachweis Sie geprüft haben. Alle anderen sehen die Produkte mit dem Hinweis, ein Kundenkonto anzufragen.
+      </p>
+      {!frei && <div style={S.hinweis}>Dieser Schalter wirkt erst nach der rechtlichen Prüfung. Sie können ihn schon setzen und die Nachweise Ihrer Kunden erfassen — bis zur Freigabe verkauft der Shop weiter an alle.</div>}
+      <label style={S.haken}>
+        <input type="checkbox" checked={an} disabled={!istChef} onChange={(e) => void setzen(e.target.checked)} />
+        Nur geprüfte Geschäftskunden dürfen bestellen {an ? <span style={{ color: frei ? C.green : C.warn }}>({frei ? "wirkt" : "gesetzt, wirkt nach der Freigabe"})</span> : null}
+      </label>
+      <div style={{ color: C.textDim, fontSize: 13, marginTop: 8 }}>Geprüfte Geschäftskunden: {geprueft} von {kunden.length}. Den Nachweis tragen Sie je Kunde unter „Bearbeiten“ ein.</div>
     </div>
   );
 }
