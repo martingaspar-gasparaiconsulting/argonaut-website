@@ -34,6 +34,7 @@ SCHALTER startSperre.gewerbeNachweis = aus
 SCHALTER startSperre.sdbVersand = aus
 SCHALTER startSperre.betriebsanweisung = aus
 SCHALTER startSperre.zusammenlagerung = aus
+SCHALTER startSperre.reifePreisTreppe = aus
 
 | Bereich | Was ist aus | Wo im Code | Anwalt-Fragen | Mitziehen beim Öffnen |
 |---|---|---|---|---|
@@ -45,6 +46,7 @@ SCHALTER startSperre.zusammenlagerung = aus
 | **SDB mit der Bestellbestätigung** (`sdbVersand`, Paket 328) | Sicherheitsdatenblätter hängen nicht an der Bestellbestätigung, kein Nachweis-Eintrag, Nachversand-Knopf gesperrt | `lib/sdbVersand.ts`, `app/api/oeffentlich/shop-bestellung`, `app/api/shop/sdb-nachversand`, `app/dashboard/shop/gefahrstoffe` | R49 (REACH Art. 31 Abs. 8/9: Form „elektronisch per Mail-Anhang“ genügt? Nachweis ausreichend? Nachversand an Empfänger der letzten 12 Monate) | Datenschutz: Empfänger-Mail im Nachweis (Aufbewahrungsfrist klären), Hinweis in der Bestellbestätigung. |
 | **Betriebsanweisung freigeben** (`betriebsanweisung`, Paket 329) | Freigabe-Knopf gesperrt, Druck immer mit „ENTWURF“; Entwürfe anlegen und speichern geht | `lib/betriebsanweisung.ts`, `app/dashboard/nachweise/gefahrstoffe/[id]/betriebsanweisung` | R49 (Haftung: Vorbefüllung aus SDB-Wortlaut, Aufbau TRGS 555, keine eigenen Mustertexte — reicht das?) | Hinweis „Entwurf ersetzt keine Gefährdungsbeurteilung“ prüfen; Unterweisung (§ 14 Abs. 2 GefStoffV) bleibt in Nachweise. |
 | **Zusammenlagerungs-Ampel** (`zusammenlagerung`, Paket 330) | Ampel je Lagerplatz im Gefahrstoffverzeichnis wird nicht angezeigt; Lagerklasse und Lagerplatz erfassen geht | `lib/zusammenlagerung.ts`, `app/dashboard/nachweise/gefahrstoffe` | R49 (Haftung bei falscher Ampel; Tabelle aus Abbild der TRGS 510 abgelesen) | Tabelle Zelle für Zelle mit der amtlichen TRGS 510 (Abschnitt 13) abgleichen, Bedeutung der Spalten 10*–13* klären, Wortlaut der Bedingungen 1–8 einbauen, Kleinmengen-Regel (400 kg/200 kg) ergänzen. |
+| **Preis-Treppe Reife/MHD** (`reifePreisTreppe`, Paket 341) | Preisschild druckt nur mit „ENTWURF“ und ohne Streichpreis; Stufen einrichten und „Preis heute“ intern ansehen geht (nur Geschäftsleitung und „Darf abrechnen“) | `lib/reifeTreppe.ts`, `app/dashboard/lebensmittel/reife/ReifeKalkBox.tsx` | R51 (PAngV § 11 Abs. 4: Ausnahme vom 30-Tage-Tiefstpreis bei drohendem Ablauf der Haltbarkeit — greift sie für MHD-Abschläge? Grundpreis § 4 bei loser Ware; Aufschlag nach Reifedauer als Preisänderung zulässig?) | Wortlaut „reduziert wegen kurzer Haltbarkeit“ prüfen; Verkauf nach MHD (kein automatischer Preis) als Hinweis in Hilfe/AGB; Preisschild-Pflichtangaben (Verkehrsbezeichnung, Herkunft bei Fleisch) mit LMIV/Etiketten abgleichen. |
 | **WhatsApp-Werbung** (`whatsappWerbung`) | Anmeldung und Kampagnen-Versand per WhatsApp | `app/api/marketing/whatsapp-senden`, `app/api/oeffentlich/whatsapp-optin` | 2.07, 2.08, 2.53, 1.64 | Einwilligungstext, Klausel für von Hand eingetragene Nummern, Meldung „abgemeldet" nach STOP ergänzen. |
 
 ## 2 · Import-Sperren (`lib/anwaltFreigabe.ts`, `ANWALT_FREIGABE`)

@@ -9,6 +9,9 @@
 // Tabelle reife_kalk: nur Geschäftsleitung oder „Darf abrechnen"
 // (die Seite blendet diesen Block sonst aus; die Sperre sitzt im SQL).
 // Rechnen: lib/reifeKalk.ts (Tests: tests/reifeKalkP340.test.mjs).
+// Paket 341: Preis-Treppe nach Reife und MHD (lib/reifeTreppe.ts, Tests
+// tests/reifeTreppeP341.test.mjs). „Preis heute" ist intern immer sichtbar;
+// das Preisschild druckt ohne Start-Schalter „reifePreisTreppe" nur ENTWURF.
 // ============================================================
 
 import { useState, useEffect, type CSSProperties, type ReactNode } from 'react';
@@ -20,6 +23,12 @@ import {
   MWST_SAETZE, kalkStartwerte, kalkPruefen, planKalk, istKalk, verlustGrenze, einstandAbweichung, margeAmpel, preisEinheit,
   type ReifeKalk, type KalkCharge, type KalkAntwort, type KalkErgebnis,
 } from '@/lib/reifeKalk';
+import {
+  treppePruefen, treppeStartwerte, preisHeute, preisschildHtml, preisschildEinheit,
+  type TreppenStufe, type MhdStufe,
+} from '@/lib/reifeTreppe';
+import { startFrei, startSperrGrund } from '@/lib/startSperre';
+import { datumText } from '@/lib/reife';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -51,9 +60,16 @@ function kalkAus(f: Form): ReifeKalk {
   };
 }
 
-export default function ReifeKalkBox({ charge, gespeichert, letzteMenge, heute, onGespeichert }: {
-  charge: KalkCharge & { id: string; nummer: string };
+type RZeile = { ab: string; auf: string };
+type MZeile = { vor: string; ab: string };
+const rZeilen = (r: TreppenStufe[]): RZeile[] => [...r.map((x) => ({ ab: String(x.ab_tag), auf: txt(x.aufschlag) })), { ab: '', auf: '' }];
+const mZeilen = (m: MhdStufe[]): MZeile[] => [...m.map((x) => ({ vor: String(x.tage_vor), ab: txt(x.abschlag) })), { vor: '', ab: '' }];
+const FREI = startFrei('reifePreisTreppe');
+
+export default function ReifeKalkBox({ charge, gespeichert, treppe, letzteMenge, heute, onGespeichert }: {
+  charge: KalkCharge & { id: string; nummer: string; produkt: string; mhd?: string | null };
   gespeichert: ReifeKalk | null;
+  treppe: { reife: TreppenStufe[]; mhd: MhdStufe[] } | null;
   letzteMenge: number | null;
   heute: string;
   onGespeichert: () => void | Promise<void>;
@@ -62,6 +78,10 @@ export default function ReifeKalkBox({ charge, gespeichert, letzteMenge, heute, 
   const [busy, setBusy] = useState(false);
   const [meldung, setMeldung] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => { setF(formAus(gespeichert ?? kalkStartwerte(charge.art))); }, [gespeichert, charge.art]);
+  const [rz, setRz] = useState<RZeile[]>(rZeilen(treppe?.reife ?? []));
+  const [mz, setMz] = useState<MZeile[]>(mZeilen(treppe?.mhd ?? []));
+  useEffect(() => { setRz(rZeilen(treppe?.reife ?? [])); setMz(mZeilen(treppe?.mhd ?? [])); }, [treppe]);
+
 
   const k = kalkAus(f);
   const plan = planKalk(charge, k);
@@ -70,6 +90,11 @@ export default function ReifeKalkBox({ charge, gespeichert, letzteMenge, heute, 
   const abw = einstandAbweichung(plan, ist);
   const grenze = verlustGrenze(charge, k, charge.ziel_tage ?? 0);
   const ohneVerlust = !vorlage(charge.art).verlust;
+  const treppeEingabe = treppePruefen(
+    rz.map((z) => ({ ab_tag: leer(z.ab), aufschlag: leer(z.auf) })),
+    mz.map((z) => ({ tage_vor: leer(z.vor), abschlag: leer(z.ab) })),
+  );
+  const heutePreis = preisHeute(charge, k.vk_preis, treppeEingabe.ok ? treppeEingabe.reife : [], treppeEingabe.ok ? treppeEingabe.mhd : [], heute);
 
   async function speichern() {
     for (const [wert, name] of [[f.ek, 'Einkauf'], [f.tag, 'Reifekosten je Tag'], [f.sonst, 'Sonstige Kosten'], [f.parier, 'Parierverlust'], [f.verlust, 'Erwarteter Reifeverlust'], [f.marge, 'Wunsch-Marge'], [f.vk, 'Verkaufspreis']] as const) {
@@ -77,11 +102,22 @@ export default function ReifeKalkBox({ charge, gespeichert, letzteMenge, heute, 
     }
     const r = kalkPruefen({ ...k, ek_art: f.ek_art });
     if (!r.ok) { setMeldung({ ok: false, text: r.fehler }); return; }
+    for (const z of [...rz.flatMap((x) => [x.ab, x.auf]), ...mz.flatMap((x) => [x.vor, x.ab])]) {
+      if (z.trim() && leseZahl(z) === null) { setMeldung({ ok: false, text: 'Preis-Treppe: bitte nur Zahlen eintragen.' }); return; }
+    }
+    if (!treppeEingabe.ok) { setMeldung({ ok: false, text: treppeEingabe.fehler }); return; }
     setBusy(true); setMeldung(null);
     try {
-      const { data, error } = await supabase.from('reife_kalk').upsert({ charge_id: charge.id, ...r.felder }, { onConflict: 'charge_id' }).select('charge_id');
+      let antwort = await supabase.from('reife_kalk').upsert({ charge_id: charge.id, ...r.felder, preis_treppe: treppeEingabe.reife, mhd_treppe: treppeEingabe.mhd }, { onConflict: 'charge_id' }).select('charge_id');
+      let ohneTreppe = false;
+      if (antwort.error && /preis_treppe|mhd_treppe|column/i.test(antwort.error.message ?? '')) {
+        // SQL Paket 341 fehlt noch: Kalkulation trotzdem speichern, Treppe nicht
+        ohneTreppe = true;
+        antwort = await supabase.from('reife_kalk').upsert({ charge_id: charge.id, ...r.felder }, { onConflict: 'charge_id' }).select('charge_id');
+      }
+      const { data, error } = antwort;
       if (error || nichtsGeschrieben(data)) { setMeldung({ ok: false, text: NICHT_GESPEICHERT }); return; }
-      setMeldung({ ok: true, text: 'Kalkulation gespeichert.' });
+      setMeldung({ ok: true, text: ohneTreppe ? 'Kalkulation gespeichert — die Preis-Treppe noch nicht (SQL Paket 341 fehlt).' : 'Kalkulation und Preis-Treppe gespeichert.' });
       await onGespeichert();
     } finally { setBusy(false); }
   }
@@ -158,9 +194,69 @@ export default function ReifeKalkBox({ charge, gespeichert, letzteMenge, heute, 
         </p>
       )}
 
+      <div style={{ borderTop: `1px solid ${C.border}`, marginTop: 14, paddingTop: 12 }}>
+        <b style={{ fontSize: 14 }}>📈 Preis-Treppe nach Reife und MHD</b>
+        <p style={{ ...s.klein, margin: '4px 0 10px' }}>
+          Grundpreis ist Ihr Verkaufspreis oben. Reife-Stufen: ab Reifetag X ein Aufschlag. MHD-Stufen: ab X Tage vor dem Mindesthaltbarkeitsdatum ein Abschlag
+          (wegen drohenden Ablaufs). Nach dem MHD gibt es keinen automatischen Preis — ob und wie Sie verkaufen, entscheiden Sie nach eigener Prüfung.
+        </p>
+        <div style={s.raster}>
+          <div>
+            <div style={{ ...s.klein, marginBottom: 4 }}>Reife-Stufen (ab Tag · Aufschlag %)</div>
+            {rz.map((z, i) => (
+              <div key={i} style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                <input style={{ ...s.input, width: 80 }} inputMode="numeric" placeholder="Tag" aria-label="ab Reifetag" value={z.ab}
+                  onChange={(e) => { const n = rz.map((x, j) => (j === i ? { ...x, ab: e.target.value } : x)); setRz(n[n.length - 1].ab || n[n.length - 1].auf ? [...n, { ab: '', auf: '' }].slice(0, 9) : n); }} />
+                <input style={{ ...s.input, width: 80 }} inputMode="decimal" placeholder="+ %" aria-label="Aufschlag in Prozent" value={z.auf}
+                  onChange={(e) => { const n = rz.map((x, j) => (j === i ? { ...x, auf: e.target.value } : x)); setRz(n[n.length - 1].ab || n[n.length - 1].auf ? [...n, { ab: '', auf: '' }].slice(0, 9) : n); }} />
+              </div>
+            ))}
+          </div>
+          <div>
+            <div style={{ ...s.klein, marginBottom: 4 }}>MHD-Stufen (Tage vor MHD · Abschlag %)</div>
+            {mz.map((z, i) => (
+              <div key={i} style={{ display: 'flex', gap: 4, marginBottom: 4 }}>
+                <input style={{ ...s.input, width: 80 }} inputMode="numeric" placeholder="Tage" aria-label="Tage vor MHD" value={z.vor}
+                  onChange={(e) => { const n = mz.map((x, j) => (j === i ? { ...x, vor: e.target.value } : x)); setMz(n[n.length - 1].vor || n[n.length - 1].ab ? [...n, { vor: '', ab: '' }].slice(0, 7) : n); }} />
+                <input style={{ ...s.input, width: 80 }} inputMode="decimal" placeholder="− %" aria-label="Abschlag in Prozent" value={z.ab}
+                  onChange={(e) => { const n = mz.map((x, j) => (j === i ? { ...x, ab: e.target.value } : x)); setMz(n[n.length - 1].vor || n[n.length - 1].ab ? [...n, { vor: '', ab: '' }].slice(0, 7) : n); }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        {!treppe?.reife.length && !treppe?.mhd.length && (
+          <button style={{ ...s.btnAus, marginTop: 6 }} onClick={() => { const t = treppeStartwerte(charge.art); setRz(rZeilen(t.reife)); setMz(mZeilen(t.mhd)); }}>Startwerte für diese Art einsetzen</button>
+        )}
+        {!treppeEingabe.ok && <p style={{ ...s.klein, color: C.warn }}>{treppeEingabe.fehler}</p>}
+        <div style={{ marginTop: 10, fontSize: 13.5 }}>
+          {heutePreis.ok ? (<>
+            <div>Preis heute: <b style={{ color: C.gold, fontSize: 16 }}>{euro(heutePreis.preis)}</b> je {pe.einheit}
+              {heutePreis.reduziert && <span style={{ color: C.dim }}> (statt {euro(heutePreis.reifePreis)})</span>}
+              <span style={{ color: C.dim }}> · {heutePreis.text} · Reifetag {heutePreis.tage}{charge.mhd ? ` · MHD ${datumText(charge.mhd)}` : ''}</span>
+            </div>
+            {heutePreis.naechste && <div style={s.klein}>Nächste Änderung am {datumText(heutePreis.naechste.datum)}: {euro(heutePreis.naechste.preis)} ({heutePreis.naechste.text})</div>}
+            {!charge.mhd && <div style={s.klein}>Ohne MHD an der Charge greifen die MHD-Stufen nicht.</div>}
+          </>) : <div style={{ ...s.klein, color: heutePreis.abgelaufen ? C.bad : C.dim }}>{heutePreis.grund}</div>}
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
+          <button style={s.btnAus} disabled={!heutePreis.ok} onClick={() => {
+            if (!heutePreis.ok) return;
+            const html = preisschildHtml({
+              produkt: charge.produkt, nummer: charge.nummer, einheit: charge.einheit, preis: heutePreis.preis,
+              streichpreis: heutePreis.reduziert ? heutePreis.reifePreis : null, tage: heutePreis.tage, mhd: charge.mhd ?? null, frei: FREI,
+            });
+            const w = window.open('', '_blank');
+            if (!w) { setMeldung({ ok: false, text: 'Das Druckfenster wurde blockiert — bitte Pop-ups für ARGONAUT erlauben.' }); return; }
+            w.document.write(html); w.document.close(); w.focus(); w.print();
+          }}>🏷 Preisschild drucken{FREI ? '' : ' (Entwurf)'}</button>
+          {!FREI && <span style={s.klein}>{startSperrGrund('reifePreisTreppe')}</span>}
+          {FREI && !preisschildEinheit(charge.einheit).grundpreisNoetig && <span style={s.klein}>Stückware: Preis je Stück.</span>}
+        </div>
+      </div>
+
       {meldung && <p style={{ ...s.klein, color: meldung.ok ? C.ok : C.bad }} role={meldung.ok ? undefined : 'alert'}>{meldung.text}</p>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-        <button style={s.btnGold} disabled={busy} onClick={() => void speichern()}>Kalkulation speichern</button>
+        <button style={s.btnGold} disabled={busy} onClick={() => void speichern()}>Kalkulation und Treppe speichern</button>
         {plan.ok && plan.e.vorschlagBrutto !== null && (
           <button style={s.btnAus} disabled={busy} onClick={() => setF({ ...f, vk: txt(plan.ok ? plan.e.vorschlagBrutto : null) })}>Plan-Vorschlag als Preis übernehmen</button>
         )}

@@ -10,6 +10,8 @@
 // Pfad: Unterpfad von /dashboard/lebensmittel, erbt dessen Freigabe.
 // Paket 340: Kalkulation mit Reifeverlust je Charge (ReifeKalkBox, Tabelle
 // reife_kalk) — nur Geschäftsleitung oder „Darf abrechnen" (kalkErlaubt).
+// Paket 341: MHD je Charge (alle mit Schreibrecht) und Preis-Treppe nach
+// Reife/MHD in der Kalkulation (lib/reifeTreppe.ts).
 // ============================================================
 
 import { useState, useEffect, useMemo, useCallback, CSSProperties } from 'react';
@@ -18,13 +20,14 @@ import { leseZahl } from '@/lib/zahlen';
 import { nichtsGeschrieben, NICHT_GESPEICHERT } from '@/lib/speichernPruefen';
 import {
   REIFE_ARTEN, REIFE_EINHEITEN, vorlage, reifeStand, stufenRang, datumText, letzteMenge, verlustProzent, klimaAbweichung,
-  tageOhneMessung, chargePruefen, messungPruefen, naechsteNummer, reifeUebersicht,
+  tageOhneMessung, chargePruefen, messungPruefen, naechsteNummer, reifeUebersicht, reifeTage,
   type ReifeStand, type ReifeStufe, type ReifeMessung,
 } from '@/lib/reife';
 import Leerzustand from '../../_components/Leerzustand';
 import { useDarfAbrechnen } from '../../_components/useDarfAbrechnen';
 import ReifeKalkBox from './ReifeKalkBox';
 import { planKalk, preisEinheit, type ReifeKalk } from '@/lib/reifeKalk';
+import { reifeStufenAus, mhdStufenAus, preisHeute, mhdPruefen, type TreppenStufe, type MhdStufe } from '@/lib/reifeTreppe';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -40,7 +43,9 @@ type Charge = {
   start_menge: number | null; einheit: string; lagerort: string | null;
   temp_min: number | null; temp_max: number | null; feuchte_min: number | null; feuchte_max: number | null;
   status: string; end_datum: string | null; end_menge: number | null; notiz: string | null;
+  mhd?: string | null;
 };
+const CHARGE_SPALTEN = 'id, nummer, produkt, art, start_datum, ziel_tage, min_tage, max_tage, start_menge, einheit, lagerort, temp_min, temp_max, feuchte_min, feuchte_max, status, end_datum, end_menge, notiz';
 type Messung = ReifeMessung & { id: string; charge_id: string; notiz: string | null };
 type Filter = 'laufend' | 'bereit' | 'fertig' | 'alle';
 type Zeile = { c: Charge; stand: ReifeStand; mess: Messung[]; letzte: { datum: string; menge: number } | null; verlust: number | null; ohne: number | null; abw: number };
@@ -83,22 +88,26 @@ export default function ReifeUhrPage() {
   const kalkErlaubt = useDarfAbrechnen() === true;
   const [kalk, setKalk] = useState<Record<string, ReifeKalk>>({});
   const [kalkSqlFehlt, setKalkSqlFehlt] = useState(false);
+  const [treppen, setTreppen] = useState<Record<string, { reife: TreppenStufe[]; mhd: MhdStufe[] }>>({});
+  const [mhdEntwurf, setMhdEntwurf] = useState<string | null>(null);
 
   const ladeKalk = useCallback(async () => {
     if (!kalkErlaubt) { setKalk({}); return; }
-    const { data, error } = await supabase.from('reife_kalk')
-      .select('charge_id, ek_art, ek_wert, kosten_tag, kosten_sonst, parier_prozent, erwarteter_verlust, marge_prozent, mwst_satz, vk_preis').limit(5000);
+    const { data, error } = await supabase.from('reife_kalk').select('*').limit(5000);
     if (error) { setKalkSqlFehlt(true); setKalk({}); return; }
     setKalkSqlFehlt(false);
     const je: Record<string, ReifeKalk> = {};
+    const tr: Record<string, { reife: TreppenStufe[]; mhd: MhdStufe[] }> = {};
     for (const z of ((data as unknown) as (Record<string, unknown> & { charge_id: string })[]) ?? []) {
       je[z.charge_id] = {
         ek_art: (z.ek_art as string) ?? 'je_einheit', ek_wert: num(z.ek_wert), kosten_tag: num(z.kosten_tag), kosten_sonst: num(z.kosten_sonst),
         parier_prozent: num(z.parier_prozent), erwarteter_verlust: num(z.erwarteter_verlust), marge_prozent: num(z.marge_prozent),
         mwst_satz: num(z.mwst_satz), vk_preis: num(z.vk_preis),
       };
+      tr[z.charge_id] = { reife: reifeStufenAus(z.preis_treppe), mhd: mhdStufenAus(z.mhd_treppe) };
     }
     setKalk(je);
+    setTreppen(tr);
   }, [kalkErlaubt]);
   useEffect(() => { void ladeKalk(); }, [ladeKalk]);
 
@@ -106,7 +115,11 @@ export default function ReifeUhrPage() {
     const { data: u } = await supabase.auth.getUser();
     if (!u?.user?.id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
     const [c, m] = await Promise.all([
-      supabase.from('reife_charge').select('id, nummer, produkt, art, start_datum, ziel_tage, min_tage, max_tage, start_menge, einheit, lagerort, temp_min, temp_max, feuchte_min, feuchte_max, status, end_datum, end_menge, notiz').order('start_datum', { ascending: false }).limit(2000),
+      (async () => {
+        // mit MHD (SQL Paket 341); fehlt die Spalte noch, wie bisher ohne
+        const mit = await supabase.from('reife_charge').select(`${CHARGE_SPALTEN}, mhd`).order('start_datum', { ascending: false }).limit(2000);
+        return mit.error ? supabase.from('reife_charge').select(CHARGE_SPALTEN).order('start_datum', { ascending: false }).limit(2000) : mit;
+      })(),
       supabase.from('reife_messung').select('id, charge_id, datum, menge, temperatur, feuchte, notiz, erstellt_am').order('datum', { ascending: false }).limit(20000),
     ]);
     if (c.error || m.error) { setSqlFehlt(true); setChargen([]); setMessungen([]); setLaden(false); return; }
@@ -200,6 +213,19 @@ export default function ReifeUhrPage() {
       if (error || nichtsGeschrieben(data)) { melde('Ändern fehlgeschlagen — dafür brauchen Sie das Schreibrecht „Lebensmittel".'); return; }
       setAbschluss(null);
       melde(null, `${c.nummer}: ${neuStatus === 'abgeschlossen' ? 'abgeschlossen' : neuStatus === 'verworfen' ? 'verworfen' : neuStatus === 'bereit' ? 'als bereit markiert' : 'reift wieder'}.`);
+      await lade();
+    } finally { setBusy(false); }
+  }
+
+  async function mhdSpeichern(c: Charge) {
+    const r = mhdPruefen(mhdEntwurf ?? '', c.start_datum);
+    if (!r.ok) { melde(r.fehler); return; }
+    setBusy(true); melde(null);
+    try {
+      const { data, error } = await supabase.from('reife_charge').update({ mhd: r.mhd }).eq('id', c.id).select('id');
+      if (error || nichtsGeschrieben(data)) { melde('MHD nicht gespeichert — dafür brauchen Sie das Schreibrecht „Lebensmittel" (und SQL Paket 341).'); return; }
+      setMhdEntwurf(null);
+      melde(null, r.mhd ? `${c.nummer}: MHD ${datumText(r.mhd)} gespeichert.` : `${c.nummer}: MHD entfernt.`);
       await lade();
     } finally { setBusy(false); }
   }
@@ -305,7 +331,7 @@ export default function ReifeUhrPage() {
             return (
               <div key={c.id} style={s.karte}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
-                  <button style={s.titelKnopf} onClick={() => { setOffen(auf ? null : c.id); setMentwurf(leerMessung(tag)); setAbschluss(null); setLoeschFrage(null); }}>
+                  <button style={s.titelKnopf} onClick={() => { setOffen(auf ? null : c.id); setMentwurf(leerMessung(tag)); setAbschluss(null); setLoeschFrage(null); setMhdEntwurf(null); }}>
                     {auf ? '▾' : '▸'} {v.symbol} {c.produkt} <span style={{ ...s.klein, fontWeight: 400 }}>{c.nummer}</span>
                   </button>
                   <span style={{ ...s.pill, color: FARBE[stand.stufe], borderColor: FARBE[stand.stufe] }}>{STUFE_TEXT[stand.stufe]}</span>
@@ -326,6 +352,16 @@ export default function ReifeUhrPage() {
                   {kalkErlaubt && kalk[c.id] && (() => {
                     const p = planKalk(c, kalk[c.id]);
                     return p.ok ? <span><span style={s.dim}>Einstand (Plan)</span> {p.e.einstand.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}/{preisEinheit(c.einheit).einheit}</span> : null;
+                  })()}
+                  {kalkErlaubt && kalk[c.id]?.vk_preis && (() => {
+                    const t = treppen[c.id];
+                    const ph = preisHeute(c, kalk[c.id].vk_preis, t?.reife ?? [], t?.mhd ?? [], tag);
+                    return ph.ok ? <span><span style={s.dim}>Preis heute</span> <b style={{ color: C.gold }}>{ph.preis.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</b>/{preisEinheit(c.einheit).einheit}</span> : null;
+                  })()}
+                  {c.mhd && (() => {
+                    const rest = reifeTage(tag, c.mhd);
+                    const vorbei = c.mhd < tag;
+                    return <span style={{ color: vorbei ? C.bad : rest !== null && rest <= 3 ? C.warn : C.text }}><span style={s.dim}>MHD</span> {datumText(c.mhd)}{vorbei ? ' — überschritten' : rest === 0 ? ' — heute' : ''}</span>;
                   })()}
                   {z.abw > 0 && <span style={{ color: C.warn }}>⚠ {z.abw} {z.abw === 1 ? 'Messung' : 'Messungen'} außerhalb des Soll-Klimas</span>}
                   {z.ohne !== null && z.ohne >= 7 && <span style={{ color: C.warn }}>seit {z.ohne} Tagen nicht gemessen</span>}
@@ -386,8 +422,18 @@ export default function ReifeUhrPage() {
                       </div>
                     ) : <p style={s.dim}>Noch keine Messung.</p>}
 
+                    {c.status !== 'verworfen' && 'mhd' in c && (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
+                        <label style={{ ...s.feld, maxWidth: 220 }}>Mindesthaltbarkeitsdatum (MHD)
+                          <input style={s.input} type="date" min={c.start_datum} value={mhdEntwurf ?? c.mhd ?? ''} onChange={(e) => setMhdEntwurf(e.target.value)} />
+                        </label>
+                        {mhdEntwurf !== null && mhdEntwurf !== (c.mhd ?? '') && (
+                          <button style={s.btnGold} disabled={busy} onClick={() => void mhdSpeichern(c)}>MHD speichern</button>
+                        )}
+                      </div>
+                    )}
                     {kalkErlaubt && !kalkSqlFehlt && (
-                      <ReifeKalkBox charge={c} gespeichert={kalk[c.id] ?? null} letzteMenge={z.letzte?.menge ?? null} heute={tag} onGespeichert={ladeKalk} />
+                      <ReifeKalkBox charge={c} gespeichert={kalk[c.id] ?? null} treppe={treppen[c.id] ?? null} letzteMenge={z.letzte?.menge ?? null} heute={tag} onGespeichert={ladeKalk} />
                     )}
                     {kalkErlaubt && kalkSqlFehlt && <div style={s.hinweis}>Die Kalkulation ist noch nicht eingerichtet (SQL Paket 340 fehlt).</div>}
 
