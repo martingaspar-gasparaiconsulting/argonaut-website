@@ -4,6 +4,8 @@
 // ARGONAUT OS · Bündel 18 · KFZ-Fachpaket (Dashboard)
 // Fahrzeuge mit HU/AU-Fristen (Ampel) + Reifenhotel (Einlagerung).
 // Pfad: app/dashboard/kfz/page.tsx
+// Paket 337 (BV2b): Händler von Einzelstücken (Boote, Maschinen, Uhren, Kunst …)
+// sehen Titel und Knöpfe in ihren Wörtern; HU/AU und Reifenhotel nur auf Wunsch.
 // ============================================================
 
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
@@ -14,6 +16,8 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { leseZahl } from '@/lib/zahlen';
+import { vorlageFuer } from '@/lib/branchenVorlage';
+import { hubNachArt } from '@/lib/einzelstueckBestand';
 
 const MODUL = 'kfz_fahrzeuge';
 
@@ -57,6 +61,8 @@ const LEER_R = { kunde_name: '', kennzeichen: '', saison: 'winter', groesse: '',
 export default function KfzPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [besitzer, setBesitzer] = useState<string | null>(null);
+  const [branche, setBranche] = useState<string | null>(null);
+  const [werkstattAn, setWerkstattAn] = useState(false);
   const [tab, setTab] = useState<'fahrzeuge' | 'reifen'>('fahrzeuge');
   const [fahrzeuge, setFahrzeuge] = useState<Fahrzeug[]>([]);
   const [reifen, setReifen] = useState<Reifen[]>([]);
@@ -87,7 +93,10 @@ export default function KfzPage() {
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
       const { data: chef } = await supabase.rpc('mein_chef_id');
-      setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      const betrieb = typeof chef === 'string' && chef ? chef : id;
+      setBesitzer(betrieb);
+      // P337: Branche des Betriebs -> Wörter der Art (fail-soft: ohne Branche wie bisher Kfz)
+      try { const { data: p } = await supabase.from('profiles').select('branche').eq('id', betrieb).maybeSingle(); setBranche(((p as { branche?: string | null } | null)?.branche) ?? null); } catch { /* wie bisher */ }
       setUid(id); await laden_(); setLaden(false);
     })();
   }, [laden_]);
@@ -139,25 +148,36 @@ export default function KfzPage() {
   const eingelagert = useMemo(() => reifen.filter((x) => !x.ausgelagert_am), [reifen]);
   const faellig = useMemo(() => fahrzeuge.filter((f) => { const a = ampel(f.hu_faellig); return a.farbe === C.danger || a.farbe === C.warn; }).length, [fahrzeuge]);
 
+  const h = hubNachArt(vorlageFuer('kfz-bestand', branche)?.art);
+  const werkstattSicht = h.werkstatt || werkstattAn;
+
   return (
     <div style={styles.page}>
-      <h1 style={styles.h1}>🚗 KFZ-Fachpaket</h1>
+      <h1 style={styles.h1}>{h.titel}</h1>
       {/* Paket 259 (07.10.26): K1 Fahrzeugbestand (Handelsbestand) */}
-      <a href="/dashboard/kfz/bestand" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🚘 Fahrzeugbestand (Handel)</a>
+      <a href="/dashboard/kfz/bestand" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>{h.bestand}</a>
       {/* Paket 263 (07.10.26): K4 Ankauf und Bewertung */}
       <a href="/dashboard/kfz/ankauf" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🔑 Ankauf und Bewertung</a>
       <a href="/dashboard/kfz/verkauf" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🤝 Verkäufe</a>
-      <a href="/dashboard/kfz/probefahrt" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🛣 Probefahrten</a>
+      {h.probefahrt && <a href="/dashboard/kfz/probefahrt" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🛣 Probefahrten</a>}
       <a href="/dashboard/kfz/anfragen" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>📨 Anfragen und Suchaufträge</a>
       <a href="/dashboard/kfz/preise" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>💶 Preise und Standzeit</a>
-      <a href="/dashboard/kfz/tresor" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🔐 Brief-Tresor und Zulassung</a>
+      {h.tresor && <a href="/dashboard/kfz/tresor" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🔐 Brief-Tresor und Zulassung</a>}
       {/* Paket 278 (08.10.26): K18 Partner-Netzwerk */}
       <a href="/dashboard/kfz/partner" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🤝 Partner-Netzwerk</a>
-      {uid && besitzer === uid && <a href="/dashboard/kfz/chef" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>📈 Chef-Blick Fahrzeughandel</a>}
+      {uid && besitzer === uid && <a href="/dashboard/kfz/chef" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, color: '#C9A84C', border: '1px solid rgba(201,168,76,0.45)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>{h.chefBlick}</a>}
       {/* Paket PS3 (25.09.26): Schadenabwicklung mit Versicherern */}
-      <a href="/dashboard/kfz/schaden" style={{ display: 'inline-block', marginTop: 10, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🛡 Schadenabwicklung mit Versicherern</a>
+      {h.schaden && <a href="/dashboard/kfz/schaden" style={{ display: 'inline-block', marginTop: 10, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🛡 Schadenabwicklung mit Versicherern</a>}
       {/* Paket PS6 (25.09.26): GwG-Identifizierung bei Barzahlung ab 10.000 EUR */}
       <a href="/dashboard/kfz/gwg" style={{ display: 'inline-block', marginTop: 10, marginRight: 8, marginLeft: 8, color: '#00e5ff', border: '1px solid rgba(143,163,190,0.18)', borderRadius: 999, padding: '6px 12px', fontSize: 13.5, fontWeight: 700, textDecoration: 'none' }}>🛂 GwG-Identifizierung</a>
+      {!h.werkstatt && (
+        <div style={{ marginTop: 14 }}>
+          <button style={{ ...styles.tab, ...(werkstattAn ? styles.tabAn : {}) }} onClick={() => setWerkstattAn(!werkstattAn)}>
+            {werkstattAn ? '▾ Kunden-Fahrzeuge (HU/AU) und Reifenhotel ausblenden' : '▸ Kunden-Fahrzeuge (HU/AU) und Reifenhotel anzeigen'}
+          </button>
+        </div>
+      )}
+      {werkstattSicht && <>
       <div style={{ marginTop: 14 }}>
         <KiAuge
           modul="KFZ"
@@ -262,6 +282,7 @@ export default function KfzPage() {
           )}
         </>
       )}
+      </>}
     </div>
   );
 }

@@ -20,7 +20,7 @@
 // ============================================================================
 
 import { leseZahl, centRunden } from './zahlen';
-import { artDef, istArt, merkmaleSauber, merkmalText, seriennrPruefen, betriebsstundenPruefen, ARTEN, type Art } from './einzelstueck';
+import { artDef, artFuerBranche, istArt, merkmaleSauber, merkmalText, seriennrPruefen, betriebsstundenPruefen, ARTEN, type Art } from './einzelstueck';
 import { finPruefen, ezText, ezAusEingabe, type Bestand } from './kfzBestand';
 import type { VorlageSpalte } from './branchenVorlage';
 
@@ -329,4 +329,45 @@ export function akteUnterzeile(art: unknown, b: Pick<Bestand, 'interne_nr' | 'er
   const z = zaehlerText(art, b);
   if (z) teile.push(z);
   return teile.join(' · ');
+}
+
+// ---------------------------------------------------------------------------
+// Paket 337 (BV2b Teil 6): Freischaltung für Händler von Einzelstücken, Wörter im Menü
+// ---------------------------------------------------------------------------
+
+/**
+ * Bekommt die Branche das Modul „kfz" (Bestand, Akte, Ankauf, Verkauf, Börse) als
+ * Einzelstück-Handel dazu? Nur wenn die Branche eine Einzelstück-Art hat UND in einer
+ * Kategorie liegt, die das Modul nicht ohnehin hat: Handel, Kultur (Galerien),
+ * Industrie nur bei Werften. Hersteller (Landtechnik) und Verleih bekommen es nicht.
+ */
+export function einzelstueckHandelZusatz(kategorie: string | null | undefined, branche: string | null | undefined): boolean {
+  const art = artFuerBranche(branche);
+  if (art === 'kfz') return false;
+  const k = String(kategorie ?? '');
+  if (k === 'Handel & E-Commerce' || k === 'Kultur, Soziales & Öffentliches') return true;
+  if (k === 'Industrie & Produktion') return art === 'boot';
+  return false;
+}
+
+/** Menü-Wort für den Eintrag /dashboard/kfz — Kfz-Betriebe behalten „🚗 KFZ-Fachpaket". */
+export function kfzMenueLabel(art: unknown): string {
+  const d = artDef(art);
+  return d.art === 'kfz' ? '🚗 KFZ-Fachpaket' : `${ART_SYMBOL[d.art]} ${d.begriffe.titel}`;
+}
+
+/** Die Fachpaket-Startseite nach Art: Titel, Wort für den Bestand, welche Kfz-Knöpfe und ob HU/AU und Reifenhotel. */
+export type HubNachArt = { titel: string; bestand: string; probefahrt: boolean; tresor: boolean; schaden: boolean; werkstatt: boolean; chefBlick: string };
+export function hubNachArt(art: unknown): HubNachArt {
+  const d = artDef(art);
+  if (d.art === 'kfz') return { titel: '🚗 KFZ-Fachpaket', bestand: '🚘 Fahrzeugbestand (Handel)', probefahrt: true, tresor: true, schaden: true, werkstatt: true, chefBlick: '📈 Chef-Blick Fahrzeughandel' };
+  return {
+    titel: `${ART_SYMBOL[d.art]} ${d.begriffe.titel}`,
+    bestand: `${ART_SYMBOL[d.art]} ${d.begriffe.titel}`,
+    probefahrt: d.kfzTeile.probefahrt,
+    tresor: d.kfzTeile.briefTresor,
+    schaden: false,
+    werkstatt: false,
+    chefBlick: '📈 Chef-Blick Handel',
+  };
 }

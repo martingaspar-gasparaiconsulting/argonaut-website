@@ -11,6 +11,7 @@
 // Ein Klick im Katalog schaltet genau dieses Set in tenant_module scharf.
 
 import { KERN_MODULE } from './pakete';
+import { einzelstueckHandelZusatz } from './einzelstueckBestand';
 
 /** Standard-Automatisierung, in jedem Branchen-Paket enthalten. */
 export const STANDARD_AUTOMATION = 'automatisierungen';
@@ -48,6 +49,23 @@ export function kategorieModule(kategorie: string): string[] {
 /** Nur die branchenspezifischen Zusatzmodule (ohne Kern) — für die Anzeige „obendrauf". */
 export function kategorieZusatz(kategorie: string): string[] {
   return [...new Set<string>([...(KATEGORIE_MODULE[kategorie] ?? []), STANDARD_AUTOMATION])];
+}
+
+/**
+ * Paket 337 (BV2b): Modul-Set einer konkreten Branche = Kategorie-Set, für Händler von
+ * Einzelstücken (Juweliere, Kunst/Antik, Second Hand, Land-/Baumaschinen, Galerien, Werften)
+ * zusätzlich „kfz" (Bestand, Akte, Ankauf, Verkauf, Börse in den Wörtern der Art).
+ * Nur additiv — bestehende Betriebe ändert das nicht (Freischaltung im Command Center).
+ */
+export function brancheModule(kategorie: string, branche: string | null | undefined): string[] {
+  const set = kategorieModule(kategorie);
+  return einzelstueckHandelZusatz(kategorie, branche) && !set.includes('kfz') ? [...set, 'kfz'] : set;
+}
+
+/** Wie kategorieZusatz, mit dem Einzelstück-Zusatz der Branche. */
+export function brancheZusatz(kategorie: string, branche: string | null | undefined): string[] {
+  const z = kategorieZusatz(kategorie);
+  return einzelstueckHandelZusatz(kategorie, branche) && !z.includes('kfz') ? [...z, 'kfz'] : z;
 }
 
 /** Ist diese Kategorie im Katalog bekannt? */

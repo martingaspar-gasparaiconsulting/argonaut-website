@@ -17,7 +17,7 @@
 
 import { useMemo, useState } from 'react';
 import { websiteKategorien, type WebBranche } from '../../vorschau/_lib/branchen-web';
-import { kategorieModule, kategorieZusatz } from '../../../lib/branchenkatalog';
+import { kategorieModule, kategorieZusatz, brancheModule, brancheZusatz } from '../../../lib/branchenkatalog';
 import { KERN_MODULE } from '../../../lib/pakete';
 import { ALLE_MODULE } from '../../../lib/rechte';
 
@@ -76,14 +76,14 @@ export default function AdminBranchen() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim(), firma: firma.trim(),
-          module: kategorieModule(sel.kategorie), branche: sel.name, kategorie: sel.kategorie,
+          module: brancheModule(sel.kategorie, sel.name), branche: sel.name, kategorie: sel.kategorie,
         }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.ok) { setFehler(json.error || 'Einladung fehlgeschlagen.'); }
       else {
         const mailHinweis = json.mailVersandt ? 'Einladungs-Mail verschickt.' : `angelegt, aber Mail-Fehler: ${json.mailFehler || 'unbekannt'}`;
-        setMeldung(`✓ ${email.trim()} eingeladen · Branche „${sel.name}" (${json.freigeschaltet ?? kategorieModule(sel.kategorie).length} Module scharf). ${mailHinweis}`);
+        setMeldung(`✓ ${email.trim()} eingeladen · Branche „${sel.name}" (${json.freigeschaltet ?? brancheModule(sel.kategorie, sel.name).length} Module scharf). ${mailHinweis}`);
         setEmail(''); setFirma('');
       }
     } catch { setFehler('Netzwerkfehler bei der Einladung.'); }
@@ -93,8 +93,9 @@ export default function AdminBranchen() {
   const feldInput: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(201,168,76,0.16)`, borderRadius: 14, padding: '10px 12px', color: '#E8EDF4', fontSize: 14, fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', outline: 'none', boxSizing: 'border-box', width: '100%' };
   const feldLabel: React.CSSProperties = { fontFamily: mono, fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)' };
 
-  const selModule = sel ? kategorieModule(sel.kategorie) : [];
-  const selZusatz = sel ? kategorieZusatz(sel.kategorie) : [];
+  // Paket 337: Einzelstück-Händler bekommen zusätzlich das Modul kfz (Bestand in ihren Wörtern)
+  const selModule = sel ? brancheModule(sel.kategorie, sel.name) : [];
+  const selZusatz = sel ? brancheZusatz(sel.kategorie, sel.name) : [];
 
   return (
     <main style={{ minHeight: '100vh', background: '#0A1628', color: '#E8EDF4', fontFamily: 'var(--font-dm-sans), system-ui, sans-serif', padding: '32px 28px' }}>

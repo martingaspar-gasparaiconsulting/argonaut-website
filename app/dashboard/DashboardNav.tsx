@@ -7,6 +7,8 @@ import { gebuchteModulKeys, nurGebuchteLinks, type TenantModulRow } from '../../
 import { abgeschalteteModuleAmStandort, nurStandortAktiveLinks, type StandortModulRow } from '../../lib/standortModule';
 import { leseStandortCookie, istStandortAktiv } from '../../lib/aktiverStandort';
 import { useAnsicht } from './_components/Ansicht';
+import { vorlageFuer } from '../../lib/branchenVorlage';
+import { kfzMenueLabel } from '../../lib/einzelstueckBestand';
 
 // ============================================================
 // ARGONAUT OS · Dashboard-Navigation (zentral) · R-3 rechte-bewusst
@@ -66,6 +68,23 @@ export default function DashboardNav() {
    * derselben Benachrichtigungs-Anlage wie die Glocke im Kopf.
    */
   const [chatUngelesen, setChatUngelesen] = useState(0);
+  // Paket 337 (BV2b): Menü-Wort für /dashboard/kfz nach Art des Betriebs („⛵ Bootsbestand" statt „KFZ-Fachpaket")
+  const [kfzLabel, setKfzLabel] = useState<string | null>(null);
+  useEffect(() => {
+    let aktiv = true;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: chef } = await supabase.rpc('mein_chef_id');
+        const betrieb = typeof chef === 'string' && chef ? chef : user.id;
+        const { data: p } = await supabase.from('profiles').select('branche').eq('id', betrieb).maybeSingle();
+        const art = vorlageFuer('kfz-bestand', ((p as { branche?: string | null } | null)?.branche) ?? null)?.art;
+        if (aktiv && art && art !== 'kfz') setKfzLabel(kfzMenueLabel(art));
+      } catch { /* Menü bleibt wie bisher */ }
+    })();
+    return () => { aktiv = false; };
+  }, []);
 
   useEffect(() => {
     let aktiv = true;
@@ -233,7 +252,7 @@ export default function DashboardNav() {
                   href={link.href}
                   style={zeigeZaehler ? { ...stil, display: 'inline-flex', alignItems: 'center', gap: 7 } : stil}
                 >
-                  {link.label}
+                  {link.href === '/dashboard/kfz' && kfzLabel ? kfzLabel : link.label}
                   {zeigeZaehler && (
                     <span
                       title={chatUngelesen + ' ungelesene Nachricht' + (chatUngelesen === 1 ? '' : 'en')}
