@@ -335,6 +335,7 @@ export default function HandelsaktePage() {
             erstzulassung: akte.erstzulassung, km_stand: akte.km_stand, leistung_kw: akte.leistung_kw, kraftstoff: akte.kraftstoff, farbe: akte.farbe,
             hu_bis: akte.hu_bis, vorbesitzer: akte.vorbesitzer, vorschaden: akte.vorschaden, vorschaden_text: akte.vorschaden_text,
             besteuerung: akte.besteuerung, vk_brutto: akte.vk_brutto,
+            ...(mitArt ? { art, merkmale: akte.merkmale ?? null } : {}),
           },
         }} />
       )}

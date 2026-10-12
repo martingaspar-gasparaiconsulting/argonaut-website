@@ -18,9 +18,14 @@
 //   nach GwG, ohne Haken kein Vertrag.
 // - Rechnung (§ 25a / Regelsteuer) entsteht erst in K7 — hier nur Hinweis.
 //
+// Paket 336 (BV2b Teil 5): Schwelle je Art des Einzelstücks über lib/einzelstueck
+// gwgPruefung — Güterhändler bar ab 10.000 €, Edelmetall (Merkmal „edelmetall") bar
+// ab 2.000 €, Kunst ab 10.000 € unabhängig von der Zahlart. Ohne Art wie bisher (Kfz).
+// Kilometer bei Übergabe und Brief-Hinweis nur, wo die Art sie hat.
 // Nur Import der zentralen Rundung, KEINE Hooks, keine Systemuhr. Node-testbar.
 // ============================================================================
 
+import { gwgPruefung, artDef } from './einzelstueck';
 import { centRunden } from './zahlen';
 
 export const UST_SATZ = 19;
@@ -100,7 +105,14 @@ export type FahrzeugFuerVerkauf = {
   hu_bis: string | null; vorbesitzer: number | null;
   vorschaden: string | null; vorschaden_text: string | null;
   besteuerung: string | null; vk_brutto: number | null;
+  /** Paket 336 (BV2b): Art und Merkmale des Einzelstücks (fehlt = Kfz). */
+  art?: string | null; merkmale?: Record<string, unknown> | null;
 };
+
+/** Paket 336: was die GwG-Prüfung über das Stück wissen muss. */
+export type GwgStueck = { art?: string | null; merkmale?: Record<string, unknown> | null } | null | undefined;
+
+export type GwgInfo = { pflicht: boolean; grenze: number; nurBar: boolean; betrag: number; text: string };
 
 export type InzahlungFahrzeug = {
   nr: string | null; marke: string | null; modell: string | null; fin: string | null; kennzeichen: string | null;
@@ -166,8 +178,25 @@ export function barSumme(v: Parameters<typeof betraege>[0] & Pick<Verkauf, 'anza
   return centRunden(s);
 }
 
-export function gwgNoetig(v: Parameters<typeof barSumme>[0]): boolean {
-  return barSumme(v) >= GWG_BAR_GRENZE;
+/**
+ * Paket 336: GwG je Art. Maßgeblich ist bei Güterhändlern das Bargeld (Anzahlung + Rest bar),
+ * im Kunsthandel der Gesamtpreis jeder Zahlart; Edelmetall senkt die Bargeld-Grenze auf 2.000 €.
+ */
+export function gwgInfo(v: Parameters<typeof barSumme>[0], stueck?: GwgStueck): GwgInfo {
+  const bar = barSumme(v);
+  const gesamt = betraege(v).gesamt;
+  const p = gwgPruefung(stueck?.art ?? 'kfz', stueck?.merkmale ?? null, gesamt, bar);
+  const nurBar = artDef(stueck?.art ?? 'kfz').gwg.nurBar;
+  return { pflicht: p.pflicht, grenze: p.grenze, nurBar, betrag: nurBar ? bar : gesamt, text: p.text };
+}
+
+export function gwgNoetig(v: Parameters<typeof barSumme>[0], stueck?: GwgStueck): boolean {
+  return gwgInfo(v, stueck).pflicht;
+}
+
+/** Kurzer Satz für Hinweise und Fehler: „Bargeld 12.000,00 €" bzw. „Kaufpreis 15.000,00 €". */
+export function gwgBetragText(i: GwgInfo): string {
+  return `${i.nurBar ? 'Bargeld' : 'Kaufpreis'} ${geld(i.betrag)}`;
 }
 
 /** Vorschlag für die Anrechnung der Inzahlungnahme: vereinbarter Ankaufspreis, sonst Angebot; bei Unternehmen mit USt brutto. */
@@ -214,11 +243,13 @@ export type Pruefung = { fehler: string[]; hinweise: string[] };
  * Was fehlt, bevor ein Vorgang in den Status `ziel` gehen darf (fehler = blockiert),
  * und was zu beachten ist (hinweise = blockiert nicht).
  */
-export function pruefen(v: Verkauf, fz: Pick<FahrzeugFuerVerkauf, 'fin' | 'vk_brutto' | 'vorschaden' | 'besteuerung'>, ziel: string, heuteIso: string): Pruefung {
+export function pruefen(v: Verkauf, fz: Pick<FahrzeugFuerVerkauf, 'fin' | 'vk_brutto' | 'vorschaden' | 'besteuerung' | 'art' | 'merkmale'>, ziel: string, heuteIso: string): Pruefung {
   const fehler: string[] = [];
   const hinweise: string[] = [];
   const b = betraege(v);
   const ist = (x: string) => ziel === x;
+  const gi = gwgInfo(v, fz);
+  const def = artDef(fz.art ?? 'kfz');
   if (v.status !== ziel && !wechselErlaubt(v.status, ziel)) fehler.push(`Von „${statusLabel(v.status)}" geht es nicht zu „${statusLabel(ziel)}".`);
   if (ziel === 'storniert') return { fehler, hinweise };
 
@@ -232,19 +263,19 @@ export function pruefen(v: Verkauf, fz: Pick<FahrzeugFuerVerkauf, 'fin' | 'vk_br
   if (ist('vertrag') || ist('uebergeben')) {
     if (!v.kaeufer_anschrift) fehler.push('Für den Kaufvertrag fehlt die Anschrift des Käufers.');
     if (v.kaeufer_art === 'verbraucher' && v.gewaehr === 'ein_jahr' && !v.gewaehr_gesondert) fehler.push('Die Verkürzung auf ein Jahr muss mit dem Verbraucher gesondert vereinbart werden: Haken „gesondert vereinbart" setzen und den eigenen Abschnitt im Vertrag unterschreiben lassen.');
-    if (gwgNoetig(v) && !v.gwg_erledigt) fehler.push(`Bargeld ${geld(barSumme(v))}: Ab 10.000 € muss der Käufer nach dem Geldwäschegesetz identifiziert werden. Erst identifizieren (GwG-Identifizierung), dann Haken setzen.`);
-    if (!fz.fin) hinweise.push('Die FIN fehlt in den Stammdaten — sie gehört in den Kaufvertrag.');
+    if (gi.pflicht && !v.gwg_erledigt) fehler.push(`${gwgBetragText(gi)}: Ab ${gi.grenze.toLocaleString('de-DE')} € muss der Käufer nach dem Geldwäschegesetz identifiziert werden. Erst identifizieren (GwG-Identifizierung), dann Haken setzen.`);
+    if (!fz.fin && def.kfzTeile.fin) hinweise.push('Die FIN fehlt in den Stammdaten — sie gehört in den Kaufvertrag.');
     if (!fz.vorschaden) hinweise.push('Vorschäden sind in der Akte nicht erfasst — im Vertrag steht dann „nicht bekannt".');
   }
   if (ist('uebergeben')) {
-    if (v.km_uebergabe === null || v.km_uebergabe === undefined) fehler.push('Bitte den Kilometerstand bei der Übergabe eintragen.');
-    if (b.rest > 0) hinweise.push(`Es sind noch ${geld(b.rest)} offen. Ohne vollständige Zahlung die Zulassungsbescheinigung Teil II nicht mitgeben.`);
+    if (def.begriffe.zaehler === 'km' && (v.km_uebergabe === null || v.km_uebergabe === undefined)) fehler.push('Bitte den Kilometerstand bei der Übergabe eintragen.');
+    if (b.rest > 0) hinweise.push(def.kfzTeile.briefTresor ? `Es sind noch ${geld(b.rest)} offen. Ohne vollständige Zahlung die Zulassungsbescheinigung Teil II nicht mitgeben.` : `Es sind noch ${geld(b.rest)} offen. Ohne vollständige Zahlung nicht übergeben.`);
   }
   if (v.kaeufer_art === 'unternehmer' && !v.kaeufer_firma) hinweise.push('Unternehmer als Käufer: Firmenname eintragen.');
   if (fz.vk_brutto !== null && fz.vk_brutto > 0 && b.fahrzeug > 0 && b.fahrzeug < fz.vk_brutto) hinweise.push(`Nachlass ${geld(fz.vk_brutto - b.fahrzeug)} gegenüber dem Inseratspreis.`);
   if (b.rest < 0) hinweise.push(`Die Inzahlungnahme ist höher als der Kaufpreis: ${geld(-b.rest)} zahlt der Betrieb an den Käufer aus.`);
   if (v.inzahlung_ankauf_id && b.inzahlung === 0) hinweise.push('Inzahlungnahme gewählt, aber kein Anrechnungsbetrag eingetragen.');
-  if (gwgNoetig(v) && !v.gwg_erledigt && !ist('vertrag') && !ist('uebergeben')) hinweise.push(`Bargeld ${geld(barSumme(v))}: Vor dem Kaufvertrag ist die Identifizierung nach dem Geldwäschegesetz nötig.`);
+  if (gi.pflicht && !v.gwg_erledigt && !ist('vertrag') && !ist('uebergeben')) hinweise.push(`${gwgBetragText(gi)}: Vor dem Kaufvertrag ist die Identifizierung nach dem Geldwäschegesetz nötig.`);
   if (fz.besteuerung !== '25a' && fz.besteuerung !== 'regel') hinweise.push('Die Besteuerung des Fahrzeugs ist offen — bitte in den Stammdaten festlegen (§ 25a oder Regelsteuer).');
   return { fehler, hinweise };
 }

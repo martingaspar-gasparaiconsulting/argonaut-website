@@ -20,7 +20,7 @@ const C = { navy: '#0A1628', navy2: '#0F2036', gold: '#C9A84C', text: '#E8EDF4',
 const FARBE: Record<string, string> = { ok: C.ok, warn: C.warn, bad: C.bad, info: C.info, gold: C.gold, dim: C.dim };
 
 type Zeile = Verkauf & { id: string; bestand_id: string; erstellt_am: string };
-type Fz = { id: string; interne_nr: string | null; marke: string | null; modell: string | null };
+type Fz = { id: string; interne_nr: string | null; marke: string | null; modell: string | null; art?: string | null; merkmale?: Record<string, unknown> | null };
 
 function heute(): string { return new Date().toISOString().slice(0, 10); }
 function de(iso: string | null): string { return iso ? iso.slice(0, 10).split('-').reverse().join('.') : '—'; }
@@ -40,7 +40,9 @@ export default function VerkaeufePage() {
       setListe(z);
       const ids = [...new Set(z.map((x) => x.bestand_id))];
       if (ids.length) {
-        const b = await supabase.from('kfz_bestand').select('id, interne_nr, marke, modell').in('id', ids);
+        // Paket 336: Art und Merkmale für die GwG-Schwelle je Art; ohne SQL p332 wie bisher
+        const mitArt = await supabase.from('kfz_bestand').select('id, interne_nr, marke, modell, art, merkmale').in('id', ids);
+        const b = !mitArt.error ? mitArt : await supabase.from('kfz_bestand').select('id, interne_nr, marke, modell').in('id', ids);
         const m: Record<string, Fz> = {};
         for (const r of ((b.data as unknown) as Fz[]) ?? []) m[r.id] = r;
         setFz(m);
@@ -53,7 +55,7 @@ export default function VerkaeufePage() {
   const gezeigt = useMemo(() => liste.filter((v) => filter === 'alle' ? true : filter === 'laufend' ? ['angebot', 'reserviert', 'vertrag'].includes(v.status) : v.status === filter), [liste, filter]);
   const zahl = (k: string) => liste.filter((v) => v.status === k).length;
   const abgelaufen = liste.filter((v) => v.status === 'reserviert' && v.reserviert_bis && v.reserviert_bis < tag).length;
-  const gwgOffen = liste.filter((v) => v.status !== 'storniert' && gwgNoetig(v) && !v.gwg_erledigt).length;
+  const gwgOffen = liste.filter((v) => v.status !== 'storniert' && gwgNoetig(v, fz[v.bestand_id]) && !v.gwg_erledigt).length;
   const offenSumme = liste.filter((v) => v.status === 'vertrag').reduce((s, v) => s + Math.max(0, betraege(v).rest), 0);
 
   return (
@@ -81,7 +83,7 @@ export default function VerkaeufePage() {
               const st = VERKAUF_STATUS.find((x) => x.key === v.status);
               const hinweis = [
                 v.status === 'reserviert' && v.reserviert_bis && v.reserviert_bis < tag ? `Reservierung abgelaufen (${de(v.reserviert_bis)})` : null,
-                v.status !== 'storniert' && gwgNoetig(v) && !v.gwg_erledigt ? 'GwG-Identifizierung offen' : null,
+                v.status !== 'storniert' && gwgNoetig(v, f) && !v.gwg_erledigt ? 'GwG-Identifizierung offen' : null,
               ].filter(Boolean).join(' · ');
               return (
                 <tr key={v.id} style={{ cursor: 'pointer' }} onClick={() => { window.location.href = `/dashboard/kfz/bestand/${v.bestand_id}`; }}>

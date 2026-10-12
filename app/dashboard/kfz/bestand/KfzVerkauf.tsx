@@ -16,7 +16,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { leseZahl } from '@/lib/zahlen';
 import { signaturStarten } from '@/lib/signaturStart';
 import {
-  VERKAUF_STATUS, ZAHLARTEN, GEWAEHR, PAPIERE, DOK_ARTEN, betraege, barSumme, gwgNoetig, inzahlungVorschlag, pruefen,
+  VERKAUF_STATUS, ZAHLARTEN, GEWAEHR, PAPIERE, DOK_ARTEN, betraege, gwgInfo, gwgBetragText, inzahlungVorschlag, pruefen,
   wechselErlaubt, statusLabel, bestandNachVerkauf, naechsteVerkaufNr, zusatzBereinigen, gewaehrErlaubt, dokumentInhalt,
   alsText, dateiName, geld, type Verkauf, type FahrzeugFuerVerkauf, type InzahlungFahrzeug, type Firmenkopf, type DokArt, type Zusatz,
 } from '@/lib/kfzVerkauf';
@@ -299,8 +299,9 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
 
   const entwurf = { ...aktiv, ...(zuFeldern(e) as Partial<Verkauf>) } as Verkauf;
   const b = betraege(entwurf);
-  const bar = barSumme(entwurf);
-  const gwg = gwgNoetig(entwurf);
+  // Paket 336: GwG-Schwelle je Art (Edelmetall bar ab 2.000 €, Kunst ab 10.000 € jede Zahlart)
+  const gi = gwgInfo(entwurf, f.fz);
+  const gwg = gi.pflicht;
   const naechste = (['reserviert', 'vertrag', 'uebergeben', 'angebot'] as const).filter((z) => wechselErlaubt(aktiv.status, z));
   const vorschau = naechste.length ? pruefen(entwurf, f.fz, naechste.includes('vertrag') ? 'vertrag' : naechste[0], heute()) : { fehler: [], hinweise: pruefen(entwurf, f.fz, aktiv.status, heute()).hinweise };
   const st = VERKAUF_STATUS.find((x) => x.key === aktiv.status);
@@ -329,7 +330,7 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
         {ok && <div style={s.ok} role="status">{ok}{link && <div style={{ ...s.mono, marginTop: 4, wordBreak: 'break-all' }}>{link}</div>}</div>}
         {gwg && (
           <div style={{ ...s.fehler, borderColor: e.gwg_erledigt ? C.ok : C.bad, background: e.gwg_erledigt ? 'rgba(76,175,125,0.10)' : 'rgba(224,102,102,0.12)' }}>
-            <b>Bargeld {geld(bar)}</b> — ab 10.000 € muss der Käufer nach dem Geldwäschegesetz identifiziert und das festgehalten werden. Bar-Anzahlung und Restzahlung zählen zusammen.
+            <b>{gwgBetragText(gi)}</b> — ab {gi.grenze.toLocaleString('de-DE')} € {gi.nurBar ? 'Bargeld' : '(jede Zahlungsart)'} muss der Käufer nach dem Geldwäschegesetz identifiziert und das festgehalten werden.{gi.nurBar ? ' Bar-Anzahlung und Restzahlung zählen zusammen.' : ''}
             <div style={{ ...s.reihe, marginTop: 8 }}>
               <a href="/dashboard/kfz/gwg" style={{ ...s.btn, textDecoration: 'none' }}>🛂 Zur GwG-Identifizierung</a>
               <label style={s.haken}><input type="checkbox" disabled={gesperrt} checked={e.gwg_erledigt} onChange={(ev) => set({ gwg_erledigt: ev.target.checked })} /> Identifizierung erledigt</label>
