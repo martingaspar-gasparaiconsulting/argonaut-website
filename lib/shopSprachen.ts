@@ -382,3 +382,47 @@ export function dokumenteSortiert<T extends { sprache: string }>(doks: T[], code
 export function dokSprachen(doks: { sprache?: string | null }[]): string[] {
   return Array.from(new Set((doks ?? []).map((d) => String(d.sprache ?? 'de')))).sort();
 }
+
+// ---------------------------------------------------------------------------
+// Paket 324: Bestätigungs-Mail an den Käufer
+// ---------------------------------------------------------------------------
+
+export type MailTexte = {
+  betreff: string; betreffBei: string; titel: string; anrede: string; anredeName: string; dank: string; dankBei: string;
+  gruss: string; summe: string; summeNetto: string; ust: string; summeBrutto: string; zahlart: string;
+  aufRechnung: string; vorkasse: string; bestellnummer: string;
+};
+
+const MAIL_DE: MailTexte = {
+  betreff: 'Ihre Bestellung', betreffBei: 'Ihre Bestellung bei {firma}', titel: 'Ihre Bestellung ist eingegangen',
+  anrede: 'Guten Tag,', anredeName: 'Guten Tag {name},',
+  dank: 'vielen Dank für Ihre Bestellung. Wir haben sie erhalten und melden uns mit der Bestätigung.',
+  dankBei: 'vielen Dank für Ihre Bestellung bei {firma}. Wir haben sie erhalten und melden uns mit der Bestätigung.',
+  gruss: 'Beste Grüße', summe: 'Summe', summeNetto: 'Summe netto', ust: 'Umsatzsteuer', summeBrutto: 'Summe brutto',
+  zahlart: 'Zahlart', aufRechnung: 'auf Rechnung ({n} Tage)', vorkasse: 'Vorkasse', bestellnummer: 'Ihre Bestellnummer',
+};
+
+const MAIL_EN: MailTexte = {
+  betreff: 'Your order', betreffBei: 'Your order with {firma}', titel: 'Your order has been received',
+  anrede: 'Hello,', anredeName: 'Hello {name},',
+  dank: 'thank you for your order. We have received it and will get back to you with the confirmation.',
+  dankBei: 'thank you for your order with {firma}. We have received it and will get back to you with the confirmation.',
+  gruss: 'Kind regards', summe: 'Total', summeNetto: 'Total (net)', ust: 'VAT', summeBrutto: 'Total (gross)',
+  zahlart: 'Payment method', aufRechnung: 'on invoice ({n} days)', vorkasse: 'prepayment', bestellnummer: 'Your order reference',
+};
+
+/** Mail-Texte: Englisch fest, alle anderen Sprachen vorerst Deutsch (ehrlich, keine ungeprüfte KI-Mail). */
+export function mailTexte(code: unknown): MailTexte {
+  return spracheFuer(code)?.code === 'en' ? MAIL_EN : MAIL_DE;
+}
+
+/** Platzhalter füllen: {n}, {name}, {summe}, {firma} … (Werte werden NICHT maskiert — vorher selbst maskieren). */
+export function fuellen(text: string, werte: Record<string, string | number>): string {
+  return text.replace(/\{([a-z_]+)\}/g, (m, k: string) => (k in werte ? String(werte[k]) : m));
+}
+
+/** Sprache aus der Bestellung: nur bekannte Codes, sonst null (Deutsch wird nicht extra vermerkt). */
+export function bestellSprache(code: unknown): string | null {
+  const s = spracheFuer(code);
+  return s && s.code !== 'de' ? s.code : null;
+}

@@ -5,6 +5,11 @@
 // Inhaber sicher über oeffentlich_id aus web_seiten (status=live) — NIE vom
 // Client. artikel ist RLS-geschützt; hier über Service-Role, aber HART auf
 // owner_user_id + im_shop=true gefiltert (fail-closed). Nur Schaufenster-Felder.
+//
+// Paket 324 (S4): ?sprache=<code>&hl=<Browser-Sprachen>. Angeboten wird nur, was
+// die Geschäftsleitung eingeschaltet hat (shop_sprache); Produkt-Texte nur
+// freigegeben und passend zum aktuellen Deutsch (Prüfsumme), sonst Deutsch.
+// Preise bleiben unberührt — die Sprache ändert nur Texte und Zahlformat.
 // ============================================================================
 
 import { NextResponse } from 'next/server';
@@ -13,6 +18,11 @@ import { oeffentlichBestellbar, shopMwst } from '@/lib/shopUebernahme';
 import { shopDokumente, type Dok } from '@/lib/produktDokumente';
 import { basisNettoCent, endkundenPreis, euro, mengenRegel, schaufensterStaffeln } from '@/lib/shopB2b';
 import { kundeAusToken, ladePreisBasis, tokenAus } from '@/lib/shopB2bServer';
+import { spracheFuer } from '@/lib/mehrsprachig';
+import {
+  TEXT_DE, angeboteneSprachen, oberflaecheFuer, produktText, waehleSprache,
+  type SpracheZeile, type UebersetzungZeile,
+} from '@/lib/shopSprachen';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,7 +52,8 @@ const FELDER = 'id, bezeichnung, verkaufspreis, einheit, kategorie, shop_beschre
 
 export async function GET(req: Request) {
   try {
-    const seite = (new URL(req.url).searchParams.get('seite') || '').trim();
+    const url = new URL(req.url);
+    const seite = (url.searchParams.get('seite') || '').trim();
     if (!seite) return NextResponse.json({ produkte: [] });
 
     const db = admin();
@@ -84,6 +95,27 @@ export async function GET(req: Request) {
     }
     const heute = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
 
+    // Paket 324 (S4): Sprache des Besuchers. Fehlt die Tabelle (SQL p323 offen), bleibt alles Deutsch.
+    let sprachZeilen: SpracheZeile[] = [];
+    {
+      const { data: sz, error: szFehler } = await db.from('shop_sprache')
+        .select('sprache, aktiv, texte, status').eq('owner_user_id', inh.owner_user_id as string).limit(50);
+      if (!szFehler) sprachZeilen = (sz as SpracheZeile[]) ?? [];
+    }
+    const angeboten = angeboteneSprachen(sprachZeilen);
+    const hl = (url.searchParams.get('hl') || req.headers.get('accept-language') || '').slice(0, 300);
+    const sprache = waehleSprache(url.searchParams.get('sprache'), hl, angeboten);
+    const texte = oberflaecheFuer(sprache, sprachZeilen.find((z) => z.sprache === sprache)) ?? { ...TEXT_DE };
+    const ueJe: Record<string, UebersetzungZeile> = {};
+    if (sprache !== 'de' && rows.length) {
+      const { data: ue, error: ueFehler } = await db.from('shop_uebersetzung')
+        .select('artikel_id, sprache, name, beschreibung, quelle_hash, status')
+        .eq('owner_user_id', inh.owner_user_id as string).eq('sprache', sprache).eq('status', 'freigegeben')
+        .in('artikel_id', rows.map((r) => r.id)).limit(1000);
+      if (!ueFehler) for (const u of (ue as UebersetzungZeile[]) ?? []) ueJe[String(u.artikel_id)] = u;
+    }
+    const info = spracheFuer(sprache)!;
+
     // Paket 317 (S3a): Preis-Basis des Betriebs und Geschäftskunde aus dem Link (Kopfzeile x-shop-konto).
     const betrieb = inh.owner_user_id as string;
     const basis = await ladePreisBasis(db, betrieb);
@@ -92,24 +124,38 @@ export async function GET(req: Request) {
 
     const produkte = rows.map((r) => ({
       id: r.id,
-      name: (r.bezeichnung || 'Produkt').toString(),
+      ...text(r),
       preis: endkundenPreis(r.verkaufspreis, r.shop_mwst, basis),
       ...gewerbe(r),
       einheit: (r.einheit || '').toString(),
       kategorie: (r.kategorie || '').toString(),
-      beschreibung: (r.shop_beschreibung || '').toString().slice(0, 600),
       bild: (r.shop_bild_url || '').toString(),
       bestand: r.aktueller_bestand == null ? null : Number(r.aktueller_bestand),
       mwst: shopMwst(r.shop_mwst),
-      dokumente: shopDokumente(dokJe[r.id] ?? [], heute),
+      dokumente: shopDokumente(dokJe[r.id] ?? [], heute, sprache),
     }));
 
     return NextResponse.json({
       produkte,
       anzahl: produkte.length,
+      sprache,
+      bcp: info.bcp,
+      rtl: !!info.rtl,
+      sprachen: angeboten.map((c) => { const s = spracheFuer(c)!; return { code: s.code, name: s.eigen, rtl: !!s.rtl }; }),
+      texte,
       ...(kunde ? { konto: { name: kunde.name, netto: true, auf_rechnung: kunde.auf_rechnung, zahlungsziel: kunde.zahlungsziel_tage } } : {}),
       ...(token && !kunde ? { konto_ungueltig: true } : {}),
     }, { headers: { 'Cache-Control': 'no-store' } });
+
+    /** Paket 324: Name und Beschreibung — freigegebene, aktuelle Übersetzung oder vollständig Deutsch. */
+    function text(r: ArtikelRow) {
+      const t = produktText({ name: r.bezeichnung, beschreibung: r.shop_beschreibung }, ueJe[r.id]);
+      return {
+        name: t.name || 'Produkt',
+        beschreibung: t.beschreibung.slice(0, t.uebersetzt ? 900 : 600),
+        ...(t.uebersetzt ? { uebersetzt: true } : {}),
+      };
+    }
 
     /** Gebinde, Mindestmenge und — nur für den Geschäftskunden — Netto-Preis mit Staffeln. */
     function gewerbe(r: ArtikelRow) {

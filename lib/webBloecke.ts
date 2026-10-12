@@ -841,6 +841,8 @@ function seiteCss(ci: CiWeb): string {
     '.ao-buchung .ao-leer{font-style:italic}',
     // Shop-Produkte (Kachel-Raster + Warenkorb-Leiste)
     '.ao-shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-top:8px}',
+    // Paket 324 (S4): Sprach-Umschalter im Shop (nur sichtbar, wenn der Betrieb mehr als Deutsch anbietet).
+    '.ao-sprache{display:flex;justify-content:flex-end;margin:0 0 12px}.ao-sprache label{display:inline-flex;gap:6px;align-items:center;font-weight:700;color:#8290a0;font-size:14px}.ao-sprache select{padding:6px 10px;border-radius:8px;border:1px solid #d5dbe3;font:inherit;background:#fff;color:#1a2433;min-height:36px}',
     '.ao-prod{background:#fff;border:1px solid #e7ebf1;border-radius:16px;overflow:hidden;box-shadow:0 12px 30px -22px rgba(20,40,70,.35);display:flex;flex-direction:column}',
     '.ao-prod-bild{aspect-ratio:4/3;background-size:cover;background-position:center;background-color:#eef2f7}',
     '.ao-prod-kein{background:linear-gradient(135deg,#eef2f7,#dde5ee)}',

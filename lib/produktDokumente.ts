@@ -195,14 +195,22 @@ export function anzeigeName(d: Dok): string {
   return teile.join(' · ');
 }
 
-/** Was im Shop am Produkt erscheint: aktuell, freigegeben, nicht abgelaufen; nach Art sortiert. */
-export function shopDokumente(liste: Dok[], heute: string): { id: string; name: string; art: string; sprache: string }[] {
+/**
+ * Was im Shop am Produkt erscheint: aktuell, freigegeben, nicht abgelaufen; nach Art sortiert.
+ * Paket 324 (S4): mit Kundensprache steht je Art die Fassung in dieser Sprache vorn, dann Deutsch.
+ */
+export function shopDokumente(liste: Dok[], heute: string, kundenSprache?: string): { id: string; name: string; art: string; sprache: string; art_key: string; titel: string | null; version: string | null }[] {
   const ordnung = ARTEN.map((a) => a.key as string);
+  const rang = (s: unknown) => (!kundenSprache ? 0 : String(s ?? 'de') === kundenSprache ? 0 : String(s ?? 'de') === 'de' ? 1 : 2);
   return (liste ?? [])
     .filter((d) => d && d.id && d.im_shop === true && d.aktuell !== false && !(istIsoTag(d.gueltig_bis) && d.gueltig_bis < heute))
-    .sort((a, b) => (ordnung.indexOf(a.art) - ordnung.indexOf(b.art)) || String(a.sprache ?? '').localeCompare(String(b.sprache ?? '')))
+    .sort((a, b) => (ordnung.indexOf(a.art) - ordnung.indexOf(b.art)) || (rang(a.sprache) - rang(b.sprache)) || String(a.sprache ?? '').localeCompare(String(b.sprache ?? '')))
     .slice(0, 12)
-    .map((d) => ({ id: String(d.id), name: anzeigeName(d), art: artInfo(d.art)?.kurz ?? 'Dok.', sprache: String(d.sprache ?? 'de') }));
+    // Paket 324 (S4): art_key, titel und version für den Namen in der Sprache des Kunden.
+    .map((d) => ({
+      id: String(d.id), name: anzeigeName(d), art: artInfo(d.art)?.kurz ?? 'Dok.', sprache: String(d.sprache ?? 'de'),
+      art_key: artInfo(d.art)?.key ?? 'sonstiges', titel: textOderNull(d.titel, 120), version: textOderNull(d.version, 40),
+    }));
 }
 
 /** Tag der Erinnerung: 30 Tage vor „gültig bis", frühestens heute. */

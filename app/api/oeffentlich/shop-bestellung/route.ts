@@ -7,6 +7,8 @@
 // im_shop-Artikel des Inhabers zählen. Danach best effort: Betriebs-Mail +
 // Käufer-Bestätigung. Bestellung läuft dann über die vorhandenen Dashboard-
 // Knöpfe in Rechnung/CRM/Lager (nichts wird hier automatisch abgebucht).
+// Paket 324 (S4): Sprache des Kunden wird vermerkt; die Käufer-Bestätigung
+// geht auf Englisch, wenn auf Englisch bestellt wurde (sonst Deutsch).
 // ============================================================================
 
 import { NextResponse } from 'next/server';
@@ -22,6 +24,8 @@ import {
   offenAusRechnungen, rahmenPruefen, zahlartPruefen, type B2bArtikel,
 } from '@/lib/shopB2b';
 import { kundeAusToken, ladePreisBasis, tokenAus } from '@/lib/shopB2bServer';
+import { sprachName } from '@/lib/mehrsprachig';
+import { bestellSprache, fuellen, mailTexte, type MailTexte } from '@/lib/shopSprachen';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,8 +42,9 @@ function clean(v: unknown, max: number): string | null {
   const t = v.trim();
   return t === '' ? null : t.slice(0, max);
 }
-function eur(n: number): string {
-  return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+function eur(n: number, sprache: string | null = null): string {
+  // Paket 324: Zahlformat der Kundensprache (immer EUR, immer westliche Ziffern).
+  return (Number(n) || 0).toLocaleString(sprache === 'en' ? 'en-GB' : 'de-DE', { style: 'currency', currency: 'EUR' });
 }
 
 // Paket 204: aktiv + shop_mwst mitlesen; fehlt shop_mwst (SQL p204 offen), ohne lesen (dann 19 %).
@@ -63,6 +68,7 @@ export async function POST(req: Request) {
     const telefon = clean(b.telefon, 60);
     const nachricht = clean(b.nachricht, 3000);
     const eingaben = Array.isArray(b.positionen) ? (b.positionen as unknown[]) : [];
+    const kSprache = bestellSprache(b.sprache);
 
     if (!seite) return NextResponse.json({ error: 'Seite nicht erkannt.' }, { status: 400 });
     if (!besteller) return NextResponse.json({ error: 'Bitte Ihren Namen angeben.' }, { status: 400 });
@@ -168,6 +174,7 @@ export async function POST(req: Request) {
       kunde ? `Geschäftskunde: ${kunde.name}` : '',
       zahlart ? `Zahlart: ${zahlart === 'rechnung' ? 'auf Rechnung' : 'Vorkasse'}` : '',
       bestellnr ? `Bestellnummer des Kunden: ${bestellnr}` : '',
+      kSprache ? `Sprache des Kunden: ${sprachName(kSprache)}` : '',
       telefon ? `Telefon: ${telefon}` : '',
       nachricht || '',
     ].filter(Boolean);
@@ -184,7 +191,13 @@ export async function POST(req: Request) {
       bestell_am: new Date().toISOString(),
     };
     if (kunde) Object.assign(zeile, { shop_kunde_id: kunde.id, kontakt_id: kunde.kontakt_id, zahlart, netto_summe: netto });
-    const { error: insErr } = await db.from('shop_bestellungen').insert(zeile);
+    if (kSprache) zeile.sprache = kSprache;
+    let { error: insErr } = await db.from('shop_bestellungen').insert(zeile);
+    // Paket 324: Fehlt die Spalte sprache (SQL p323 offen), ohne sie speichern — die Sprache steht dann nur in der Notiz.
+    if (insErr && kSprache) {
+      delete zeile.sprache;
+      ({ error: insErr } = await db.from('shop_bestellungen').insert(zeile));
+    }
     if (insErr) {
       console.error('shop-bestellung Insert:', insErr);
       return NextResponse.json({ error: 'Bestellung konnte nicht gespeichert werden.' }, { status: 500 });
@@ -197,15 +210,18 @@ export async function POST(req: Request) {
     const betriebMail = (ci?.email || '').toString().trim();
 
     type MailPos = { menge: number; bezeichnung: string; einzelpreis: number; einzelpreis_netto?: number };
-    const posTab = (positionen as MailPos[])
-      .map((p) => `<tr><td style="padding:4px 12px 4px 0;">${p.menge.toLocaleString('de-DE')}×</td><td style="padding:4px 12px 4px 0;">${escapeHtml(p.bezeichnung)}</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(eur(kunde && p.einzelpreis_netto != null ? centRunden(p.menge * p.einzelpreis_netto) : p.menge * p.einzelpreis))}</td></tr>`)
+    // Paket 324: Tabelle und Summen in der Sprache der Mail (Betrieb immer Deutsch, Käufer je Bestell-Sprache).
+    const posTabIn = (spr: string | null) => (positionen as MailPos[])
+      .map((p) => `<tr><td style="padding:4px 12px 4px 0;">${p.menge.toLocaleString(spr === 'en' ? 'en-GB' : 'de-DE')}×</td><td style="padding:4px 12px 4px 0;">${escapeHtml(p.bezeichnung)}</td><td style="padding:4px 0;text-align:right;font-weight:600;">${escapeHtml(eur(kunde && p.einzelpreis_netto != null ? centRunden(p.menge * p.einzelpreis_netto) : p.menge * p.einzelpreis, spr))}</td></tr>`)
       .join('');
-    const summenZeilen = kunde && netto != null
-      ? `<tr><td colspan="2" style="padding:8px 12px 0 0;">Summe netto</td><td style="padding:8px 0 0;text-align:right;">${escapeHtml(eur(netto))}</td></tr>`
-        + `<tr><td colspan="2" style="padding:2px 12px 0 0;">Umsatzsteuer</td><td style="padding:2px 0 0;text-align:right;">${escapeHtml(eur(centRunden(brutto - netto)))}</td></tr>`
-        + `<tr><td colspan="2" style="padding:2px 12px 0 0;font-weight:700;">Summe brutto</td><td style="padding:2px 0 0;text-align:right;font-weight:800;">${escapeHtml(eur(brutto))}</td></tr>`
-        + `<tr><td colspan="3" style="padding:8px 0 0;color:#6b7688;">Zahlart: ${zahlart === 'rechnung' ? `auf Rechnung (${kunde.zahlungsziel_tage} Tage)` : 'Vorkasse'}${bestellnr ? ` · Ihre Bestellnummer: ${escapeHtml(bestellnr)}` : ''}</td></tr>`
-      : `<tr><td colspan="2" style="padding:8px 12px 0 0;font-weight:700;">Summe</td><td style="padding:8px 0 0;text-align:right;font-weight:800;">${escapeHtml(eur(brutto))}</td></tr>`;
+    const summenIn = (m: MailTexte, spr: string | null) => kunde && netto != null
+      ? `<tr><td colspan="2" style="padding:8px 12px 0 0;">${escapeHtml(m.summeNetto)}</td><td style="padding:8px 0 0;text-align:right;">${escapeHtml(eur(netto, spr))}</td></tr>`
+        + `<tr><td colspan="2" style="padding:2px 12px 0 0;">${escapeHtml(m.ust)}</td><td style="padding:2px 0 0;text-align:right;">${escapeHtml(eur(centRunden(brutto - netto), spr))}</td></tr>`
+        + `<tr><td colspan="2" style="padding:2px 12px 0 0;font-weight:700;">${escapeHtml(m.summeBrutto)}</td><td style="padding:2px 0 0;text-align:right;font-weight:800;">${escapeHtml(eur(brutto, spr))}</td></tr>`
+        + `<tr><td colspan="3" style="padding:8px 0 0;color:#6b7688;">${escapeHtml(m.zahlart)}: ${escapeHtml(zahlart === 'rechnung' ? fuellen(m.aufRechnung, { n: kunde.zahlungsziel_tage }) : m.vorkasse)}${bestellnr ? ` · ${escapeHtml(m.bestellnummer)}: ${escapeHtml(bestellnr)}` : ''}</td></tr>`
+      : `<tr><td colspan="2" style="padding:8px 12px 0 0;font-weight:700;">${escapeHtml(m.summe)}</td><td style="padding:8px 0 0;text-align:right;font-weight:800;">${escapeHtml(eur(brutto, spr))}</td></tr>`;
+    const posTab = posTabIn(null);
+    const summenZeilen = summenIn(mailTexte('de'), null);
 
     // 1) Betrieb benachrichtigen (best effort — Bestellung liegt schon sicher).
     if (betriebMail) {
@@ -214,26 +230,27 @@ export async function POST(req: Request) {
         `<p style="margin:0 0 14px;">Über Ihren Onlineshop ist eine neue Bestellung eingegangen — sie liegt bereits unter „Shop / Marktplatz".</p>
          <table style="border-collapse:collapse;font-size:14px;">${posTab}
          ${summenZeilen}</table>
-         <p style="margin:16px 0 0;font-size:14px;">Besteller: <b>${escapeHtml(besteller)}</b>${email ? ` · ${escapeHtml(email)}` : ''}${telefon ? ` · ${escapeHtml(telefon)}` : ''}</p>
+         <p style="margin:16px 0 0;font-size:14px;">Besteller: <b>${escapeHtml(besteller)}</b>${email ? ` · ${escapeHtml(email)}` : ''}${telefon ? ` · ${escapeHtml(telefon)}` : ''}${kSprache ? ` · Sprache: <b>${escapeHtml(sprachName(kSprache))}</b>` : ''}</p>
          ${nachricht ? `<p style="margin:8px 0 0;color:#6b7688;font-size:13px;">${escapeHtml(nachricht).replace(/\n/g, '<br>')}</p>` : ''}`,
       );
       const r = await sendeMail({ an: betriebMail, betreff: `Neue Shop-Bestellung: ${besteller}`, html, ...(email ? { antwortAn: email } : {}) });
       if (!r.ok) console.error('shop-bestellung Betriebs-Mail:', r.fehler);
     }
 
-    // 2) Käufer-Bestätigung (best effort).
+    // 2) Käufer-Bestätigung (best effort) — Paket 324: auf Englisch, wenn auf Englisch bestellt.
     if (email) {
+      const m = mailTexte(kSprache);
       const vorname = besteller.split(' ')[0];
       const html = mailLayout(
-        'Ihre Bestellung ist eingegangen',
-        `<p style="margin:0 0 14px;">Guten Tag${vorname ? ' ' + escapeHtml(vorname) : ''},</p>
-         <p style="margin:0 0 14px;">vielen Dank für Ihre Bestellung${firma ? ' bei ' + escapeHtml(firma) : ''}. Wir haben sie erhalten und melden uns mit der Bestätigung.</p>
-         <table style="border-collapse:collapse;font-size:14px;margin:0 0 12px;">${posTab}
-         ${summenZeilen}</table>
-         <p style="margin:8px 0 0;">Beste Grüße${firma ? '<br>' + escapeHtml(firma) : ''}</p>`,
+        m.titel,
+        `<p style="margin:0 0 14px;">${vorname ? fuellen(escapeHtml(m.anredeName), { name: escapeHtml(vorname) }) : escapeHtml(m.anrede)}</p>
+         <p style="margin:0 0 14px;">${firma ? fuellen(escapeHtml(m.dankBei), { firma: escapeHtml(firma) }) : escapeHtml(m.dank)}</p>
+         <table style="border-collapse:collapse;font-size:14px;margin:0 0 12px;">${posTabIn(kSprache)}
+         ${summenIn(m, kSprache)}</table>
+         <p style="margin:8px 0 0;">${escapeHtml(m.gruss)}${firma ? '<br>' + escapeHtml(firma) : ''}</p>`,
       );
       try {
-        const r = await sendeMail({ an: email, betreff: `Ihre Bestellung${firma ? ' bei ' + firma : ''}`, html });
+        const r = await sendeMail({ an: email, betreff: firma ? fuellen(m.betreffBei, { firma }) : m.betreff, html });
         if (!r.ok) console.error('shop-bestellung Käufer-Mail:', r.fehler);
       } catch (e) { console.error('shop-bestellung Käufer-Mail-Versand:', e); }
     }
