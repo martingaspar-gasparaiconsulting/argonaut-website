@@ -13,6 +13,7 @@
 // altem SDB. SDB öffnen über /api/gefahrstoff/sdb (60-Sekunden-Link).
 // Paket 319 (G2a Teil 2): „🔳 QR-Aushang" je Lagerplatz (Druckbogen) —
 // der QR führt auf die Handy-Ansicht unter Mein Bereich (Login, alle Beschäftigten).
+// Paket 329 (G2b): „📋 Betriebsanweisung" je Stoff → [id]/betriebsanweisung (TRGS 555).
 // Logik: lib/qualitaet.ts + lib/gefahrstoffLager.ts (getestet).
 // SQL: supabase-sql/ps2-qualitaet.sql + p318-gefahrstoff-2.sql.
 // Unterpfad von /dashboard/nachweise (erbt dessen Freigabe).
@@ -369,6 +370,7 @@ export default function GefahrstoffeSeite() {
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   {quelle.art !== 'keine' && <a style={{ ...knopf, textDecoration: 'none' }} href={`/api/gefahrstoff/sdb?id=${z.id}`} target="_blank" rel="noopener noreferrer">📄 SDB öffnen</a>}
+                  <a style={{ ...knopf, textDecoration: 'none' }} href={`/dashboard/nachweise/gefahrstoffe/${z.id}/betriebsanweisung`} title="Betriebsanweisung nach TRGS 555 (Entwurf, Druck)">📋 Betriebsanweisung</a>
                   {istChef && alt && <button style={knopf} disabled={busy} onClick={() => void erinnern(z)} title="Erinnerung, das aktuelle Sicherheitsdatenblatt anzufordern">🔔 Erinnern</button>}
                   {istChef && z.sdb_pfad && <button style={{ ...knopf, color: C.textDim }} disabled={busy} onClick={() => void dateiEntfernen(z)}>Datei entfernen</button>}
                   {istChef && <button style={knopf} onClick={() => bearbeiten(z)}>Bearbeiten</button>}

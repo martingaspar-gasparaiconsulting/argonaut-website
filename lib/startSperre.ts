@@ -21,7 +21,8 @@ export type StartBereich =
   | 'whatsappWerbung' // WhatsApp-Anmeldung und Kampagnen-Versand (Paket 3)
   | 'gefahrstoffShop' // Paket 325 (S2): Gefahr-Angaben (CLP) am Shop-Produkt und vor dem Bestellknopf (R49)
   | 'gewerbeNachweis' // Paket 327 (S3b): Schalter „nur Gewerbekunden“ im Shop (R49)
-  | 'sdbVersand'; // Paket 328 (S5): Sicherheitsdatenblatt mit der Bestellbestätigung und Nachversand (R49)
+  | 'sdbVersand' // Paket 328 (S5): Sicherheitsdatenblatt mit der Bestellbestätigung und Nachversand (R49)
+  | 'betriebsanweisung'; // Paket 329 (G2b): Betriebsanweisung freigeben und ohne „ENTWURF“ drucken (R49)
 
 /** Der Schalter. false = abgeschaltet bis zur Freigabe durch den Anwalt. */
 export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.freeze({
@@ -32,6 +33,7 @@ export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.fr
   gefahrstoffShop: false,
   gewerbeNachweis: false,
   sdbVersand: false,
+  betriebsanweisung: false,
 });
 
 const GRUND: Record<StartBereich, string> = {
@@ -42,6 +44,7 @@ const GRUND: Record<StartBereich, string> = {
   gefahrstoffShop: 'Die Anzeige der Gefahr-Angaben im Shop wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie die Angaben vorbereiten und bestätigen.',
   gewerbeNachweis: 'Der Schalter „nur Gewerbekunden“ wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie Nachweise schon erfassen und prüfen.',
   sdbVersand: 'Der automatische Versand der Sicherheitsdatenblätter wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin senden Sie die Datenblätter bitte selbst.',
+  betriebsanweisung: 'Das Freigeben von Betriebsanweisungen wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie Entwürfe vorbereiten; der Druck trägt „ENTWURF“.',
 };
 
 /** true, wenn der Bereich freigeschaltet ist. `freigabe` nur für Tests. */
