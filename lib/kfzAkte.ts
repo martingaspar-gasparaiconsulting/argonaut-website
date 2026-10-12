@@ -89,12 +89,16 @@ export type Ampel = { prozent: number; stufe: 'ok' | 'warn' | 'bad'; punkte: { n
  * Inserats-Ampel: wie fertig ist das Inserat? Gewichte: Fotos 30, Pflichtangaben 25,
  * Titel 15, Beschreibung 15, Preis 10, Ausstattung 5. Grün ab 80, gelb ab 55.
  */
-export function inseratAmpel(a: AkteFelder): Ampel {
+export function inseratAmpel(a: AkteFelder, einzelstueck?: { merkmale: number } | null): Ampel {
   const fotos = a.fotos ?? 0;
   const titelHinweise = titelPruefen(a.inserat_titel, a.vorschaden);
+  // Paket 334 (BV2b): Einzelstücke ohne CO₂-Pflicht (Boot, Uhr, Kunst …) — statt „Energie und CO₂" zählen die Merkmale (ab 3 voll).
+  const pflicht = einzelstueck
+    ? { name: 'Merkmale', gewicht: 25, ok: einzelstueck.merkmale >= 3, teil: Math.min(1, Math.max(0, einzelstueck.merkmale) / 3), hinweis: `${einzelstueck.merkmale} Merkmale (empfohlen 3+)` }
+    : { name: 'Energie und CO₂', gewicht: 25, ok: pflichtFehlt(a).length === 0, teil: pflichtFehlt(a).length === 0 ? 1 : 0, hinweis: pflichtFehlt(a).length ? `fehlt: ${pflichtFehlt(a).join(', ')}` : 'vollständig' };
   const punkte = [
     { name: 'Fotos', gewicht: 30, ok: fotos >= 12, teil: fotos > 0 ? Math.min(1, fotos / 12) : 0, hinweis: fotos >= 12 ? `${fotos} Fotos` : `${fotos} von empfohlen 12+` },
-    { name: 'Energie und CO₂', gewicht: 25, ok: pflichtFehlt(a).length === 0, teil: pflichtFehlt(a).length === 0 ? 1 : 0, hinweis: pflichtFehlt(a).length ? `fehlt: ${pflichtFehlt(a).join(', ')}` : 'vollständig' },
+    pflicht,
     { name: 'Titel', gewicht: 15, ok: titelHinweise.every((x) => x.stufe === 'ok'), teil: titelHinweise.some((x) => x.stufe === 'bad') || !String(a.inserat_titel ?? '').trim() ? 0 : titelHinweise.every((x) => x.stufe === 'ok') ? 1 : 0.5, hinweis: titelHinweise[0].text },
     { name: 'Beschreibung', gewicht: 15, ok: String(a.inserat_text ?? '').trim().length >= 200, teil: Math.min(1, String(a.inserat_text ?? '').trim().length / 200), hinweis: `${String(a.inserat_text ?? '').trim().length} Zeichen (empfohlen 200+)` },
     { name: 'Preis', gewicht: 10, ok: !!a.vk_brutto && a.vk_brutto > 0, teil: a.vk_brutto && a.vk_brutto > 0 ? 1 : 0, hinweis: a.vk_brutto ? 'gesetzt' : 'fehlt' },

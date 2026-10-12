@@ -255,3 +255,78 @@ export function merkmaleFuerForm(art: unknown, werte: Record<string, unknown> | 
   }
   return aus;
 }
+
+// ---------------------------------------------------------------------------
+// Paket 334 (BV2b Teil 3): Handelsakte nach Art
+// ---------------------------------------------------------------------------
+
+/** Reiter der Akte, die es nur für Straßenfahrzeuge (bzw. Arten mit diesem Kfz-Teil) gibt. */
+export type AkteTeile = {
+  energie: boolean;        // Energie und CO₂ (Pkw-EnVKV)
+  probefahrt: boolean;
+  tresor: boolean;         // Brief und Schlüssel, Zulassung
+  hu: boolean;             // HU-Termin im Zustand
+  finDienste: boolean;     // Werkstatt-Lebensakte, Fahrzeughistorie über die FIN
+  bewertung: boolean;      // DAT/Schwacke
+  kfzAusstattung: boolean; // Ausstattungs-Katalog für Autos
+  polster: boolean;
+};
+
+export function akteTeile(art: unknown, mitArt: boolean): AkteTeile {
+  if (!mitArt) return { energie: true, probefahrt: true, tresor: true, hu: true, finDienste: true, bewertung: true, kfzAusstattung: true, polster: true };
+  const d = artDef(art);
+  const kfz = d.art === 'kfz';
+  return {
+    energie: d.kfzTeile.co2,
+    probefahrt: d.kfzTeile.probefahrt,
+    tresor: d.kfzTeile.briefTresor,
+    hu: d.kfzTeile.zulassung,
+    finDienste: d.kfzTeile.fin,
+    bewertung: kfz,
+    kfzAusstattung: kfz,
+    polster: kfz,
+  };
+}
+
+/** Welche Reiter-Schlüssel ausgeblendet werden (energie, probefahrt, tresor). */
+export function akteReiterAus(art: unknown, mitArt: boolean): string[] {
+  const t = akteTeile(art, mitArt);
+  const aus: string[] = [];
+  if (!t.energie) aus.push('energie');
+  if (!t.probefahrt) aus.push('probefahrt');
+  if (!t.tresor) aus.push('tresor');
+  return aus;
+}
+
+/** Alle Merkmale der Art für die Merkmale-Karte — auch leere, mit Kennzeichen „intern". */
+export function merkmaleListe(art: unknown, werte: Record<string, unknown> | null | undefined): { key: string; label: string; text: string; intern: boolean; gesetzt: boolean }[] {
+  const w = (werte && typeof werte === 'object') ? werte as Record<string, unknown> : {};
+  return artDef(art).merkmale.map((m) => {
+    const v = w[m.key];
+    const gesetzt = v !== undefined && v !== null && v !== '';
+    return { key: m.key, label: m.label, text: gesetzt ? merkmalText(m, v) : '—', intern: !m.oeffentlich, gesetzt };
+  });
+}
+
+/** Zahl der gesetzten Merkmale (für die Inserats-Ampel bei Einzelstücken). */
+export function merkmaleZahl(art: unknown, werte: Record<string, unknown> | null | undefined): number {
+  return merkmaleListe(art, werte).filter((m) => m.gesetzt).length;
+}
+
+/** Kopfzeile der Akte: „F-0002 · 2019 · 1.250 Bh" bzw. Kfz wie bisher mit PS und Kraftstoff. */
+export function akteUnterzeile(art: unknown, b: Pick<Bestand, 'interne_nr' | 'erstzulassung' | 'km_stand' | 'leistung_kw' | 'kraftstoff'> & { betriebsstunden?: number | null }, ps: number | null): string {
+  const d = artDef(art);
+  const teile = [b.interne_nr ?? ''];
+  if (d.art === 'kfz') {
+    teile.push(`EZ ${ezText(b.erstzulassung)}`);
+    teile.push(typeof b.km_stand === 'number' ? `${b.km_stand.toLocaleString('de-DE')} km` : '— km');
+    let s = teile.join(' · ');
+    if (ps) s += ` · ${ps} PS (${b.leistung_kw} kW)`;
+    if (b.kraftstoff) s += ` · ${b.kraftstoff}`;
+    return s;
+  }
+  teile.push(`${d.begriffe.datumWort} ${datumText(art, b.erstzulassung)}`);
+  const z = zaehlerText(art, b);
+  if (z) teile.push(z);
+  return teile.join(' · ');
+}

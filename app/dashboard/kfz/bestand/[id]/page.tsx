@@ -11,12 +11,18 @@
 // Paket 265 (K5): Reiter „Kalkulation" (KfzKalkulation) — Plan/Nach, Kosten, Provision.
 // Paket 266 (K6): Reiter „Verkauf" (KfzVerkauf) — Käufer, Preis, Inzahlungnahme, Unterlagen, Unterschrift.
 // Andockpunkte: K7 Rechnung (aus dem Verkauf). Paket 278 (K18): Reiter „Partner" (KfzPartner).
+// Paket 334 (BV2b Teil 3): Akte nach Art des Einzelstücks (lib/einzelstueckBestand):
+// Merkmale-Karte in der Übersicht; Energie/CO₂, Probefahrt, Brief und Schlüssel,
+// HU, FIN-Dienste (Werkstatt, Historie), DAT/Schwacke, Auto-Ausstattung und Polster
+// nur, wo die Art sie hat. Ohne SQL p332 (keine Spalte art) bleibt alles wie bisher.
 // ============================================================
 
-import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useMemo, Fragment, CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { leseZahl } from '@/lib/zahlen';
+import { artDef } from '@/lib/einzelstueck';
+import { stueckArt, akteTeile, akteReiterAus, merkmaleListe, merkmaleZahl, akteUnterzeile, kennungText, ART_SYMBOL } from '@/lib/einzelstueckBestand';
 import { vorlageFuer, mitKunde, standtageAmpel, type KundenEinstellung } from '@/lib/branchenVorlage';
 import { standtage, ezText, euro, psAusKw, finTreffer, type Bestand, type FinTreffer } from '@/lib/kfzBestand';
 import {
@@ -77,6 +83,7 @@ export default function HandelsaktePage() {
     } catch { /* egal */ }
   }, []);
   const [fotoZahl, setFotoZahl] = useState(0);
+  const [mitArt, setMitArt] = useState(false);
   const zaehle = useCallback((n: number) => setFotoZahl(n), []);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -99,6 +106,7 @@ export default function HandelsaktePage() {
     if (error || !data) { setFehler(error ? 'Die Akte lässt sich nicht laden. Fehlt SQL Paket 261 oder das Recht „KFZ"?' : 'Dieses Fahrzeug gibt es nicht (mehr).'); setLaden(false); return; }
     const a = data as unknown as Akte;
     setAkte(a);
+    setMitArt(Object.prototype.hasOwnProperty.call(a, 'art')); // P334: select('*') liefert art nur mit SQL p332
     setAus(merkmaleBereinigen(a.ausstattung ?? []));
     setPolster(a.polster ?? '');
     setEn({ kraftstoff: a.kraftstoff ?? '', verbrauch: zahlText(a.verbrauch_komb), einheit: a.verbrauch_einheit ?? (istElektro(a.kraftstoff) ? 'kwh' : 'l'), co2: zahlText(a.co2_g_km), klasse: a.co2_klasse ?? '' });
@@ -116,7 +124,7 @@ export default function HandelsaktePage() {
     setEinstellung(((e.data as { einstellung?: KundenEinstellung } | null)?.einstellung) ?? null);
     setBranche(((pr.data as { branche?: string | null } | null)?.branche) ?? null);
     try {
-      if (a.fin) {
+      if (a.fin && akteTeile(stueckArt(a, null), Object.prototype.hasOwnProperty.call(a, 'art')).finDienste) {
         const w = await supabase.from('werkstatt_fahrzeuge').select('id, fin').eq('fin', a.fin);
         const wf = ((w.data as unknown) as { id: string; fin: string | null }[]) ?? [];
         const au = wf.length ? await supabase.from('werkstatt_auftraege').select('fahrzeug_id').in('fahrzeug_id', wf.map((x) => x.id)) : { data: [] };
@@ -141,17 +149,24 @@ export default function HandelsaktePage() {
   if (laden) return <div style={s.page}><p style={s.dim}>Lädt …</p></div>;
   if (!akte || !vorlage) return <div style={s.page}><a href="/dashboard/kfz/bestand" style={s.zurueck}>← Zum Bestand</a>{fehler && <div style={s.fehler}>{fehler}</div>}</div>;
 
+  const vArt = vorlage.art;
+  const art = stueckArt(akte, mitArt ? vArt : null);
+  const teile = akteTeile(art, mitArt);
+  const aDef = artDef(mitArt ? art : 'kfz');
+  const reiterAus = akteReiterAus(art, mitArt);
+  const sichtReiter = REITER.filter(([k]) => !reiterAus.includes(k));
+  const aktiverReiter: Reiter = reiterAus.includes(reiter) ? 'uebersicht' : reiter;
   const t = standtage(akte, tag);
   const st = vorlage.status.find((x) => x.key === akte.status) ?? { label: akte.status, farbe: 'dim' as const };
-  const ps = psAusKw(akte.leistung_kw);
-  const titel = [akte.marke, akte.modell, akte.variante].filter(Boolean).join(' ') || vorlage.einheit;
+  const ps = aDef.art === 'kfz' ? psAusKw(akte.leistung_kw) : null;
+  const titel = [akte.marke, akte.modell, akte.variante].filter(Boolean).join(' ') || aDef.begriffe.einheit;
   const entwurfFelder = {
     marke: akte.marke, modell: akte.modell, vk_brutto: akte.vk_brutto, status: akte.status,
     kraftstoff: en.kraftstoff || null, verbrauch_komb: leseZahl(en.verbrauch), verbrauch_einheit: en.einheit,
     co2_g_km: leseZahl(en.co2), co2_klasse: en.klasse || null, vorschaden: zust.vorschaden || null,
     inserat_titel: ins.titel, inserat_text: ins.text, inseriert: ins.inseriert, ausstattung: aus, fotos: fotoZahl,
   };
-  const ampel = inseratAmpel(entwurfFelder);
+  const ampel = inseratAmpel(entwurfFelder, teile.energie ? null : { merkmale: merkmaleZahl(art, akte.merkmale) });
   const fehlt = pflichtFehlt(entwurfFelder);
   const vorschlagKlasse = co2KlasseVorschlag(leseZahl(en.co2), en.kraftstoff);
   const verlauf = preisVerlauf(preise);
@@ -166,8 +181,8 @@ export default function HandelsaktePage() {
             <span style={{ ...s.pill, color: FARBE[standtageAmpel(t, vorlage.ampel)] }}>{t === null ? '—' : `${t} Standtage`}</span>
             <span style={{ ...s.pill, color: FARBE[ampel.stufe] }}>Inserat {ampel.prozent} %</span>
           </div>
-          <h1 style={s.h1}>{titel}</h1>
-          <div style={s.dim}>{akte.interne_nr ?? ''} · EZ {ezText(akte.erstzulassung)} · {akte.km_stand !== null ? `${akte.km_stand.toLocaleString('de-DE')} km` : '— km'}{ps ? ` · ${ps} PS (${akte.leistung_kw} kW)` : ''}{akte.kraftstoff ? ` · ${akte.kraftstoff}` : ''}</div>
+          <h1 style={s.h1}>{mitArt && aDef.art !== 'kfz' ? `${ART_SYMBOL[aDef.art]} ` : ''}{titel}</h1>
+          <div style={s.dim}>{mitArt ? akteUnterzeile(art, akte, ps) : `${akte.interne_nr ?? ''} · EZ ${ezText(akte.erstzulassung)} · ${akte.km_stand !== null ? `${akte.km_stand.toLocaleString('de-DE')} km` : '— km'}${ps ? ` · ${ps} PS (${akte.leistung_kw} kW)` : ''}${akte.kraftstoff ? ` · ${akte.kraftstoff}` : ''}`}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={s.preis}>{euro(akte.vk_brutto)}</div>
@@ -176,57 +191,66 @@ export default function HandelsaktePage() {
         </div>
       </div>
 
-      {treffer && <div style={s.hinweis}>🔧 Diese FIN kennt Ihre Werkstatt: {treffer.auftraege} {treffer.auftraege === 1 ? 'Auftrag' : 'Aufträge'} in der <a href="/dashboard/fahrzeugakte" style={{ color: C.info }}>Fahrzeugakte</a>. Nach dem Verkauf läuft die Lebensakte dort weiter.</div>}
+      {treffer && teile.finDienste && <div style={s.hinweis}>🔧 Diese FIN kennt Ihre Werkstatt: {treffer.auftraege} {treffer.auftraege === 1 ? 'Auftrag' : 'Aufträge'} in der <a href="/dashboard/fahrzeugakte" style={{ color: C.info }}>Fahrzeugakte</a>. Nach dem Verkauf läuft die Lebensakte dort weiter.</div>}
       {fehler && <div style={s.fehler} role="alert">{fehler}</div>}
       {ok && <div style={s.ok} role="status">{ok}</div>}
 
       <div style={s.reiter} role="tablist">
-        {REITER.map(([k, n]) => <button key={k} role="tab" aria-selected={reiter === k} style={reiter === k ? s.reiterAn : s.reiterAus} onClick={() => { setReiter(k); setOk(null); }}>{n}{k === 'energie' && fehlt.length ? ' ⚠' : ''}</button>)}
+        {sichtReiter.map(([k, n]) => <button key={k} role="tab" aria-selected={aktiverReiter === k} style={aktiverReiter === k ? s.reiterAn : s.reiterAus} onClick={() => { setReiter(k); setOk(null); }}>{n}{k === 'energie' && fehlt.length ? ' ⚠' : ''}</button>)}
       </div>
 
-      {reiter === 'uebersicht' && (
+      {aktiverReiter === 'uebersicht' && (
         <div style={s.raster}>
           {/* Paket 271 (K10): offene Anfragen und passende Suchaufträge */}
           <KfzAnfrageHinweis fz={{ id: akte.id, status: akte.status, marke: akte.marke, modell: akte.modell, vk_brutto: akte.vk_brutto, erstzulassung: akte.erstzulassung, km_stand: akte.km_stand, kraftstoff: akte.kraftstoff, sparte: akte.sparte }} />
-          <div style={s.karte}><h3 style={s.h3}>Fahrzeug</h3>
+          <div style={s.karte}><h3 style={s.h3}>{mitArt ? aDef.begriffe.einheit : 'Fahrzeug'}</h3>
             <dl style={s.kv}>
-              <dt>FIN</dt><dd style={s.mono}>{akte.fin ?? '—'}</dd><dt>Kennzeichen</dt><dd style={s.mono}>{akte.kennzeichen ?? '—'}</dd>
+              <dt>{mitArt ? aDef.begriffe.ident : 'FIN'}</dt><dd style={s.mono}>{mitArt ? kennungText(art, akte) : akte.fin ?? '—'}</dd>
+              {teile.hu && <><dt>Kennzeichen</dt><dd style={s.mono}>{akte.kennzeichen ?? '—'}</dd></>}
               <dt>Sparte</dt><dd>{akte.sparte ?? '—'}</dd><dt>Farbe</dt><dd>{akte.farbe ?? '—'}{akte.farbcode ? ` · ${akte.farbcode}` : ''}</dd>
-              <dt>Polster</dt><dd>{akte.polster ?? '—'}</dd><dt>Standort</dt><dd>{standort}</dd><dt>Eingang</dt><dd>{deDatum(akte.eingang_am)}</dd>
+              {teile.polster && <><dt>Polster</dt><dd>{akte.polster ?? '—'}</dd></>}<dt>Standort</dt><dd>{standort}</dd><dt>Eingang</dt><dd>{deDatum(akte.eingang_am)}</dd>
             </dl>
           </div>
+          {mitArt && aDef.merkmale.length > 0 && (
+            <div style={s.karte}><h3 style={s.h3}>Merkmale · {aDef.label}</h3>
+              <dl style={s.kv}>
+                {merkmaleListe(art, akte.merkmale).map((m) => <Fragment key={m.key}><dt>{m.label}{m.intern ? ' 🔒' : ''}</dt><dd style={m.gesetzt ? undefined : { color: C.dim }}>{m.text}</dd></Fragment>)}
+              </dl>
+              <div style={{ ...s.dim, marginTop: 8 }}>🔒 = intern, erscheint nie in Börse oder Inserat. Ändern über <a href={`/dashboard/kfz/bestand?bearbeiten=${akte.id}`} style={{ color: C.info }}>✎ Stammdaten</a>.</div>
+            </div>
+          )}
           <div style={s.karte}><h3 style={s.h3}>Zustand und Herkunft</h3>
             <div style={s.feldRaster}>
               <label style={s.lab}>Vorbesitzer<input style={s.inp} inputMode="numeric" value={zust.vorbesitzer} onChange={(e) => setZust({ ...zust, vorbesitzer: e.target.value })} /></label>
-              <label style={s.lab}>HU bis<input type="date" style={s.inp} value={zust.hu_bis} onChange={(e) => setZust({ ...zust, hu_bis: e.target.value })} /></label>
+              {teile.hu && <label style={s.lab}>HU bis<input type="date" style={s.inp} value={zust.hu_bis} onChange={(e) => setZust({ ...zust, hu_bis: e.target.value })} /></label>}
               <label style={s.lab}>Vorschäden<select style={s.inp} value={zust.vorschaden} onChange={(e) => setZust({ ...zust, vorschaden: e.target.value })}>
                 <option value="">nicht erfasst</option><option value="keine_bekannt">keine bekannt</option><option value="ja">ja (bitte beschreiben)</option><option value="unbekannt">unbekannt</option></select></label>
             </div>
             {zust.vorschaden === 'ja' && <label style={{ ...s.lab, marginTop: 8 }}>Welche Vorschäden?<textarea style={{ ...s.inp, minHeight: 60 }} value={zust.vorschaden_text} onChange={(e) => setZust({ ...zust, vorschaden_text: e.target.value })} /></label>}
             <button style={{ ...s.gold, marginTop: 10, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => {
               const vb = leseZahl(zust.vorbesitzer);
-              void speichern({ vorbesitzer: vb === null ? null : Math.max(0, Math.round(vb)), hu_bis: zust.hu_bis || null, vorschaden: zust.vorschaden || null, vorschaden_text: zust.vorschaden === 'ja' ? (zust.vorschaden_text.trim() || null) : null }, 'Zustand gespeichert.');
+              void speichern({ vorbesitzer: vb === null ? null : Math.max(0, Math.round(vb)), ...(teile.hu ? { hu_bis: zust.hu_bis || null } : {}), vorschaden: zust.vorschaden || null, vorschaden_text: zust.vorschaden === 'ja' ? (zust.vorschaden_text.trim() || null) : null }, 'Zustand gespeichert.');
             }}>💾 Speichern</button>
           </div>
           {/* Paket 276: Marktvergleich (eigene Vergleichsangebote, keine fremden Marktdaten) */}
           <KfzMarkt fz={{ id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, vk_brutto: akte.vk_brutto, km_stand: akte.km_stand, erstzulassung: akte.erstzulassung }} />
           {/* Paket 274: Fahrzeughistorie (carVertical u. a.) am Fahrzeug */}
-          <KfzHistorie id={akte.id} fin={akte.fin} werte={akte as unknown as { historie_url?: string | null; historie_anbieter?: string | null; historie_am?: string | null; historie_oeffentlich?: boolean | null }} onGespeichert={() => void lade()} />
+          {teile.finDienste && <KfzHistorie id={akte.id} fin={akte.fin} werte={akte as unknown as { historie_url?: string | null; historie_anbieter?: string | null; historie_am?: string | null; historie_oeffentlich?: boolean | null }} onGespeichert={() => void lade()} />}
           {/* Paket 283: Bewertung DAT/Schwacke (im eigenen Konto abgefragt, Werte von Hand übernommen) */}
-          <KfzBewertung id={akte.id} fin={akte.fin} vkBrutto={akte.vk_brutto} werte={akte as unknown as Partial<Bewertung>} onGespeichert={() => void lade()} />
+          {teile.bewertung && <KfzBewertung id={akte.id} fin={akte.fin} vkBrutto={akte.vk_brutto} werte={akte as unknown as Partial<Bewertung>} onGespeichert={() => void lade()} />}
           <div style={s.karte}><h3 style={s.h3}>Inserat auf einen Blick</h3>
             {ampel.punkte.map((p) => <div key={p.name} style={s.ampelZeile}><span>{p.name}</span><span style={{ color: p.ok ? C.ok : C.warn, textAlign: 'right' }}>{p.hinweis}</span></div>)}
           </div>
         </div>
       )}
 
-      {reiter === 'fotos' && <KfzMedien bestandId={akte.id} betrieb={(akte as unknown as { owner_user_id: string }).owner_user_id} onAnzahl={zaehle} />}
-      {reiter === 'inserat' && fotoZahl === 0 && <div style={s.hinweis}>Noch keine Fotos: Reiter „Fotos und Video" öffnen.</div>}
+      {aktiverReiter === 'fotos' && <KfzMedien bestandId={akte.id} betrieb={(akte as unknown as { owner_user_id: string }).owner_user_id} onAnzahl={zaehle} />}
+      {aktiverReiter === 'inserat' && fotoZahl === 0 && <div style={s.hinweis}>Noch keine Fotos: Reiter „Fotos und Video" öffnen.</div>}
 
-      {reiter === 'ausstattung' && (
+      {aktiverReiter === 'ausstattung' && (
         <div style={s.karte}>
-          <div style={{ ...s.dim, marginBottom: 10 }}>{aus.length} Merkmale gewählt. Dieselben Merkmale gehen später an alle Börsen (K11).</div>
-          {AUSSTATTUNG.map((g) => (
+          <div style={{ ...s.dim, marginBottom: 10 }}>{aus.length} Merkmale gewählt. Dieselben Merkmale gehen später an alle Börsen (K11).{teile.kfzAusstattung ? '' : ' Tragen Sie die Ausstattung als eigene Merkmale ein (z. B. Autopilot, Kartenplotter).'}</div>
+          {(teile.kfzAusstattung ? AUSSTATTUNG : []).map((g) => (
             <div key={g.gruppe} style={{ marginBottom: 12 }}>
               <div style={s.tag}>{g.gruppe}</div>
               <div style={s.chips}>{g.merkmale.map((m) => {
@@ -244,12 +268,12 @@ export default function HandelsaktePage() {
               onKeyDown={(e) => { if (e.key === 'Enter' && eigenesMerkmal.trim()) { setAus(merkmaleBereinigen([...aus, eigenesMerkmal])); setEigenesMerkmal(''); } }} aria-label="Eigenes Merkmal" />
             <button style={s.btn} onClick={() => { if (eigenesMerkmal.trim()) { setAus(merkmaleBereinigen([...aus, eigenesMerkmal])); setEigenesMerkmal(''); } }}>＋ Hinzufügen</button>
           </div>
-          <label style={{ ...s.lab, marginTop: 10, maxWidth: 320 }}>Polster<input style={s.inp} value={polster} onChange={(e) => setPolster(e.target.value)} placeholder="z. B. Leder Schwarz" /></label>
-          <button style={{ ...s.gold, marginTop: 10, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => void speichern({ ausstattung: merkmaleBereinigen(aus), polster: polster.trim() || null }, 'Ausstattung gespeichert.')}>💾 Ausstattung speichern</button>
+          {teile.polster && <label style={{ ...s.lab, marginTop: 10, maxWidth: 320 }}>Polster<input style={s.inp} value={polster} onChange={(e) => setPolster(e.target.value)} placeholder="z. B. Leder Schwarz" /></label>}
+          <button style={{ ...s.gold, marginTop: 10, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => void speichern({ ausstattung: merkmaleBereinigen(aus), ...(teile.polster ? { polster: polster.trim() || null } : {}) }, 'Ausstattung gespeichert.')}>💾 Ausstattung speichern</button>
         </div>
       )}
 
-      {reiter === 'energie' && (
+      {aktiverReiter === 'energie' && (
         <div style={s.karte}>
           <div style={{ ...s.dim, marginBottom: 10 }}>Diese Angaben gehören in jedes Inserat eines neuen bzw. jungen Pkw. Übernehmen Sie die Werte aus dem Datenblatt.</div>
           <div style={s.feldRaster}>
@@ -269,12 +293,12 @@ export default function HandelsaktePage() {
         </div>
       )}
 
-      {reiter === 'inserat' && (
+      {aktiverReiter === 'inserat' && (
         <div style={s.raster}>
           <div style={s.karte}>
             <h3 style={s.h3}>Titel und Beschreibung</h3>
             <label style={s.lab}>Titel<input style={s.inp} value={ins.titel} maxLength={120} onChange={(e) => setIns({ ...ins, titel: e.target.value })} /></label>
-            {!ins.titel.trim() && <button style={{ ...s.btn, marginTop: 6 }} onClick={() => setIns({ ...ins, titel: titelVorschlag({ marke: akte.marke, modell: akte.modell, variante: akte.variante, ps, kraftstoff: akte.kraftstoff }) })}>Titel aus Stammdaten vorschlagen</button>}
+            {!ins.titel.trim() && <button style={{ ...s.btn, marginTop: 6 }} onClick={() => setIns({ ...ins, titel: titelVorschlag({ marke: akte.marke, modell: akte.modell, variante: akte.variante, ps, kraftstoff: teile.energie ? akte.kraftstoff : null }) })}>Titel aus Stammdaten vorschlagen</button>}
             <div style={{ display: 'grid', gap: 6, margin: '10px 0' }}>
               <div style={s.tag}>Titel-Wächter</div>
               {titelPruefen(ins.titel, zust.vorschaden || akte.vorschaden).map((h, i) => <div key={i} style={{ color: FARBE[h.stufe], fontSize: 13.5 }}>● {h.text}</div>)}
@@ -283,7 +307,7 @@ export default function HandelsaktePage() {
             <div style={s.dim}>{ins.text.trim().length} Zeichen</div>
             <label style={{ ...s.haken, marginTop: 8 }}><input type="checkbox" checked={ins.inseriert} onChange={(e) => setIns({ ...ins, inseriert: e.target.checked })} /> Inserat ist online</label>
             {/* Paket 272: Hinweis auf die eigene Fahrzeugbörse */}
-            <div style={s.dim}>Erscheint in Ihrer Fahrzeugbörse, sobald diese eingeschaltet ist (Fahrzeugbestand → 🌐 Fahrzeugbörse) und das Fahrzeug im Bestand, in der Aufbereitung oder im Zulauf steht.</div>
+            <div style={s.dim}>Erscheint in Ihrer {mitArt && aDef.art !== 'kfz' ? 'Börse' : 'Fahrzeugbörse'}, sobald diese eingeschaltet ist (Fahrzeugbestand → 🌐 Fahrzeugbörse) und das Fahrzeug im Bestand, in der Aufbereitung oder im Zulauf steht.</div>
             <button style={{ ...s.gold, marginTop: 10, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => void speichern({ inserat_titel: ins.titel.trim() || null, inserat_text: ins.text.trim() || null, inseriert: ins.inseriert }, 'Inserat gespeichert.')}>💾 Speichern</button>
           </div>
           <div style={s.karte}>
@@ -295,7 +319,7 @@ export default function HandelsaktePage() {
         </div>
       )}
 
-      {reiter === 'kalk' && (
+      {aktiverReiter === 'kalk' && (
         <KfzKalkulation f={{
           id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, ek_netto: akte.ek_netto, vk_brutto: akte.vk_brutto,
           besteuerung: akte.besteuerung, standtageJetzt: t, standtagePlanStandard: vorlage.ampel.gruenBis, standkostenTag: vorlage.standkostenTag,
@@ -303,7 +327,7 @@ export default function HandelsaktePage() {
         }} />
       )}
 
-      {reiter === 'verkauf' && (
+      {aktiverReiter === 'verkauf' && (
         <KfzVerkauf onGeaendert={() => void lade()} f={{
           id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, bestandStatus: akte.status,
           fz: {
@@ -315,7 +339,7 @@ export default function HandelsaktePage() {
         }} />
       )}
 
-      {reiter === 'probefahrt' && (
+      {aktiverReiter === 'probefahrt' && (
         <KfzProbefahrt onGeaendert={() => void lade()} f={{
           id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id,
           fz: { interne_nr: akte.interne_nr, marke: akte.marke, modell: akte.modell, fin: akte.fin, kennzeichen: akte.kennzeichen, km_stand: akte.km_stand },
@@ -323,7 +347,7 @@ export default function HandelsaktePage() {
       )}
 
       {/* Paket 277: Brief-Tresor, Zulassung, Aufbereitung */}
-      {reiter === 'tresor' && (
+      {aktiverReiter === 'tresor' && (
         <KfzTresor onGeaendert={() => void lade()} fz={{
           id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id, status: akte.status,
           interne_nr: akte.interne_nr, marke: akte.marke, modell: akte.modell, kennzeichen: akte.kennzeichen, fin: akte.fin, km_stand: akte.km_stand,
@@ -331,14 +355,14 @@ export default function HandelsaktePage() {
       )}
 
       {/* Paket 278: K18 Partner-Netzwerk — Auftrag am Fahrzeug an einen verbundenen Betrieb */}
-      {reiter === 'partner' && (
+      {aktiverReiter === 'partner' && (
         <KfzPartner fz={{
           id: akte.id, owner_user_id: (akte as unknown as { owner_user_id: string }).owner_user_id,
           marke: akte.marke, modell: akte.modell, fin: akte.fin, km_stand: akte.km_stand,
         }} />
       )}
 
-      {reiter === 'preis' && (
+      {aktiverReiter === 'preis' && (
         <div style={s.karte}>
           <h3 style={s.h3}>Preisverlauf</h3>
           {verlauf.punkte.length === 0 ? <div style={s.dim}>Noch kein Preis gesetzt.</div> : (
@@ -354,7 +378,7 @@ export default function HandelsaktePage() {
         </div>
       )}
 
-      {reiter === 'historie' && (
+      {aktiverReiter === 'historie' && (
         <div style={s.karte}>
           <h3 style={s.h3}>Verlauf</h3>
           <ul style={s.zeitstrahl}>
