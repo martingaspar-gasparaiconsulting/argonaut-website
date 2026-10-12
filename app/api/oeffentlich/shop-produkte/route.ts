@@ -23,6 +23,8 @@ import {
   TEXT_DE, angeboteneSprachen, oberflaecheFuer, produktText, waehleSprache,
   type SpracheZeile, type UebersetzungZeile,
 } from '@/lib/shopSprachen';
+import { gefahrFuerShop } from '@/lib/shopGefahr';
+import { startFrei } from '@/lib/startSperre';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -116,6 +118,17 @@ export async function GET(req: Request) {
     }
     const info = spracheFuer(sprache)!;
 
+    // Paket 326 (S2): Gefahr-Angaben nur bestätigt und nur nach Freigabe (startSperre „gefahrstoffShop", R49).
+    const gefahrFrei = startFrei('gefahrstoffShop');
+    const gefahrJe: Record<string, Record<string, unknown>> = {};
+    if (gefahrFrei && rows.length) {
+      const { data: gz, error: gzFehler } = await db.from('artikel_gefahr')
+        .select('artikel_id, piktogramme, signalwort, h_saetze, p_saetze, un_nummer, ufi, keine_kennzeichnung, status')
+        .eq('owner_user_id', inh.owner_user_id as string).eq('status', 'bestaetigt')
+        .in('artikel_id', rows.map((r) => r.id)).limit(1000);
+      if (!gzFehler) for (const g of (gz as Record<string, unknown>[]) ?? []) gefahrJe[String(g.artikel_id)] = g;
+    }
+
     // Paket 317 (S3a): Preis-Basis des Betriebs und Geschäftskunde aus dem Link (Kopfzeile x-shop-konto).
     const betrieb = inh.owner_user_id as string;
     const basis = await ladePreisBasis(db, betrieb);
@@ -133,6 +146,7 @@ export async function GET(req: Request) {
       bestand: r.aktueller_bestand == null ? null : Number(r.aktueller_bestand),
       mwst: shopMwst(r.shop_mwst),
       dokumente: shopDokumente(dokJe[r.id] ?? [], heute, sprache),
+      ...gefahr(r.id),
     }));
 
     return NextResponse.json({
@@ -146,6 +160,12 @@ export async function GET(req: Request) {
       ...(kunde ? { konto: { name: kunde.name, netto: true, auf_rechnung: kunde.auf_rechnung, zahlungsziel: kunde.zahlungsziel_tage } } : {}),
       ...(token && !kunde ? { konto_ungueltig: true } : {}),
     }, { headers: { 'Cache-Control': 'no-store' } });
+
+    /** Paket 326: Gefahr-Angaben (deutsch) — nur wenn vorhanden. */
+    function gefahr(id: string) {
+      const g = gefahrFuerShop(gefahrJe[id] as Parameters<typeof gefahrFuerShop>[0], gefahrFrei);
+      return g ? { gefahr: g } : {};
+    }
 
     /** Paket 324: Name und Beschreibung — freigegebene, aktuelle Übersetzung oder vollständig Deutsch. */
     function text(r: ArtikelRow) {

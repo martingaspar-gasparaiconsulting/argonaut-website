@@ -231,6 +231,7 @@
     h += '</div><div class="ao-wk-summe"><span>' + TH(konto ? 'summe_netto' : 'summe') + '</span><b>' + eur(summe(w)) + '</b></div>';
     h += '<div class="ao-wk-rechtshinweis">' + TH(konto ? 'hinweis_netto' : 'hinweis_brutto') + '</div>';
     if (sprache !== 'de') h += '<div class="ao-wk-rechtshinweis">' + TH('rechtstexte') + '</div>';
+    h += gefahrKasse(w);
     h += '<form class="ao-wk-kasse" novalidate>'
       + '<div class="ao-wk-feld"><label>' + TH(konto ? 'feld_ansprechpartner' : 'feld_name') + '</label><input name="besteller" required autocomplete="name"></div>'
       + '<div class="ao-wk-zwei"><div class="ao-wk-feld"><label>' + TH('feld_email') + '</label><input type="email" name="email" autocomplete="email" dir="ltr"></div><div class="ao-wk-feld"><label>' + TH('feld_telefon') + '</label><input name="telefon" autocomplete="tel" dir="ltr"></div></div>'
@@ -315,6 +316,56 @@
     return t;
   }
 
+  // --- Paket 326 (S2): Gefahr-Angaben (CLP). Kommen nur bestätigt und nur nach Freigabe vom Server.
+  // Bewusst immer Deutsch (Kennzeichnung in der Landessprache), unabhängig von der Shop-Sprache.
+  function rauten(g) {
+    var h = '', i, p;
+    for (i = 0; i < g.piktogramme.length; i++) {
+      p = g.piktogramme[i];
+      h += '<span class="ao-ghs" title="' + esc(p.key + ' ' + p.label) + '" role="img" aria-label="' + esc('Gefahrenpiktogramm ' + p.label) + '">'
+        + '<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="8" y="8" width="24" height="24" transform="rotate(45 20 20)" fill="#fff" stroke="#d0021b" stroke-width="3"/>'
+        + '<text x="20" y="23" text-anchor="middle" font-size="8" font-weight="700" fill="#1a2433">' + esc(p.key.replace('GHS', '')) + '</text></svg>'
+        + '<span>' + esc(p.label) + '</span></span>';
+    }
+    return h;
+  }
+  function gefahrHtml(p) {
+    var g = p && p.gefahr;
+    if (!g || !g.piktogramme) return '';
+    var h = '<div class="ao-gefahr" lang="de" dir="ltr">', i;
+    if (g.piktogramme.length) h += '<div class="ao-ghs-reihe">' + rauten(g) + '</div>';
+    if (g.signalwort) h += '<div class="ao-signal">' + esc(g.signalwort) + '</div>';
+    if (g.h && g.h.length) {
+      h += '<ul class="ao-hsaetze">';
+      for (i = 0; i < g.h.length; i++) h += '<li><b>' + esc(g.h[i].code) + '</b> ' + esc(g.h[i].text) + '</li>';
+      h += '</ul>';
+    }
+    if (g.p && g.p.length) {
+      h += '<details class="ao-psaetze"><summary>Sicherheitshinweise (' + g.p.length + ')</summary><ul>';
+      for (i = 0; i < g.p.length; i++) h += '<li><b>' + esc(g.p[i].code) + '</b> ' + esc(g.p[i].text) + '</li>';
+      h += '</ul></details>';
+    }
+    var z = [];
+    if (g.un) z.push(esc(g.un));
+    if (g.ufi) z.push('UFI: ' + esc(g.ufi));
+    if (z.length) h += '<div class="ao-gefahr-zusatz">' + z.join(' · ') + '</div>';
+    return h + '</div>';
+  }
+  /** Vor dem Bestellknopf: alle Produkte im Warenkorb mit Gefahr-Angaben, kurz. */
+  function gefahrKasse(w) {
+    var h = '', i, p, g, k, codes;
+    for (i = 0; i < w.length; i++) {
+      p = produkt(w[i].id); g = p && p.gefahr;
+      if (!g) continue;
+      codes = [];
+      for (k = 0; k < (g.h || []).length; k++) codes.push(esc(g.h[k].code) + ' ' + esc(g.h[k].text));
+      h += '<div class="ao-gefahr-kasse-zeile"><div class="ao-ghs-reihe">' + rauten(g) + '</div><div><b>' + esc(p.name) + '</b>'
+        + (g.signalwort ? ' · <span class="ao-signal">' + esc(g.signalwort) + '</span>' : '')
+        + (codes.length ? '<div class="ao-gefahr-codes">' + codes.join(' · ') + '</div>' : '') + '</div></div>';
+    }
+    return h ? '<div class="ao-gefahr-kasse" lang="de" dir="ltr"><b>Gefahrenhinweise zu Ihrer Bestellung</b>' + h + '</div>' : '';
+  }
+
   // --- Paket 317: Staffeln und Mengen-Hinweis ---
   function staffeln(p) {
     if (!konto || !p.staffeln || p.staffeln.length < 2) return '';
@@ -344,6 +395,7 @@
         + (p.bild ? '<div class="ao-prod-bild" style="background-image:url(' + encodeURI(p.bild) + ')"></div>' : '<div class="ao-prod-bild ao-prod-kein"></div>')
         + '<div class="ao-prod-body"><div class="ao-prod-name"' + (p.uebersetzt || sprache === 'de' ? '' : ' lang="de" dir="ltr"') + '>' + esc(p.name) + '</div>'
         + (p.beschreibung ? '<div class="ao-prod-text"' + (p.uebersetzt || sprache === 'de' ? '' : ' lang="de" dir="ltr"') + '>' + esc(p.beschreibung) + '</div>' : '')
+        + gefahrHtml(p)
         + doks(p)
         + staffeln(p)
         + mengeHinweis(p)

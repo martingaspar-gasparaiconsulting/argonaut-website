@@ -266,3 +266,20 @@ export function shopAnzeige(a: GefahrAngaben): {
     ufi: a.ufi,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Paket 326: was das Schaufenster bekommt
+// ---------------------------------------------------------------------------
+
+/**
+ * Gefahr-Angaben für den Shop — nur wenn der Start-Schalter frei ist UND ein
+ * Mensch bestätigt hat. Alles andere: null (der Shop zeigt dann nichts an).
+ * Die Kennzeichnung bleibt deutsch (Etikett in der Landessprache).
+ */
+export function gefahrFuerShop(
+  z: (Partial<GefahrAngaben> & { status?: string | null }) | null | undefined,
+  frei: boolean,
+): ReturnType<typeof shopAnzeige> {
+  if (!frei || !z || z.status !== 'bestaetigt') return null;
+  return shopAnzeige(sauber(z));
+}
