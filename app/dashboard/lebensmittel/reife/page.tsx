@@ -8,6 +8,8 @@
 // Vorgaben je Art sind Startwerte — der Betrieb trägt seine eigenen ein.
 // Rechnen: lib/reife.ts (Tests: tests/reifeP339.test.mjs).
 // Pfad: Unterpfad von /dashboard/lebensmittel, erbt dessen Freigabe.
+// Paket 340: Kalkulation mit Reifeverlust je Charge (ReifeKalkBox, Tabelle
+// reife_kalk) — nur Geschäftsleitung oder „Darf abrechnen" (kalkErlaubt).
 // ============================================================
 
 import { useState, useEffect, useMemo, useCallback, CSSProperties } from 'react';
@@ -20,6 +22,9 @@ import {
   type ReifeStand, type ReifeStufe, type ReifeMessung,
 } from '@/lib/reife';
 import Leerzustand from '../../_components/Leerzustand';
+import { useDarfAbrechnen } from '../../_components/useDarfAbrechnen';
+import ReifeKalkBox from './ReifeKalkBox';
+import { planKalk, preisEinheit, type ReifeKalk } from '@/lib/reifeKalk';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -75,6 +80,27 @@ export default function ReifeUhrPage() {
   const [mentwurf, setMentwurf] = useState<MEntwurf>(leerMessung(tag));
   const [abschluss, setAbschluss] = useState<{ id: string; art: 'abgeschlossen' | 'verworfen'; menge: string } | null>(null);
   const [loeschFrage, setLoeschFrage] = useState<string | null>(null);
+  const kalkErlaubt = useDarfAbrechnen() === true;
+  const [kalk, setKalk] = useState<Record<string, ReifeKalk>>({});
+  const [kalkSqlFehlt, setKalkSqlFehlt] = useState(false);
+
+  const ladeKalk = useCallback(async () => {
+    if (!kalkErlaubt) { setKalk({}); return; }
+    const { data, error } = await supabase.from('reife_kalk')
+      .select('charge_id, ek_art, ek_wert, kosten_tag, kosten_sonst, parier_prozent, erwarteter_verlust, marge_prozent, mwst_satz, vk_preis').limit(5000);
+    if (error) { setKalkSqlFehlt(true); setKalk({}); return; }
+    setKalkSqlFehlt(false);
+    const je: Record<string, ReifeKalk> = {};
+    for (const z of ((data as unknown) as (Record<string, unknown> & { charge_id: string })[]) ?? []) {
+      je[z.charge_id] = {
+        ek_art: (z.ek_art as string) ?? 'je_einheit', ek_wert: num(z.ek_wert), kosten_tag: num(z.kosten_tag), kosten_sonst: num(z.kosten_sonst),
+        parier_prozent: num(z.parier_prozent), erwarteter_verlust: num(z.erwarteter_verlust), marge_prozent: num(z.marge_prozent),
+        mwst_satz: num(z.mwst_satz), vk_preis: num(z.vk_preis),
+      };
+    }
+    setKalk(je);
+  }, [kalkErlaubt]);
+  useEffect(() => { void ladeKalk(); }, [ladeKalk]);
 
   const lade = useCallback(async () => {
     const { data: u } = await supabase.auth.getUser();
@@ -297,6 +323,10 @@ export default function ReifeUhrPage() {
                   {z.letzte && <span><span style={s.dim}>zuletzt</span> {zahl(z.letzte.menge, 3)} {c.einheit} ({datumText(z.letzte.datum)})</span>}
                   {z.verlust !== null && <span><span style={s.dim}>Reifeverlust</span> <b style={{ color: z.verlust < 0 ? C.warn : C.text }}>{zahl(z.verlust)} %</b>{z.verlust < 0 ? ' (Zunahme — Wiegung prüfen)' : ''}</span>}
                   {c.lagerort && <span><span style={s.dim}>Lagerort</span> {c.lagerort}</span>}
+                  {kalkErlaubt && kalk[c.id] && (() => {
+                    const p = planKalk(c, kalk[c.id]);
+                    return p.ok ? <span><span style={s.dim}>Einstand (Plan)</span> {p.e.einstand.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}/{preisEinheit(c.einheit).einheit}</span> : null;
+                  })()}
                   {z.abw > 0 && <span style={{ color: C.warn }}>⚠ {z.abw} {z.abw === 1 ? 'Messung' : 'Messungen'} außerhalb des Soll-Klimas</span>}
                   {z.ohne !== null && z.ohne >= 7 && <span style={{ color: C.warn }}>seit {z.ohne} Tagen nicht gemessen</span>}
                 </div>
@@ -355,6 +385,11 @@ export default function ReifeUhrPage() {
                         </table>
                       </div>
                     ) : <p style={s.dim}>Noch keine Messung.</p>}
+
+                    {kalkErlaubt && !kalkSqlFehlt && (
+                      <ReifeKalkBox charge={c} gespeichert={kalk[c.id] ?? null} letzteMenge={z.letzte?.menge ?? null} heute={tag} onGespeichert={ladeKalk} />
+                    )}
+                    {kalkErlaubt && kalkSqlFehlt && <div style={s.hinweis}>Die Kalkulation ist noch nicht eingerichtet (SQL Paket 340 fehlt).</div>}
 
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {c.status === 'reift' && <button style={s.btnAus} disabled={busy} onClick={() => void status(c, 'bereit')}>✓ Als bereit markieren</button>}
