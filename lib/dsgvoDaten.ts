@@ -116,6 +116,7 @@ export const DATEN_ORTE: DatenOrt[] = [
   { tabelle: 'angebote', label: 'Angebote', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
   { tabelle: 'verkaufschancen', label: 'Verkaufschancen', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
   { tabelle: 'crm_deal', label: 'Deals', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
+  { tabelle: 'vk_anruf', label: 'Anrufe (Anruf-Sitzung)', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
   { tabelle: 'shop_bestellungen', label: 'Shop-Bestellungen', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
   { tabelle: 'versand_sendung', label: 'Sendungen', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
   { tabelle: 'kfz_fahrzeuge', label: 'KFZ-Fahrzeuge', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },

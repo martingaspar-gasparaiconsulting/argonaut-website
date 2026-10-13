@@ -199,6 +199,9 @@ export default function AkquisePage() {
         <b style={{ color: C.text }}> wie viele Anrufe ein Termin kostet</b>. Genau diese Zahl
         macht Vertrieb planbar und übergebbar.
       </p>
+      <a href="/dashboard/akquise/sitzung" style={{ display: 'inline-block', marginBottom: 18, background: C.gold, color: C.navy, borderRadius: 10, padding: '10px 16px', fontWeight: 800, textDecoration: 'none' }}>
+        ☎️ Anruf-Sitzung starten — eine Person nach der anderen
+      </a>
 
       {fehler && (
         <div style={{ background: 'rgba(224,102,102,0.12)', border: `1px solid ${C.rot}`, borderRadius: 12, padding: '12px 14px', marginBottom: 16, fontSize: 13.5 }}>

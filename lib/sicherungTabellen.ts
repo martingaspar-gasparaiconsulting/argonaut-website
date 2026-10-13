@@ -142,6 +142,8 @@ export const WEITERE_TABELLEN: string[] = [
   'vk_funktion',
   // Paket 359 (VK1 Teil 2): eigene Pipelines und ihre Stufen
   'crm_pipeline', 'crm_pipeline_stufe',
+  // Paket 360 (VK4): Anruf-Sitzung — jeder Anruf mit Ergebnis
+  'vk_anruf',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

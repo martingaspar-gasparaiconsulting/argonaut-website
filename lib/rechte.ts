@@ -141,6 +141,7 @@ export const NAV_LINKS: NavLink[] = [
   // ueberschreiben. `immer: true` heisst: jeder erfasst seine eigene Arbeit —
   // wie bei „Meine Einsaetze". Wer was sieht, entscheidet RLS.
   { label: '📞 Akquise-Cockpit', href: '/dashboard/akquise', immer: true, ebene: 4, gruppe: 'vertrieb' },
+  { label: '☎️ Anruf-Sitzung', href: '/dashboard/akquise/sitzung', immer: true, ebene: 4, gruppe: 'vertrieb' },
   { label: '📣 Marketing', href: '/dashboard/marketing', modul: 'marketing', ebene: 3, gruppe: 'vertrieb' },
   // Freebie-Baukasten: haengt am Marketing-Recht, bekommt aber KEINEN eigenen
   // Modul-Schluessel — sonst wuerde er in MODUL_PFAD den Pfad von
