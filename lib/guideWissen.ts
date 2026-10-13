@@ -2878,6 +2878,22 @@ export const WISSEN: Record<string, SeitenWissen> = {
     ],
     probe: { anlegen: 'Eine Tiergruppe „Test" mit Bestand 0 anlegen.', loeschen: 'Löschen gibt es hier nicht — die Gruppe bleibt in der Liste. Für Probe-Einträge besser die Übungswelt nutzen.' },
   },
+  '/dashboard/tierbestand/arznei': {
+    zweck: 'Arzneimittel-Bestandsbuch für Nutztiere: Erwerb und Anwendung von Tierarzneimitteln je Tiergruppe, mit Wartezeiten für Fleisch, Milch und Eier, „frei ab"-Datum, Fristen, Halbjahres-Übersicht der Antibiotika und Druck.',
+    wer: 'beide',
+    werText: 'Wer das Modul „Tierbestand" sehen darf, liest mit; eintragen braucht das Schreibrecht „Tierbestand". Stornieren (mit Grund) darf nur die Geschäftsleitung. Löschen gibt es nicht.',
+    schritte: [
+      'Reiter „📦 Erwerb": „+ Erwerb eintragen" — Datum, Arzneimittel, Menge mit Einheit und „Bezogen von" (Tierarztpraxis oder Apotheke) sind Pflicht; Zulassungsnummer, Charge, Beleg-Nr. und Verfallsdatum möglichst mit eintragen',
+      'Reiter „💉 Anwendungen": „+ Anwendung eintragen" — Tiergruppe aus dem Tierbestand, Anzahl Tiere, Kennzeichnung (z. B. Ohrmarken), Arzneimittel (oder „Aus Erwerb" wählen), Beleg-Nr. des Tierarztes, Menge, erster und letzter Behandlungstag',
+      'Wartezeiten in Tagen vom tierärztlichen Beleg bzw. der Packungsbeilage übernehmen: Fleisch, Milch, Eier — nicht zutreffende Felder leer lassen, „0" wenn keine Wartezeit gilt. Mindestens eine ist Pflicht',
+      '„frei ab" rechnet ARGONAUT: letzter Behandlungstag plus Wartezeit. Der Reiter „🚦 Überblick" zeigt, welche Gruppe gerade für welches Erzeugnis gesperrt ist, und die Fristen (Wartezeit-Ende in 14 Tagen, Antibiotika-Mitteilung, Verfall)',
+      'Antibiotika: Haken „Antibiotikum" setzen. Der Reiter „🧫 Antibiotika" fasst je Halbjahr Anwendungen, Tiere, Behandlungstage und Menge zusammen (CSV) — die Mitteilung selbst machen Sie in der HIT-Antibiotika-Datenbank, falls Ihr Betrieb mitteilungspflichtig ist',
+      'Ein Eintrag bleibt, wie er ist. Ist etwas falsch: Geschäftsleitung „stornieren" mit Grund, dann den richtigen Eintrag neu anlegen',
+      'Reiter „🖨️ Bestandsbuch drucken": Zeitraum und optional eine Tiergruppe wählen — Stornierte erscheinen durchgestrichen mit Grund',
+    ],
+    probe: { anlegen: 'Einen Erwerb „Test" mit 1 ml eintragen.', loeschen: 'Löschen gibt es nicht — die Geschäftsleitung storniert den Probe-Eintrag mit Grund „Probe"; er bleibt durchgestrichen sichtbar. Für Probe-Einträge besser die Übungswelt nutzen.' },
+    vorher: [{ text: 'Tiergruppen im Tierbestand', href: '/dashboard/tierbestand' }],
+  },
 
   '/dashboard/verein': {
     zweck: 'Die Vereinsverwaltung mit zwei Reitern: „👥 Mitglieder“ mit Beitrag und Beitragsvolumen pro Jahr, „🎪 Veranstaltungen“ mit Teilnehmerzahl und Ehrenamt-Stunden. Oben führen zwei Knöpfe zu den Mitgliederversammlungen und zum Ehrenamt.',

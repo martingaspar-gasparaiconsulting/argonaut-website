@@ -193,6 +193,19 @@ export const VERFAHREN_KATALOG: VerfahrenVorschlag[] = [
     tom: TOM_STANDARD + ' Wiegescheine nach Abschluss unveraenderbar (Storno nur mit Grund durch die Geschaeftsleitung); Wiegezeiten vom Server.',
   },
   {
+    // Paket 357 (13.10.2026): Arzneimittel-Bestandsbuch (Fachpaket Tierhaltung)
+    wenn: 'tierbestand',
+    name: 'Arzneimittel-Bestandsbuch fuer Nutztiere (Tierhaltung)',
+    zweck: 'Nachweis von Erwerb und Anwendung von Tierarzneimitteln bei lebensmittelliefernden Tieren, Einhaltung der Wartezeiten.',
+    rechtsgrundlage: 'Art. 6 Abs. 1 lit. c DSGVO (tierarzneimittelrechtliche Nachweispflichten des Tierhalters), § 26 Abs. 1 BDSG fuer Beschaeftigtendaten',
+    kategorien_betroffene: 'Beschaeftigte und Familienangehoerige, die Mittel anwenden; Tierarztpraxen und Apotheken als Lieferanten',
+    kategorien_daten: 'Name der anwendenden Person, Name der Tierarztpraxis bzw. Apotheke, Belegnummern, Name der erfassenden Person mit Zeitpunkt; zu den Tieren Gruppe, Kennzeichnung, Mittel, Menge und Wartezeit (keine personenbezogenen Daten)',
+    empfaenger: 'Veterinaeramt auf Anforderung, ' + EMPF_BASIS,
+    drittland: KEIN_DRITTLAND,
+    loeschfrist: 'Vorschlag: 5 Jahre nach dem Eintrag (Aufbewahrungspflicht fuer Nachweise ueber Tierarzneimittel). Vom Betrieb anzupassen.',
+    tom: TOM_STANDARD + ' Eintraege sind nur anhaengbar (keine Aenderung, kein Loeschen durch Nutzer; Storno nur mit Grund durch die Geschaeftsleitung); Zeitstempel vom Server.',
+  },
+  {
     wenn: 'marketing',
     name: 'Newsletter und Direktwerbung',
     zweck: 'Versand von Informationen und Angeboten an Interessenten und Kunden, Messung der Wirkung.',

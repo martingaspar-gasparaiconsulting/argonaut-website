@@ -136,6 +136,8 @@ export const WEITERE_TABELLEN: string[] = [
   'abfall_schluessel', 'container_auftrag', 'container_bestand', 'wiegeschein',
   // Paket 356 (A4c Teil 2): Abfallregister und ADR-Befoerderungspapiere
   'abfall_register', 'adr_papier',
+  // Paket 357 (A4d): Tierhaltung — Arzneimittel-Bestandsbuch (Erwerb, Anwendung)
+  'tier_arznei_anwendung', 'tier_arznei_eingang',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

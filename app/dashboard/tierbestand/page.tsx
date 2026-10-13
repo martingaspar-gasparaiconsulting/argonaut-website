@@ -209,6 +209,8 @@ export default function TierbestandPage() {
       <div style={styles.eyebrow}>ARGONAUT OS · Tierbestand</div>
       <h1 style={styles.h1}>🐄 Tierbestand & HIT-Meldung</h1>
       <p style={styles.sub}>Bestände, Zu- und Abgänge und Stichtagsmeldungen an einem Ort — mit Melde-Ampel für die 7-Tage-Frist an HI-Tier, damit keine Meldung durchrutscht.</p>
+      {/* Paket 357: Arzneimittel-Bestandsbuch je Tiergruppe */}
+      <p style={{ margin: '0 0 14px' }}><a href="/dashboard/tierbestand/arznei" style={{ color: C.gold, fontSize: 13.5, fontWeight: 600 }}>💊 Arzneimittel-Bestandsbuch mit Wartezeiten →</a></p>
 
       {fehler && <div style={styles.err}>{fehler}</div>}
       {ok && <div style={styles.ok}>{ok}</div>}

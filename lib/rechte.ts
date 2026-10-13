@@ -329,6 +329,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🌾 Schlagkartei', href: '/dashboard/schlagkartei', modul: 'schlagkartei', ebene: 3, gruppe: 'betrieb' },
   { label: '🧺 Ernte & Direktvermarktung', href: '/dashboard/ernte', modul: 'ernte', ebene: 3, gruppe: 'betrieb' },
   { label: '🐄 Tierbestand', href: '/dashboard/tierbestand', modul: 'tierbestand', ebene: 3, gruppe: 'betrieb' },
+  // Paket 357 (13.10.26): Arzneimittel-Bestandsbuch mit Wartezeiten — Unterpfad von /dashboard/tierbestand.
+  { label: '💊 Arznei-Bestandsbuch', href: '/dashboard/tierbestand/arznei', modul: 'tierbestand', ebene: 3, gruppe: 'betrieb' },
   { label: '⚖️ Akten & Fristen', href: '/dashboard/fristen', modul: 'fristen', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Zuschnitt', href: '/dashboard/zuschnitt', modul: 'zuschnitt', ebene: 3, gruppe: 'betrieb' },
   { label: '❤️ Spenden', href: '/dashboard/spenden', modul: 'spenden', ebene: 3, sensibel: true, gruppe: 'finanzen' },
