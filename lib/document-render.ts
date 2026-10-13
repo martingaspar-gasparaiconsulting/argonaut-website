@@ -3,7 +3,7 @@
 // Wandelt ein DocumentTemplate + Nutzerdaten in das Format um, das
 // buildDocx / buildXlsx aus lib/document-engine.ts erwarten.
 // -----------------------------------------------------------------------------
-import { getTemplate, type DocumentTemplate } from "@/lib/document-templates";
+import { getTemplate, RECHTLICH_PRUEFEN, HINWEIS_RECHTLICH, type DocumentTemplate } from "@/lib/document-templates";
 import type { DocxParagraph, XlsxColumn } from "@/lib/document-engine";
 import { leseZahlOder } from './zahlen';
 
@@ -142,6 +142,8 @@ export function renderDocument(templateId: string, data: Record<string, any>): R
 
   // pdf / docx: Titel + Paragraphen --------------------------------------------
   const paragraphs: DocxParagraph[] = [];
+  // Paket 349: Dokumente mit Rechtswirkung tragen oben den Entwurfs-Hinweis.
+  if (RECHTLICH_PRUEFEN.has(tpl.id)) paragraphs.push({ text: HINWEIS_RECHTLICH, bold: true });
   for (const f of tpl.felder) {
     const v = data[f.key];
     if (v === undefined || v === null || v === "") continue;

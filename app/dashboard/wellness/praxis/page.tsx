@@ -20,8 +20,9 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, CSSProperties, type PointerEvent } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { ladeRechtstext } from '@/lib/rechtsTexteLaden';
 import {
-  berlinTag, datumDe, berlinZeit, EINWILLIGUNGEN, EINWILLIGUNG_VERSION, KANAELE, einwilligungText, einwilligungStand,
+  berlinTag, datumDe, berlinZeit, EINWILLIGUNGEN, EINWILLIGUNG_VERSION, KANAELE, einwilligungText, einwilligungStand, praxisRechtstext,
   darfErinnern, ausfallVereinbarungAm, pruefeAusfall, ausfallSchreiben, pruefeEinwilligung, recallListe, recallText,
   RECALL_VORSCHLAEGE, RECALL_LABEL, AUSFALL_LABEL, NOTIZ_ARTEN, NOTIZ_MAX, unterschriftGueltig,
   type EinwilligungArt, type EinwilligungDaten, type EinwilligungZeile, type Kanal, type RecallEinstellung, type RecallStatus, type AusfallErgebnis,
@@ -58,6 +59,7 @@ export default function PraxisSeite() {
   const [uid, setUid] = useState<string | null>(null);
   const [istChef, setIstChef] = useState(false);
   const [firma, setFirma] = useState('');
+  const [betrieb, setBetrieb] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('recall');
   const [kunden, setKunden] = useState<Kunde[]>([]);
   const [einw, setEinw] = useState<Einw[]>([]);
@@ -99,6 +101,7 @@ export default function PraxisSeite() {
       let chef: string | null = null;
       try { const r = await supabase.rpc('mein_chef_id'); chef = (r.data as string | null) ?? null; } catch { /* Chef */ }
       setIstChef(!chef || chef === u.id);
+      setBetrieb(chef || u.id);
       try {
         const { data: p } = await supabase.from('profiles').select('firma_name').eq('id', chef || u.id).maybeSingle();
         setFirma(String((p as { firma_name?: string } | null)?.firma_name ?? ''));
@@ -151,7 +154,7 @@ export default function PraxisSeite() {
           {!kunden.length && <div style={s.dim}>Noch keine Kunden — zuerst in „Gesundheit & Wellness" anlegen.</div>}
         </div>
       )}
-      {tab === 'einwilligung' && kunde && <EinwilligungTab kunde={kunde} einw={einw} firma={firma} istChef={istChef} laden={laden} meldung={meldung} />}
+      {tab === 'einwilligung' && kunde && <EinwilligungTab kunde={kunde} einw={einw} firma={firma} betrieb={betrieb} istChef={istChef} laden={laden} meldung={meldung} />}
       {tab === 'gesundheit' && <GesundheitTab kunde={kunde} istChef={istChef} uid={uid} laden={laden} meldung={meldung} />}
       {tab === 'hwg' && <HwgTab />}
       {tab === 'protokoll' && istChef && <ProtokollTab uid={uid} name={name} />}
@@ -385,7 +388,7 @@ function AusfallTab(p: {
 // Einwilligungen
 // ---------------------------------------------------------------------------
 
-function EinwilligungTab(p: { kunde: Kunde; einw: Einw[]; firma: string; istChef: boolean; laden: () => Promise<void>; meldung: (o: string | null, f?: string | null) => void }) {
+function EinwilligungTab(p: { kunde: Kunde; einw: Einw[]; firma: string; betrieb: string | null; istChef: boolean; laden: () => Promise<void>; meldung: (o: string | null, f?: string | null) => void }) {
   const [art, setArt] = useState<EinwilligungArt | null>(null);
 
   async function widerruf(a: EinwilligungArt) {
@@ -414,7 +417,7 @@ function EinwilligungTab(p: { kunde: Kunde; einw: Einw[]; firma: string; istChef
     <>
       <div style={s.card}>
         <b>Einwilligungen von {p.kunde.name}</b>
-        <div style={s.hint}>Mustertexte — vor dem ersten Einsatz anwaltlich prüfen lassen. Eine Einwilligung wird nie geändert: ein Widerruf ist ein neuer Eintrag, die alte Unterschrift bleibt als Nachweis.</div>
+        <div style={s.hint}>Der Wortlaut jeder Einwilligung kommt aus Ihrem eigenen, von Ihrem Anwalt geprüften Text unter <a href="/dashboard/rechtstexte" style={{ color: 'inherit' }}>Meine Rechtstexte</a> — ARGONAUT liefert dafür keinen Mustertext. Eine Einwilligung wird nie geändert: ein Widerruf ist ein neuer Eintrag, die alte Unterschrift bleibt als Nachweis.</div>
         {EINWILLIGUNGEN.map((e) => {
           const st = einwilligungStand(p.einw, p.kunde.id, e.key);
           const farbe = st.status === 'aktiv' ? C.green : st.status === 'widerrufen' ? C.danger : C.textDim;
@@ -437,12 +440,12 @@ function EinwilligungTab(p: { kunde: Kunde; einw: Einw[]; firma: string; istChef
           );
         })}
       </div>
-      {art && <Unterschreiben art={art} kunde={p.kunde} firma={p.firma} onZu={() => setArt(null)} onFertig={async () => { setArt(null); p.meldung('Einwilligung gespeichert.'); await p.laden(); }} />}
+      {art && <Unterschreiben art={art} kunde={p.kunde} firma={p.firma} betrieb={p.betrieb} onZu={() => setArt(null)} onFertig={async () => { setArt(null); p.meldung('Einwilligung gespeichert.'); await p.laden(); }} />}
     </>
   );
 }
 
-function Unterschreiben(p: { art: EinwilligungArt; kunde: Kunde; firma: string; onZu: () => void; onFertig: () => Promise<void> }) {
+function Unterschreiben(p: { art: EinwilligungArt; kunde: Kunde; firma: string; betrieb: string | null; onZu: () => void; onFertig: () => Promise<void> }) {
   const [daten, setDaten] = useState<EinwilligungDaten>(p.art === 'ausfall' ? { frist_stunden: 24 } : p.art === 'recall' ? { kanaele: ['email'] } : {});
   const [betrag, setBetrag] = useState('');
   const [nameU, setNameU] = useState(p.kunde.name);
@@ -451,7 +454,12 @@ function Unterschreiben(p: { art: EinwilligungArt; kunde: Kunde; firma: string; 
   const zeichnet = useRef(false);
   const hatStrich = useRef(false);
   const d: EinwilligungDaten = p.art === 'ausfall' ? { ...daten, betrag: zahl(betrag) ?? undefined } : daten;
-  const text = einwilligungText(p.art, p.firma, d);
+  // Paket 349: Wortlaut nur aus „Meine Rechtstexte" (praxis.<art>) — ohne eigenen Text keine Unterschrift.
+  const [eigen, setEigen] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    void ladeRechtstext(supabase, p.betrieb, praxisRechtstext(p.art)).then((g) => setEigen(g?.text ?? null));
+  }, [p.betrieb, p.art]);
+  const text = einwilligungText(p.art, p.firma, d, eigen, p.kunde.name);
   const info = EINWILLIGUNGEN.find((e) => e.key === p.art);
 
   function punkt(e: PointerEvent<HTMLCanvasElement>) {
@@ -477,11 +485,12 @@ function Unterschreiben(p: { art: EinwilligungArt; kunde: Kunde; firma: string; 
   async function speichern() {
     const bild = hatStrich.current ? canvas.current?.toDataURL('image/png') ?? '' : '';
     const f = pruefeEinwilligung({ art: p.art, name: nameU, unterschrift: bild, daten: d });
-    if (/\[[^\]]+\]/.test(text)) f.push('Im Text sind noch [Platzhalter] offen — bitte den Firmennamen im Profil hinterlegen bzw. die Felder ausfüllen.');
+    if (!text) f.push('Für diese Einwilligung ist kein eigener Text hinterlegt (Meine Rechtstexte).');
+    if (text && /\[[^\]]+\]/.test(text)) f.push('Im Text sind noch [Platzhalter] offen — bitte den Firmennamen im Profil hinterlegen bzw. die Felder ausfüllen.');
     setFehler(f);
     if (f.length) return;
     const { error } = await supabase.from('praxis_einwilligung').insert({
-      kunde_id: p.kunde.id, art: p.art, version: EINWILLIGUNG_VERSION, text_kopie: text, daten: d,
+      kunde_id: p.kunde.id, art: p.art, version: EINWILLIGUNG_VERSION, text_kopie: text as string, daten: d,
       name_unterschrift: nameU.trim().slice(0, 120), unterschrift: bild,
     });
     if (error) { setFehler(['Speichern fehlgeschlagen.']); return; }
@@ -513,13 +522,19 @@ function Unterschreiben(p: { art: EinwilligungArt; kunde: Kunde; firma: string; 
         {p.art === 'weitergabe' && (
           <label style={s.lab}>Empfänger<input style={s.inp} value={daten.empfaenger ?? ''} onChange={(e) => setDaten({ ...daten, empfaenger: e.target.value.slice(0, 160) })} placeholder="z. B. Labor Muster GmbH" /></label>
         )}
-        <div style={s.textbox}>{text}</div>
+        {eigen === undefined && <div style={s.textbox}>Text wird geladen …</div>}
+        {eigen !== undefined && !text && (
+          <div style={{ ...s.textbox, color: C.danger }}>
+            Für diese Einwilligung ist noch kein eigener Text hinterlegt. ARGONAUT liefert dafür keinen Mustertext — die Geschäftsleitung hinterlegt den von Ihrem Anwalt geprüften Text unter <a href="/dashboard/rechtstexte" style={{ color: 'inherit' }}>Verwaltung → Meine Rechtstexte</a>.
+          </div>
+        )}
+        {text && <div style={s.textbox}>{text}</div>}
         <label style={s.lab}>Name der unterschreibenden Person<input style={s.inp} value={nameU} onChange={(e) => setNameU(e.target.value)} /></label>
         <canvas ref={canvas} width={600} height={200} style={{ width: '100%', height: 150, background: '#fff', borderRadius: 10, touchAction: 'none', marginTop: 8 }}
           onPointerDown={start} onPointerMove={zug} onPointerUp={() => { zeichnet.current = false; }} onPointerLeave={() => { zeichnet.current = false; }} />
         {fehler.length > 0 && <ul style={{ ...s.liste, color: C.danger }}>{fehler.map((f, i) => <li key={i}>{f}</li>)}</ul>}
         <div style={s.knoepfe}>
-          <button style={s.primaer} onClick={() => void speichern()}>Unterschrift speichern</button>
+          <button style={s.primaer} disabled={!text} onClick={() => void speichern()}>Unterschrift speichern</button>
           <button style={s.mini} onClick={leeren}>Neu</button>
         </div>
       </div>

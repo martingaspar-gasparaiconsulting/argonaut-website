@@ -81,7 +81,7 @@ export interface WebDienste {
   whatsapp?: boolean;
 }
 
-export function datenschutzText(ci: CiRecht, dienste?: WebDienste): string {
+export function datenschutzText(ci: CiRecht, dienste?: WebDienste, opts: { mitHinweis?: boolean } = {}): string {
   const firma = z(ci.firma) || 'Ihr Firmenname';
   const verantwortlich = [z(ci.impressum_inhaber) || firma, z(ci.strasse), ortZeile(ci)].filter(Boolean).join(', ');
   const mail = z(ci.email);
@@ -143,19 +143,33 @@ export function datenschutzText(ci: CiRecht, dienste?: WebDienste): string {
     'Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Einer Verarbeitung für Werbung können Sie jederzeit ohne Begründung widersprechen. Eine Einwilligung können Sie jederzeit für die Zukunft widerrufen (Art. 7 Abs. 3). Wenden Sie sich dazu an die oben genannte verantwortliche Stelle.');
   abschnitt('Beschwerderecht',
     'Ihnen steht ein Beschwerderecht bei einer Datenschutz-Aufsichtsbehörde zu, insbesondere in dem Bundesland Ihres Wohnsitzes oder unseres Sitzes.');
-  t.push('', 'Hinweis: Dies ist ein Grundgerüst aus ARGONAUT OS. Ergänzen Sie weitere Dienste, die Sie selbst einsetzen (z. B. Zahlungsanbieter, eigene Werbe- oder Social-Media-Einbindungen), und lassen Sie den Text vor der Veröffentlichung prüfen.');
+  // Paket 349: Der Hinweis richtet sich an den Betrieb — auf der veröffentlichten Seite steht er nicht.
+  if (opts.mitHinweis !== false) t.push('', 'Hinweis: Dies ist ein Grundgerüst aus ARGONAUT OS. Ergänzen Sie weitere Dienste, die Sie selbst einsetzen (z. B. Zahlungsanbieter, eigene Werbe- oder Social-Media-Einbindungen), und lassen Sie den Text vor der Veröffentlichung prüfen.');
   return t.join('\n');
 }
 
-// --- AGB-Hinweis ------------------------------------------------------------
-export function agbText(ci: CiRecht): string {
-  const firma = z(ci.firma) || 'Ihr Firmenname';
+// --- AGB ---------------------------------------------------------------------
+// Paket 349 (A1 Vorlagen-Prinzip): AGB sind individuell — ARGONAUT liefert keine.
+// Auf der Website erscheinen nur die eigenen AGB des Betriebs („Meine Rechtstexte",
+// web.agb). Ohne eigenen Text gibt es keinen AGB-Abschnitt und keinen Link im Fuß.
+
+/** Öffentlicher AGB-Text — oder null, wenn der Betrieb keine hinterlegt hat. */
+export function agbOeffentlich(eigen: string | null | undefined): string | null {
+  const t = (eigen ?? '').trim();
+  return t.length >= 50 && !t.includes('[Ihr Text]') ? t : null;
+}
+
+/** Anzeige im Dashboard (Webauftritt): eigene AGB oder der Hinweis für den Betrieb. */
+export function agbText(ci: CiRecht, eigen?: string | null): string {
+  const t = agbOeffentlich(eigen);
+  if (t) return t;
+  const firma = z(ci.firma) || 'Ihr Betrieb';
   return [
     'Allgemeine Geschäftsbedingungen (AGB)',
     '',
-    'Für Verträge, die über diese Website zustande kommen, gelten die Allgemeinen Geschäftsbedingungen von ' + firma + '.',
+    `Für ${firma} sind noch keine eigenen AGB hinterlegt — auf Ihrer Website erscheint deshalb kein AGB-Abschnitt.`,
     '',
-    'Hinweis: AGB sind individuell. Für einen reinen Internetauftritt ohne Verkauf sind sie in der Regel nicht erforderlich. Sobald Sie online verkaufen (Shop), sind AGB und eine Widerrufsbelehrung Pflicht — diese ergänzen wir automatisch, wenn Sie den Shop aktivieren.',
+    'AGB sind individuell; ARGONAUT liefert dafür keinen Mustertext. Für einen reinen Internetauftritt ohne Verkauf sind sie in der Regel nicht nötig. Wenn Sie AGB verwenden, hinterlegen Sie Ihren von Ihrem Anwalt geprüften Text unter Verwaltung → Meine Rechtstexte („AGB auf Ihrer Website").',
   ].join('\n');
 }
 
@@ -167,7 +181,7 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean; barrierefreiheit?: boolean } = {}): string {
+export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean; barrierefreiheit?: boolean; agb?: boolean } = {}): string {
   const firma = esc(z(ci.firma) || 'Ihr Firmenname');
   return [
     '<footer class="ao-fuss">',
@@ -176,7 +190,7 @@ export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean; 
     '    <nav class="ao-fuss-links">',
     '      <a href="#impressum">Impressum</a>',
     '      <a href="#datenschutz">Datenschutz</a>',
-    '      <a href="#agb">AGB</a>',
+    opts.agb ? '      <a href="#agb">AGB</a>' : '',
     opts.widerruf ? '      <a href="#widerruf" class="ao-fuss-widerruf"><b>Vertrag widerrufen</b></a>' : '',
     opts.barrierefreiheit ? '      <a href="#barrierefreiheit">Barrierefreiheit</a>' : '',
     '    </nav>',

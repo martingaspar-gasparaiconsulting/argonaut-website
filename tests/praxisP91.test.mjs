@@ -64,8 +64,10 @@ test('Einwilligungen: neueste Zeile entscheidet, Widerruf als neue Zeile, Wege',
   assert.equal(pruefeEinwilligung({ art: 'recall', name: 'Anna', unterschrift: PNG, daten: {} }).length, 1);
   assert.equal(pruefeEinwilligung({ art: 'ausfall', name: 'A', unterschrift: 'x', daten: { frist_stunden: 0, betrag: 5000 } }).length, 4);
   assert.equal(pruefeEinwilligung({ art: 'quatsch', name: 'Anna', unterschrift: PNG }).length, 1);
-  assert.match(einwilligungText('ausfall', 'Praxis Sonne', { frist_stunden: 24, betrag: 45 }), /24 Stunden.*45,00 €.*anderweitig vergeben.*geringerer Schaden/s);
-  assert.match(einwilligungText('datenschutz', ''), /\[Name des Betriebs\].*widerrufen/s);
+  // Paket 349: kein ARGONAUT-Wortlaut mehr — nur der eigene Text des Betriebs
+  assert.equal(einwilligungText('ausfall', 'Praxis Sonne', { frist_stunden: 24, betrag: 45 }), null);
+  const eigen = 'Bei Absage später als {{frist}} vor dem Termin berechnet {{betrieb}} ein Ausfallhonorar von {{betrag}}.';
+  assert.equal(einwilligungText('ausfall', 'Praxis Sonne', { frist_stunden: 24, betrag: 45 }, eigen), 'Bei Absage später als 24 Stunden vor dem Termin berechnet Praxis Sonne ein Ausfallhonorar von 45,00 €.');
 });
 
 test('Ausfallhonorar: Vereinbarung vorher, Frist, neu vergeben, Nichterscheinen', () => {

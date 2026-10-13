@@ -20,6 +20,7 @@
 // KEINE Befunde, keine Diagnosen, keine Kassenabrechnung — das ist Stufe 2
 // (C5-Testat, H04/H05) und wird hier bewusst nicht angeboten.
 // ============================================================================
+import { textFuellen } from './rechtsTexte';
 
 const TAG = 86_400_000;
 const STUNDE = 3_600_000;
@@ -111,41 +112,40 @@ export function einwilligungInfo(art: unknown) {
   return EINWILLIGUNGEN.find((e) => e.key === art) ?? null;
 }
 
-const WIDERRUF = 'Diese Einwilligung ist freiwillig. Ich kann sie jederzeit mit Wirkung für die Zukunft widerrufen, formlos und ohne Angabe von Gründen. Die Rechtmäßigkeit der bis zum Widerruf erfolgten Verarbeitung bleibt unberührt.';
+// Paket 349 (A1 Vorlagen-Prinzip): Der Wortlaut der Einwilligungen kommt nur noch aus
+// „Meine Rechtstexte" (praxis.<art>). ARGONAUT liefert keinen Mustertext mehr.
 
 function betragDe(n: number): string {
   return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/** Schlüssel in „Meine Rechtstexte" je Einwilligung. */
+export function praxisRechtstext(art: EinwilligungArt): string {
+  return `praxis.${art}`;
+}
+
+/** Werte für die Platzhalter im eigenen Text: {{betrieb}}, {{wege}}, {{frist}}, {{betrag}}, {{empfaenger}}. */
+export function einwilligungWerte(art: EinwilligungArt, firma: string, d: EinwilligungDaten = {}): Record<string, string> {
+  const k = (d.kanaele ?? []).map((x) => KANAELE.find((y) => y.key === x)?.label).filter(Boolean);
+  return {
+    betrieb: firma.trim(),
+    wege: art === 'recall' ? k.join(', ') : '',
+    frist: art === 'ausfall' && d.frist_stunden ? `${d.frist_stunden} Stunden` : '',
+    betrag: art === 'ausfall' && d.betrag ? `${betragDe(d.betrag)} €` : '',
+    empfaenger: art === 'weitergabe' ? (d.empfaenger?.trim() ?? '') : '',
+  };
+}
+
 /**
- * Mustertext zum Unterschreiben. Wird beim Unterschreiben als Kopie mit
- * gespeichert — spätere Textänderungen verändern keine alte Einwilligung.
- * MUSTER: vor dem Einsatz anwaltlich prüfen lassen (R09/R10).
+ * Text zum Unterschreiben: der eigene, vom Anwalt des Betriebs geprüfte Text
+ * mit gefüllten Platzhaltern — oder null, wenn keiner hinterlegt ist. Wird beim
+ * Unterschreiben als Kopie mit gespeichert; spätere Änderungen verändern keine
+ * alte Einwilligung.
  */
-export function einwilligungText(art: EinwilligungArt, firma: string, d: EinwilligungDaten = {}): string {
-  const f = firma.trim() || '[Name des Betriebs]';
-  switch (art) {
-    case 'datenschutz':
-      return `Ich willige ein, dass ${f} die Gesundheitsangaben, die ich selbst mitteile (zum Beispiel Allergien, Unverträglichkeiten oder Hinweise, die bei der Behandlung zu beachten sind), zur Durchführung und Dokumentation meiner Behandlung speichert und verwendet (Art. 9 Abs. 2 lit. a DSGVO). Diese Angaben werden getrennt von den übrigen Kundendaten und verschlüsselt gespeichert; jeder Zugriff wird protokolliert. Die Datenschutzinformation nach Art. 13 DSGVO habe ich erhalten. ${WIDERRUF}`;
-    case 'recall': {
-      const k = (d.kanaele ?? []).map((x) => KANAELE.find((y) => y.key === x)?.label).filter(Boolean);
-      const wege = k.length ? k.join(', ') : '[Weg der Erinnerung]';
-      return `Ich möchte von ${f} an fällige Folgetermine erinnert werden, und zwar per ${wege}. Die Erinnerung enthält keine Angaben zu meiner Behandlung. ${WIDERRUF}`;
-    }
-    case 'ausfall': {
-      const frist = d.frist_stunden ? `${d.frist_stunden} Stunden` : '[Frist] Stunden';
-      const betrag = d.betrag ? `${betragDe(d.betrag)} €` : '[Betrag] €';
-      return `Vereinbarte Termine sind ausschließlich für mich reserviert. Kann ich einen Termin nicht wahrnehmen, sage ich ihn spätestens ${frist} vorher ab. Bei späterer Absage oder wenn ich nicht erscheine, berechnet ${f} ein Ausfallhonorar von ${betrag}. Das Ausfallhonorar entfällt, wenn der Termin anderweitig vergeben werden kann. Mir bleibt der Nachweis vorbehalten, dass kein oder ein wesentlich geringerer Schaden entstanden ist.`;
-    }
-    case 'foto':
-      return `Ich willige ein, dass ${f} zur Dokumentation meiner Behandlung Fotos anfertigt und intern speichert. Die Fotos werden weder veröffentlicht noch an Dritte weitergegeben. ${WIDERRUF} Nach einem Widerruf werden die Fotos gelöscht, soweit keine Aufbewahrungspflicht besteht.`;
-    case 'foto_werbung':
-      return `Ich willige ein, dass ${f} Fotos, auf denen ich zu sehen bin, auf der eigenen Website und in sozialen Netzwerken veröffentlicht. Mir ist bekannt, dass veröffentlichte Bilder von Dritten kopiert werden können und sich nach einem Widerruf nicht in jedem Fall vollständig entfernen lassen. ${WIDERRUF}`;
-    case 'weitergabe': {
-      const an = d.empfaenger?.trim() || '[Empfänger]';
-      return `Ich willige ein, dass ${f} die dafür erforderlichen Angaben an ${an} übermittelt, und entbinde ${f} insoweit von einer bestehenden Schweigepflicht. Eine Weitergabe an andere Empfänger erfolgt nicht. ${WIDERRUF}`;
-    }
-  }
+export function einwilligungText(art: EinwilligungArt, firma: string, d: EinwilligungDaten = {}, eigen?: string | null, kunde: string = ''): string | null {
+  const t = (eigen ?? '').trim();
+  if (t.length < 50 || t.includes('[Ihr Text]')) return null;
+  return textFuellen(t, { ...einwilligungWerte(art, firma, d), kunde: kunde.trim(), datum: datumDe(berlinTag(new Date())) });
 }
 
 export type EinwilligungZeile = {

@@ -48,7 +48,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const boerse = await aktiveBoerseKennung((seite as { owner_user_id: string }).owner_user_id).catch(() => null);
     // Paket 305: Menüpunkt „Fahrzeug verkaufen" auf die Fahrzeugmappe, wenn der Online-Ankauf an ist.
     const ankauf = await aktiveAnkaufKennung((seite as { owner_user_id: string }).owner_user_id).catch(() => null);
-    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: kennung, shopFrei: await startFreiServer('shop'), ...(boerse ? { fahrzeugeLink: `/fahrzeuge/${boerse}` } : {}), ...(ankauf ? { verkaufenLink: `/ankauf/${ankauf}` } : {}) });
+    // Paket 349: AGB nur aus „Meine Rechtstexte" des Betriebs (web.agb), sonst kein AGB-Abschnitt.
+    const { data: agbZeile } = await db.from('rechtstext').select('text').eq('owner_user_id', (seite as { owner_user_id: string }).owner_user_id).eq('schluessel', 'web.agb').maybeSingle();
+    const agbText = (agbZeile as { text?: string } | null)?.text ?? null;
+    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: kennung, shopFrei: await startFreiServer('shop'), agbText, ...(boerse ? { fahrzeugeLink: `/fahrzeuge/${boerse}` } : {}), ...(ankauf ? { verkaufenLink: `/ankauf/${ankauf}` } : {}) });
 
     return new Response(html, {
       status: 200,

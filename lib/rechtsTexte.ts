@@ -107,6 +107,55 @@ export const RECHTS_TEXTE: readonly RechtsTextEintrag[] = Object.freeze([
     gliederung: ['Zustand bei Annahme', 'Kostenrahmen und Zusatzarbeiten', 'Probefahrt durch die Werkstatt', 'Abholung'],
     platzhalter: [BETRIEB, KUNDE, DATUM], angebunden: true,
   },
+  {
+    schluessel: 'praxis.datenschutz', titel: 'Einwilligung Gesundheitsangaben', bereich: 'Praxis und Behandlung',
+    wofuer: 'Einwilligung, dass Sie Gesundheitsangaben (z. B. Allergien, Unverträglichkeiten) für die Behandlung speichern und nutzen.',
+    wo: 'Praxis → Kunde → Einwilligungen → „Aufnehmen"', empfaenger: 'Patient bzw. Kunde (unterschreibt)',
+    gliederung: ['Welche Angaben', 'Zweck', 'Freiwilligkeit und Widerruf'],
+    platzhalter: [BETRIEB, KUNDE, DATUM], angebunden: true,
+  },
+  {
+    schluessel: 'praxis.recall', titel: 'Einwilligung Terminerinnerung (Recall)', bereich: 'Praxis und Behandlung',
+    wofuer: 'Einwilligung, an fällige Folgetermine erinnert zu werden — über die gewählten Wege.',
+    wo: 'Praxis → Kunde → Einwilligungen → „Aufnehmen"', empfaenger: 'Patient bzw. Kunde (unterschreibt)',
+    gliederung: ['Erinnerung und Wege', 'Inhalt der Erinnerung', 'Freiwilligkeit und Widerruf'],
+    platzhalter: [BETRIEB, KUNDE, DATUM, { key: 'wege', label: 'gewählte Wege (E-Mail, SMS …)' }], angebunden: true,
+  },
+  {
+    schluessel: 'praxis.ausfall', titel: 'Vereinbarung Ausfallhonorar', bereich: 'Praxis und Behandlung',
+    wofuer: 'Vereinbarung über ein Ausfallhonorar bei später Absage oder Nichterscheinen.',
+    wo: 'Praxis → Kunde → Einwilligungen → „Aufnehmen"', empfaenger: 'Patient bzw. Kunde (unterschreibt)',
+    gliederung: ['Absagefrist', 'Höhe des Ausfallhonorars', 'Ausnahmen'],
+    platzhalter: [BETRIEB, KUNDE, DATUM, { key: 'frist', label: 'Absagefrist (z. B. 24 Stunden)' }, { key: 'betrag', label: 'Ausfallhonorar in €' }], angebunden: true,
+  },
+  {
+    schluessel: 'praxis.foto', titel: 'Einwilligung Fotos zur Dokumentation', bereich: 'Praxis und Behandlung',
+    wofuer: 'Einwilligung, Fotos der Behandlung intern zur Dokumentation anzufertigen und zu speichern.',
+    wo: 'Praxis → Kunde → Einwilligungen → „Aufnehmen"', empfaenger: 'Patient bzw. Kunde (unterschreibt)',
+    gliederung: ['Zweck der Fotos', 'Speicherung', 'Freiwilligkeit und Widerruf'],
+    platzhalter: [BETRIEB, KUNDE, DATUM], angebunden: true,
+  },
+  {
+    schluessel: 'praxis.foto_werbung', titel: 'Einwilligung Fotos für Werbung', bereich: 'Praxis und Behandlung',
+    wofuer: 'Einwilligung, Fotos auf Ihrer Website und in sozialen Netzwerken zu veröffentlichen.',
+    wo: 'Praxis → Kunde → Einwilligungen → „Aufnehmen"', empfaenger: 'Patient bzw. Kunde (unterschreibt)',
+    gliederung: ['Wo veröffentlicht wird', 'Risiken der Veröffentlichung', 'Freiwilligkeit und Widerruf'],
+    platzhalter: [BETRIEB, KUNDE, DATUM], angebunden: true,
+  },
+  {
+    schluessel: 'praxis.weitergabe', titel: 'Weitergabe an Dritte / Schweigepflicht', bereich: 'Praxis und Behandlung',
+    wofuer: 'Einwilligung zur Weitergabe von Angaben an einen genannten Empfänger (z. B. Labor) und Entbindung von der Schweigepflicht.',
+    wo: 'Praxis → Kunde → Einwilligungen → „Aufnehmen"', empfaenger: 'Patient bzw. Kunde (unterschreibt)',
+    gliederung: ['Empfänger und Zweck', 'Umfang der Weitergabe', 'Freiwilligkeit und Widerruf'],
+    platzhalter: [BETRIEB, KUNDE, DATUM, { key: 'empfaenger', label: 'Empfänger' }], angebunden: true,
+  },
+  {
+    schluessel: 'web.agb', titel: 'AGB auf Ihrer Website', bereich: 'Website und Shop',
+    wofuer: 'Ihre Allgemeinen Geschäftsbedingungen. Erscheinen auf Ihrer ARGONAUT-Website im Abschnitt „AGB" und im Seitenfuß — ohne eigenen Text gibt es dort keinen AGB-Abschnitt.',
+    wo: 'Website-Bauer → veröffentlichte Seite → AGB', empfaenger: 'Besucher Ihrer Website',
+    gliederung: ['Geltungsbereich', 'Vertragsschluss', 'Preise und Zahlung', 'Lieferung bzw. Leistung', 'Gewährleistung', 'Schlussbestimmungen'],
+    platzhalter: [BETRIEB], angebunden: true,
+  },
 ]);
 
 export function eintragFuer(schluessel: string): RechtsTextEintrag | null {

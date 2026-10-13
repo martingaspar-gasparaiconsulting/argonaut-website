@@ -35,6 +35,15 @@ export interface DocumentTemplate {
   felder: TemplateFeld[];
 }
 
+// Paket 349 (A1 Vorlagen-Prinzip): Dokumente mit Rechtswirkung. ARGONAUT liefert
+// keinen geprüften Vertragstext — das Dokument trägt oben „ENTWURF" und den
+// Hinweis, es vor Verwendung rechtlich prüfen zu lassen.
+export const RECHTLICH_PRUEFEN: ReadonlySet<string> = new Set([
+  'arbeitsvertrag', 'arbeitszeugnis', 'nda', 'kuendigung', 'abmahnung', 'freelancer_vertrag', 'vollmacht',
+  'praktikumsvertrag', 'aufhebungsvertrag', 'mietvertrag_gewerbe', 'widerspruch', 'lohnaenderung',
+]);
+export const HINWEIS_RECHTLICH = 'ENTWURF aus ARGONAUT OS — kein geprüfter Vertragstext. Bitte vor Verwendung von Ihrem Anwalt prüfen lassen.';
+
 // Wiederkehrende Felder, damit wir uns nicht wiederholen ------------------------
 const kunde: TemplateFeld[] = [
   { key: "kunde_name", label: "Name des Kunden / der Kundin", typ: "text", pflicht: true, beispiel: "Müller GmbH" },

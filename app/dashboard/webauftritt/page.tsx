@@ -14,6 +14,7 @@
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { impressumText, datenschutzText, agbText } from '@/lib/webRecht';
+import { ladeRechtstext } from '@/lib/rechtsTexteLaden';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -63,6 +64,8 @@ export default function WebauftrittPage() {
   const [logoFehler, setLogoFehler] = useState(false);
   const [logoLaedt, setLogoLaedt] = useState(false);
   const [kopiert, setKopiert] = useState(false);
+  // Paket 349: eigene AGB aus „Meine Rechtstexte" (web.agb) — ohne sie zeigt die Website keinen AGB-Abschnitt.
+  const [agbEigen, setAgbEigen] = useState<string | null>(null);
 
   const ladeCi = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -89,7 +92,10 @@ export default function WebauftrittPage() {
       const { data } = await supabase.auth.getUser();
       const id = data?.user?.id ?? null;
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
-      setUid(id); await ladeCi(id); setLaden(false);
+      setUid(id); await ladeCi(id);
+      const agb = await ladeRechtstext(supabase, id, 'web.agb');
+      setAgbEigen(agb?.text ?? null);
+      setLaden(false);
     })();
   }, [ladeCi]);
 
@@ -103,7 +109,7 @@ export default function WebauftrittPage() {
     ? impressumText(ci)
     : rechtTab === 'datenschutz'
       ? datenschutzText(ci)
-      : agbText(ci);
+      : agbText(ci, agbEigen);
 
   async function rechtKopieren() {
     try {
@@ -242,7 +248,7 @@ export default function WebauftrittPage() {
           {/* 4) Impressum (Pflicht) */}
           <div style={styles.card}>
             <div style={styles.cardTitel}>4 · Impressum &amp; Rechtliches <span style={styles.pflicht}>Pflicht in Deutschland</span></div>
-            <p style={styles.mini}>Diese Angaben stehen automatisch auf <b>jeder</b> Seite im Fuß (Impressum · Datenschutz · AGB). Genau das vergessen Laien-Baukästen — wir machen es richtig.</p>
+            <p style={styles.mini}>Diese Angaben stehen automatisch auf <b>jeder</b> Seite im Fuß (Impressum · Datenschutz · AGB, wenn Sie eigene AGB hinterlegt haben). Genau das vergessen Laien-Baukästen — wir machen es richtig.</p>
             <Feld label="Vertretungsberechtigte(r) / Inhaber(in)" value={ci.impressum_inhaber} onChange={(v) => setF('impressum_inhaber', v)} placeholder="z. B. Max Bauer" />
             <div style={styles.formGrid}>
               <Feld label="USt-IdNr. (falls vorhanden)" value={ci.impressum_ustid} onChange={(v) => setF('impressum_ustid', v)} placeholder="DE123456789" />

@@ -13,7 +13,7 @@
 // Supabase-Aufrufe, keine Hooks.
 // ============================================================
 
-import { impressumText, datenschutzText, agbText, fussHtml, type CiRecht, type WebDienste } from './webRecht';
+import { impressumText, datenschutzText, agbOeffentlich, fussHtml, type CiRecht, type WebDienste } from './webRecht';
 import { startFrei, startSperrGrund } from './startSperre';
 
 import { einstellung as einblendungEinstellung } from './einblendung';
@@ -659,13 +659,15 @@ function videoFacade(embed: string, anbieter: string): string {
 }
 
 // --- Rechts-Abschnitte (verankert, damit der Fuß darauf zeigt) --------------
-export function rechtsSektionen(ci: CiWeb, dienste?: WebDienste): string {
+export function rechtsSektionen(ci: CiWeb, dienste?: WebDienste, agbEigen?: string | null): string {
+  const agb = agbOeffentlich(agbEigen);
   const block = (id: string, titel: string, text: string) =>
     '<section class="recht" id="' + id + '"><div class="wrap narrow"><h2>' + titel + '</h2><div class="pretext">' + esc(text) + '</div></div></section>';
   return [
     block('impressum', 'Impressum', impressumText(ci)),
-    block('datenschutz', 'Datenschutz', datenschutzText(ci, dienste)),
-    block('agb', 'AGB', agbText(ci)),
+    block('datenschutz', 'Datenschutz', datenschutzText(ci, dienste, { mitHinweis: false })),
+    // Paket 349: AGB nur mit eigenem Text des Betriebs (Meine Rechtstexte, web.agb).
+    agb ? block('agb', 'Allgemeine Geschäftsbedingungen', agb) : '',
     // Paket PR (K04): auf JEDER Seite verankert und im Fuss verlinkt = „deutlich wahrnehmbar".
     // markdownZuHtml maskiert zuerst, dann wird formatiert.
     z(ci.barrierefreiheit_text)
@@ -1036,7 +1038,7 @@ export function seiteHtml(
   seite: { titel?: string; bloecke: Block[] },
   ci: CiWeb,
   jahr: number,
-  opts: { oeffentlichId?: string; editor?: boolean; fahrzeugeLink?: string; verkaufenLink?: string; shopFrei?: boolean } = {},
+  opts: { oeffentlichId?: string; editor?: boolean; fahrzeugeLink?: string; verkaufenLink?: string; shopFrei?: boolean; agbText?: string | null } = {},
 ): string {
   // Paket 346: /p/[id] und eigene Domains geben den wirksamen Stand mit (lib/freigabeServer.ts).
   const shopFrei = opts.shopFrei ?? startFrei('shop');
@@ -1081,9 +1083,9 @@ export function seiteHtml(
     '<nav class="mainnav"><a href="#leistungen">Leistungen</a>' + fahrzeuge + verkaufen + '<a href="#ueber">Über uns</a><a href="#kontakt">Kontakt</a></nav>',
     '</div></header>',
     koerper,
-    rechtsSektionen(ci, webDiensteDerSeite(seite.bloecke || [], shopFrei)),
+    rechtsSektionen(ci, webDiensteDerSeite(seite.bloecke || [], shopFrei), opts.agbText),
     hatProdukte ? widerrufSektion(opts.oeffentlichId) : '',
-    fussHtml(ci, jahr, { widerruf: hatProdukte, barrierefreiheit: !!z(ci.barrierefreiheit_text) }),
+    fussHtml(ci, jahr, { widerruf: hatProdukte, barrierefreiheit: !!z(ci.barrierefreiheit_text), agb: !!agbOeffentlich(opts.agbText) }),
     anfrageSkript(),
     newsletterSkript(),
     terminSkript(),

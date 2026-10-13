@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { markiere, type Beleg } from '@/lib/firmenWissen';
+import { RECHTLICH_PRUEFEN, HINWEIS_RECHTLICH } from '@/lib/document-templates';
 
 type Vorschlag = {
   templateId: string;
@@ -182,7 +183,10 @@ export default function MitarbeiterChatSeite() {
         <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, color: '#C9A84C', fontSize: 'clamp(16px, 1.38vw, 22px)', marginBottom: 4 }}>
           Dokument-Vorschlag: {v.name} ({v.format.toUpperCase()})
         </div>
-        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>Agent: {v.agent}</div>
+        <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>Baustein: {v.agent}</div>
+        {RECHTLICH_PRUEFEN.has(v.templateId) && (
+          <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: '#E0A24C', border: '1px solid rgba(224,162,76,0.5)', borderRadius: 8, padding: '8px 10px', marginBottom: 12 }}>⚖️ {HINWEIS_RECHTLICH}</div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '6px 16px', fontSize: 'clamp(14px, 1.25vw, 20px)' }}>
           {Object.entries(v.data).map(([key, wert]) => (
