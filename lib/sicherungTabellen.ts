@@ -84,7 +84,7 @@ export const WEITERE_TABELLEN: string[] = [
   'projekt_vorlagen', 'projektleistungen', 'proof_asset', 'proof_feedback', 'proof_version',
   'provision_partner', 'provision_zuordnung', 'pruef_protokoll', 'pruef_punkt', 'pruefpflichten',
   'qs_lieferant_bewertung', 'qs_reklamation', 'qs_rueckruf', 'raum_belegung', 'raum_ressource',
-  'rechnung_abschlaege', 'rechnung_nummernkreise', 'rechnung_positionen', 'reisekosten',
+  'rechnung_abschlaege', 'rechnung_nummernkreise', 'rechnung_positionen', 'rechtstext', 'rechtstext_fassung', 'reisekosten',
   'report_gespeichert', 'reservierung_platz', 'reservierung_vorgang', 'ressourcen',
   'rezeptur_zutaten', 'rezepturen', 'rueckhol_lauf', 'rueckhol_schritt', 'rueckhol_strecke',
   'rueckhol_versand', 'schlag', 'schlag_bedarf', 'schlag_duengung', 'schlag_psm',

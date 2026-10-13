@@ -1312,6 +1312,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Website-Bauer (Erklärung im Fuß jeder Seite)', href: '/dashboard/webseiten' }, { text: 'Webauftritt (übernommene Farben)', href: '/dashboard/webauftritt' }],
     vorher: [{ text: 'Firmen-Auftritt', href: '/dashboard/webauftritt' }, { text: 'Gespeicherte Seiten im Website-Bauer', href: '/dashboard/webseiten' }],
   },
+  '/dashboard/rechtstexte': {
+    zweck: 'Hier hinterlegt die Geschäftsleitung ihre eigenen Texte für Verträge, Bedingungen und Erklärungen, die Kunden unterschreiben — zum Beispiel die Bedingungen der Einlagerung im Verwahrprotokoll. ARGONAUT liefert dafür bewusst keinen Mustertext, nur ein Gerüst mit Überschriften. Ihren Text setzt ARGONAUT in das Dokument ein und füllt Platzhalter wie {{kunde}} automatisch. Jede Änderung wird eine neue Fassung; frühere Fassungen bleiben unveränderbar belegbar.',
+    wer: 'chef',
+    werText: 'Nur der Chef (die Geschäftsleitung) hinterlegt, ändert und entfernt Rechtstexte. Mitarbeiter sehen die Seite nicht, ihre Dokumente (z. B. das Verwahrprotokoll) nehmen aber automatisch den gültigen Text des Betriebs.',
+    schritte: [
+      'Beim gewünschten Text „Eigenen Text hinterlegen" — darunter steht, wo er erscheint und wer ihn bekommt',
+      'Leeres Feld: „Gerüst einfügen" setzt nur die Überschriften mit „[Ihr Text]" ein. Füllen Sie jede Lücke mit Ihrem eigenen, von Ihrem Anwalt geprüften Text oder löschen Sie den Abschnitt — solange „[Ihr Text]" dasteht, lässt sich nicht speichern',
+      'Platzhalter wie {{kunde}}, {{betrieb}} oder {{datum}} füllt ARGONAUT im Dokument; andere Platzhalter werden abgelehnt',
+      'Freiwillig einen Prüf-Vermerk eintragen (z. B. „geprüft von Kanzlei … am …"), „Speichern". Jede spätere Änderung wird „Fassung 2", „Fassung 3" …',
+      '„Frühere Fassungen" zeigt, welcher Text wann galt. „Entfernen" nimmt den Text zurück — neue Dokumente zeigen dann den Hinweis, dass keine Bedingungen hinterlegt sind',
+    ],
+    probe: { anlegen: 'Bei „Bedingungen der Einlagerung" das Gerüst einfügen, jede Lücke mit einem Testsatz füllen, speichern (Fassung 1). Unter Reservierung & Platz bei einer Einlagerung „📄 Protokoll" — Ihr Text steht im PDF. Text ändern → Fassung 2.', loeschen: '„Entfernen" — das nächste Protokoll zeigt den Hinweis statt Bedingungen.' },
+    vorher: [{ text: 'Reservierung & Platz (Einlagerung)', href: '/dashboard/reservierung' }],
+  },
   '/dashboard/rechte': {
     zweck: 'Legt für jeden Mitarbeiter fest, welche Bereiche er sieht und wo er zusätzlich speichern und löschen darf („✏️ darf ändern“) — mit Vorlagen per Klick und der Verteil-Vollmacht für Administratoren. Der Chef sieht immer alles, „Übersicht“ und „Mein Bereich“ sieht jeder.',
     wer: 'chef',

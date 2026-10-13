@@ -23,6 +23,7 @@ import {
 } from '@/lib/reservierung';
 import { augeReservierung } from '@/lib/auge';
 import { verwahrProtokollPdf } from '@/lib/verwahrProtokollPdf';
+import { ladeDokumentText } from '@/lib/rechtsTexteLaden';
 import KiAuge from '../_components/KiAuge';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import { NurVoll } from '../_components/Ansicht';
@@ -231,16 +232,22 @@ export default function ReservierungPage() {
     finally { setBusy(null); }
   }
 
-  function protokoll(v: Vorgang) {
+  async function protokoll(v: Vorgang) {
     const p = plaetze.find((x) => x.id === v.platz_id);
+    const kunde = v.kunde_name || kontakte.find((k) => k.id === v.kontakt_id)?.name || '—';
+    // Paket 347: Bedingungen nur aus „Meine Rechtstexte" — ohne eigenen Text kein Mustertext.
+    const bedingungen = await ladeDokumentText(supabase, besitzer, 'verwahrung.bedingungen', {
+      betrieb: aussteller || '', kunde, datum: fmtDatum(v.von),
+    });
     verwahrProtokollPdf({
       aussteller: aussteller || 'Mein Betrieb',
-      kunde: v.kunde_name || kontakte.find((k) => k.id === v.kontakt_id)?.name || '—',
+      kunde,
       telefon: v.kunde_tel || '',
       kennzeichen: v.kennzeichen || '',
       eingelagertAm: fmtDatum(v.von),
       lagerplatz: p ? `${p.bezeichnung}${p.standort ? ' · ' + p.standort : ''}` : '—',
       gegenstand: v.gegenstand || '',
+      bedingungen,
     });
   }
 
@@ -400,7 +407,7 @@ export default function ReservierungPage() {
                             {v.art === 'einlagerung' && v.status === 'eingelagert' && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => setzeStatus(v, 'zur_abholung')}>🔔 Zur Abholung</button>}
                             {v.art === 'einlagerung' && (v.status === 'eingelagert' || v.status === 'zur_abholung') && <button style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55` }} disabled={busy === v.id} onClick={() => setzeStatus(v, 'ausgelagert')}>📤 Ausgelagert</button>}
                             {v.art === 'einlagerung' && lager?.verwertbar && (v.status === 'eingelagert' || v.status === 'zur_abholung') && <button style={{ ...styles.mini, color: C.danger, borderColor: `${C.danger}55` }} disabled={busy === v.id} onClick={() => setzeStatus(v, 'entsorgt')}>🗑 Entsorgt</button>}
-                            {v.art === 'einlagerung' && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} onClick={() => protokoll(v)}>📄 Protokoll</button>}
+                            {v.art === 'einlagerung' && <button style={{ ...styles.mini, color: C.cyan, borderColor: `${C.cyan}55` }} onClick={() => void protokoll(v)}>📄 Protokoll</button>}
                             {/* Vorbestellung */}
                             {v.art === 'vorbestellung' && v.status === 'offen' && <button style={{ ...styles.mini, color: C.gold, borderColor: `${C.gold}55` }} disabled={busy === v.id} onClick={() => setzeStatus(v, 'bereit')}>🔔 Bereit</button>}
                             {v.art === 'vorbestellung' && (v.status === 'offen' || v.status === 'bereit') && <button style={{ ...styles.mini, color: C.green, borderColor: `${C.green}55` }} disabled={busy === v.id} onClick={() => setzeStatus(v, 'abgeholt')}>✓ Abgeholt</button>}

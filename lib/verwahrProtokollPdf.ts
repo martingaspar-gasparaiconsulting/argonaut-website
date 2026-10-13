@@ -1,10 +1,12 @@
 // lib/verwahrProtokollPdf.ts
-// Verwahrprotokoll für die Einlagerung (Reifenhotel u. a.) — Verwahrungsvertrag
-// nach § 688 BGB. Client-seitig via jsPDF (A4 hoch). Dient der Beweissicherung:
-// Fabrikat/Zustand/Alter (DOT)/Profiltiefe/Felgenzustand werden festgehalten,
-// dazu Obhut-, Laufzeit- und Verwertungshinweis (Verwertung erst nach Ablauf der
-// Laufzeit + schriftlicher 14-Tage-Frist).
+// Verwahrprotokoll für die Einlagerung (Reifenhotel u. a.). Client-seitig via
+// jsPDF (A4 hoch). Dient der Beweissicherung: Fabrikat/Zustand/Alter (DOT)/
+// Profiltiefe/Felgenzustand werden festgehalten.
+// Paket 347 (A1 Vorlagen-Prinzip): Die Bedingungen (Laufzeit, Obhut, Vorgehen
+// bei Nichtabholung …) kommen NUR noch aus „Meine Rechtstexte" des Betriebs
+// (Schlüssel „verwahrung.bedingungen"). ARGONAUT liefert keinen Wortlaut mehr.
 import { jsPDF } from 'jspdf';
+import type { DokumentText } from '@/lib/rechtsTexte';
 import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
 import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
 
@@ -16,6 +18,8 @@ export interface VerwahrDaten {
   eingelagertAm: string;   // bereits formatiert (TT.MM.JJJJ)
   lagerplatz?: string;
   gegenstand?: string;     // Fabrikat, DOT-Alter, Profiltiefe, Felgenzustand …
+  /** Paket 347: Bedingungen aus „Meine Rechtstexte" (lib/rechtsTexte.dokumentText). */
+  bedingungen?: DokumentText | null;
 }
 
 export function verwahrProtokollPdf(d: VerwahrDaten): void {
@@ -31,7 +35,7 @@ export function verwahrProtokollPdf(d: VerwahrDaten): void {
   doc.setTextColor(navy); doc.setFontSize(18);
   y += 8; doc.text('Einlagerung / Verwahrung', L, y);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(dim);
-  y += 6; doc.text('Verwahrungsvertrag nach § 688 BGB', L, y);
+  y += 6; doc.text('Protokoll der Annahme zur Einlagerung', L, y);
   doc.setDrawColor(gold[0], gold[1], gold[2]); doc.setLineWidth(0.6);
   y += 3; doc.line(L, y, R, y);
 
@@ -71,22 +75,30 @@ export function verwahrProtokollPdf(d: VerwahrDaten): void {
   doc.text(g, L + 3, y + 9);
   y += 34;
 
-  // Hinweise
+  // Bedingungen: nur der eigene Text des Betriebs (Paket 347), nie ein Mustertext von ARGONAUT
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(dim);
-  doc.text('Vereinbarungen', L, y);
+  doc.text('Bedingungen der Einlagerung', L, y);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(navy);
-  const hinweise = [
-    '· Der Verwahrer bewahrt den Gegenstand sorgfältig auf (Obhutspflicht, § 688 BGB).',
-    '· Vertragslaufzeit 12 Monate; ohne Abholung verlängert sie sich stillschweigend.',
-    '· Eine Verwertung/Entsorgung ist erst nach Ablauf der Laufzeit und nach schriftlicher',
-    '  Ankündigung mit einer Frist von 14 Tagen zulässig.',
-    '· Der Zustand wird beidseitig bei Annahme bestätigt; spätere Beanstandungen bedürfen',
-    '  des Nachweises. Empfehlung: separate Obhuts-/Inhaltsversicherung.',
-  ];
   y += 6;
-  hinweise.forEach((h) => { doc.text(doc.splitTextToSize(h, W), L, y); y += 5.2; });
+  const b = d.bedingungen;
+  if (b && b.eigen) {
+    doc.setFontSize(9);
+    for (const zeile of doc.splitTextToSize(b.text, W) as string[]) {
+      if (y > 272) { doc.addPage(); y = 20; }
+      doc.text(zeile, L, y); y += 4.4;
+    }
+    doc.setFontSize(8); doc.setTextColor(dim);
+    if (y > 272) { doc.addPage(); y = 20; }
+    y += 1; doc.text(`Bedingungen des Betriebs, ${b.stand}`, L, y); y += 4;
+    doc.setTextColor(navy);
+  } else {
+    doc.setFontSize(9); doc.setTextColor(dim);
+    doc.text(doc.splitTextToSize('Es sind keine eigenen Bedingungen des Betriebs hinterlegt. Dieses Protokoll hält nur die Annahme und den Zustand fest.', W), L, y);
+    y += 10; doc.setTextColor(navy);
+  }
 
   // Unterschriften
+  if (y > 236) { doc.addPage(); y = 40; }
   y = Math.max(y + 12, 250);
   doc.setDrawColor(160); doc.setLineWidth(0.3);
   doc.line(L, y, L + 70, y);
