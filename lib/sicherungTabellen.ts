@@ -105,6 +105,27 @@ export const WEITERE_TABELLEN: string[] = [
   'werkstatt_positionen', 'werkstatt_status_log', 'whatsapp_kontakt', 'whatsapp_nachricht',
   'whatsapp_versand', 'whatsapp_vorlage', 'wiederkehr_lauf', 'zahlungen', 'zielgruppe',
   'zusammenfuehrungen', 'zuschnitt_projekt', 'zuschnitt_teil',
+  // Paket 350 (13.10.2026): alle Tabellen mit owner_user_id seit dem Befund vom 25.09.2026
+  // (Import, Ablaeufe, Kfz, Mobilitaet, Chemie/Shop, Reife, Vorbestellung, Box …).
+  'ablaeufe', 'ablauf_ergebnisse', 'ablauf_laeufe', 'ablauf_protokoll', 'ablauf_versionen',
+  'absender_domain', 'agentur_nutzungsrecht', 'agrar_duengebedarf', 'artikel_gefahr',
+  'beleg_ablage', 'betriebsanweisung', 'box_bestellung', 'box_fach', 'box_kapazitaet',
+  'box_option', 'box_vorlage', 'cmr_frachtbrief', 'dienstrad_vorgang', 'ersparnis_angabe',
+  'fahrtenbuch_abschluss', 'fahrtenbuch_aenderung', 'fahrtenbuch_fahrt', 'fuehrerschein_kontrolle',
+  'gwg_identifizierung', 'hotel_kurtaxe', 'hotel_kurtaxe_beleg', 'hotel_meldeschein',
+  'import_altsystem_wahl', 'import_umzug', 'kfz_anfrage', 'kfz_ankauf', 'kfz_bestand',
+  'kfz_bestand_kalk', 'kfz_bestand_kosten', 'kfz_bestand_medien', 'kfz_bestand_preis',
+  'kfz_boerse_aufruf', 'kfz_mappe', 'kfz_mappe_datei', 'kfz_mappe_nachricht', 'kfz_marktvergleich',
+  'kfz_probefahrt', 'kfz_rote_kennzeichen', 'kfz_suchauftrag', 'kfz_tresor', 'kfz_tresor_log',
+  'kfz_verkauf', 'kfz_zulassung', 'ladestrom_erstattung', 'logistik_kartenbuchung', 'miet_anfrage',
+  'miet_buchung', 'miet_einstellung', 'miet_fahrer', 'miet_fahrzeug', 'miet_schaden',
+  'miet_vorgang', 'mobilitaet_leistung', 'modul_einstellung', 'ms_einsatz', 'ms_event', 'ms_gast',
+  'ms_gruppe', 'ms_teil', 'ms_teilnehmer', 'partner_auftrag', 'partner_eintrag',
+  'partner_rechnung', 'preis_spiegel_posten', 'preis_spiegel_vergleich', 'produkt_dokument',
+  'rechnung_ablage', 'rechts_freigabe', 'rechts_freigabe_protokoll', 'reife_charge', 'reife_kalk',
+  'reife_messung', 'rezeptur_version', 'sdb_versand', 'shop_kunde', 'shop_preis',
+  'shop_preisliste', 'shop_sprache', 'shop_uebersetzung', 'shop_widerrufe', 'vorbestell_aktion',
+  'vorbestell_posten', 'vormerkung', 'werbe_sperre', 'zweirad', 'zweirad_garantie',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */
@@ -112,6 +133,20 @@ export const NIE_SICHERN: string[] = [
   'ads_zugang', 'api_schluessel', 'bank_zugang', 'beispiel_datensatz', 'betrieb_integrationen',
   'betriebs_geheimnisse', 'dialog_einstellung', 'elster_zugang', 'kassen_system', 'mail_zugang',
   'marktplatz_zugang', 'portal_zugaenge', 'social_zugang', 'versand_zugang', 'whatsapp_zugang',
+];
+
+/**
+ * Paket 350: Tabellen mit owner_user_id, die bewusst NICHT in die Datei kommen —
+ * Sicherheits- und Systemzustand (Zwei-Faktor-Hilfen und -Pflicht, Betriebs-
+ * Sperre, Fernhilfe-Sitzungen) und die interne Warteschlange der Abläufe.
+ * Sie gehören dem System, nicht dem Betrieb, und helfen bei einer
+ * Wiederherstellung nicht. Der Test tests/speicherSicherungP350 prüft, dass
+ * jede Tabelle mit owner_user_id in supabase-sql/ entweder gesichert wird oder
+ * hier bzw. in NIE_SICHERN steht — neue Tabellen fallen so sofort auf.
+ */
+export const SYSTEM_TABELLEN: string[] = [
+  'zwei_faktor_helfer', 'zwei_faktor_grenze', 'zwei_faktor_hilfe', 'zwei_faktor_ruecksetzungen',
+  'zwei_faktor_pflicht', 'zwei_faktor_pflicht_protokoll', 'zwei_faktor_ausnahme', 'betrieb_sperre', 'fernhilfe_sitzung', 'ablauf_ereignisse',
 ];
 
 /** Ist das eine Tabelle mit Zugangsdaten (darf nie in die Sicherung)? */
