@@ -117,6 +117,8 @@ export const DATEN_ORTE: DatenOrt[] = [
   { tabelle: 'verkaufschancen', label: 'Verkaufschancen', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
   { tabelle: 'crm_deal', label: 'Deals', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
   { tabelle: 'vk_anruf', label: 'Anrufe (Anruf-Sitzung)', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
+  { tabelle: 'telefon_einwilligung', label: 'Einwilligungen in Anrufe', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Nachweis der Einwilligung in Telefonwerbung (§ 7a UWG, 5 Jahre aufbewahren); der Kontakt-Bezug wird beim Löschen geleert.', imExport: true },
+  { tabelle: 'telefon_sperre', label: 'Anruf-Sperrliste', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Die Sperre muss bleiben, damit die Nummer nicht wieder angerufen wird (Widerspruch); der Kontakt-Bezug wird beim Löschen geleert.', imExport: true },
   { tabelle: 'shop_bestellungen', label: 'Shop-Bestellungen', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
   { tabelle: 'versand_sendung', label: 'Sendungen', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },
   { tabelle: 'kfz_fahrzeuge', label: 'KFZ-Fahrzeuge', spalte: 'kontakt_id', art: 'automatisch', begruendung: DURCH_DATENBANK, imExport: true },

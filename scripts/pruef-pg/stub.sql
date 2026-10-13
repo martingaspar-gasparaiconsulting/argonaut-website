@@ -17,5 +17,5 @@ alter table public.crm_deal enable row level security;
 create policy owner_all on public.crm_deal for all to authenticated using (auth.uid()=owner_user_id) with check (auth.uid()=owner_user_id);
 create policy ma_all on public.crm_deal for all to authenticated using (owner_user_id = public.mein_chef_id() and public.darf_ich_modul_aendern('pipeline')) with check (owner_user_id = public.mein_chef_id() and public.darf_ich_modul_aendern('pipeline'));
 alter table public.leads add column if not exists telefon text, add column if not exists created_at timestamptz default now(), add column if not exists stufe text, add column if not exists status text;
-create table public.kontakte(id uuid primary key default gen_random_uuid(), owner_user_id uuid not null, vorname text, telefon text, letzter_kontakt_am timestamptz, naechster_kontakt_am timestamptz);
+create table public.kontakte(id uuid primary key default gen_random_uuid(), owner_user_id uuid not null, vorname text, telefon text, mobil text, kunde_seit date, letzter_kontakt_am timestamptz, naechster_kontakt_am timestamptz);
 create table public.vertrieb_aktivitaet(id uuid primary key default gen_random_uuid(), owner_user_id uuid, mitarbeiter_id uuid, art text, ergebnis text, notiz text, standort_id uuid, erstellt_am timestamptz default now());

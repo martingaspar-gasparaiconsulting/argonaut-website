@@ -144,6 +144,8 @@ export const WEITERE_TABELLEN: string[] = [
   'crm_pipeline', 'crm_pipeline_stufe',
   // Paket 360 (VK4): Anruf-Sitzung — jeder Anruf mit Ergebnis
   'vk_anruf',
+  // Paket 362 (VK11): Anruf-Sperrliste und Einwilligungen (§ 7a UWG)
+  'telefon_einwilligung', 'telefon_sperre',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

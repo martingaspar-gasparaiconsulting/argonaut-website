@@ -452,6 +452,21 @@ export const WISSEN: Record<string, SeitenWissen> = {
     vorher: [{ text: 'Leads mit Telefonnummer', href: '/dashboard/leads' }],
     landetIn: [{ text: 'Akquise-Cockpit', href: '/dashboard/akquise' }, { text: 'Leads', href: '/dashboard/leads' }],
   },
+  '/dashboard/akquise/sperrliste': {
+    zweck: 'Anruf-Sperrliste und Einwilligungen in Anrufe: Wer nicht mehr angerufen werden möchte, wird für den ganzen Betrieb gesperrt; Einwilligungen in Telefonwerbung werden mit Quelle, Datum und Nachweis aufbewahrt.',
+    wer: 'beide',
+    werText: 'Sperren, Einwilligungen erfassen und Widerrufe eintragen darf jeder im Team. Entsperren nur die Geschäftsleitung, mit Grund. Gelöscht wird nichts.',
+    schritte: [
+      'Reiter „Sperrliste": Nummer mit Vorwahl eingeben, Grund wählen (Widerspruch, falsche Nummer, von Hand), „Sperren" – sie verschwindet aus jeder Anruf-Liste',
+      'In der Anruf-Sitzung geht es noch schneller: „🚫 Widerspruch – nicht mehr anrufen"; „Falsche Nummer" sperrt von selbst',
+      'Reiter „Einwilligungen": Kontakt wählen (Nummer wird übernommen), Art der Einwilligung, Datum und wo der Nachweis liegt – z. B. „Formular unterschrieben, Ordner Messe 2026"',
+      'Widerruft jemand, „Widerruf eintragen" – die Nummer wird sofort gesperrt',
+      'Die Ampel vor jedem Anruf: grün = eigene Anfrage oder Einwilligung, gelb = Firma (Grund angeben), rot = gesperrt oder Verbraucher ohne Einwilligung, grau = erst einordnen (Verbraucher oder Firma)',
+      'Bei Verbrauchern ohne Einwilligung ist nur ein Anruf ohne Werbung möglich (z. B. Rückfrage zum laufenden Auftrag) – mit Anlass, der gespeichert wird',
+    ],
+    probe: { anlegen: 'Eigene Handynummer sperren und in der Anruf-Sitzung prüfen, dass sie nicht erscheint.', loeschen: 'Als Geschäftsleitung mit Grund „Test der Sperrliste beendet" entsperren (der Nachweis bleibt).' },
+    landetIn: [{ text: 'Anruf-Sitzung', href: '/dashboard/akquise/sitzung' }],
+  },
   '/dashboard/marketing': {
     zweck: 'Ihre Kampagnen mit Kanälen, Laufzeit, Budget und Ampel — und wie viele Leads jede Kampagne gebracht hat.',
     wer: 'chef',

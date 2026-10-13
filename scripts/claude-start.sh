@@ -42,7 +42,7 @@ su postgres -c "dropdb -h /var/tmp/pg -p 5499 --if-exists vorlage; createdb -h /
 $P -d vorlage -f scripts/pruef-pg/stub.sql >/dev/null 2>&1 && echo "  Platzhalter ok" || echo "  Platzhalter FEHLER"
 sed -n '/create or replace function public.p353_name/,/^\$\$;/p' supabase-sql/p353-*.sql > /tmp/p353name.sql
 $P -d vorlage -f /tmp/p353name.sql >/dev/null 2>&1 && echo "  p353_name ok"
-for f in supabase-sql/p358-*.sql supabase-sql/p359-*.sql supabase-sql/p360-*.sql; do
+for f in supabase-sql/p358-*.sql supabase-sql/p359-*.sql supabase-sql/p360-*.sql supabase-sql/p362-*.sql; do
   [ -f "$f" ] && { $P -d vorlage -f "$f" >/dev/null 2>&1 && echo "  $(basename $f) ok" || echo "  $(basename $f) FEHLER"; }
 done
 

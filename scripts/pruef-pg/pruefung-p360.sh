@@ -24,10 +24,10 @@ ja    "A11 Termin" $M "insert into vk_anruf(owner_user_id,lead_id,ergebnis,user_
 gleich "A12 nach Termin kein naechster" "termin|" $C "select letzter_anruf_ergebnis||'|'||coalesce(naechster_anruf_am::text,'') from leads where id='$L2'"
 nein  "A13 fremder Lead" "nicht zu Ihrem Betrieb" $M "insert into vk_anruf(owner_user_id,lead_id,ergebnis,user_id) values ('$C','$LX','termin','$M')"
 nein  "A14 ohne Bezug" "vk_anruf_bezug" $M "insert into vk_anruf(owner_user_id,ergebnis,user_id) values ('$C','termin','$M')"
-ja    "A15 fremde Person angegeben -> Server setzt eigene" $M "insert into vk_anruf(owner_user_id,kontakt_id,ergebnis,user_id) values ('$C','$K1','gespraech','$C')"
+ja    "A15 fremde Person angegeben -> Server setzt eigene" $M "insert into vk_anruf(owner_user_id,kontakt_id,ergebnis,user_id,erlaubnis,erlaubnis_grund) values ('$C','$K1','gespraech','$C','kein_werbeanruf','Rueckfrage zum Auftrag')"
 gleich "A15b user_id = angemeldete Person" "$M" $C "select user_id from vk_anruf where kontakt_id='$K1'"
 nein  "A16 aendern verboten" "bleibt, wie er ist" $C "update vk_anruf set ergebnis='termin'"
-ja    "A17 Kontakt-Anruf Rueckruf" $M "insert into vk_anruf(owner_user_id,kontakt_id,ergebnis,rueckruf_am,user_id) values ('$C','$K1','rueckruf',now()+interval '2 hours','$M')"
+ja    "A17 Kontakt-Anruf Rueckruf" $M "insert into vk_anruf(owner_user_id,kontakt_id,ergebnis,rueckruf_am,user_id,erlaubnis,erlaubnis_grund) values ('$C','$K1','rueckruf',now()+interval '2 hours','$M','kein_werbeanruf','Rueckfrage zum Auftrag')"
 gleich "A18 Kontakt letzter+naechster gesetzt" "true|true" $C "select (letzter_kontakt_am is not null)||'|'||(naechster_kontakt_am > now()) from kontakte where id='$K1'"
 ja    "A19 MA nimmt eigenen Anruf zurueck" $M "delete from vk_anruf where lead_id='$L2' and ergebnis='termin'"
 gleich "A20 Lead neu gerechnet (Rueckruf wieder letzter)" "1|rueckruf" $C "select anruf_versuche||'|'||letzter_anruf_ergebnis from leads where id='$L2'"
@@ -41,6 +41,6 @@ gleich "F2 freier Setter sieht nur eigene" "1" $F "select count(*) from vk_anruf
 gleich "F3 MA sieht alle" "6" $M "select count(*) from vk_anruf"
 gleich "F4 Fremder sieht nichts" "0" $X "select count(*) from vk_anruf"
 nein  "F5 anon" "permission denied" $C "set local role anon; select * from vk_anruf"
-roh "drop table vertrieb_aktivitaet cascade" >/dev/null
+roh "drop table vertrieb_aktivitaet cascade" # (Kontakt-Anrufe brauchen seit P362 eine Erlaubnis) >/dev/null
 ja    "B1 ohne Cockpit-Tabelle trotzdem gespeichert" $M "insert into vk_anruf(owner_user_id,lead_id,ergebnis,user_id) values ('$C','$L2','gespraech','$M')"
 echo "== $ok gruen, $bad rot"

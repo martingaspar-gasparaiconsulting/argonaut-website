@@ -7,12 +7,14 @@
 // Logik: lib/anrufSitzung.ts · Tabelle vk_anruf (SQL p360). Fehlt die Tabelle,
 // zeigt die Box nur die Nummer.
 
-import { useCallback, useEffect, useState, CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import {
   ERGEBNISSE, telefonNorm, anrufPruefen, anrufZeile, lokalZuIso, rueckrufVorschlaege, ersteReaktion,
   ergebnis as ergebnisInfo, zeitDe, type ErgebnisKey,
 } from '@/lib/anrufSitzung';
+import ErlaubnisAmpel, { type Freigabe } from './ErlaubnisAmpel';
+import { ampel as erlaubnisAmpel, sperrMap, nummerNorm, type SperreRoh, type EinwilligungRoh } from '@/lib/anrufErlaubnis';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -34,6 +36,13 @@ export default function AnrufVerlauf({ leadId, kontaktId, telefon, angelegt }: {
   const [notiz, setNotiz] = useState('');
   const [busy, setBusy] = useState(false);
   const [meldung, setMeldung] = useState<{ ok: boolean; text: string } | null>(null);
+  // Paket 362: Erlaubnis-Ampel vor dem Erfassen
+  const [sperren, setSperren] = useState<SperreRoh[]>([]);
+  const [einw, setEinw] = useState<EinwilligungRoh[]>([]);
+  const [verbr, setVerbr] = useState<boolean | null>(null);
+  const [bestand, setBestand] = useState(false);
+  const [frei, setFrei] = useState<Freigabe>({ ok: false, fehler: '' });
+  const onFreigabe = useCallback((f: Freigabe) => setFrei(f), []);
 
   const laden = useCallback(async () => {
     const spalte = leadId ? 'lead_id' : 'kontakt_id';
@@ -44,7 +53,22 @@ export default function AnrufVerlauf({ leadId, kontaktId, telefon, angelegt }: {
       .eq(spalte, id).order('erstellt_am', { ascending: false }).limit(200);
     setBereit(!error);
     setAnrufe(error ? [] : ((data as Anruf[]) ?? []));
-  }, [leadId, kontaktId]);
+    const nr = nummerNorm(telefon);
+    if (nr) {
+      const { data: sp } = await supabase.from('telefon_sperre').select('nummer, quelle, grund, gesperrt_am, entsperrt_am').eq('nummer', nr).is('entsperrt_am', null);
+      setSperren(((sp as SperreRoh[]) ?? []));
+    }
+    if (kontaktId) {
+      const [ew, k] = await Promise.all([
+        supabase.from('telefon_einwilligung').select('id, nummer, kontakt_id, lead_id, widerrufen_am').is('widerrufen_am', null).or(`kontakt_id.eq.${kontaktId}${nr ? `,nummer.eq.${nr}` : ''}`),
+        supabase.from('kontakte').select('ist_verbraucher, kunde_seit, status').eq('id', kontaktId).maybeSingle(),
+      ]);
+      setEinw(((ew.data as EinwilligungRoh[]) ?? []));
+      const kk = k.data as { ist_verbraucher?: boolean | null; kunde_seit?: string | null; status?: string | null } | null;
+      setVerbr(kk?.ist_verbraucher ?? null);
+      setBestand(!!(kk?.kunde_seit || kk?.status === 'kunde'));
+    }
+  }, [leadId, kontaktId, telefon]);
 
   useEffect(() => {
     (async () => {
@@ -61,17 +85,25 @@ export default function AnrufVerlauf({ leadId, kontaktId, telefon, angelegt }: {
   }, [laden]);
 
   const tel = telefonNorm(telefon);
+  const ampel = useMemo(() => erlaubnisAmpel({ typ: leadId ? 'lead' : 'kontakt', id: (leadId ?? kontaktId) as string, telefon: telefon ?? null, istVerbraucher: verbr, bestandskunde: bestand }, sperrMap(sperren), einw),
+    [leadId, kontaktId, telefon, verbr, bestand, sperren, einw]);
+  async function einordnen(v: boolean) {
+    setVerbr(v);
+    if (kontaktId) await supabase.from('kontakte').update({ ist_verbraucher: v }).eq('id', kontaktId);
+  }
   const ersterAnruf = anrufe.length ? anrufe[anrufe.length - 1].erstellt_am : null;
   const reaktion = leadId && angelegt ? ersteReaktion({ created_at: angelegt, erster_anruf_am: ersterAnruf, telefon }, new Date()) : null;
 
   async function speichern() {
     if (!betrieb || !ich || !erg) { setMeldung({ ok: false, text: 'Bitte ein Ergebnis wählen.' }); return; }
+    if (!frei.ok) { setMeldung({ ok: false, text: frei.fehler || 'Bitte zuerst die Erlaubnis klären.' }); return; }
     const f = anrufPruefen(erg, rueck, notiz, new Date());
     if (f.length) { setMeldung({ ok: false, text: f.join(' ') }); return; }
     setBusy(true); setMeldung(null);
     try {
-      const { error } = await supabase.from('vk_anruf').insert(anrufZeile({ typ: leadId ? 'lead' : 'kontakt', id: (leadId ?? kontaktId) as string }, erg, rueck, notiz, betrieb, ich));
-      if (error) { setMeldung({ ok: false, text: /Lead|Kontakt|Rückruf|Betrieb/.test(error.message) ? error.message : 'Nicht gespeichert — fehlt SQL Paket 360?' }); return; }
+      const zeile = { ...anrufZeile({ typ: leadId ? 'lead' : 'kontakt', id: (leadId ?? kontaktId) as string }, erg, rueck, notiz, betrieb, ich), erlaubnis: frei.erlaubnis, erlaubnis_grund: frei.grund };
+      const { error } = await supabase.from('vk_anruf').insert(zeile);
+      if (error) { setMeldung({ ok: false, text: /Lead|Kontakt|Rückruf|Betrieb|gesperrt|Einwilligung|Verbraucher|Grund|erlaubt/.test(error.message) ? error.message : 'Nicht gespeichert — fehlt SQL Paket 360/362?' }); return; }
       setErg(''); setRueck(null); setRueckLokal(''); setNotiz(''); setOffen(false);
       setMeldung({ ok: true, text: 'Anruf gespeichert.' });
       await laden();
@@ -95,7 +127,9 @@ export default function AnrufVerlauf({ leadId, kontaktId, telefon, angelegt }: {
     <div style={st.box}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <span style={st.titel}>☎️ Anrufe</span>
-        {tel && <a href={`tel:${tel}`} style={st.anrufen}>📞 {telefon}</a>}
+        {tel && (ampel.braucht !== 'gesperrt'
+          ? <a href={`tel:${tel}`} style={st.anrufen}>📞 {telefon}</a>
+          : <span style={{ ...st.anrufen, background: 'transparent', color: '#E06666', border: '1px dashed #E06666' }}>🚫 {telefon} gesperrt</span>)}
         {reaktion && reaktion.minuten != null && (
           <span style={{ ...st.uhr, color: AMPEL[reaktion.ampel], borderColor: AMPEL[reaktion.ampel] + '66' }}>⏱ {reaktion.text}</span>
         )}
@@ -106,6 +140,7 @@ export default function AnrufVerlauf({ leadId, kontaktId, telefon, angelegt }: {
 
       {offen && (
         <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+          <ErlaubnisAmpel ampel={ampel} onFreigabe={onFreigabe} onEinordnen={(v) => void einordnen(v)} schluessel={leadId ?? kontaktId ?? ''} />
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {ERGEBNISSE.map((e) => (
               <button key={e.key} onClick={() => setErg(e.key)} style={{ ...st.chip, color: e.farbe, borderColor: erg === e.key ? e.farbe : 'rgba(255,255,255,0.15)', background: erg === e.key ? e.farbe + '22' : 'transparent' }}>{e.icon} {e.name}</button>
@@ -121,7 +156,7 @@ export default function AnrufVerlauf({ leadId, kontaktId, telefon, angelegt }: {
             </div>
           )}
           <textarea style={{ ...st.inp, minHeight: 50 }} maxLength={2000} placeholder="Notiz (optional)" value={notiz} onChange={(e) => setNotiz(e.target.value)} />
-          <div><button style={st.primaer} disabled={busy || !erg} onClick={() => void speichern()}>{busy ? 'Speichert …' : 'Anruf speichern'}</button></div>
+          <div><button style={st.primaer} disabled={busy || !erg || !frei.ok} onClick={() => void speichern()}>{busy ? 'Speichert …' : 'Anruf speichern'}</button></div>
         </div>
       )}
       {meldung && <p style={{ margin: '8px 0 0', color: meldung.ok ? '#3ddc84' : '#E06666', fontSize: 14 }}>{meldung.text}</p>}

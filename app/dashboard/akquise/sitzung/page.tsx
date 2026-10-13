@@ -22,6 +22,8 @@ import {
 import { filtere, type Segment } from '@/lib/segmente';
 import { ladeVerkaufsteam, type TeamStand } from '@/lib/verkaufsteamLaden';
 import Leerzustand from '../../_components/Leerzustand';
+import ErlaubnisAmpel, { type Freigabe } from '../../_components/ErlaubnisAmpel';
+import { ampel as erlaubnisAmpel, sperrMap, einwilligungFuer, nummerNorm, type SperreRoh, type EinwilligungRoh } from '@/lib/anrufErlaubnis';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -34,7 +36,7 @@ const C = {
 };
 
 const LEAD_SPALTEN = 'id, name, telefon, email, status, stufe, quelle, created_at, nachricht, dienstleistung, setter_user_id, closer_user_id, anruf_versuche, letzter_anruf_ergebnis, letzter_anruf_am, naechster_anruf_am, erster_anruf_am';
-const KONTAKT_SPALTEN = 'id, vorname, nachname, firma, email, telefon, mobil, ort, plz, land, position, status, quelle, kunde_seit, letzter_kontakt_am, betreuungs_intervall_tage, werbe_einwilligung, werbe_widerspruch_am';
+const KONTAKT_SPALTEN = 'id, vorname, nachname, firma, email, telefon, mobil, ort, plz, land, position, status, quelle, kunde_seit, letzter_kontakt_am, betreuungs_intervall_tage, werbe_einwilligung, werbe_widerspruch_am, ist_verbraucher';
 type Gruppe = Segment & { id: string; name: string };
 type Gespeichert = { id: string; name: string; ergebnis: string; zeit: string };
 
@@ -77,6 +79,11 @@ export default function AnrufSitzungSeite() {
   const [zuletzt, setZuletzt] = useState<Gespeichert | null>(null);
   const [erledigt, setErledigt] = useState(0);
   const [auswertungAuf, setAuswertungAuf] = useState(false);
+  // Paket 362: Sperrliste, Einwilligungen, Einordnung und Freigabe je Anruf.
+  const [sperren, setSperren] = useState<SperreRoh[]>([]);
+  const [einw, setEinw] = useState<EinwilligungRoh[]>([]);
+  const [einordnung, setEinordnung] = useState<Record<string, boolean>>({});
+  const [frei, setFrei] = useState<Freigabe>({ ok: false, fehler: '' });
   const [anrufe30, setAnrufe30] = useState<AnrufZeile[] | null>(null);
 
   const ich = stand?.ich ?? null;
@@ -93,6 +100,12 @@ export default function AnrufSitzungSeite() {
       const seit = new Date(Date.now() - 180 * 86_400_000).toISOString();
       const ak = await supabase.from('vk_anruf').select('kontakt_id, ergebnis, rueckruf_am, erstellt_am').not('kontakt_id', 'is', null).gte('erstellt_am', seit).limit(5000);
       setAnrufeK(ak.error ? [] : ((ak.data as AnrufKurz[]) ?? []));
+      const [sp, ew] = await Promise.all([
+        supabase.from('telefon_sperre').select('nummer, quelle, grund, gesperrt_am, entsperrt_am').is('entsperrt_am', null).limit(10000),
+        supabase.from('telefon_einwilligung').select('id, nummer, kontakt_id, lead_id, quelle, erteilt_am, widerrufen_am').is('widerrufen_am', null).limit(10000),
+      ]);
+      setSperren(sp.error ? [] : ((sp.data as SperreRoh[]) ?? []));
+      setEinw(ew.error ? [] : ((ew.data as EinwilligungRoh[]) ?? []));
       if (st?.ich) {
         const tag = berlinTag(new Date().toISOString());
         const h = await supabase.from('vk_anruf').select('ergebnis, erstellt_am').eq('user_id', st.ich).gte('erstellt_am', new Date(Date.now() - 36 * 3_600_000).toISOString()).limit(2000);
@@ -124,11 +137,24 @@ export default function AnrufSitzungSeite() {
     })();
   }, [gruppeId, gruppen]);
 
+  const sperrIndex = useMemo(() => sperrMap(sperren), [sperren]);
+  const kontaktInfo = useMemo(() => new Map(kontakte.map((k) => [k.id, k as KontaktRoh & { ist_verbraucher?: boolean | null; kunde_seit?: string | null; status?: string | null }])), [kontakte]);
   const liste = useMemo(() => warteschlange({
     leads, kontakte: quellen.liste ? kontakte : [], anrufeKontakte: anrufeK, jetzt,
     quellen, ich, nurMeine,
-  }).filter((x) => !uebersprungen.has(`${x.typ}:${x.id}`)), [leads, kontakte, anrufeK, jetzt, quellen, ich, nurMeine, uebersprungen]);
+  }).filter((x) => !uebersprungen.has(`${x.typ}:${x.id}`))
+    // Paket 362: gesperrte Nummern nie; Verbraucher aus Gruppen ohne Einwilligung nicht (wären rot).
+    .filter((x) => { const n = nummerNorm(x.telefonRoh); return !(n && sperrIndex.has(n)); })
+    .filter((x) => !(x.typ === 'kontakt' && x.grund === 'liste' && kontaktInfo.get(x.id)?.ist_verbraucher === true && !einwilligungFuer(einw, nummerNorm(x.telefonRoh), x.id))),
+  [leads, kontakte, anrufeK, jetzt, quellen, ich, nurMeine, uebersprungen, sperrIndex, kontaktInfo, einw]);
   const aktuell: Eintrag | null = laeuft ? liste[0] ?? null : null;
+  const aktuellAmpel = useMemo(() => {
+    if (!aktuell) return null;
+    const k = kontaktInfo.get(aktuell.id);
+    const verbr = aktuell.typ === 'kontakt' ? (einordnung[aktuell.id] ?? k?.ist_verbraucher ?? null) : null;
+    return erlaubnisAmpel({ typ: aktuell.typ, id: aktuell.id, telefon: aktuell.telefonRoh, istVerbraucher: verbr, bestandskunde: !!(k?.kunde_seit || k?.status === 'kunde') }, sperrIndex, einw);
+  }, [aktuell, kontaktInfo, einordnung, sperrIndex, einw]);
+  const onFreigabe = useCallback((f: Freigabe) => setFrei(f), []);
   const heute = tagesZahlen(heuteAnrufe);
   const zaehl = useMemo(() => {
     const z = { rueckruf: 0, neu: 0, offen: 0, liste: 0 };
@@ -153,15 +179,19 @@ export default function AnrufSitzungSeite() {
 
   async function speichern(erg: ErgebnisKey, rueckIso: string | null) {
     if (!aktuell || !betrieb || !ich) return;
+    if (!frei.ok) { setFehler(frei.fehler || 'Bitte zuerst die Erlaubnis klären.'); return; }
     const f = anrufPruefen(erg, rueckIso, notiz, new Date());
     if (f.length) { setFehler(f.join(' ')); return; }
     setBusy(true); setFehler(null);
     try {
-      const { data, error } = await supabase.from('vk_anruf').insert(anrufZeile(aktuell, erg, rueckIso, notiz, betrieb, ich)).select('id').single();
+      const zeile = { ...anrufZeile(aktuell, erg, rueckIso, notiz, betrieb, ich), erlaubnis: frei.erlaubnis, erlaubnis_grund: frei.grund };
+      const { data, error } = await supabase.from('vk_anruf').insert(zeile).select('id').single();
       if (error || !data) {
-        setFehler(error && /Lead|Kontakt|Rückruf|Betrieb/.test(error.message) ? error.message : 'Nicht gespeichert — fehlt SQL Paket 360? ' + (error?.message ?? ''));
+        setFehler(error && /Lead|Kontakt|Rückruf|Betrieb|gesperrt|Einwilligung|Verbraucher|Grund|erlaubt/.test(error.message) ? error.message : 'Nicht gespeichert — fehlt SQL Paket 360/362? ' + (error?.message ?? ''));
         return;
       }
+      // Falsche Nummer: gleich sperren, damit sie nicht wiederkommt (Beiwerk).
+      if (erg === 'falsche_nummer') await sperrenEintragen('falsche_nummer', 'Beim Anruf als falsche Nummer erkannt');
       setZuletzt({ id: (data as { id: string }).id, name: aktuell.name, ergebnis: erg, zeit: new Date().toISOString() });
       setErledigt((n) => n + 1);
       setHeuteAnrufe((h) => [...h, { ergebnis: erg }]);
@@ -186,6 +216,43 @@ export default function AnrufSitzungSeite() {
       setHeuteAnrufe((h) => h.slice(0, -1));
       await laden_(stand);
     } finally { setBusy(false); }
+  }
+
+  async function sperrenEintragen(quelle: 'widerspruch' | 'falsche_nummer', grund: string): Promise<boolean> {
+    if (!aktuell || !betrieb) return false;
+    const nummer = nummerNorm(aktuell.telefonRoh);
+    if (!nummer) { setFehler('Die Nummer hat keine Vorwahl und lässt sich nicht sperren.'); return false; }
+    const { error } = await supabase.from('telefon_sperre').insert({
+      owner_user_id: betrieb, nummer, quelle, grund,
+      lead_id: aktuell.typ === 'lead' ? aktuell.id : null, kontakt_id: aktuell.typ === 'kontakt' ? aktuell.id : null,
+    });
+    if (error) { setFehler('Sperren fehlgeschlagen — fehlt SQL Paket 362? ' + error.message); return false; }
+    return true;
+  }
+
+  async function widerspruch() {
+    if (!aktuell) return;
+    if (!window.confirm(`Widerspruch: ${aktuell.name} möchte nicht mehr angerufen werden. Nummer für den ganzen Betrieb sperren?`)) return;
+    setBusy(true); setFehler(null);
+    try {
+      const ok = await sperrenEintragen('widerspruch', notiz.trim() || 'Widerspruch am Telefon');
+      if (!ok) return;
+      // Das Gespräch selbst zählt als „kein Interesse", wenn der Anruf erlaubt war.
+      if (frei.ok && betrieb && ich) {
+        await supabase.from('vk_anruf').insert({ ...anrufZeile(aktuell, 'kein_interesse', null, notiz || 'Widerspruch: nicht mehr anrufen', betrieb, ich), erlaubnis: frei.erlaubnis, erlaubnis_grund: frei.grund });
+        setErledigt((n) => n + 1);
+        setHeuteAnrufe((h) => [...h, { ergebnis: 'kein_interesse' }]);
+      }
+      neuStart();
+      await laden_(stand);
+    } finally { setBusy(false); }
+  }
+
+  async function einordnen(verbraucher: boolean) {
+    if (!aktuell || aktuell.typ !== 'kontakt') return;
+    setEinordnung((e) => ({ ...e, [aktuell.id]: verbraucher }));
+    // Am Kontakt merken, wenn das Recht dafür da ist (sonst gilt die Wahl nur in dieser Sitzung).
+    await supabase.from('kontakte').update({ ist_verbraucher: verbraucher }).eq('id', aktuell.id);
   }
 
   function ueberspringen() {
@@ -278,8 +345,9 @@ export default function AnrufSitzungSeite() {
           </div>
           {quellen.liste && (
             <div style={st.warn}>
+              Verbraucher ohne Einwilligung und gesperrte Nummern sind ausgeblendet. Vor jedem Anruf zeigt die Ampel, ob er erlaubt ist.<br />
               ⚠ Kontakte aus einer Gruppe haben nicht selbst angefragt. Werbeanrufe bei Verbrauchern sind nur mit vorheriger ausdrücklicher Einwilligung erlaubt,
-              bei Firmen nur bei mutmaßlichem Interesse. Kontakte mit Werbe-Widerspruch sind ausgeblendet. Eine Ampel je Anruf folgt mit dem Paket „Anruf-Sperrliste".
+              bei Firmen nur bei mutmaßlichem Interesse. Kontakte mit Werbe-Widerspruch sind ausgeblendet.
             </div>
           )}
           <button style={{ ...st.primaer, marginTop: 14, opacity: liste.length && bereit ? 1 : 0.5 }} disabled={!liste.length || !bereit}
@@ -301,7 +369,10 @@ export default function AnrufSitzungSeite() {
             <span style={st.dim}>{erledigt} erledigt · noch {liste.length} in der Liste</span>
           </div>
           <div style={st.name}>{aktuell.name}{aktuell.firma && aktuell.firma !== aktuell.name ? <span style={st.dim}> · {aktuell.firma}</span> : null}</div>
-          <a href={`tel:${aktuell.telefon}`} style={st.anrufen}>📞 {aktuell.telefonRoh || aktuell.telefon}</a>
+          {frei.ok
+            ? <a href={`tel:${aktuell.telefon}`} style={st.anrufen}>📞 {aktuell.telefonRoh || aktuell.telefon}</a>
+            : <span style={{ ...st.anrufen, background: 'transparent', color: C.dim, border: `1px dashed ${C.rand}` }}>📞 {aktuell.telefonRoh || aktuell.telefon}</span>}
+          {aktuellAmpel && <ErlaubnisAmpel ampel={aktuellAmpel} onFreigabe={onFreigabe} onEinordnen={(v) => void einordnen(v)} schluessel={`${aktuell.typ}:${aktuell.id}`} />}
           <div style={st.infos}>
             {aktuell.grund === 'rueckruf' && aktuell.faellig && <span>🔁 Rückruf vereinbart für {zeitDe(aktuell.faellig)}</span>}
             {aktuell.angelegt && <span>Anfrage {seitText(aktuell.angelegt, jetzt)}{aktuell.quelle ? ` · ${aktuell.quelle}` : ''}</span>}
@@ -319,7 +390,7 @@ export default function AnrufSitzungSeite() {
           <div style={{ ...st.titel, marginTop: 16 }}>Ergebnis</div>
           <div style={st.ergebnisse}>
             {ERGEBNISSE.map((e) => (
-              <button key={e.key} disabled={busy} onClick={() => ergebnisKlick(e.key)}
+              <button key={e.key} disabled={busy || !frei.ok} onClick={() => ergebnisKlick(e.key)}
                 style={{ ...st.erg, borderColor: wahl === e.key ? e.farbe : C.rand, color: e.farbe, background: wahl === e.key ? e.farbe + '22' : 'transparent' }}>
                 <span style={{ fontSize: 20 }}>{e.icon}</span>{e.name}
               </button>
@@ -345,6 +416,8 @@ export default function AnrufSitzungSeite() {
 
           <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
             <button style={st.knopf} disabled={busy} onClick={ueberspringen}>Überspringen</button>
+            <button style={{ ...st.knopf, color: C.rot, borderColor: C.rot + '66' }} disabled={busy} onClick={() => void widerspruch()}>🚫 Widerspruch – nicht mehr anrufen</button>
+            <Link href="/dashboard/akquise/sperrliste" style={{ ...st.knopf, textDecoration: 'none' }} target="_blank">Sperrliste & Einwilligungen ↗</Link>
             <button style={st.knopf} onClick={() => setLaeuft(false)}>Sitzung beenden</button>
           </div>
         </div>
