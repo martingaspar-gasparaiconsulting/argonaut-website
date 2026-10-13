@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, type CSSProperties, type FormEvent } from 'react'
+import { nachZustaendig, zustaendigText, meineRolle, type Person } from '@/lib/verkaufsteam'
 import FristAmpel from '../_components/FristAmpel'
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder'
 import { NurVoll } from '../_components/Ansicht'
@@ -32,6 +33,9 @@ export type Lead = {
   termin_gebucht_am: string | null
   termin_gehalten_am: string | null
   kunde_seit: string | null
+  // Paket 358: Zuständige im Verkaufsteam
+  setter_user_id?: string | null
+  closer_user_id?: string | null
 }
 
 type StatusKey = 'neu' | 'offen' | 'gewonnen' | 'verloren'
@@ -99,7 +103,8 @@ const inputStyle: CSSProperties = { width: '100%', padding: '10px', border: '1px
 // Tabellennamen, wie bei allen anderen Modulen (siehe kfz: 'kfz_fahrzeuge').
 const MODUL = 'leads'
 
-export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: string }) {
+export default function LeadsClient({ leads, userId, team = [], frei = false }: { leads: Lead[]; userId: string; team?: Person[]; frei?: boolean }) {
+  const [zustaendig, setZustaendig] = useState<string>('alle')
   const [status, setStatus] = useState<'alle' | StatusKey>('alle')
   const [stufe, setStufe] = useState<'alle' | Stufe>('alle')
   const [herkunft, setHerkunft] = useState<'alle' | 'neu' | 'bestand'>('alle')
@@ -127,9 +132,10 @@ export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: 
     return () => { abgebrochen = true }
   }, [leads])
 
-  const nachHerkunft = leads.filter((l) =>
+  const nachHerkunft = nachZustaendig(leads, zustaendig, userId).filter((l) =>
     herkunft === 'alle' ? true : herkunft === 'bestand' ? l.ist_bestand === true : l.ist_bestand !== true
   )
+  const mitTeam = team.length > 1 || leads.some((l) => l.setter_user_id || l.closer_user_id)
   // Die Stufe einer Anfrage: gesetzt, sonst aus dem alten Status abgeleitet —
   // so faellt kein Bestandslead aus Filter und Trichter.
   const stufeVon = (l: Lead): Stufe => (istStufe(l.stufe) ? l.stufe : stufeAusStatus(l.status))
@@ -215,6 +221,25 @@ export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: 
           <button onClick={() => setHerkunft('bestand')} style={pillStyle(herkunft === 'bestand', '#C9A84C')}>Bestand ({anzahlBestand})</button>
         </div>
 
+        {/* Paket 358: Zuständig — Meine / ohne Zuständige / je Person */}
+        {mitTeam && !frei ? (
+          <>
+            <p style={labelStyle}>Zuständig</p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '18px', alignItems: 'center' }}>
+              <button onClick={() => setZustaendig('alle')} style={pillStyle(zustaendig === 'alle', '#C9A84C')}>Alle ({leads.length})</button>
+              <button onClick={() => setZustaendig('meine')} style={pillStyle(zustaendig === 'meine', '#C9A84C')}>Meine ({nachZustaendig(leads, 'meine', userId).length})</button>
+              <button onClick={() => setZustaendig('ohne')} style={pillStyle(zustaendig === 'ohne', '#C9A84C')}>Ohne Zuständige ({nachZustaendig(leads, 'ohne', userId).length})</button>
+              <select value={['alle', 'meine', 'ohne'].includes(zustaendig) ? '' : zustaendig} onChange={(e) => setZustaendig(e.target.value || 'alle')}
+                style={{ background: '#0F2036', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '999px', padding: '5px 12px', fontFamily: 'inherit' }}>
+                <option value="">je Person …</option>
+                {team.map((p) => <option key={p.user_id} value={p.user_id}>{p.name}</option>)}
+              </select>
+              <a href="/dashboard/leads/team" style={{ color: '#C9A84C', fontSize: 'clamp(12px, 1.06vw, 17px)', marginLeft: '6px' }}>👥 Verkaufsteam</a>
+            </div>
+          </>
+        ) : null}
+        {frei ? <p style={{ ...labelStyle, color: 'rgba(255,255,255,0.55)', textTransform: 'none', letterSpacing: 0 }}>Sie sehen die Leads, für die Sie zuständig sind.</p> : null}
+
         <p style={labelStyle}>Stufe</p>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
           <button onClick={() => setStufe('alle')} style={pillStyle(stufe === 'alle', '#C9A84C')}>Alle ({nachHerkunft.length})</button>
@@ -269,6 +294,10 @@ export default function LeadsClient({ leads, userId }: { leads: Lead[]; userId: 
                     ) : null}
                   </div>
                 </div>
+
+                {(() => { const z = zustaendigText(l, team); const r = meineRolle(l, userId); return z ? (
+                  <p style={{ margin: '8px 0 0', fontSize: 'clamp(12px, 1.06vw, 17px)', color: r ? '#C9A84C' : 'rgba(255,255,255,0.5)' }}>👤 {z}</p>
+                ) : null })()}
 
                 <div style={{ display: 'flex', gap: '18px', flexWrap: 'wrap', marginTop: '10px', fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.75)' }}>
                   {l.telefon ? <span>Tel: {l.telefon}</span> : null}

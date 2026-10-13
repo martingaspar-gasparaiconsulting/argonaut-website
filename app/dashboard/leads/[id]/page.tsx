@@ -2,6 +2,8 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import LeadDetailClient, { type LeadDetail } from './LeadDetailClient'
 import AblaufKnoepfe from '../../_components/AblaufKnoepfe'
+import ZustaendigBox from './ZustaendigBox'
+import { ladeVerkaufsteam, ladeZustaendige } from '@/lib/verkaufsteamLaden'
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -17,7 +19,11 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
   if (!data) notFound()
 
-  const lead = data as LeadDetail
+  // Paket 358: Zuständige + Team. Freie Setter sehen den Angebotsentwurf nicht
+  // (Preise) — er wird gar nicht erst an den Browser gegeben.
+  const [stand, zust] = await Promise.all([ladeVerkaufsteam(supabase), ladeZustaendige(supabase, id)])
+  const z = zust.get(id) ?? { setter_user_id: null, closer_user_id: null }
+  const lead = (stand.frei ? { ...data, angebot_entwurf: null, angebot_status: null } : data) as LeadDetail
 
   return (
     <div style={{ background: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#FFFFFF' }}>
@@ -28,7 +34,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         </a>
         {/* Paket 168: Ablauf-Knöpfe (nur Geschäftsleitung, nur eingeschaltete) */}
         <AblaufKnoepfe modul="leads" vorgangId={lead.id} />
-        <LeadDetailClient lead={lead} />
+        {stand.bereit ? <ZustaendigBox leadId={lead.id} team={stand.team} setter={z.setter_user_id} closer={z.closer_user_id} frei={stand.frei} ich={stand.ich} /> : null}
+        <LeadDetailClient lead={lead} ohneAngebot={stand.frei} />
       </main>
     </div>
   )

@@ -74,7 +74,7 @@ function formatDatum(iso: string | null): string | null {
   }
 }
 
-export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
+export default function LeadDetailClient({ lead, ohneAngebot = false }: { lead: LeadDetail; ohneAngebot?: boolean }) {
   const [entwurf, setEntwurf] = useState<string>(lead.angebot_entwurf ?? '')
   const [angebotStatus, setAngebotStatus] = useState<string>(lead.angebot_status ?? '')
   const [erstelltAm, setErstelltAm] = useState<string | null>(lead.angebot_erstellt_am ?? null)
@@ -470,7 +470,8 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
         )}
       </div>
 
-      {/* Rechte Spalte: KI-Angebotsentwurf */}
+      {/* Rechte Spalte: KI-Angebotsentwurf — Paket 358: nicht für freie Setter (Preise) */}
+      {ohneAngebot ? <div /> : (
       <section style={{ ...card, position: 'sticky', top: '92px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
           <h2 style={{ fontSize: 'clamp(17px, 1.5vw, 24px)', fontWeight: 800, margin: 0 }}>KI-Angebotsentwurf</h2>
@@ -650,6 +651,7 @@ export default function LeadDetailClient({ lead }: { lead: LeadDetail }) {
           )}
         </div>
       </section>
+      )}
     </div>
   )
 }

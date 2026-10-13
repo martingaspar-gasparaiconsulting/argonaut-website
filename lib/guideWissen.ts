@@ -406,6 +406,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
   },
 
   // --- Vertrieb (Teil A2b) -------------------------------------------------
+  '/dashboard/leads/team': {
+    zweck: 'Verkaufsteam: wer im Verkauf Setter, Closer oder Teamleitung ist, wer „frei" ist (nur eigene Leads, keine Deals), und wie viele Leads jede Person betreut.',
+    wer: 'beide',
+    werText: 'Wer Leads sehen darf, sieht die Übersicht. Funktionen, „frei" und „aktiv" setzt nur die Geschäftsleitung.',
+    schritte: [
+      'In der Tabelle je Person die „Funktion" wählen (Setter, Closer, Teamleitung), bei Bedarf „frei" oder „aktiv" umschalten und „speichern" drücken',
+      '„frei" heißt: Die Person sieht nur Leads, bei denen sie Setter oder Closer ist, keine Deals und keinen Angebotsentwurf, und sie kann Zuständige nicht ändern. Neue Leads, die sie anlegt, gehören automatisch ihr',
+      'Am einzelnen Lead oben „Setter" und „Closer" wählen und „Zuständige speichern" — oder „Ich übernehme"',
+      'In der Lead-Liste filtert „Zuständig" auf „Meine", „Ohne Zuständige" oder eine bestimmte Person',
+    ],
+    probe: { anlegen: 'Einer Testperson die Funktion „Setter" geben und einem Probe-Lead zuweisen.', loeschen: 'Funktion wieder auf „—" setzen bzw. am Lead „— niemand —" wählen. Gelöscht wird hier nichts.' },
+    vorher: [{ text: 'Mitarbeiter mit eigener Anmeldung', href: '/dashboard/personal' }],
+  },
   '/dashboard/leads': {
     zweck: 'Alle Anfragen an einem Ort: von der Website, aus Freebies, Webinaren oder von Hand erfasst — mit Stufe (neu, qualifiziert … verloren) und Herkunft.',
     wer: 'beide',

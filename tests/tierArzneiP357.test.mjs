@@ -169,7 +169,8 @@ test('Verdrahtung: SQL, Seite, Menü, Sicherung, Guide', () => {
   assert.ok(!/p357_ma_update|p357_ma_delete/.test(sql), 'Mitarbeiter ändern und löschen nichts');
   const sicher = lies('lib/sicherungTabellen.ts');
   for (const t of ['tier_arznei_eingang', 'tier_arznei_anwendung']) assert.ok(sicher.includes(`'${t}'`), t);
-  assert.match(lies('lib/rechte.ts'), /href: '\/dashboard\/tierbestand\/arznei', modul: 'tierbestand'/);
+  assert.match(lies('lib/rechte.ts'), /href: '\/dashboard\/tierbestand\/arznei', ebene: 3/);
+  assert.ok(!/href: '\/dashboard\/tierbestand\/arznei', modul:/.test(lies('lib/rechte.ts')), 'Unterpfad ohne eigenen Modul-Schluessel (MODUL_PFAD)');
   assert.ok(lies('lib/guideWissen.ts').includes('/dashboard/tierbestand/arznei'));
   const seite = lies('app/dashboard/tierbestand/arznei/page.tsx');
   assert.ok(!/frei_fleisch_ab\s*:/.test(seite.replace(/\/\/.*$/gm, '')), 'Seite schreibt nie die gerechnete Spalte');

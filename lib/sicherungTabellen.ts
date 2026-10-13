@@ -138,6 +138,8 @@ export const WEITERE_TABELLEN: string[] = [
   'abfall_register', 'adr_papier',
   // Paket 357 (A4d): Tierhaltung — Arzneimittel-Bestandsbuch (Erwerb, Anwendung)
   'tier_arznei_anwendung', 'tier_arznei_eingang',
+  // Paket 358 (VK1): Verkaufsteam — Funktion je Person
+  'vk_funktion',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase-server'
 import { STANDORT_COOKIE } from '@/lib/aktiverStandort'
 import { konkreterStandort, standortOrFilter } from '@/lib/standortDaten'
 import LeadsClient, { type Lead } from './LeadsClient'
+import { ladeVerkaufsteam, ladeZustaendige } from '@/lib/verkaufsteamLaden'
 
 export default async function LeadsPage() {
   const supabase = await createClient()
@@ -21,7 +22,10 @@ export default async function LeadsPage() {
 
   const { data } = await query.order('created_at', { ascending: false })
 
-  const leads = (data ?? []) as Lead[]
+  // Paket 358: Zuständige (Setter/Closer) und Team — eigene Abfragen, damit die
+  // Liste auch ohne SQL 358 erscheint.
+  const [stand, zust] = await Promise.all([ladeVerkaufsteam(supabase), ladeZustaendige(supabase)])
+  const leads = ((data ?? []) as Lead[]).map((l) => ({ ...l, ...(zust.get(l.id) ?? { setter_user_id: null, closer_user_id: null }) }))
 
   return (
     <div style={{ background: '#0A1628', fontFamily: 'var(--font-dm-sans), sans-serif', color: '#FFFFFF' }}>
@@ -33,7 +37,7 @@ export default async function LeadsPage() {
           <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(15px, 1.31vw, 21px)', margin: 0 }}>Alle eingehenden Anfragen und Ihr Bestand an einem Ort - vom ersten Kontakt bis zum gewonnenen Auftrag.</p>
         </section>
 
-        <LeadsClient leads={leads} userId={user.id} />
+        <LeadsClient leads={leads} userId={user.id} team={stand.team} frei={stand.frei} />
       </main>
     </div>
   )

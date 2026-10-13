@@ -134,6 +134,8 @@ export const NAV_LINKS: NavLink[] = [
 
   // --- Vertrieb & Projekte (Ebene 3, operativ) ------------------------------
   { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3, gruppe: 'vertrieb' },
+  // Paket 358 (13.10.26): Verkaufsteam (VK1) — Unterpfad von /dashboard/leads, deshalb ohne eigenen Modul-Schluessel.
+  { label: '👥 Verkaufsteam', href: '/dashboard/leads/team', ebene: 3, gruppe: 'vertrieb' },
   // Akquise-Cockpit: bewusst OHNE `modul`-Schluessel. Ein zweiter Eintrag mit
   // `modul: 'leads'` wuerde in MODUL_PFAD den Pfad von /dashboard/leads
   // ueberschreiben. `immer: true` heisst: jeder erfasst seine eigene Arbeit —
@@ -329,8 +331,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🌾 Schlagkartei', href: '/dashboard/schlagkartei', modul: 'schlagkartei', ebene: 3, gruppe: 'betrieb' },
   { label: '🧺 Ernte & Direktvermarktung', href: '/dashboard/ernte', modul: 'ernte', ebene: 3, gruppe: 'betrieb' },
   { label: '🐄 Tierbestand', href: '/dashboard/tierbestand', modul: 'tierbestand', ebene: 3, gruppe: 'betrieb' },
-  // Paket 357 (13.10.26): Arzneimittel-Bestandsbuch mit Wartezeiten — Unterpfad von /dashboard/tierbestand.
-  { label: '💊 Arznei-Bestandsbuch', href: '/dashboard/tierbestand/arznei', modul: 'tierbestand', ebene: 3, gruppe: 'betrieb' },
+  // Paket 357 (13.10.26): Arzneimittel-Bestandsbuch mit Wartezeiten — Unterpfad von /dashboard/tierbestand,
+  // deshalb OHNE eigenen Modul-Schluessel (sonst zeigte MODUL_PFAD['tierbestand'] hierher; Fund P358).
+  { label: '💊 Arznei-Bestandsbuch', href: '/dashboard/tierbestand/arznei', ebene: 3, gruppe: 'betrieb' },
   { label: '⚖️ Akten & Fristen', href: '/dashboard/fristen', modul: 'fristen', ebene: 3, gruppe: 'betrieb' },
   { label: '📐 Zuschnitt', href: '/dashboard/zuschnitt', modul: 'zuschnitt', ebene: 3, gruppe: 'betrieb' },
   { label: '❤️ Spenden', href: '/dashboard/spenden', modul: 'spenden', ebene: 3, sensibel: true, gruppe: 'finanzen' },
