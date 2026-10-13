@@ -193,6 +193,19 @@ export const VERFAHREN_KATALOG: VerfahrenVorschlag[] = [
     tom: TOM_STANDARD + ' Wiegescheine nach Abschluss unveraenderbar (Storno nur mit Grund durch die Geschaeftsleitung); Wiegezeiten vom Server.',
   },
   {
+    // Paket 363 (13.10.2026): Herstellungsprotokoll (Fachpaket Lebensmittel-Herstellung)
+    wenn: 'herstellung',
+    name: 'Herstellungsprotokolle (Sud, Milchverarbeitung, Mahlgang, Ansatz)',
+    zweck: 'Rueckverfolgbarkeit und Eigenkontrolle in der Lebensmittelherstellung: wer hat wann welchen Schritt gemessen, welche Rohstoff-Chargen wurden eingesetzt.',
+    rechtsgrundlage: 'Art. 6 Abs. 1 lit. c DSGVO (Rueckverfolgbarkeit nach Art. 18 VO (EG) 178/2002, Eigenkontrolle), § 26 Abs. 1 BDSG fuer Beschaeftigtendaten',
+    kategorien_betroffene: 'Beschaeftigte (Personen, die Protokolle anlegen, Messwerte erfassen oder abschliessen)',
+    kategorien_daten: 'Name der erfassenden Person mit Zeitpunkt je Messwert, Abschluss und Storno',
+    empfaenger: 'Lebensmittelueberwachung auf Anforderung, ' + EMPF_BASIS,
+    drittland: KEIN_DRITTLAND,
+    loeschfrist: 'Vorschlag: 5 Jahre nach Abschluss des Protokolls; laenger, solange Ware aus der Charge noch im Verkehr ist. Vom Betrieb anzupassen.',
+    tom: TOM_STANDARD + ' Messwerte nur anhaengbar, Zeitstempel und Namen vom Server; abgeschlossene Protokolle unveraenderbar (Storno nur mit Grund durch die Geschaeftsleitung).',
+  },
+  {
     // Paket 357 (13.10.2026): Arzneimittel-Bestandsbuch (Fachpaket Tierhaltung)
     wenn: 'tierbestand',
     name: 'Arzneimittel-Bestandsbuch fuer Nutztiere (Tierhaltung)',

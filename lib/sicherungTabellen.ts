@@ -146,6 +146,8 @@ export const WEITERE_TABELLEN: string[] = [
   'vk_anruf',
   // Paket 362 (VK11): Anruf-Sperrliste und Einwilligungen (§ 7a UWG)
   'telefon_einwilligung', 'telefon_sperre',
+  // Paket 363 (A4e): Herstellungsprotokolle (Sud, Milch, Mahlgang, Ansatz)
+  'herstell_messung', 'herstell_protokoll', 'herstell_rohstoff',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

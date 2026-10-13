@@ -19,3 +19,13 @@ create policy ma_all on public.crm_deal for all to authenticated using (owner_us
 alter table public.leads add column if not exists telefon text, add column if not exists created_at timestamptz default now(), add column if not exists stufe text, add column if not exists status text;
 create table public.kontakte(id uuid primary key default gen_random_uuid(), owner_user_id uuid not null, vorname text, telefon text, mobil text, kunde_seit date, letzter_kontakt_am timestamptz, naechster_kontakt_am timestamptz);
 create table public.vertrieb_aktivitaet(id uuid primary key default gen_random_uuid(), owner_user_id uuid, mitarbeiter_id uuid, art text, ergebnis text, notiz text, standort_id uuid, erstellt_am timestamptz default now());
+-- Paket 363: Rezepturen und Chargen (Platzhalter mit den Spalten aus dem Code)
+create table public.rezepturen(id uuid primary key default gen_random_uuid(), owner_user_id uuid not null, name text, typ text, basis_menge numeric, basis_einheit text, artikel_id uuid);
+create table public.charge_los(id uuid primary key default gen_random_uuid(), owner_user_id uuid not null, artikel_id uuid, charge_nr text, typ text, bezeichnung text, menge numeric, einheit text, herstell_datum date, mhd date, herkunft text, auftrag text, status text default 'freigegeben', bemerkung text, standort_id uuid, created_at timestamptz default now());
+create table public.charge_verwendung(id uuid primary key default gen_random_uuid(), owner_user_id uuid not null, los_id uuid references public.charge_los(id), richtung text, referenz text, menge numeric, datum date, notiz text);
+alter table public.charge_los enable row level security;
+alter table public.charge_verwendung enable row level security;
+create policy owner_all on public.charge_los for all to authenticated using (auth.uid()=owner_user_id) with check (auth.uid()=owner_user_id);
+create policy ma_all on public.charge_los for all to authenticated using (owner_user_id = public.mein_chef_id() and public.darf_ich_modul_aendern('chargen')) with check (owner_user_id = public.mein_chef_id() and public.darf_ich_modul_aendern('chargen'));
+create policy owner_all on public.charge_verwendung for all to authenticated using (auth.uid()=owner_user_id) with check (auth.uid()=owner_user_id);
+create policy ma_all on public.charge_verwendung for all to authenticated using (owner_user_id = public.mein_chef_id() and public.darf_ich_modul_aendern('chargen')) with check (owner_user_id = public.mein_chef_id() and public.darf_ich_modul_aendern('chargen'));

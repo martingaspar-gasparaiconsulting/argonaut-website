@@ -2800,6 +2800,24 @@ export const WISSEN: Record<string, SeitenWissen> = {
     vorher: [{ text: 'Personal (Wachpersonen anlegen)', href: '/dashboard/personal' }, { text: 'Objektzeiten (Objekte)', href: '/dashboard/objektzeiten' }, { text: 'Rechte („Bewachung") je Mitarbeiter vergeben', href: '/dashboard/rechte' }],
   },
   // Paket 355 (A4c): Fachpaket Entsorgung, Teil 1 — Container-Dienst und Wiegeschein
+  '/dashboard/herstellung': {
+    zweck: 'Herstellungsprotokoll für Brauerei (Sud), Molkerei, Mühle und jede andere Herstellung im Großen: Messwerte je Schritt, eingesetzte Rohstoff-Chargen, Soll/Ist und Ausbeute. Beim Abschluss entsteht die Charge mit Rückverfolgung.',
+    wer: 'beide',
+    werText: 'Wer das Modul „Herstellung" mit Schreibrecht hat, legt Protokolle an, erfasst Messwerte und schließt ab (fürs Anlegen der Charge zusätzlich Schreibrecht „Chargen"). Stornieren und Löschen nur die Geschäftsleitung.',
+    schritte: [
+      '„＋ Neues Protokoll": Art (Sud, Milch, Mahlgang, Ansatz), auf Wunsch Rezeptur (füllt Name und Soll-Menge), Bezeichnung, Soll-Menge – die Nummer vergibt das System',
+      'Rohstoffe eintragen: Bezeichnung, Charge (Vorschläge aus freigegebenen Chargen), Menge',
+      'Messwerte je Schritt: Schritt und Messgröße aus der Vorlage wählen (z. B. Einmaischen → Temperatur), Wert eintragen, „Speichern" – Zeit und Name hält der Server fest',
+      'Vertippt? Messwerte werden nur angehängt – einen neuen Wert mit Bemerkung „Korrektur" erfassen',
+      '„Abschließen": Ist-Menge, Chargennummer (Vorschlag), MHD; beim Sud zusätzlich Stammwürze in °P. Die Charge steht danach in Quarantäne und wird unter „Chargen" nach der Prüfung freigegeben',
+      'Gesperrte oder in Quarantäne stehende Rohstoff-Chargen lehnt das System beim Abschluss ab',
+      'Brauerei: Reiter „Sud-Übersicht" zeigt je Monat die Hektoliter je Stammwürze – nur als Hilfe für die eigene Biersteuer-Anmeldung, ARGONAUT berechnet keine Steuer',
+      '„🖨 Protokoll drucken" für den Ordner oder die Lebensmittelkontrolle',
+    ],
+    probe: { anlegen: 'Protokoll „Test-Sud" mit 100 l anlegen, einen Messwert erfassen.', loeschen: 'Als Geschäftsleitung mit Grund „Test beendet" stornieren (bleibt als Nachweis).' },
+    vorher: [{ text: 'Rohstoff-Chargen', href: '/dashboard/chargen' }, { text: 'Rezepturen (optional)', href: '/dashboard/rezeptur' }],
+    landetIn: [{ text: 'Chargen (Quarantäne, Rückverfolgung)', href: '/dashboard/chargen' }],
+  },
   '/dashboard/entsorgung': {
     zweck: 'Container-Dienst und Wiegeschein für Entsorgungsbetriebe: der Containerbestand mit Stand (auf dem Hof, beim Kunden, voll gemeldet, in Reparatur), Aufträge zum Stellen, Tauschen und Abholen je Tag mit Tagesliste für die Fahrer — beim Erledigen setzt ARGONAUT die Container um. Der Wiegeschein nimmt Brutto und Tara von Ihrer Waage auf; Nummer, Uhrzeit jeder Wägung und Netto setzt ARGONAUT, abgeschlossen bleibt der Schein unveränderbar. Die Abfallschlüssel sind Ihre eigene Liste — ARGONAUT liefert keinen amtlichen Katalog mit. Dazu das Abfallregister (nur anhängen, Übernahme aus dem Wiegeschein, Druck und CSV) und das ADR-Beförderungspapier mit 1000-Punkte-Rechnung (Ausstellen erst nach Freigabe).',
     wer: 'beide',

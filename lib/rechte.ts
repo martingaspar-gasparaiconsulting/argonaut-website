@@ -316,6 +316,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🛡️ Bewachung', href: '/dashboard/bewachung', modul: 'bewachung', ebene: 3, gruppe: 'betrieb' },
   // Paket 355 (13.10.26): A4c Fachpaket Entsorgung Teil 1 — Container-Dienst und Wiegeschein.
   { label: '♻️ Entsorgung', href: '/dashboard/entsorgung', modul: 'entsorgung', ebene: 3, gruppe: 'betrieb' },
+  { label: '🏭 Herstellung', href: '/dashboard/herstellung', modul: 'herstellung', ebene: 3, gruppe: 'betrieb' },
   // Paket 303 (10.10.26): N1 Betriebs-Netzwerk fuer alle Branchen — ohne eigenen Modul-Schluessel (Chef immer;
   // die Rechte je Auftrag prueft die Datenbank nach Projekte/Auftraege/Objektzeiten/Kfz).
   // Paket 304 (10.10.26): Mitarbeiter mit einem dieser Module sehen und erreichen es (vorher: nur Chef,
