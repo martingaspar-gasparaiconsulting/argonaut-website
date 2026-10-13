@@ -130,6 +130,8 @@ export const WEITERE_TABELLEN: string[] = [
   'bestattung_aufgabe_vorlage', 'sterbefall', 'sterbefall_aufgabe', 'sterbefall_partner', 'sterbefall_posten',
   // Paket 353 (A4b): Bewachung — Kontrollpunkte, Rundgaenge, Scans, Wachbuch
   'wach_kontrollpunkt', 'wach_rundgang', 'wach_scan', 'wachbuch_eintrag',
+  // Paket 354 (A4b Teil 2): Dienstplan und Objekt-Vorgaben
+  'wach_dienst', 'wach_objekt_vorgabe',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

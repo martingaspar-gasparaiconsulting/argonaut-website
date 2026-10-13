@@ -36,6 +36,10 @@ export const QUALIFIKATIONEN: Quali[] = [
   { key: 'fuehrerschein_c', label: 'Führerschein C/C1/CE' },
   { key: 'erste_hilfe', label: 'Ersthelfer', hinweis: 'Fortbildung alle 2 Jahre' },
   { key: 'brandschutzhelfer', label: 'Brandschutzhelfer' },
+  // Paket 354 (13.10.2026): Bewachungsgewerbe (§ 34a GewO)
+  { key: 'unterrichtung_34a', label: 'Unterrichtung § 34a GewO', hinweis: 'IHK — Grundpflicht jeder Wachperson' },
+  { key: 'sachkunde_34a', label: 'Sachkundeprüfung § 34a GewO', hinweis: 'IHK — für bestimmte Tätigkeiten Pflicht, ersetzt die Unterrichtung' },
+  { key: 'bewacherregister', label: 'Im Bewacherregister gemeldet', hinweis: 'Bewacher-ID ins Feld Nachweis' },
 ];
 
 export function qualiLabel(key: string): string {

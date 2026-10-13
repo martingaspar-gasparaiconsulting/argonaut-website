@@ -14,10 +14,11 @@ export type Melde = (fehler: string | null, ok?: string | null) => void;
 export type Db = SupabaseClient;
 
 /** Meldungen der Datenbank-Wächter (deutsch, verständlich) durchreichen, sonst eine Rechte-Meldung. */
-const WAECHTER = /Objekt|Rundgang|Kontrollpunkt|Nachtrag|Eintrag|Zukunft|Betrieb|ausgeblendet|Scannen|beendet|Geschäftsleitung/;
+const WAECHTER = /Objekt|Rundgang|Kontrollpunkt|Nachtrag|Eintrag|Zukunft|Betrieb|ausgeblendet|Scannen|beendet|Geschäftsleitung|Wachperson|abgesagt|Vorgabe/;
 export function fehlerText(msg: string | undefined, sonst: string): string {
   if (!msg) return sonst;
-  if (/wach_rundgang_einer_laeuft|duplicate key/.test(msg)) return 'Es läuft schon ein eigener Rundgang — bitte erst diesen beenden.';
+  if (/exclusion constraint|keine_ueberschneidung/.test(msg)) return 'Diese Person ist zu der Zeit schon eingeplant.';
+  if (/wach_rundgang_einer_laeuft/.test(msg)) return 'Es läuft schon ein eigener Rundgang — bitte erst diesen beenden.';
   if (/foreign key|violates foreign key/.test(msg)) return 'Dieser Kontrollpunkt hat schon Scans und bleibt deshalb erhalten — blenden Sie ihn stattdessen aus.';
   return WAECHTER.test(msg) ? msg : sonst;
 }

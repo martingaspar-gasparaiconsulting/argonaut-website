@@ -32,19 +32,36 @@ for sid,t,u,rows in S:
     n=sum(pz(r[5]) for r in rows if r[6]!="live")
     secs.append(f'''<section id="{sid}"><header class="sh"><h2>{esc(t)}</h2><p>{esc(u)} · <b>{n} offene Pushes</b></p></header><div class="tw"><table><thead><tr><th>Nr</th><th>Paket</th><th>Heute: fehlt oder läuft falsch</th><th>Lösung</th><th>Wer</th><th>Pushes</th></tr></thead><tbody>{"".join(tr)}</tbody></table></div></section>''')
 # Reiter „Offen“ (11.10.2026, Martins Wunsch): alles Offene auf einen Blick, nach Lage gruppiert
-_gruppen=[("Als Nächstes","next",lambda st: st in ("nächster","läuft")),("Frei baubar","open",lambda st: st_cls(st)=="open"),("Wartet auf jemanden","wait",lambda st: st_cls(st)=="wait")]
+# 13.10.2026 (Martins Wunsch): feiner aufgeteilt — frei baubar nach Wer, Wartendes nach Grund. Jede Zeile landet in genau einer Gruppe (erste passende).
+import re as _re
+_PARTNER=_re.compile(r"Partner|Testzugang|Testkonten|Konto|Zugang|Anbieter", _re.I)
+_gruppen=[
+    ("▶ Als Nächstes","gold",lambda st,w: st in ("nächster","läuft")),
+    ("Frei baubar · nur Claude","c",lambda st,w: st_cls(st)=="open" and w=="C"),
+    ("Frei baubar · gemeinsam","g",lambda st,w: st_cls(st)=="open" and w=="G"),
+    ("Frei baubar · Martin","m",lambda st,w: st_cls(st)=="open"),
+    ("Wartet auf Martin","m",lambda st,w: "Martin" in st),
+    ("Wartet auf Anwalt","an",lambda st,w: "Anwalt" in st),
+    ("Wartet auf Partner oder Zugang","pa",lambda st,w: bool(_PARTNER.search(st))),
+    ("Wartet auf anderes (Vorgänger-Paket, App-Prüfung, Termin …)","op",lambda st,w: st_cls(st)=="wait"),
+]
 _offen_html=[]
 _offen_summe=0
-for _t,_c,_f in _gruppen:
-    _z=[]
+_vergeben=set()
+_chips=[]
+for _gi,(_t,_c,_f) in enumerate(_gruppen):
+    _z=[]; _gp=0
     for sid,t,u,rows in S:
         for nr,pak,heute,loes,wer,push,stat in rows:
-            if stat=="live" or not _f(stat): continue
-            wl,wc=WER[wer]; _offen_summe+=pz(push)
+            if stat=="live" or (sid,nr) in _vergeben or not _f(stat,wer): continue
+            _vergeben.add((sid,nr))
+            wl,wc=WER[wer]; _offen_summe+=pz(push); _gp+=pz(push)
             _z.append(f'<tr class="z-{st_cls(stat)}"><td class="nr" data-l="Nr">{esc(nr)}</td><td class="pak" data-l="Paket"><strong>{esc(pak)}</strong><span class="st st-{st_cls(stat)}">{esc(stat)}</span></td><td class="heute" data-l="Bereich"><a href="#{sid}" style="color:inherit">{esc(t)}</a></td><td class="wer" data-l="Wer"><span class="w w-{wc}">{wl}</span></td><td class="push" data-l="Pushes">{esc(push)}</td></tr>')
     if _z:
-        _offen_html.append(f'<h3 style="margin:8px 0 0;font-size:16px">{esc(_t)} · {len(_z)}</h3><div class="tw"><table><thead><tr><th>Nr</th><th>Paket</th><th>Bereich</th><th>Wer</th><th>Pushes</th></tr></thead><tbody>{"".join(_z)}</tbody></table></div>')
-OFFEN=f'<section id="offen"><header class="sh"><h2>Offen auf einen Blick</h2><p>Alles, was noch nicht live ist – oben das Nächste, dann frei baubar, dann was auf jemanden wartet · <b>{_offen_summe} offene Pushes</b></p></header>{"".join(_offen_html)}</section>'
+        _k=f'--k:var(--{_c});--kbg:var(--{"goldbg" if _c=="gold" else _c+"bg"})'
+        _chips.append(f'<a class="ogc" style="{_k}" href="#og{_gi}">{esc(_t)} · {_gp}</a>')
+        _offen_html.append(f'<div class="ogr" style="{_k}"><h3 id="og{_gi}"><span class="pill">{esc(_t)}</span><small>{len(_z)} Pakete · {_gp} Pushes</small></h3><div class="tw"><table><thead><tr><th>Nr</th><th>Paket</th><th>Bereich</th><th>Wer</th><th>Pushes</th></tr></thead><tbody>{"".join(_z)}</tbody></table></div></div>')
+OFFEN=f'<section id="offen"><header class="sh"><h2>Offen auf einen Blick</h2><p>Alles, was noch nicht live ist – oben das Nächste, dann frei baubar (nur Claude / gemeinsam), dann was wartet, nach Grund · <b>{_offen_summe} offene Pushes</b></p></header><nav class="sprung" aria-label="Gruppen">{"".join(_chips)}</nav>{"".join(_offen_html)}</section>'
 body=f'''<title>ARGONAUT Bauliste</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap">
@@ -52,14 +69,14 @@ body=f'''<title>ARGONAUT Bauliste</title>
 /* Layout: Kopf mit Summen, dann je Stufe eine Tabelle Problem -> Loesung; unter 760px werden Zeilen zu Karten */
 :root{{--bg:#f6f7f9;--fl:#ffffff;--ink:#0a1628;--mut:#556173;--line:#dfe3ea;--gold:#9a7a26;--goldbg:#f5eedb;--navy:#0a1628;
 --ok:#1f7a4d;--okbg:#e3f3ea;--run:#1d5fa8;--runbg:#e2edf9;--nx:#8a5a00;--nxbg:#fbeccd;--wt:#6b5a8e;--wtbg:#ece7f5;--op:#556173;--opbg:#eceff3;
---g:#8a5a00;--gbg:#fbeccd;--c:#1d5fa8;--cbg:#e2edf9;--m:#6b5a8e;--mbg:#ece7f5;
+--g:#8a5a00;--gbg:#fbeccd;--c:#1d5fa8;--cbg:#e2edf9;--m:#6b5a8e;--mbg:#ece7f5;--an:#b3261e;--anbg:#fbe4e2;--pa:#0f766e;--pabg:#dcf2ef;
 --f:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"DM Mono",ui-monospace,Consolas,monospace}}
 @media (prefers-color-scheme:dark){{:root:not([data-theme="light"]){{--bg:#0b1220;--fl:#121b2c;--ink:#e8ecf3;--mut:#9aa6b8;--line:#243047;--gold:#d7b75e;--goldbg:#2a2413;
 --ok:#5fd29a;--okbg:#12301f;--run:#7cb6f5;--runbg:#132a44;--nx:#f0c060;--nxbg:#3a2c0e;--wt:#bfaee6;--wtbg:#2a2340;--op:#9aa6b8;--opbg:#1c2638;
---g:#f0c060;--gbg:#3a2c0e;--c:#7cb6f5;--cbg:#132a44;--m:#bfaee6;--mbg:#2a2340;color-scheme:dark}}}}
+--g:#f0c060;--gbg:#3a2c0e;--c:#7cb6f5;--cbg:#132a44;--m:#bfaee6;--mbg:#2a2340;--an:#ff8a80;--anbg:#3a1614;--pa:#5fd3c4;--pabg:#0f2e2b;color-scheme:dark}}}}
 :root[data-theme="dark"]{{--bg:#0b1220;--fl:#121b2c;--ink:#e8ecf3;--mut:#9aa6b8;--line:#243047;--gold:#d7b75e;--goldbg:#2a2413;
 --ok:#5fd29a;--okbg:#12301f;--run:#7cb6f5;--runbg:#132a44;--nx:#f0c060;--nxbg:#3a2c0e;--wt:#bfaee6;--wtbg:#2a2340;--op:#9aa6b8;--opbg:#1c2638;
---g:#f0c060;--gbg:#3a2c0e;--c:#7cb6f5;--cbg:#132a44;--m:#bfaee6;--mbg:#2a2340;color-scheme:dark}}
+--g:#f0c060;--gbg:#3a2c0e;--c:#7cb6f5;--cbg:#132a44;--m:#bfaee6;--mbg:#2a2340;--an:#ff8a80;--anbg:#3a1614;--pa:#5fd3c4;--pabg:#0f2e2b;color-scheme:dark}}
 body{{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f)}}
 .wrap{{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:28px 60px;display:grid;gap:36px}}
 .wrap>*{{min-width:0}} section{{min-width:0;grid-template-columns:minmax(0,1fr)}}
@@ -72,6 +89,9 @@ h1{{font-size:clamp(26px,4vw,38px);line-height:1.1;margin:0;text-wrap:balance}}
 .zahl b{{font:500 28px var(--mono);font-variant-numeric:tabular-nums}}
 .zahl span{{color:var(--mut);font-size:13px}}
 .zahl.gold{{background:var(--goldbg);border-color:transparent}}
+.ogr{{border-left:6px solid var(--k);padding-left:14px;display:grid;gap:8px;margin-top:6px}} .ogr h3{{margin:0;font-size:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;scroll-margin-top:16px}}
+.ogr h3 .pill{{background:var(--kbg);color:var(--k);border-radius:999px;padding:2px 12px}} .ogr h3 small{{color:var(--mut);font:500 12px var(--mono)}}
+.ogr td:first-child{{box-shadow:inset 4px 0 0 var(--k);background:var(--kbg)}} nav.sprung a.ogc{{border-color:var(--k);background:var(--kbg);color:var(--k);font-weight:500}}
 .leg{{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--mut);align-items:center}}
 nav.sprung{{display:flex;flex-wrap:wrap;gap:8px}}
 nav.sprung a{{font-size:13px;color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--fl)}}
@@ -124,7 +144,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 13.10.2026 · _p353 unterwegs · A4b Teil 1 Wachbuch und Kontrollgänge · nächster A4b Teil 2 Nachweise und Einsatzplanung</div>
+<div class="eyebrow">ARGONAUT OS · Stand 13.10.2026 · _p354 unterwegs · A4b Fachpaket Bewachung komplett · nächster A4c Fachpaket Abfall, Entsorgung, Gefahrgut</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

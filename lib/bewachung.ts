@@ -12,10 +12,15 @@
 // (Serverzeit) — nichts hier erzeugt einen Zeitstempel, der gespeichert wird.
 // Wachbuch und Scans werden nur angehängt; Korrekturen sind Nachträge.
 //
+// Teil 2 (Paket 354): Pflichtangaben des Betriebs (Erlaubnis nach § 34a GewO,
+// Bewacherregister), Nachweise der Wachpersonen, Dienstplan je Objekt mit
+// Warnung bei fehlendem Nachweis.
+//
 // Keine Supabase-, React- oder Next-Abhängigkeit.
 // ============================================================================
 
 import { qrMatrix } from './qr';
+import { giltAm, qualiLabel } from './dispoPlus';
 
 // --- Branchen ---------------------------------------------------------------------
 
@@ -301,6 +306,8 @@ export type NachweisDaten = {
   objekt: ObjektDruck; von: string; bis: string; erstellt: string;
   rundgaenge: readonly Rundgang[]; punkte: readonly Kontrollpunkt[]; scans: readonly (Scan & { rundgang_id: string })[]; eintraege: readonly Eintrag[];
   mitWachbuch: boolean;
+  /** Paket 354: Pflichtangaben des Betriebs (Erlaubnis, Bewacherregister); weggelassen = keine Zeile. */
+  angaben?: BetriebAngaben | null;
 };
 
 /**
@@ -315,6 +322,7 @@ export function nachweisHtml(d: NachweisDaten, firma: Firmenkopf | null): string
   const teile: string[] = [];
   teile.push(`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Nachweis ${esc(objektName(d.objekt))}</title>${STIL}</head><body>`);
   teile.push(kopfHtml(firma));
+  if (d.angaben !== undefined) teile.push(angabenZeile(d.angaben));
   teile.push(`<h1>Nachweis Bewachung · ${esc(objektName(d.objekt))}</h1>`);
   teile.push(`<p class="klein">${d.objekt.adresse ? esc(d.objekt.adresse) + ' · ' : ''}Zeitraum ${esc(datumDe(d.von))} bis ${esc(datumDe(d.bis))} · erstellt am ${esc(zeitDe(d.erstellt))}. Alle Zeiten sind Serverzeiten (Berlin).</p>`);
   teile.push(`<h2>Kontrollgänge (${rg.length})</h2>`);
@@ -350,6 +358,200 @@ export function nachweisHtml(d: NachweisDaten, firma: Firmenkopf | null): string
     }
   }
   teile.push('<p class="klein" style="margin-top:24px">Wachbuch und Scans werden in ARGONAUT nur angehängt: Einträge lassen sich nicht ändern oder löschen, Korrekturen erscheinen als Nachtrag.</p>');
+  teile.push('</body></html>');
+  return teile.join('');
+}
+
+// ============================================================================
+// Teil 2 · Paket 354 (13.10.2026): Betrieb, Nachweise, Dienstplan
+// ============================================================================
+
+/** modul_einstellung.modul für die Pflichtangaben des Bewachungsbetriebs. */
+export const EINSTELLUNG_MODUL = 'bewachung';
+
+export type BetriebAngaben = { erlaubnis_nr: string; erlaubnis_behoerde: string; erlaubnis_datum: string; register_nr: string };
+
+/** Aus modul_einstellung.einstellung lesen — Fremdes und Falsches fällt weg. */
+export function angabenLesen(einst: unknown): BetriebAngaben {
+  const e = einst && typeof einst === 'object' ? (einst as Record<string, unknown>) : {};
+  const t = (x: unknown, max: number) => (typeof x === 'string' ? x.trim().slice(0, max) : '');
+  const d = t(e.erlaubnis_datum, 10);
+  return { erlaubnis_nr: t(e.erlaubnis_nr, 80), erlaubnis_behoerde: t(e.erlaubnis_behoerde, 160), erlaubnis_datum: /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '', register_nr: t(e.register_nr, 80) };
+}
+
+/** Pflicht: Erlaubnis-Nummer (Aktenzeichen) und Registriernummer im Bewacherregister. */
+export function angabenPruefen(a: BetriebAngaben, heute: string): { ok: true } | { ok: false; fehler: string[] } {
+  const f: string[] = [];
+  if (!a.erlaubnis_nr.trim()) f.push('Bitte die Nummer bzw. das Aktenzeichen Ihrer Erlaubnis nach § 34a GewO eintragen.');
+  if (!a.register_nr.trim()) f.push('Bitte die Registriernummer Ihres Betriebs im Bewacherregister eintragen.');
+  if (a.erlaubnis_nr.length > 80 || a.register_nr.length > 80) f.push('Nummern: höchstens 80 Zeichen.');
+  if (a.erlaubnis_behoerde.length > 160) f.push('Behörde: höchstens 160 Zeichen.');
+  if (a.erlaubnis_datum && (!/^\d{4}-\d{2}-\d{2}$/.test(a.erlaubnis_datum) || a.erlaubnis_datum > heute)) f.push('Datum der Erlaubnis: bitte ein Datum bis heute wählen.');
+  return f.length ? { ok: false, fehler: f } : { ok: true };
+}
+export function angabenVollstaendig(a: BetriebAngaben): boolean {
+  return !!a.erlaubnis_nr.trim() && !!a.register_nr.trim();
+}
+
+/** Nachweise, die ein Objekt verlangen kann (gleiche Liste wie die Datenbank). */
+export const OBJEKT_ANFORDERUNGEN = Object.freeze(['unterrichtung_34a', 'sachkunde_34a', 'bewacherregister', 'erste_hilfe', 'brandschutzhelfer'] as const);
+
+export type Quali = { mitarbeiter_id: string; art: string; gueltig_bis?: string | null; nachweis?: string | null };
+
+/**
+ * Was fehlt einer Wachperson an einem Tag? Grundpflicht für jede Wachperson:
+ * Unterrichtung ODER Sachkundeprüfung (die Sachkunde ersetzt die Unterrichtung)
+ * und die Meldung im Bewacherregister. Dazu die Vorgaben des Objekts — verlangt
+ * es die Sachkunde, reicht die Unterrichtung nicht. Abgelaufene Einträge
+ * (gültig bis) zählen nicht. Richtwerte, keine Rechtsberatung: die Pflichten
+ * trägt der Betrieb.
+ */
+export function nachweisFehlt(qualis: readonly Quali[], mitarbeiterId: string, anforderungen: readonly string[], tag: string): string[] {
+  const hat = (art: string) => qualis.some((q) => q.mitarbeiter_id === mitarbeiterId && q.art === art && giltAm(q, tag));
+  const f: string[] = [];
+  const sachkundeVerlangt = anforderungen.includes('sachkunde_34a');
+  if (sachkundeVerlangt) { if (!hat('sachkunde_34a')) f.push(qualiLabel('sachkunde_34a')); }
+  else if (!hat('unterrichtung_34a') && !hat('sachkunde_34a')) f.push(`${qualiLabel('unterrichtung_34a')} oder ${qualiLabel('sachkunde_34a')}`);
+  if (!hat('bewacherregister')) f.push(qualiLabel('bewacherregister'));
+  for (const a of anforderungen) {
+    if (a === 'sachkunde_34a' || a === 'unterrichtung_34a' || a === 'bewacherregister') continue;
+    if (!hat(a)) f.push(qualiLabel(a));
+  }
+  return f;
+}
+
+/** Bewacher-ID einer Person (Feld „Nachweis" beim Eintrag „Im Bewacherregister gemeldet"). */
+export function bewacherId(qualis: readonly Quali[], mitarbeiterId: string): string | null {
+  const q = qualis.find((x) => x.mitarbeiter_id === mitarbeiterId && x.art === 'bewacherregister');
+  const n = String(q?.nachweis ?? '').trim();
+  return n || null;
+}
+
+/** Ampel je Person für die Nachweis-Übersicht (heute, ohne Objekt-Vorgaben). */
+export function nachweisStand(qualis: readonly Quali[], mitarbeiterId: string, heute: string): { ok: boolean; fehlt: string[]; bewacherId: string | null } {
+  const fehlt = nachweisFehlt(qualis, mitarbeiterId, [], heute);
+  return { ok: fehlt.length === 0, fehlt, bewacherId: bewacherId(qualis, mitarbeiterId) };
+}
+
+// --- Dienstplan -------------------------------------------------------------------
+
+/** Berliner Ortszeit (Tag + „HH:MM") als UTC-Zeitstempel — Sommer- und Winterzeit richtig. */
+export function berlinZuIso(tag: string, uhr: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tag) || !/^\d{2}:\d{2}$/.test(uhr)) return null;
+  const [y, m, d] = tag.split('-').map(Number);
+  const [h, mi] = uhr.split(':').map(Number);
+  if (h > 23 || mi > 59) return null;
+  const ziel = Date.UTC(y, m - 1, d, h, mi);
+  let t = ziel;
+  for (let i = 0; i < 3; i++) {
+    const teile = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(new Date(t)).map((p) => [p.type, p.value]));
+    const gesehen = Date.UTC(+teile.year, +teile.month - 1, +teile.day, +teile.hour, +teile.minute);
+    t += ziel - gesehen;
+  }
+  const chk = new Date(t);
+  if (Number.isNaN(chk.getTime())) return null;
+  return chk.toISOString();
+}
+
+/** Tag + 1 (für Dienste über Mitternacht). */
+export function naechsterTag(tag: string): string {
+  const d = new Date(tag + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Dienst aus Tag, von, bis bauen. „bis" kleiner/gleich „von" = über Mitternacht
+ * (endet am Folgetag). Höchstens 24 Stunden, wie die Datenbank.
+ */
+export function dienstZeit(tag: string, von: string, bis: string): { ok: true; beginn: string; ende: string; stunden: number } | { ok: false; fehler: string } {
+  const b = berlinZuIso(tag, von);
+  if (!b) return { ok: false, fehler: 'Bitte Tag und Beginn (HH:MM) wählen.' };
+  const e = berlinZuIso(bis <= von ? naechsterTag(tag) : tag, bis);
+  if (!e) return { ok: false, fehler: 'Bitte das Ende (HH:MM) wählen.' };
+  const ms = new Date(e).getTime() - new Date(b).getTime();
+  if (ms <= 0) return { ok: false, fehler: 'Das Ende liegt vor dem Beginn.' };
+  if (ms > 24 * 3600000) return { ok: false, fehler: 'Ein Dienst dauert höchstens 24 Stunden.' };
+  return { ok: true, beginn: b, ende: e, stunden: Math.round(ms / 360000) / 10 };
+}
+
+export type Dienst = {
+  id: string; objekt_id: string; mitarbeiter_id: string; mitarbeiter_name: string | null; beginn: string; ende: string;
+  aufgabe: string | null; notiz: string | null; status: string; trotz_warnung: boolean; warnung_text: string | null;
+};
+
+/** Überschneidet sich ein neuer Dienst mit einem geplanten derselben Person? (halb-offen wie die Datenbank) */
+export function dienstKonflikt(dienste: readonly Dienst[], mitarbeiterId: string, beginn: string, ende: string, ohneId?: string): Dienst | null {
+  const b = new Date(beginn).getTime();
+  const e = new Date(ende).getTime();
+  return dienste.find((d) => d.id !== ohneId && d.status === 'geplant' && d.mitarbeiter_id === mitarbeiterId
+    && new Date(d.beginn).getTime() < e && b < new Date(d.ende).getTime()) ?? null;
+}
+
+/** Montag der Woche eines Tages (JJJJ-MM-TT). */
+export function wochenMontag(tag: string): string {
+  const d = new Date(tag + 'T12:00:00Z');
+  const wt = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - wt);
+  return d.toISOString().slice(0, 10);
+}
+export function tagePlus(tag: string, n: number): string {
+  const d = new Date(tag + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+const WOCHENTAG = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+/** Die sieben Tage einer Woche mit den geplanten Diensten (nach Berliner Beginn-Tag), sortiert. */
+export function wochenPlan(dienste: readonly Dienst[], montag: string, mitAbgesagten = false): { tag: string; name: string; dienste: Dienst[] }[] {
+  return WOCHENTAG.map((name, i) => {
+    const tag = tagePlus(montag, i);
+    return {
+      tag, name,
+      dienste: dienste.filter((d) => berlinTag(d.beginn) === tag && (mitAbgesagten || d.status === 'geplant'))
+        .slice().sort((a, b) => a.beginn.localeCompare(b.beginn)),
+    };
+  });
+}
+
+/** Stunden je Person in einer Liste geplanter Dienste. */
+export function stundenJePerson(dienste: readonly Dienst[]): { name: string; stunden: number }[] {
+  const m = new Map<string, { name: string; ms: number }>();
+  for (const d of dienste) {
+    if (d.status !== 'geplant') continue;
+    const x = m.get(d.mitarbeiter_id) ?? { name: d.mitarbeiter_name ?? '—', ms: 0 };
+    x.ms += new Date(d.ende).getTime() - new Date(d.beginn).getTime();
+    m.set(d.mitarbeiter_id, x);
+  }
+  return [...m.values()].map((x) => ({ name: x.name, stunden: Math.round(x.ms / 360000) / 10 })).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+function angabenZeile(a: BetriebAngaben | null | undefined): string {
+  if (!a || !angabenVollstaendig(a)) return '<p class="klein rot">[Erlaubnis nach § 34a GewO und Bewacherregister-Nummer fehlen — Bewachung → Betrieb &amp; Nachweise]</p>';
+  const erl = [`Erlaubnis nach § 34a GewO: ${esc(a.erlaubnis_nr)}`, a.erlaubnis_behoerde ? esc(a.erlaubnis_behoerde) : '', a.erlaubnis_datum ? `vom ${esc(datumDe(a.erlaubnis_datum))}` : ''].filter(Boolean).join(', ');
+  return `<p class="klein">${erl} · Bewacherregister: ${esc(a.register_nr)}</p>`;
+}
+
+/** Dienstplan einer Woche für ein Objekt (Druck). Mit Pflichtangaben des Betriebs. */
+export function dienstplanHtml(objekt: ObjektDruck, montag: string, dienste: readonly Dienst[], firma: Firmenkopf | null, angaben: BetriebAngaben | null): string {
+  const plan = wochenPlan(dienste, montag);
+  const teile: string[] = [];
+  teile.push(`<!doctype html><html lang="de"><head><meta charset="utf-8"><title>Dienstplan ${esc(objektName(objekt))}</title>${STIL}</head><body>`);
+  teile.push(kopfHtml(firma));
+  teile.push(angabenZeile(angaben));
+  teile.push(`<h1>Dienstplan · ${esc(objektName(objekt))}</h1><p class="klein">${objekt.adresse ? esc(objekt.adresse) + ' · ' : ''}Woche ${esc(datumDe(montag))} bis ${esc(datumDe(tagePlus(montag, 6)))}</p>`);
+  teile.push('<table><thead><tr><th>Tag</th><th>Zeit</th><th>Wachperson</th><th>Aufgabe</th></tr></thead><tbody>');
+  for (const t of plan) {
+    if (!t.dienste.length) { teile.push(`<tr><td>${t.name} ${esc(datumDe(t.tag))}</td><td colspan="3" class="klein">—</td></tr>`); continue; }
+    t.dienste.forEach((d, i) => {
+      teile.push(`<tr><td>${i === 0 ? `${t.name} ${esc(datumDe(t.tag))}` : ''}</td><td>${esc(uhrDe(d.beginn))}–${esc(uhrDe(d.ende))}${berlinTag(d.ende) !== t.tag ? ' (+1)' : ''}</td>`
+        + `<td>${esc(d.mitarbeiter_name ?? '—')}</td><td>${esc(d.aufgabe ?? '')}</td></tr>`);
+    });
+  }
+  teile.push('</tbody></table>');
+  const st = stundenJePerson(plan.flatMap((t) => t.dienste));
+  if (st.length) teile.push(`<p class="klein">Stunden: ${st.map((x) => `${esc(x.name)} ${String(x.stunden).replace('.', ',')} Std.`).join(' · ')}</p>`);
   teile.push('</body></html>');
   return teile.join('');
 }

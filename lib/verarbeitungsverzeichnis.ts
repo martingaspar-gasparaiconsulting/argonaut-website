@@ -169,11 +169,11 @@ export const VERFAHREN_KATALOG: VerfahrenVorschlag[] = [
   {
     // Paket 353 (13.10.2026): Wachbuch und Kontrollgaenge (Fachpaket Bewachung)
     wenn: 'bewachung',
-    name: 'Wachbuch und Kontrollgaenge (Bewachung)',
+    name: 'Wachbuch, Kontrollgaenge und Dienstplan (Bewachung)',
     zweck: 'Nachweis der vereinbarten Bewachungsleistung gegenueber dem Auftraggeber, Dokumentation von Vorkommnissen und Schichtuebergaben.',
     rechtsgrundlage: 'Art. 6 Abs. 1 lit. b DSGVO (Bewachungsvertrag), lit. f (Nachweis und Beweissicherung), § 26 Abs. 1 BDSG fuer Beschaeftigtendaten',
     kategorien_betroffene: 'Beschaeftigte (Wachkraefte), im Wachbuch genannte Personen (z. B. Besucher, Verursacher von Vorkommnissen)',
-    kategorien_daten: 'Name der Wachkraft, Beginn und Ende des Kontrollgangs, Zeitpunkt je Kontrollpunkt, Standort nur wenn freiwillig mitgesendet, Wachbuch-Texte',
+    kategorien_daten: 'Name der Wachkraft, Beginn und Ende des Kontrollgangs, Zeitpunkt je Kontrollpunkt, Standort nur wenn freiwillig mitgesendet, Wachbuch-Texte, Dienstzeiten je Objekt, Nachweise nach § 34a GewO (Unterrichtung, Sachkunde, Bewacher-ID)',
     empfaenger: 'Auftraggeber der Bewachung (Nachweis ohne Standortdaten), Behoerden bei Vorkommnissen, ' + EMPF_BASIS,
     drittland: KEIN_DRITTLAND,
     loeschfrist: 'Vorschlag: 3 Jahre nach Ende des Kalenderjahres des Eintrags (regelmaessige Verjaehrung, § 195 BGB); laenger nur, solange ein Streitfall oder eine Ermittlung laeuft. Vom Betrieb anzupassen.',

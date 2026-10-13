@@ -4082,6 +4082,10 @@ export const BELEG_STATUS: Record<string, string> = { erfasst: 'erfasst', offen:
  * nicht passt, bleibt mit seinem Namen als eigene Befaehigung erhalten.
  */
 export const QUALI_MUSTER: [RegExp, string][] = [
+  // Paket 354: Bewachung (§ 34a GewO) — vor allen anderen, damit „Sachkunde 34a" nicht anders landet
+  [/\bsachkunde\w*\b.*\b34 ?a\b|\b34 ?a\b.*\bsachkunde\w*/, 'sachkunde_34a'],
+  [/\bunterrichtung\w*\b.*\b(34 ?a|bewach\w*)\b|\b34 ?a\b/, 'unterrichtung_34a'],
+  [/\b(bewacherregister\w*|bewacher id|bewacherid)\b/, 'bewacherregister'],
   [/\b(elektrofachkraft|efk)\b/, 'elektrofachkraft'],
   [/\b(elektrotechnisch unterwiesen\w*|eup)\b/, 'eup'],
   [/\b(gas|gasinstallation|installateurverzeichnis)\b/, 'gas'],

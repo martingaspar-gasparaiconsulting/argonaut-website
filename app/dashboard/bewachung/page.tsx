@@ -6,26 +6,30 @@
 // Reiter: Kontrollgang (Handy: Rundgang beginnen, QR scannen oder Code
 // tippen, beenden) · Wachbuch (nur anhängen, Korrektur als Nachtrag) ·
 // Kontrollpunkte (QR-Aufkleber drucken) · Nachweis (für den Auftraggeber).
+// Paket 354: Dienstplan je Objekt (Warnung bei fehlendem Nachweis) ·
+// Betrieb & Nachweise (Erlaubnis § 34a GewO, Bewacherregister, Bewacher-ID).
 // Logik: lib/bewachung.ts (tests/bewachungP353).
 // Datenbank: supabase-sql/p353-bewachung-wachbuch.sql (Modul „bewachung").
 // ============================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
-import { uebersicht, type Kontrollpunkt, type Eintrag } from '@/lib/bewachung';
+import { uebersicht, angabenLesen, angabenVollstaendig, EINSTELLUNG_MODUL, type Kontrollpunkt, type Eintrag, type BetriebAngaben, type Quali } from '@/lib/bewachung';
 import Leerzustand from '../_components/Leerzustand';
 import { C, s, heute, Feld, schreiben, type Objekt } from './bewachungUi';
 import Kontrollgang, { type RundgangZeile } from './Kontrollgang';
 import Wachbuch from './Wachbuch';
 import Kontrollpunkte from './Kontrollpunkte';
 import Nachweis from './Nachweis';
+import Dienstplan, { type Person, type Vorgabe } from './Dienstplan';
+import BetriebNachweise from './BetriebNachweise';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 );
 
-type Reiter = 'gang' | 'buch' | 'punkte' | 'nachweis';
+type Reiter = 'gang' | 'buch' | 'punkte' | 'plan' | 'nachweis' | 'betrieb';
 const OBJEKT_SCHLUESSEL = 'argonaut_bewachung_objekt';
 
 export default function BewachungPage() {
@@ -45,6 +49,10 @@ export default function BewachungPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [reiter, setReiter] = useState<Reiter>('gang');
   const [neuObjekt, setNeuObjekt] = useState<{ bezeichnung: string; adresse: string } | null>(null);
+  const [angaben, setAngaben] = useState<BetriebAngaben>(angabenLesen(null));
+  const [personen, setPersonen] = useState<Person[]>([]);
+  const [qualis, setQualis] = useState<(Quali & { id: string })[]>([]);
+  const [vorgaben, setVorgaben] = useState<Vorgabe[]>([]);
 
   function melde(f: string | null, o: string | null = null) { setFehler(f); setOk(o); }
 
@@ -74,6 +82,20 @@ export default function BewachungPage() {
     const alt = await supabase.from('wach_rundgang').select('id, objekt_id, mitarbeiter_user, mitarbeiter_name, gestartet_am, beendet_am, status, notiz').eq('status', 'laeuft').lt('gestartet_am', seit).limit(200);
     if (!alt.error && alt.data?.length) rg = [...rg, ...(((alt.data as unknown) as RundgangZeile[]) ?? [])];
     setRundgaenge(rg);
+    // Paket 354: Pflichtangaben, Wachpersonen, Nachweise, Objekt-Vorgaben (Fehler = leer, die Seite bleibt nutzbar)
+    const [e, m, q, v] = await Promise.all([
+      supabase.from('modul_einstellung').select('einstellung').eq('owner_user_id', chefId ?? me).eq('modul', EINSTELLUNG_MODUL).maybeSingle(),
+      supabase.from('mitarbeiter').select('id, vorname, nachname, austrittsdatum').order('nachname', { ascending: true }).limit(2000),
+      supabase.from('mitarbeiter_qualifikation').select('id, mitarbeiter_id, art, gueltig_bis, nachweis').limit(20000),
+      supabase.from('wach_objekt_vorgabe').select('id, objekt_id, anforderungen, notiz').limit(5000),
+    ]);
+    setAngaben(angabenLesen(e.error ? null : (e.data as { einstellung?: unknown } | null)?.einstellung));
+    const heuteTag = heute();
+    const ma = m.error ? [] : (((m.data as unknown) as { id: string; vorname: string | null; nachname: string | null; austrittsdatum: string | null }[]) ?? []);
+    setPersonen(ma.filter((x) => !x.austrittsdatum || x.austrittsdatum >= heuteTag)
+      .map((x) => ({ id: x.id, name: [x.vorname, x.nachname].map((t) => String(t ?? '').trim()).filter(Boolean).join(' ') || 'ohne Namen' })));
+    setQualis(q.error ? [] : (((q.data as unknown) as (Quali & { id: string })[]) ?? []));
+    setVorgaben(v.error ? [] : (((v.data as unknown) as Vorgabe[]) ?? []));
     setObjektId((vorher) => {
       if (vorher && obj.some((x) => x.id === vorher)) return vorher;
       const eigen = rg.find((x) => x.status === 'laeuft' && x.mitarbeiter_user === me);
@@ -134,6 +156,12 @@ export default function BewachungPage() {
       </p>
       {fehler && <div style={s.fehler} role="alert">{fehler}</div>}
       {ok && <div style={s.ok}>{ok}</div>}
+      {!sqlFehlt && !laden && !angabenVollstaendig(angaben) && (
+        <div style={s.fehler}>
+          Pflichtangaben fehlen: Erlaubnis nach § 34a GewO und Registriernummer im Bewacherregister.{' '}
+          <button style={s.mini} onClick={() => setReiter('betrieb')}>{istChef ? 'jetzt eintragen' : 'ansehen'}</button>
+        </div>
+      )}
       {sqlFehlt && <div style={s.hinweis}>Wachbuch und Kontrollgänge sind noch nicht eingerichtet (SQL Paket 353 fehlt) oder das Recht „Bewachung" fehlt.</div>}
 
       {!sqlFehlt && (<>
@@ -181,13 +209,18 @@ export default function BewachungPage() {
             <button style={reiter === 'gang' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('gang')}>🚶 Kontrollgang</button>
             <button style={reiter === 'buch' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('buch')}>📒 Wachbuch</button>
             <button style={reiter === 'punkte' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('punkte')}>📍 Kontrollpunkte ({punkte.filter((p) => p.objekt_id === objekt.id && p.aktiv).length})</button>
+            <button style={reiter === 'plan' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('plan')}>📅 Dienstplan</button>
             <button style={reiter === 'nachweis' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('nachweis')}>🧾 Nachweis</button>
+            <button style={reiter === 'betrieb' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('betrieb')}>🪪 Betrieb &amp; Nachweise</button>
           </div>
 
           {reiter === 'gang' && <Kontrollgang supabase={supabase} objekt={objekt} punkte={punkte} rundgaenge={rundgaenge} uid={uid} istChef={istChef} melde={melde} onGeaendert={neuLaden} />}
           {reiter === 'buch' && <Wachbuch supabase={supabase} objekt={objekt} eintraege={eintraege} laufenderRundgang={meinLaufend} melde={melde} onGeaendert={buchLaden} />}
           {reiter === 'punkte' && <Kontrollpunkte supabase={supabase} objekt={objekt} punkte={punkte} istChef={istChef} melde={melde} onGeaendert={lade} />}
-          {reiter === 'nachweis' && <Nachweis supabase={supabase} objekt={objekt} punkte={punkte} heute={tag} melde={melde} />}
+          {reiter === 'plan' && <Dienstplan supabase={supabase} objekt={objekt} personen={personen} qualis={qualis} vorgabe={vorgaben.find((v) => v.objekt_id === objekt.id) ?? null}
+            angaben={angaben} heute={tag} istChef={istChef} melde={melde} onVorgabe={lade} />}
+          {reiter === 'nachweis' && <Nachweis supabase={supabase} objekt={objekt} punkte={punkte} heute={tag} angaben={angaben} melde={melde} />}
+          {reiter === 'betrieb' && <BetriebNachweise supabase={supabase} ich={ich} istChef={istChef} angaben={angaben} personen={personen} qualis={qualis} heute={tag} melde={melde} onGeaendert={lade} />}
         </>)}
       </>)}
     </div>

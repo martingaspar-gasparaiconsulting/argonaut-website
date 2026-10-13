@@ -7,7 +7,7 @@
 // ============================================================
 
 import { useState } from 'react';
-import { nachweisHtml, zeitraumPruefen, type Kontrollpunkt, type Rundgang, type Scan, type Eintrag } from '@/lib/bewachung';
+import { nachweisHtml, zeitraumPruefen, type Kontrollpunkt, type Rundgang, type Scan, type Eintrag, type BetriebAngaben } from '@/lib/bewachung';
 import { C, s, firmaLaden, zeige, inStuecken, type Db, type Objekt, type Melde } from './bewachungUi';
 
 function tagVerschieben(iso: string, n: number): string {
@@ -16,8 +16,8 @@ function tagVerschieben(iso: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default function Nachweis({ supabase, objekt, punkte, heute, melde }: {
-  supabase: Db; objekt: Objekt; punkte: Kontrollpunkt[]; heute: string; melde: Melde;
+export default function Nachweis({ supabase, objekt, punkte, heute, angaben, melde }: {
+  supabase: Db; objekt: Objekt; punkte: Kontrollpunkt[]; heute: string; angaben: BetriebAngaben; melde: Melde;
 }) {
   const [von, setVon] = useState(tagVerschieben(heute, -6));
   const [bis, setBis] = useState(heute);
@@ -47,7 +47,7 @@ export default function Nachweis({ supabase, objekt, punkte, heute, melde }: {
         eintraege = ((e.data as unknown) as Eintrag[]) ?? [];
       }
       const firma = await firmaLaden();
-      const html = nachweisHtml({ objekt, von, bis, erstellt: new Date().toISOString(), rundgaenge, punkte, scans, eintraege, mitWachbuch }, firma);
+      const html = nachweisHtml({ objekt, von, bis, erstellt: new Date().toISOString(), rundgaenge, punkte, scans, eintraege, mitWachbuch, angaben }, firma);
       if (!zeige(html)) { melde('Das Druckfenster wurde blockiert — bitte Pop-ups für ARGONAUT erlauben.'); return; }
       melde(null, `Nachweis geöffnet: ${rundgaenge.length} Rundgänge${firma?.name ? '' : ' — Ihre Firmendaten fehlen darin (Einstellungen → Firmendaten)'}.`);
     } finally { setBusy(false); }
