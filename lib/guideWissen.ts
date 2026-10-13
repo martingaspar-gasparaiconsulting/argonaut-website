@@ -2745,6 +2745,24 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Ein Objekt „Test-Objekt" mit zwei Kontrollpunkten anlegen, Aufkleber drucken. Rundgang beginnen, einen Punkt über den Code eintippen, beenden — die Rückfrage nennt den fehlenden Punkt. Im Wachbuch eine Meldung „Test" eintragen und einen Nachtrag dazu. Nachweis für heute erstellen: ein Rundgang mit 1/2 und dem fehlenden Punkt in Rot.', loeschen: 'Wachbuch und Scans bleiben bewusst stehen. Kontrollpunkte ohne Scans entfernt die Geschäftsleitung, sonst ausblenden; das Objekt unter „Objektzeiten" archivieren.' },
     vorher: [{ text: 'Personal (Wachpersonen anlegen)', href: '/dashboard/personal' }, { text: 'Objektzeiten (Objekte)', href: '/dashboard/objektzeiten' }, { text: 'Rechte („Bewachung") je Mitarbeiter vergeben', href: '/dashboard/rechte' }],
   },
+  // Paket 355 (A4c): Fachpaket Entsorgung, Teil 1 — Container-Dienst und Wiegeschein
+  '/dashboard/entsorgung': {
+    zweck: 'Container-Dienst und Wiegeschein für Entsorgungsbetriebe: der Containerbestand mit Stand (auf dem Hof, beim Kunden, voll gemeldet, in Reparatur), Aufträge zum Stellen, Tauschen und Abholen je Tag mit Tagesliste für die Fahrer — beim Erledigen setzt ARGONAUT die Container um. Der Wiegeschein nimmt Brutto und Tara von Ihrer Waage auf; Nummer, Uhrzeit jeder Wägung und Netto setzt ARGONAUT, abgeschlossen bleibt der Schein unveränderbar. Die Abfallschlüssel sind Ihre eigene Liste — ARGONAUT liefert keinen amtlichen Katalog mit.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „Entsorgung" sehen Container, Aufträge und Wiegescheine; mit Schreibrecht legen sie Container und Abfallschlüssel an, planen und erledigen Aufträge und wiegen. Einen abgeschlossenen Wiegeschein storniert nur die Geschäftsleitung, mit Grund. Löschen darf nur die Geschäftsleitung — und nur, was noch offen bzw. geplant ist: erledigte Aufträge und abgeschlossene oder stornierte Wiegescheine bleiben.',
+    schritte: [
+      'Einmalig: Reiter „🏷️ Abfallschlüssel" — die Schlüssel eintragen, mit denen Sie arbeiten (sechs Ziffern, gefährlicher Abfall mit Sternchen, z. B. 17 06 05*), mit Bezeichnung',
+      'Einmalig: Reiter „🗑️ Container" — je Container Nummer (z. B. A-07), Art und Größe in m³. Neue Container stehen auf dem Hof',
+      'Reiter „🚛 Aufträge": „+ Neuer Auftrag" — Stellen, Tauschen oder Abholen, Termin, Kunde (aus Kontakten übernehmbar), Stellplatz. Den Container können Sie gleich oder erst beim Erledigen wählen',
+      'Beim Kunden „✓ erledigt": ARGONAUT stellt den neuen Container zum Kunden und nimmt den abgeholten zurück auf den Hof. Steht ein Container nicht dort, wo er laut ARGONAUT sein müsste, sagt ARGONAUT es und ändert nichts',
+      '„🖨 Tagesliste für die Fahrer" druckt alle Aufträge des gewählten Tages mit Containern und Abhaken-Kästchen',
+      'Reiter „🗑️ Container": „voll gemeldet", wenn der Kunde anruft; „🔁 Tausch planen" oder „⬆️ Abholung planen" füllt den Auftrag vor. Die Standzeit zählt ab dem Stelltag',
+      'Reiter „⚖️ Wiegescheine": „+ Neuer Wiegeschein" — Kennzeichen, Kunde, Abfallschlüssel, Waage und Brutto. „Erstwägung speichern (offen)" oder gleich mit Tara „Abschließen und drucken". Offene Scheine bekommen später die zweite Wägung. Nach einem erledigten Abholen/Tauschen füllt „⚖️ wiegen" den Schein vor',
+      'Falsch gewogen? Einen abgeschlossenen Schein ändert niemand: die Geschäftsleitung storniert ihn mit Grund, dann einen neuen anlegen',
+    ],
+    probe: { anlegen: 'Abfallschlüssel „17 09 04 Gemischte Bau- und Abbruchabfälle" und Container „T-1" (Absetzcontainer, 7 m³) anlegen. Auftrag „Stellen" für Kunde „Probe" heute planen, „✓ erledigt" mit T-1 — T-1 steht beim Kunden. Abholung planen und erledigen — T-1 wieder auf dem Hof. Danach „⚖️ wiegen": Brutto 12340, Tara 4120 → Netto 8.220 kg, abschließen und drucken.', loeschen: 'Abgeschlossene Wiegescheine bleiben (stornieren mit Grund). Erledigte Aufträge bleiben. Container mit Aufträgen ausblenden statt entfernen.' },
+    vorher: [{ text: 'Kontakte (Kunden mit Adresse)', href: '/dashboard/crm' }, { text: 'Rechte („Entsorgung") je Mitarbeiter vergeben', href: '/dashboard/rechte' }],
+  },
   '/dashboard/etiketten': {
     zweck: 'Etiketten nach LMIV: Zutaten mit hervorgehobenen Allergenen (14 Pflichtallergene), Nährwerte je 100 g oder 100 ml, laufende Prüfung der Pflichtangaben und Etikett als PDF. Bei loser Ware werden nur die Allergene verlangt.',
     wer: 'beide',

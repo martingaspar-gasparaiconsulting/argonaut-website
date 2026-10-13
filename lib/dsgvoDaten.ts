@@ -70,6 +70,9 @@ export const DATEN_ORTE: DatenOrt[] = [
   { tabelle: 'spende', label: 'Spenden', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Zuwendungsbestätigungen unterliegen der Aufbewahrungspflicht.', imExport: true },
   // Paket 352 (A4a): Sterbefall-Akte — der Kontakt ist der Auftraggeber (Angehörige/r)
   { tabelle: 'sterbefall', label: 'Bestattungsaufträge (als Auftraggeber/in)', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Auftragsunterlage mit Kostenvoranschlag und Vollmacht — bleibt als Geschäftsunterlage für die Aufbewahrungsfrist.', imExport: true },
+  // Paket 355 (A4c): Container-Aufträge und Wiegescheine — Grundlage der Abrechnung und der Abfall-Nachweise
+  { tabelle: 'container_auftrag', label: 'Container-Aufträge', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Beleg, wann welcher Container wo stand — Grundlage der Abrechnung (Aufbewahrungspflicht).', imExport: true },
+  { tabelle: 'wiegeschein', label: 'Wiegescheine', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Wägebeleg zur Abrechnung und zum Nachweis der Abfallmengen — bleibt für die Aufbewahrungsfrist.', imExport: true },
   { tabelle: 'signatur_anfragen', label: 'Unterschriften', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Nachweis erteilter Unterschriften — Beweismittel bei Streit über Vertragsschluss.', imExport: true },
 
   // --- Wird anonymisiert: Vorgang bleibt, Person geht ------------------------

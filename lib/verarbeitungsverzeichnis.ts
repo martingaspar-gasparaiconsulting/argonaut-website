@@ -180,6 +180,19 @@ export const VERFAHREN_KATALOG: VerfahrenVorschlag[] = [
     tom: TOM_STANDARD + ' Wachbuch und Scans sind nur anhaengbar (keine Aenderung, kein Loeschen durch Nutzer); Zeitstempel vom Server. Auswertungen nicht zur Verhaltens- oder Leistungskontrolle ohne Beteiligung des Betriebsrats.',
   },
   {
+    // Paket 355 (13.10.2026): Container-Dienst und Wiegeschein (Fachpaket Entsorgung)
+    wenn: 'entsorgung',
+    name: 'Container-Auftraege und Wiegescheine (Entsorgung)',
+    zweck: 'Durchfuehrung und Abrechnung von Containerdienst und Entsorgung, Nachweis der angenommenen bzw. abgegebenen Abfallmengen.',
+    rechtsgrundlage: 'Art. 6 Abs. 1 lit. b DSGVO (Entsorgungsvertrag), lit. c (handels- und steuerrechtliche Aufbewahrung; abfallrechtliche Nachweis- und Registerpflichten), lit. f (Beweissicherung)',
+    kategorien_betroffene: 'Kunden und Ansprechpartner, Fahrer (eigene und fremde), Beschaeftigte',
+    kategorien_daten: 'Name und Adresse des Kunden, Stellplatz, Telefon, Kennzeichen, Name des Fahrers, Gewichte mit Zeitpunkt, Abfallschluessel, Name der Person, die den Wiegeschein abschliesst',
+    empfaenger: 'Kunden (Wiegeschein), Behoerden auf Anforderung, ' + EMPF_BASIS,
+    drittland: KEIN_DRITTLAND,
+    loeschfrist: 'Vorschlag: 8 Jahre nach Ende des Kalenderjahres (Buchungsbelege, § 147 AO), soweit abrechnungsrelevant; sonst 3 Jahre (Register nach Nachweisverordnung). Vom Betrieb anzupassen.',
+    tom: TOM_STANDARD + ' Wiegescheine nach Abschluss unveraenderbar (Storno nur mit Grund durch die Geschaeftsleitung); Wiegezeiten vom Server.',
+  },
+  {
     wenn: 'marketing',
     name: 'Newsletter und Direktwerbung',
     zweck: 'Versand von Informationen und Angeboten an Interessenten und Kunden, Messung der Wirkung.',
