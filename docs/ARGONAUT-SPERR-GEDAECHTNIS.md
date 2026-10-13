@@ -23,9 +23,12 @@ Die Nummern in Klammern (z. B. **2.01**) sind die Fragen der Anwalt-Liste „ARG
 
 Alle Schalter dieser Datei stehen im Command Center unter **Freigabe-Zentrale** (`/admin/command-center/freigaben`, `lib/freigabeZentrale.ts`, Tabellen `freigabe_schalter` und `freigabe_protokoll`, SQL p345). Nur der Betreiber mit eingerichteter und bestätigter Zwei-Faktor-Anmeldung.
 
-- **Freigabe vormerken** nur für Start-Schalter und Import-Sperren, nur mit Vermerk (mind. 20 Zeichen) und Datum der Anwalt-Antwort. Jede Änderung landet unveränderbar im Protokoll.
-- **Ausbaustufe 1 (Paket 345):** Eine Vormerkung **wirkt noch nicht**. Wirksam ist allein der Schalter im Code (Abschnitte 1 und 2). Teil 2 (A0, nächster Push) liest die Freigabe am Server.
-- **Code-Standard bleibt „aus".** Die Zeilen `SCHALTER …` unten beschreiben den Code, nicht die Datenbank.
+- **Freigeben** nur für Start-Schalter und Import-Sperren, nur mit Vermerk (mind. 20 Zeichen), Datum der Anwalt-Antwort und Haken „Mitziehen beim Öffnen erledigt" (Schritte 2, 5 und 6 oben). Jede Änderung landet unveränderbar im Protokoll.
+- **Seit Paket 346 wirkt eine Freigabe** (A0 Teil 2): Wirksam frei = Schalter im Code an **oder** in der Freigabe-Zentrale freigegeben. Server: `lib/freigabeServer.ts` (liest `freigabe_schalter` mit der Service-Rolle, 60 Sekunden Zwischenspeicher, nach jeder Änderung sofort neu auf dem Server der Zentrale). Seiten im Dashboard: `lib/useFreigabeStand.ts` über `/api/freigaben/stand`. Regel in `lib/freigabeStand.ts`.
+- **Jeder Fehler = gesperrt.** Fehlt die Tabelle, ist die Datenbank nicht erreichbar oder kommt Unsinn zurück, gilt der Code-Stand. Unbekannte Schlüssel öffnen nichts.
+- **Wieder sperren** in der Zentrale wirkt genauso schnell. Ein freigegebener Schalter lässt sich nicht ausblenden — erst sperren.
+- Mit einer Freigabe in der Zentrale entfallen die Schritte 3 und 4 (Code und `SCHALTER`-Zeile bleiben „aus"). Wer dauerhaft im Code öffnen will, geht die 8 Schritte wie bisher; danach kann die Freigabe in der Zentrale bleiben.
+- **Code-Standard bleibt „aus".** Die Zeilen `SCHALTER …` unten beschreiben den Code, nicht die Datenbank. Neue Prüfstellen IMMER mit dem wirksamen Stand (`startFreiServer`, `ladeFreigabeStand`, `useFreigabeStand`) — der Test `tests/freigabeWirksamP346.test.mjs` wird sonst rot.
 - Neue Start-Schalter oder Import-Bereiche brauchen zusätzlich einen Eintrag in `START_INFO` bzw. `IMPORT_INFO` (`lib/freigabeZentrale.ts`) — der Test `tests/freigabeZentraleP345.test.mjs` wird sonst rot.
 - **Ausblenden** (statt Löschen) in drei getrennten Schritten: Klick → Rückfrage → Namen eintippen. Der Schalter im Code bleibt.
 

@@ -108,7 +108,7 @@ test('Start-Schalter reifePreisTreppe ist aus und im Sperr-Gedächtnis', () => {
   assert.equal(startFrei('reifePreisTreppe', { reifePreisTreppe: true }), true);
   assert.match(lies('docs/ARGONAUT-SPERR-GEDAECHTNIS.md'), /SCHALTER startSperre\.reifePreisTreppe = aus/);
   const box = lies('app/dashboard/lebensmittel/reife/ReifeKalkBox.tsx');
-  assert.match(box, /startFrei\('reifePreisTreppe'\)/);
+  assert.match(box, /startFrei\('reifePreisTreppe', freigabe\)/);
   assert.match(box, /frei: FREI/);
   const sql = lies('supabase-sql/p341-reife-preistreppe.sql');
   assert.match(sql, /add column if not exists mhd date/);

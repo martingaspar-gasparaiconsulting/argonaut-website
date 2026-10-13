@@ -13,6 +13,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import Leerzustand from "../../_components/Leerzustand";
 import { inCent, zahlAusFeld, zahlFeld } from "@/lib/zahlen";
 import { startFrei } from "@/lib/startSperre";
+import { useFreigabeStand } from "@/lib/useFreigabeStand";
 import {
   SHOP_B2B_MODUL, basisNettoCent, centText, kundeName, mengenRegel, preisBasis, preisZeilePruefen,
   regelEingabePruefen, schaufensterStaffeln, zahlungsziel, type PreisBasis, type Preisliste,
@@ -72,6 +73,7 @@ async function alleSeiten<T>(laden: (von: number, bis: number) => PromiseLike<{ 
 }
 
 export default function GeschaeftskundenSeite() {
+  const freigabe = useFreigabeStand().start; // Paket 346: Code ODER Freigabe-Zentrale
   const [reiter, setReiter] = useState<Reiter>("kunden");
   const [istChef, setIstChef] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
@@ -146,7 +148,7 @@ export default function GeschaeftskundenSeite() {
         Geschäftskunden sehen im Shop ihre eigenen Netto-Preise mit Staffeln und dürfen — wenn Sie es freigeben — auf Rechnung kaufen.
         Jeder Kunde bekommt einen persönlichen Link. Gebinde und Mindestmenge gelten für alle Käufer im Shop.
       </p>
-      {!startFrei("shop") && (
+      {!startFrei("shop", freigabe) && (
         <div style={S.hinweis}>Der Online-Shop ist bis zur rechtlichen Freigabe geschlossen. Sie können hier schon alles vorbereiten; Kunden sehen bis dahin einen Hinweis.</div>
       )}
       {!istChef && !laden && <div style={S.hinweis}>Preise, Kauf auf Rechnung und Links pflegt die Geschäftsleitung. Sie sehen hier den Stand.</div>}
@@ -729,7 +731,7 @@ function GewerbeSchalter({ an, istChef, uid, kunden, onGespeichert }: {
   an: boolean; istChef: boolean; uid: string | null; kunden: Kunde[]; onGespeichert: (an: boolean) => void;
 }) {
   const [fehler, setFehler] = useState<string | null>(null);
-  const frei = startFrei("gewerbeNachweis");
+  const frei = startFrei("gewerbeNachweis", useFreigabeStand().start); // Paket 346
   const geprueft = kunden.filter((k) => k.aktiv && k.nachweis_ok).length;
 
   async function setzen(neu: boolean) {

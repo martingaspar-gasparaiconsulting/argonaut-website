@@ -92,7 +92,7 @@ test('Server-Teile: Link nur als Prüfsumme, Konto nur beim Betrieb der Seite, R
   assert.match(srv, /\.eq\('owner_user_id', betrieb\)\.eq\('token_hash', tokenHash\(token\)\)/);
   assert.match(srv, /!k\.aktiv\) return null/);
   const best = lies('app/api/oeffentlich/shop-bestellung/route.ts');
-  assert.match(best, /startSperrGrund\('shop'\)/, 'Shop bleibt bis zur Freigabe zu');
+  assert.match(best, /startSperrGrund\('shop', freigabe\)/, 'Shop bleibt bis zur Freigabe zu');
   assert.match(best, /kundeAusToken\(db, ownerId/);
   assert.match(best, /zahlartPruefen\(b\.zahlart, kunde\.auf_rechnung\)/);
   assert.match(best, /rahmenPruefen\(kunde\.kreditrahmen_cent/);

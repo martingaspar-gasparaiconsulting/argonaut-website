@@ -28,6 +28,7 @@ import {
   type TreppenStufe, type MhdStufe,
 } from '@/lib/reifeTreppe';
 import { startFrei, startSperrGrund } from '@/lib/startSperre';
+import { useFreigabeStand } from '@/lib/useFreigabeStand';
 import { datumText } from '@/lib/reife';
 
 const supabase = createBrowserClient(
@@ -64,7 +65,6 @@ type RZeile = { ab: string; auf: string };
 type MZeile = { vor: string; ab: string };
 const rZeilen = (r: TreppenStufe[]): RZeile[] => [...r.map((x) => ({ ab: String(x.ab_tag), auf: txt(x.aufschlag) })), { ab: '', auf: '' }];
 const mZeilen = (m: MhdStufe[]): MZeile[] => [...m.map((x) => ({ vor: String(x.tage_vor), ab: txt(x.abschlag) })), { vor: '', ab: '' }];
-const FREI = startFrei('reifePreisTreppe');
 
 export default function ReifeKalkBox({ charge, gespeichert, treppe, letzteMenge, heute, onGespeichert }: {
   charge: KalkCharge & { id: string; nummer: string; produkt: string; mhd?: string | null };
@@ -74,6 +74,8 @@ export default function ReifeKalkBox({ charge, gespeichert, treppe, letzteMenge,
   heute: string;
   onGespeichert: () => void | Promise<void>;
 }) {
+  const freigabe = useFreigabeStand().start; // Paket 346: Code ODER Freigabe-Zentrale
+  const FREI = startFrei('reifePreisTreppe', freigabe);
   const [f, setF] = useState<Form>(formAus(gespeichert ?? kalkStartwerte(charge.art)));
   const [busy, setBusy] = useState(false);
   const [meldung, setMeldung] = useState<{ ok: boolean; text: string } | null>(null);
@@ -249,7 +251,7 @@ export default function ReifeKalkBox({ charge, gespeichert, treppe, letzteMenge,
             if (!w) { setMeldung({ ok: false, text: 'Das Druckfenster wurde blockiert — bitte Pop-ups für ARGONAUT erlauben.' }); return; }
             w.document.write(html); w.document.close(); w.focus(); w.print();
           }}>🏷 Preisschild drucken{FREI ? '' : ' (Entwurf)'}</button>
-          {!FREI && <span style={s.klein}>{startSperrGrund('reifePreisTreppe')}</span>}
+          {!FREI && <span style={s.klein}>{startSperrGrund('reifePreisTreppe', freigabe)}</span>}
           {FREI && !preisschildEinheit(charge.einheit).grundpreisNoetig && <span style={s.klein}>Stückware: Preis je Stück.</span>}
         </div>
       </div>

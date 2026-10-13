@@ -21,7 +21,7 @@ import { createClient } from '@supabase/supabase-js';
 import { sendeMail, mailLayout } from '@/lib/mail';
 import { escapeHtml, istEmailGueltig } from '@/lib/newsletter';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
-import { startSperrGrund } from '@/lib/startSperre';
+import { startSperrGrundServer } from '@/lib/freigabeServer';
 import { ladePreisBasis } from '@/lib/shopB2bServer';
 import { bestellSprache, fuellen } from '@/lib/shopSprachen';
 import { sprachName } from '@/lib/mehrsprachig';
@@ -48,7 +48,7 @@ function eur(n: number, sprache: string | null): string {
 
 export async function POST(req: Request) {
   // Paket 343: Vorbestellung im Shop erst nach der rechtlichen Prüfung (Webshop UND Vorbestellung frei).
-  const gesperrt = startSperrGrund('shop') || startSperrGrund('vorbestellShop');
+  const gesperrt = (await startSperrGrundServer('shop')) || (await startSperrGrundServer('vorbestellShop')); // Paket 346
   if (gesperrt) return NextResponse.json({ error: gesperrt }, { status: 403 });
   try {
     const body = await req.json().catch(() => null);

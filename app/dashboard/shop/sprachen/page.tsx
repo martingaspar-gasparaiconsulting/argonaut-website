@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import { createBrowserClient } from "@supabase/ssr";
 import Leerzustand from "../../_components/Leerzustand";
 import { startFrei } from "@/lib/startSperre";
+import { useFreigabeStand } from "@/lib/useFreigabeStand";
 import { spracheFuer } from "@/lib/mehrsprachig";
 import {
   FREMD_SPRACHEN, EINGEBAUT, TEXT_DE, TEXT_EN, TEXT_KEYS, STATUS_INFO, darfAnbieten, freigabeFehler,
@@ -78,6 +79,7 @@ function deutsch(a: Artikel) { return { name: a.bezeichnung, beschreibung: a.sho
 function sprachText(code: string) { const s = spracheFuer(code); return s ? `${s.name} · ${s.eigen}` : code; }
 
 export default function ShopSprachenSeite() {
+  const freigabe = useFreigabeStand().start; // Paket 346: Code ODER Freigabe-Zentrale
   const [reiter, setReiter] = useState<Reiter>("sprachen");
   const [code, setCode] = useState<string>(EINGEBAUT);
   const [istChef, setIstChef] = useState(false);
@@ -131,7 +133,7 @@ export default function ShopSprachenSeite() {
         Ihren Shop in bis zu 24 Sprachen anbieten. Die KI schlägt Übersetzungen mit wörtlicher Rückübersetzung vor — Sie prüfen
         und geben frei. Im Shop erscheint nur, was freigegeben ist. Preise, Währung und Zahlen werden nie übersetzt.
       </p>
-      {!startFrei("shop") && (
+      {!startFrei("shop", freigabe) && (
         <div style={S.hinweis}>Der Online-Shop ist bis zur rechtlichen Freigabe geschlossen. Sie können hier schon alles vorbereiten.</div>
       )}
       {!istChef && !laden && <div style={S.hinweis}>Vorschläge dürfen Sie anlegen und bearbeiten. Freigeben und Sprachen einschalten macht die Geschäftsleitung.</div>}

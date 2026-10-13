@@ -30,6 +30,7 @@ import { kiFetch } from '@/lib/ki';
 import { pruefeDeckel, monatsSchluessel } from '@/lib/chatDeckel';
 import { originErlaubt } from '@/lib/chatEinbetten';
 import { startFrei, startSperrGrund, istFremdeHerkunft } from '@/lib/startSperre';
+import { ladeFreigabeStand } from '@/lib/freigabeServer';
 import {
   leseEinstellung,
   gespraechsStand,
@@ -70,7 +71,7 @@ export async function OPTIONS(req: Request) {
   const seite = new URL(req.url).searchParams.get('seite') || '';
   if (!origin || !seite) return new Response(null, { status: 204 });
   // Paket 216: Berater auf fremden Websites bis zur Freigabe aus (lib/startSperre.ts).
-  if (!startFrei('kiBeraterFremd') && istFremdeHerkunft(origin, req.url)) return new Response(null, { status: 204 });
+  if (!startFrei('kiBeraterFremd', (await ladeFreigabeStand()).start) && istFremdeHerkunft(origin, req.url)) return new Response(null, { status: 204 });
 
   try {
     const db = admin();
@@ -128,8 +129,9 @@ export async function POST(req: Request) {
     // beliebige Seite bares Geld. Ohne Origin ist es unsere eigene Seite.
     if (origin) {
       // Paket 216: fremde Websites erst nach der Freigabe (lib/startSperre.ts).
-      if (!startFrei('kiBeraterFremd') && istFremdeHerkunft(origin, req.url)) {
-        return NextResponse.json({ error: startSperrGrund('kiBeraterFremd') }, { status: 403 });
+      const freigabe = (await ladeFreigabeStand()).start; // Paket 346: Code ODER Freigabe-Zentrale
+      if (!startFrei('kiBeraterFremd', freigabe) && istFremdeHerkunft(origin, req.url)) {
+        return NextResponse.json({ error: startSperrGrund('kiBeraterFremd', freigabe) }, { status: 403 });
       }
       if (!originErlaubt(origin, inh.chat_domains)) {
         return NextResponse.json(

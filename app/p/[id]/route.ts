@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase-admin';
+import { startFreiServer } from '@/lib/freigabeServer';
 import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
 import { aktiveBoerseKennung } from '@/lib/kfzBoerseLaden';
 import { aktiveAnkaufKennung } from '@/lib/fahrzeugMappeServer';
@@ -47,7 +48,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const boerse = await aktiveBoerseKennung((seite as { owner_user_id: string }).owner_user_id).catch(() => null);
     // Paket 305: Menüpunkt „Fahrzeug verkaufen" auf die Fahrzeugmappe, wenn der Online-Ankauf an ist.
     const ankauf = await aktiveAnkaufKennung((seite as { owner_user_id: string }).owner_user_id).catch(() => null);
-    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: kennung, ...(boerse ? { fahrzeugeLink: `/fahrzeuge/${boerse}` } : {}), ...(ankauf ? { verkaufenLink: `/ankauf/${ankauf}` } : {}) });
+    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: kennung, shopFrei: await startFreiServer('shop'), ...(boerse ? { fahrzeugeLink: `/fahrzeuge/${boerse}` } : {}), ...(ankauf ? { verkaufenLink: `/ankauf/${ankauf}` } : {}) });
 
     return new Response(html, {
       status: 200,

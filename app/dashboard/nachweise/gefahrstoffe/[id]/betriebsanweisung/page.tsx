@@ -19,6 +19,7 @@ import { useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { PIKTOGRAMME, datumDe } from '@/lib/qualitaet';
 import { startFrei, startSperrGrund } from '@/lib/startSperre';
+import { useFreigabeStand } from '@/lib/useFreigabeStand';
 import {
   ABSCHNITTE, LEER_INHALT, SDB_ABSCHNITT, entwurf, saubererInhalt, freigabeFehler, druckHtml,
   type Inhalt, type AngabenKurz, type GefahrstoffKurz,
@@ -61,7 +62,8 @@ export default function BetriebsanweisungSeite() {
   const [sqlFehlt, setSqlFehlt] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const freigabeOffen = startFrei('betriebsanweisung');
+  const freigabe = useFreigabeStand().start; // Paket 346: Code ODER Freigabe-Zentrale
+  const freigabeOffen = startFrei('betriebsanweisung', freigabe);
 
   const laden = useCallback(async () => {
     if (!id) return;
@@ -198,7 +200,7 @@ export default function BetriebsanweisungSeite() {
                 ? <span style={{ color: C.green }}>✓ Freigegeben{ba.freigegeben_am ? ` am ${datumDe(ba.freigegeben_am.slice(0, 10))}` : ''} · Version {ba.version ?? 1}</span>
                 : <span style={{ color: C.warn }}>Entwurf{ba.version ? ` (zuletzt freigegeben: Version ${ba.version})` : ''}{geaendert ? ' · ungespeicherte Änderungen' : ''}</span>)
               : <span style={{ color: C.warn }}>Noch keine Betriebsanweisung angelegt.</span>}
-            {!freigabeOffen && <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>{startSperrGrund('betriebsanweisung')}</div>}
+            {!freigabeOffen && <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>{startSperrGrund('betriebsanweisung', freigabe)}</div>}
             <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>Der Entwurf ersetzt keine Gefährdungsbeurteilung. Prüfen Sie jeden Abschnitt am aktuellen Sicherheitsdatenblatt.</div>
           </div>
 
@@ -208,7 +210,7 @@ export default function BetriebsanweisungSeite() {
             {!nurLesen && ba && !(freigegeben && !geaendert) && (
               <button style={{ ...knopf, ...(freigabeOffen && !geaendert && !luecken.length ? { borderColor: C.green, color: C.green } : { color: C.textDim }) }}
                 disabled={busy || !freigabeOffen || geaendert || luecken.length > 0} onClick={() => void freigeben()}
-                title={!freigabeOffen ? String(startSperrGrund('betriebsanweisung')) : geaendert ? 'Bitte zuerst speichern' : luecken.join(' ')}>✅ Freigeben</button>
+                title={!freigabeOffen ? String(startSperrGrund('betriebsanweisung', freigabe)) : geaendert ? 'Bitte zuerst speichern' : luecken.join(' ')}>✅ Freigeben</button>
             )}
             <button style={knopf} onClick={drucken}>🖨 Drucken</button>
           </div>

@@ -25,6 +25,7 @@ import {
 } from '@/lib/shopSprachen';
 import { gefahrFuerShop } from '@/lib/shopGefahr';
 import { startFrei } from '@/lib/startSperre';
+import { ladeFreigabeStand } from '@/lib/freigabeServer';
 import { einwilligungText } from '@/lib/vorbestellAktion';
 import { fuerSchaufenster, ladeAktionen } from '@/lib/vorbestellShopServer';
 
@@ -121,7 +122,8 @@ export async function GET(req: Request) {
     const info = spracheFuer(sprache)!;
 
     // Paket 326 (S2): Gefahr-Angaben nur bestätigt und nur nach Freigabe (startSperre „gefahrstoffShop", R49).
-    const gefahrFrei = startFrei('gefahrstoffShop');
+    const freigabe = (await ladeFreigabeStand()).start; // Paket 346: Code ODER Freigabe-Zentrale
+    const gefahrFrei = startFrei('gefahrstoffShop', freigabe);
     const gefahrJe: Record<string, Record<string, unknown>> = {};
     if (gefahrFrei && rows.length) {
       const { data: gz, error: gzFehler } = await db.from('artikel_gefahr')
@@ -137,10 +139,10 @@ export async function GET(req: Request) {
     const token = tokenAus(req);
     const kunde = token ? await kundeAusToken(db, betrieb, token, rows.map((r) => r.id)) : null;
     // Paket 327 (S3b): nur geprüfte Geschäftskunden? (wirkt erst nach Freigabe R49)
-    const nurGewerbe = await ladeNurGewerbe(db, betrieb);
+    const nurGewerbe = await ladeNurGewerbe(db, betrieb, freigabe.gewerbeNachweis);
 
     // Paket 343 (BV3b): Vorbestellung und Vormerkliste — nur mit Start-Freigabe „shop“ UND „vorbestellShop“ (R52/R53).
-    const vorbestellung = startFrei('shop') && startFrei('vorbestellShop')
+    const vorbestellung = startFrei('shop', freigabe) && startFrei('vorbestellShop', freigabe)
       ? fuerSchaufenster(await ladeAktionen(db, betrieb, heute, basis))
       : [];
     let einwilligung = '';

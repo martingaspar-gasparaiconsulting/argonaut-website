@@ -155,7 +155,7 @@ export function geschuetztGrund(bereich: AnwaltBereich, erlaubt: boolean, freiga
 
 export function erkenneDatei(
   dateiname: string, kopf: readonly string[], zeilen: readonly string[][],
-  opt: { dbSpalten?: KatalogSpalte[] | null; erlaubt?: (zielKey: string) => boolean; ersteZeile?: string } = {},
+  opt: { dbSpalten?: KatalogSpalte[] | null; erlaubt?: (zielKey: string) => boolean; ersteZeile?: string; anwaltFreigabe?: Readonly<Record<AnwaltBereich, boolean>> } = {},
 ): DateiErkennung {
   const so = erkenneSonderweg(dateiname, kopf, opt.ersteZeile ?? '');
   if (so) return { datei: dateiname, ziel: null, sicher: true, kandidaten: [], sonder: so };
@@ -184,7 +184,7 @@ export function erkenneDatei(
   const bester = treffer[0];
   const besterDef = bester ? zielDef(bester.ziel) : undefined;
   if (bester && besterDef?.anwalt && bester.punkte >= 0.3 && bester.pflichtFehlt.length === 0) {
-    const grund = geschuetztGrund(besterDef.anwalt, opt.erlaubt ? opt.erlaubt(besterDef.key) : true);
+    const grund = geschuetztGrund(besterDef.anwalt, opt.erlaubt ? opt.erlaubt(besterDef.key) : true, opt.anwaltFreigabe ?? ANWALT_FREIGABE);
     if (grund) {
       return { datei: dateiname, ziel: null, sicher: true, kandidaten: treffer.slice(0, 5), sonder: { art: 'geschuetzt', ...SONDER.geschuetzt, titel: `${besterDef.label} — besonders geschützte Daten`, grund } };
     }

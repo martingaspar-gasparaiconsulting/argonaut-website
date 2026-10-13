@@ -8,9 +8,10 @@
 // Ausblenden (statt Löschen) nur in drei getrennten Schritten: Klick →
 // Rückfrage bestätigen → Namen eintippen. Nur der Betreiber mit Zwei-Faktor.
 //
-// Teil 1 (dieses Paket): Übersicht, Vermerk, Freigabe VORMERKEN, Protokoll.
-// Die Vormerkung wirkt noch nicht — wirksam bleibt der Schalter im Code.
-// Teil 2 (A0, 2. Push) liest die Freigabe am Server und lässt sie wirken.
+// Teil 1 (Paket 345): Übersicht, Vermerk, Freigabe, Protokoll.
+// Teil 2 (Paket 346): Die Freigabe WIRKT — Server und Seiten lesen den Stand
+// über lib/freigabeServer.ts bzw. lib/useFreigabeStand.ts (Code ODER
+// Datenbank, jeder Fehler = gesperrt). Der Code-Standard bleibt „aus".
 //
 // Keine Hooks, kein Supabase — node-testbar (tests/freigabeZentraleP345).
 // ============================================================================
@@ -126,28 +127,29 @@ export type DbZeile = {
   anwalt_antwort_datum: string | null; ausgeblendet: boolean; geaendert_am: string | null;
 };
 
-export type Stand = 'aus' | 'vorgemerkt' | 'an' | 'info';
+export type Stand = 'aus' | 'freigegeben' | 'an' | 'info';
 export type ZeileMitStand = Schalter & { db: DbZeile | null; stand: Stand; ausgeblendet: boolean };
 
 /**
- * Stand je Schalter. Teil 1: wirksam ist allein der Code — eine Freigabe in
- * der Datenbank ist nur „vorgemerkt". Unbekannte Datenbank-Zeilen (Schalter
- * gibt es im Code nicht mehr) werden ignoriert.
+ * Stand je Schalter (Teil 2): „an" = im Code an, „freigegeben" = in der
+ * Freigabe-Zentrale freigegeben und damit wirksam, „aus" = gesperrt,
+ * „info" = nur hier sichtbar, Öffnen anderswo. Unbekannte Datenbank-Zeilen
+ * (Schalter gibt es im Code nicht mehr) werden ignoriert.
  */
 export function zeilenMitStand(db: DbZeile[]): ZeileMitStand[] {
   const je = new Map(db.map((z) => [z.schluessel, z]));
   return alleSchalter().map((s) => {
     const d = je.get(s.schluessel) ?? null;
-    const stand: Stand = !s.schaltbar ? (s.codeAn ? 'an' : 'info') : s.codeAn ? 'an' : d?.an ? 'vorgemerkt' : 'aus';
+    const stand: Stand = !s.schaltbar ? (s.codeAn ? 'an' : 'info') : s.codeAn ? 'an' : d?.an === true ? 'freigegeben' : 'aus';
     return { ...s, db: d, stand, ausgeblendet: d?.ausgeblendet === true };
   });
 }
 
-export function uebersicht(z: ZeileMitStand[]): { gesamt: number; aus: number; vorgemerkt: number; an: number; ausgeblendet: number } {
+export function uebersicht(z: ZeileMitStand[]): { gesamt: number; aus: number; freigegeben: number; an: number; ausgeblendet: number } {
   return {
     gesamt: z.length,
     aus: z.filter((x) => x.stand === 'aus' || x.stand === 'info').length,
-    vorgemerkt: z.filter((x) => x.stand === 'vorgemerkt').length,
+    freigegeben: z.filter((x) => x.stand === 'freigegeben').length,
     an: z.filter((x) => x.stand === 'an').length,
     ausgeblendet: z.filter((x) => x.ausgeblendet).length,
   };
@@ -158,7 +160,11 @@ export function uebersicht(z: ZeileMitStand[]): { gesamt: number; aus: number; v
 export const MIN_VERMERK = 20;
 const istTag = (s: unknown) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s + 'T00:00:00Z'));
 
-export type FreigabeEingabe = { schluessel: string; vermerk: string; anwalt_frage: string; anwalt_antwort_datum: string };
+export type FreigabeEingabe = {
+  schluessel: string; vermerk: string; anwalt_frage: string; anwalt_antwort_datum: string;
+  /** Paket 346: „Mitziehen beim Öffnen" aus dem Sperr-Gedächtnis erledigt (Haken). */
+  mitgezogen?: boolean;
+};
 
 export function freigebenPruefen(e: FreigabeEingabe, heute: string): string[] {
   const f: string[] = [];
@@ -170,6 +176,7 @@ export function freigebenPruefen(e: FreigabeEingabe, heute: string): string[] {
   if (v.length < MIN_VERMERK) f.push(`Bitte einen Vermerk mit mindestens ${MIN_VERMERK} Zeichen (welche Anwalt-Antwort, was eingebaut ist).`);
   if (v.length > 1000) f.push('Der Vermerk ist zu lang (höchstens 1.000 Zeichen).');
   if (e.anwalt_frage.trim().length > 120) f.push('Anwalt-Frage: höchstens 120 Zeichen.');
+  if (e.mitgezogen !== true) f.push('Bitte bestätigen, dass die Punkte „Mitziehen beim Öffnen" aus dem Sperr-Gedächtnis erledigt sind.');
   if (!istTag(e.anwalt_antwort_datum)) f.push('Bitte das Datum der Anwalt-Antwort eintragen.');
   else if (e.anwalt_antwort_datum > heute) f.push('Das Datum der Anwalt-Antwort liegt in der Zukunft.');
   return f;
@@ -186,5 +193,5 @@ export function ausblendenBereit(schritt: { geklickt: boolean; bestaetigt: boole
 }
 
 export const AKTION_TEXT: Record<string, string> = {
-  freigeben: 'Freigabe vorgemerkt', sperren: 'Wieder gesperrt', ausblenden: 'Ausgeblendet', einblenden: 'Wieder eingeblendet', vermerk: 'Vermerk geändert',
+  freigeben: 'Freigegeben', sperren: 'Wieder gesperrt', ausblenden: 'Ausgeblendet', einblenden: 'Wieder eingeblendet', vermerk: 'Vermerk geändert',
 };

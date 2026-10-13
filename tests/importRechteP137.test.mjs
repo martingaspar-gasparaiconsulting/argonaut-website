@@ -65,10 +65,10 @@ test('leseRechtStand ist vorsichtig', () => {
 test('Seite: Pruefung beim Waehlen, Importieren und Rueckgaengig', () => {
   const s = lies('app/dashboard/import/page.tsx');
   const block = (von, bis) => s.slice(s.indexOf(von), s.indexOf(bis, s.indexOf(von) + 1));
-  assert.ok(block('function zielWaehlen(', '\n  }\n').includes('importErlaubt(key, rechtStand)'));
-  assert.ok(block('async function importieren()', 'if (ziel.kinder)').includes('importErlaubt(ziel.key, rechtStand)'));
-  assert.ok(block('async function rueckgaengig(j: Job)', 'const z = zielDef').includes('importErlaubt(j.ziel, rechtStand)'));
-  assert.ok(block('async function rueckgaengigBestand(j: Job)', "setBusy('rueck')").includes('importErlaubt(j.ziel, rechtStand)'));
+  assert.ok(block('function zielWaehlen(', '\n  }\n').includes('importErlaubt(key, rechtStand, freigabe.anwalt)'));
+  assert.ok(block('async function importieren()', 'if (ziel.kinder)').includes('importErlaubt(ziel.key, rechtStand, freigabe.anwalt)'));
+  assert.ok(block('async function rueckgaengig(j: Job)', 'const z = zielDef').includes('importErlaubt(j.ziel, rechtStand, freigabe.anwalt)'));
+  assert.ok(block('async function rueckgaengigBestand(j: Job)', "setBusy('rueck')").includes('importErlaubt(j.ziel, rechtStand, freigabe.anwalt)'));
   assert.ok(s.includes('const bereit = bereitKatalog && recht.ok;'));
   assert.ok(s.includes("from('mitarbeiter_rechte').select('module, schreib_module')"));
 });

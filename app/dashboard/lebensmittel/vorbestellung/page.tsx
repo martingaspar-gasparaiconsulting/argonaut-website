@@ -32,6 +32,7 @@ import {
 import Leerzustand from '../../_components/Leerzustand';
 import { etikettZumArtikel, shopBereitschaft, type EtikettZeile, type ShopArtikel } from '@/lib/vorbestellShop';
 import { startFrei, startSperrGrund } from '@/lib/startSperre';
+import { useFreigabeStand } from '@/lib/useFreigabeStand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -65,11 +66,12 @@ type AEntwurf = { id: string | null; titel: string; charge: string; artikel: str
 const leereAktion = (): AEntwurf => ({ id: null, titel: '', charge: '', artikel: '', menge: '', einheit: 'kg', max: '', von: '', bis: '', schluss: '', notiz: '' });
 const AKTION_FELDER = 'id, titel, reife_charge_id, menge_gesamt, einheit, max_je_kunde, abhol_von, abhol_bis, bestell_schluss, status, notiz';
 // Kundenseitig erst nach rechtlicher Freigabe (Webshop UND Vorbestellung im Shop)
-const SHOP_SPERRE = startFrei('shop') ? startSperrGrund('vorbestellShop') : startSperrGrund('shop');
 type KEntwurf = { name: string; tel: string; mail: string; menge: string; tag: string; quelle: string; notiz: string; einwilligung: boolean };
 const leererKunde = (tag = ''): KEntwurf => ({ name: '', tel: '', mail: '', menge: '', tag, quelle: 'theke', notiz: '', einwilligung: false });
 
 export default function VorbestellungPage() {
+  const freigabe = useFreigabeStand().start; // Paket 346: Code ODER Freigabe-Zentrale
+  const SHOP_SPERRE = startFrei('shop', freigabe) ? startSperrGrund('vorbestellShop', freigabe) : startSperrGrund('shop', freigabe);
   const tag = heute();
   const [aktionen, setAktionen] = useState<AktionZeile[]>([]);
   const [posten, setPosten] = useState<PostenZeile[]>([]);

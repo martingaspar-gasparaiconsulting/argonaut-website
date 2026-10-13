@@ -19,7 +19,7 @@ import { escapeHtml } from '@/lib/newsletter';
 import { firmaKurz } from '@/lib/fahrzeugMappeServer';
 import { basisAdresse } from '@/lib/kfzBoerseLaden';
 import { kundenLink, kundeName, shopSeite, tokenGueltig } from '@/lib/shopB2b';
-import { startFrei } from '@/lib/startSperre';
+import { startFreiServer } from '@/lib/freigabeServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       if (!an) return NextResponse.json({ link, mail: false, hinweis: 'Der Kontakt hat keine E-Mail-Adresse. Bitte den Link selbst weitergeben.' }, { headers: { 'Cache-Control': 'no-store' } });
       const fk = await firmaKurz(supabase, user.id);
       const firma = fk.firma || 'Ihr Lieferant';
-      const offen = startFrei('shop');
+      const offen = await startFreiServer('shop'); // Paket 346
       const html = kundenMailLayout(firma, fk.akzent, 'Ihr Zugang zu unserem Shop',
         `<p style="margin:0 0 14px;">Guten Tag,</p>`
         + `<p style="margin:0 0 14px;">für ${escapeHtml(kundeName(kontakt))} haben wir einen persönlichen Zugang zu unserem Online-Shop eingerichtet. Über den Knopf sehen Sie Ihre Preise netto, Ihre Staffelpreise und — falls vereinbart — die Zahlung auf Rechnung.</p>`

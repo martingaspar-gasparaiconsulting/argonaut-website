@@ -83,7 +83,7 @@ test('Route: Login, Import-Recht, Laengen-Deckel, kiFetch; Seite nutzt denselben
   const r = lies('app/api/import-aufraeumen/route.ts');
   assert.ok(r.includes("auth.getUser()"));
   assert.ok(r.includes("{ status: 401 }"));
-  assert.ok(r.includes('importErlaubt(zielKey, stand)'));
+  assert.ok(r.includes('importErlaubt(zielKey, stand, (await ladeFreigabeStand()).anwalt)'));
   assert.ok(r.includes('rohtext.length > AUFRAEUMER_MAX_ZEICHEN'));
   assert.ok(r.includes("kiFetch('import-aufraeumen'"));
   assert.ok(!/\.insert\(|\.update\(|\.upsert\(|\.delete\(/.test(r), 'Route schreibt nichts');

@@ -139,7 +139,7 @@ test('Start-Schalter: vorbestellShop aus, Sperr-Gedächtnis, Schnittstelle prüf
   assert.equal(startFrei('vorbestellShop'), false);
   assert.match(lies('docs/ARGONAUT-SPERR-GEDAECHTNIS.md'), /SCHALTER startSperre\.vorbestellShop = aus/);
   const r = lies('app/api/oeffentlich/vorbestellung/route.ts');
-  assert.match(r, /const gesperrt = startSperrGrund\('shop'\) \|\| startSperrGrund\('vorbestellShop'\);\n\s+if \(gesperrt\) return NextResponse\.json\(\{ error: gesperrt \}, \{ status: 403 \}\);/);
+  assert.match(r, /const gesperrt = \(await startSperrGrundServer\('shop'\)\) \|\| \(await startSperrGrundServer\('vorbestellShop'\)\);.*\n\s+if \(gesperrt\) return NextResponse\.json\(\{ error: gesperrt \}, \{ status: 403 \}\);/);
   // Betrieb nur über die veröffentlichte Seite, Aktion neu geprüft wie im Schaufenster
   assert.match(r, /\.eq\('oeffentlich_id', seite\)/);
   assert.match(r, /inh\.status !== 'live'/);
@@ -149,7 +149,7 @@ test('Start-Schalter: vorbestellShop aus, Sperr-Gedächtnis, Schnittstelle prüf
   assert.match(r, /b\.einwilligung !== true/);
   assert.ok(!/console\.error\([^)]*e\.mail/.test(r), 'keine Kundendaten im Protokoll');
   const p = lies('app/api/oeffentlich/shop-produkte/route.ts');
-  assert.match(p, /startFrei\('shop'\) && startFrei\('vorbestellShop'\)\s+\? fuerSchaufenster\(await ladeAktionen\(db, betrieb, heute, basis\)\)/);
+  assert.match(p, /startFrei\('shop', freigabe\) && startFrei\('vorbestellShop', freigabe\)\s+\? fuerSchaufenster\(await ladeAktionen\(db, betrieb, heute, basis\)\)/);
   const srv = lies('lib/vorbestellShopServer.ts');
   for (const t of ['vorbestell_aktion', 'vorbestell_posten', 'artikel', 'etikett_produkt']) {
     assert.match(srv, new RegExp(`from\\('${t}'\\)\\.select\\([^)]*\\)\\s*\\.eq\\('owner_user_id', betrieb\\)`), t + ' hart auf den Betrieb');

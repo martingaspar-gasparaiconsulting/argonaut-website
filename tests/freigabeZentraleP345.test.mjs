@@ -1,7 +1,7 @@
 // ============================================================================
 // tests/freigabeZentraleP345.test.mjs — Paket 345 (12.10.2026)
-// A0 Freigabe-Zentrale Teil 1: Katalog vollständig, Vormerkung wirkt (noch)
-// nicht, Freigabe nur mit Vermerk, Ausblenden in drei Schritten, Zugang nur
+// A0 Freigabe-Zentrale Teil 1: Katalog vollständig, Stand je Schalter (seit
+// Paket 346: Freigabe in der Datenbank = „freigegeben", wirksam), Freigabe nur mit Vermerk, Ausblenden in drei Schritten, Zugang nur
 // Betreiber mit bestätigtem zweiten Faktor, SQL ohne Nutzer-Rechte.
 // ============================================================================
 
@@ -33,27 +33,29 @@ test('Katalog: jeder Start-Schalter und jede Import-Sperre hat Titel und Anwalt-
   assert.equal(slug('Gesundheit & Wellness'), 'gesundheitWellness');
 });
 
-test('Teil 1: Freigabe in der Datenbank ist nur vorgemerkt — wirksam bleibt der Code', () => {
+test('Stand: Freigabe in der Datenbank = freigegeben (wirksam seit P346), Code-Schalter bleibt aus', () => {
   const db = [
     { schluessel: 'startSperre.shop', an: true, vermerk: V, anwalt_frage: 'R53', anwalt_antwort_datum: '2026-11-20', ausgeblendet: false, geaendert_am: null },
     { schluessel: 'startSperre.fernhilfe', an: false, vermerk: null, anwalt_frage: null, anwalt_antwort_datum: null, ausgeblendet: true, geaendert_am: null },
     { schluessel: 'gibtEsNicht.mehr', an: true, vermerk: V, anwalt_frage: null, anwalt_antwort_datum: '2026-11-20', ausgeblendet: false, geaendert_am: null },
   ];
   const z = zeilenMitStand(db);
-  assert.equal(z.find((x) => x.schluessel === 'startSperre.shop').stand, 'vorgemerkt');
+  assert.equal(z.find((x) => x.schluessel === 'startSperre.shop').stand, 'freigegeben');
   assert.equal(z.find((x) => x.schluessel === 'startSperre.fernhilfe').stand, 'aus');
   assert.equal(z.find((x) => x.schluessel === 'startSperre.fernhilfe').ausgeblendet, true);
   assert.ok(!z.some((x) => x.schluessel === 'gibtEsNicht.mehr'), 'unbekannte Zeilen fallen weg');
   assert.equal(z.find((x) => x.schluessel === 'kasse.modus').stand, 'info');
   const u = uebersicht(z);
-  assert.equal(u.vorgemerkt, 1); assert.equal(u.an, 0); assert.equal(u.ausgeblendet, 1);
-  // die Vormerkung darf den wirksamen Schalter nicht beeinflussen
+  assert.equal(u.freigegeben, 1); assert.equal(u.an, 0); assert.equal(u.ausgeblendet, 1);
+  // der Schalter im Code bleibt unberührt — wirksam wird die Freigabe über lib/freigabeStand
   assert.equal(START_FREIGABE.shop, false);
 });
 
 test('Freigeben nur mit Vermerk, Anwalt-Datum, nicht in der Zukunft, nur schaltbare', () => {
-  const ok = { schluessel: 'startSperre.shop', vermerk: V, anwalt_frage: 'R53', anwalt_antwort_datum: '2026-11-20' };
+  const ok = { schluessel: 'startSperre.shop', vermerk: V, anwalt_frage: 'R53', anwalt_antwort_datum: '2026-11-20', mitgezogen: true };
   assert.deepEqual(freigebenPruefen(ok, '2026-11-21'), []);
+  assert.match(freigebenPruefen({ ...ok, mitgezogen: false }, '2026-11-21').join(' '), /Mitziehen/, 'P346: Haken Pflicht');
+  assert.match(freigebenPruefen({ ...ok, mitgezogen: undefined }, '2026-11-21').join(' '), /Mitziehen/);
   assert.match(freigebenPruefen({ ...ok, vermerk: 'x'.repeat(MIN_VERMERK - 1) }, '2026-11-21').join(' '), /mindestens 20/);
   assert.match(freigebenPruefen({ ...ok, vermerk: '   ' + 'x'.repeat(10) + '            ' }, '2026-11-21').join(' '), /mindestens/, 'Leerzeichen zählen nicht');
   assert.match(freigebenPruefen({ ...ok, anwalt_antwort_datum: '' }, '2026-11-21').join(' '), /Datum/);
@@ -91,9 +93,10 @@ test('SQL p345: keine Rechte für Nutzer, Freigabe nur mit Vermerk, Protokoll fe
   assert.doesNotMatch(sql, /\bdrop\s+table\b|\btruncate\b/i);
 });
 
-test('Command Center verlinkt, Sperr-Gedächtnis erklärt die Vormerkung', () => {
+test('Command Center verlinkt, Sperr-Gedächtnis erklärt die Freigabe', () => {
   assert.match(lies('app/admin/command-center/page.tsx'), /href: '\/admin\/command-center\/freigaben'/);
   const g = lies('docs/ARGONAUT-SPERR-GEDAECHTNIS.md');
   assert.match(g, /Freigabe-Zentrale im Command Center/);
-  assert.match(g, /Vormerkung \*\*wirkt noch nicht\*\*/);
+  assert.match(g, /Seit Paket 346 wirkt eine Freigabe/);
+  assert.match(g, /Jeder Fehler = gesperrt/);
 });

@@ -22,7 +22,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient } from '@/lib/supabase-server';
 import { leseSchluessel, verschluessele, bindung } from '@/lib/gesundheitsdaten';
 import { pruefeStapel, anzahlJePatient } from '@/lib/gesundheitImport';
-import { anwaltSperrGrund } from '@/lib/anwaltFreigabe';
+import { anwaltSperrGrundServer } from '@/lib/freigabeServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +32,7 @@ function fehler(meldung: string, status = 400, code?: string) {
 }
 
 export async function POST(req: Request) {
-  const sperre = anwaltSperrGrund('gesundheit');
+  const sperre = await anwaltSperrGrundServer('gesundheit'); // Paket 346: Code ODER Freigabe-Zentrale
   if (sperre) return fehler(sperre, 403, 'anwalt');
 
   let body: unknown;

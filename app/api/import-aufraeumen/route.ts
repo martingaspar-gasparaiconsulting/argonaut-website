@@ -17,6 +17,7 @@ import {
   aufraeumerErlaubt, aufraeumerPrompt, extrahiereJsonArray, antwortZuZeilen, AUFRAEUMER_MAX_ZEICHEN,
 } from '@/lib/importAufraeumer';
 import { importErlaubt, leseRechtStand } from '@/lib/importRechte';
+import { ladeFreigabeStand } from '@/lib/freigabeServer';
 import { modellFuer as kiModell } from '@/lib/kiModelle';
 
 export const runtime = 'nodejs';
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
       const stand = !r1.error
         ? leseRechtStand(r1.data, true)
         : leseRechtStand((await supabase.from('mitarbeiter_rechte').select('module').eq('mitarbeiter_id', maId).maybeSingle()).data, false);
-      const recht = importErlaubt(zielKey, stand);
+      const recht = importErlaubt(zielKey, stand, (await ladeFreigabeStand()).anwalt); // Paket 346
       if (!recht.ok) return NextResponse.json({ error: recht.grund }, { status: 403 });
     }
 

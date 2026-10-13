@@ -8,7 +8,7 @@
 import { createHash } from 'node:crypto';
 import { SHOP_B2B_MODUL, besuchMerken, preisBasis, tokenGueltig, type PreisBasis, type Preisliste } from './shopB2b';
 import { nurGewerbeAktiv } from './shopGewerbe';
-import { startFrei } from './startSperre';
+import { startFreiServer } from './freigabeServer';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
@@ -43,7 +43,9 @@ export async function ladePreisBasis(db: Db, betrieb: string): Promise<PreisBasi
  * Nur mit Einstellung des Betriebs UND Start-Freigabe „gewerbeNachweis" (R49).
  * Fehler beim Lesen bei eingeschaltetem Start-Schalter: lieber sperren (fail-closed).
  */
-export async function ladeNurGewerbe(db: Db, betrieb: string, frei: boolean = startFrei('gewerbeNachweis')): Promise<boolean> {
+export async function ladeNurGewerbe(db: Db, betrieb: string, freiVorgabe?: boolean): Promise<boolean> {
+  // Paket 346: wirksamer Stand = Code ODER Freigabe-Zentrale (Fehler = gesperrt)
+  const frei = freiVorgabe ?? (await startFreiServer('gewerbeNachweis'));
   if (!frei) return false;
   try {
     const { data, error } = await db.from('modul_einstellung').select('einstellung').eq('owner_user_id', betrieb).eq('modul', SHOP_B2B_MODUL).maybeSingle();

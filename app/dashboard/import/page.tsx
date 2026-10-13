@@ -55,6 +55,7 @@ import {
 } from '@/lib/importBestand';
 import { buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
 import { importErlaubt, leseRechtStand, type RechtStand } from '@/lib/importRechte';
+import { useFreigabeStand } from '@/lib/useFreigabeStand';
 import { aufraeumerErlaubt, teileText, zeilenZuCsv, AUFRAEUMER_MAX_PORTIONEN } from '@/lib/importAufraeumer';
 import UmzugStapel from './UmzugStapel';
 import { istVcard, leseVcard } from '@/lib/vcardLeser';
@@ -316,6 +317,8 @@ export default function ImportCenterPage() {
   const [binMitarbeiter, setBinMitarbeiter] = useState(false);
   /** Paket 137: Bereiche und „darf ändern" des angemeldeten Mitarbeiters (null = noch nicht geladen). */
   const [rechtStand, setRechtStand] = useState<RechtStand | null>(null);
+  /** Paket 346: wirksame Import-Sperren (Code ODER Freigabe-Zentrale), Fehler = gesperrt. */
+  const freigabe = useFreigabeStand();
   const [namen, setNamen] = useState<Record<string, string>>({});
 
   // --- Schritt 2: Feldkatalog aus der Datenbank, Altsysteme -----------------
@@ -571,7 +574,7 @@ export default function ImportCenterPage() {
   // gespeichert). Offene Posten (Rechnungen) sind ausgenommen — Geld-Daten
   // werden nicht per Knopf geloescht.
   async function rueckgaengig(j: Job) {
-    const recht = importErlaubt(j.ziel, rechtStand);
+    const recht = importErlaubt(j.ziel, rechtStand, freigabe.anwalt);
     if (!recht.ok) { setFehler(recht.grund); return; }
     const z = zielDef(j.ziel);
     const ids = (j.angelegte_ids ?? []).filter(Boolean);
@@ -635,7 +638,7 @@ export default function ImportCenterPage() {
 
   function zielWaehlen(key: string) {
     // Paket 137: nur mit Freigabe fuer diesen Bereich.
-    const recht = importErlaubt(key, rechtStand);
+    const recht = importErlaubt(key, rechtStand, freigabe.anwalt);
     if (!recht.ok) { setFehler(recht.grund); return; }
     // Paket 128: Ziele, die das Datenbank-Update brauchen, nicht halb oeffnen.
     const z = zielDef(key);
@@ -1390,7 +1393,7 @@ export default function ImportCenterPage() {
    * bleibt der heutige Stand (sonst wuerde eine echte Buchung ueberschrieben).
    */
   async function rueckgaengigBestand(j: Job) {
-    const recht = importErlaubt(j.ziel, rechtStand);
+    const recht = importErlaubt(j.ziel, rechtStand, freigabe.anwalt);
     if (!recht.ok) { setFehler(recht.grund); return; }
     setBusy('rueck'); setFehler(null); setHinweis(null);
     try {
@@ -1431,7 +1434,7 @@ export default function ImportCenterPage() {
   async function importieren() {
     if (!datei || !ziel || !bericht || bericht.gut === 0) return;
     // Paket 137: Freigabe pruefen — auch wenn das Ziel per Link (?ziel=) vorgewaehlt war.
-    const recht = importErlaubt(ziel.key, rechtStand);
+    const recht = importErlaubt(ziel.key, rechtStand, freigabe.anwalt);
     if (!recht.ok) { setFehler(recht.grund); return; }
     // Paket 127: Bestellungen mit Positionen gehen einen eigenen Weg (Kopf + Positionen).
     if (ziel.kinder) { await importiereMitPositionen(); return; }
@@ -2093,7 +2096,8 @@ export default function ImportCenterPage() {
         {/* --- Paket 147: Umzug Schritt 6 — mehrere Dateien auf einmal --- */}
         <UmzugStapel
           dbSpalten={dbSpalten}
-          erlaubt={(k) => importErlaubt(k, rechtStand).ok}
+          erlaubt={(k) => importErlaubt(k, rechtStand, freigabe.anwalt).ok}
+          anwaltFreigabe={freigabe.anwalt}
           erledigt={erledigtDateien}
           busy={busy !== null}
           onOeffnen={(d, k) => { zielWaehlen(k); setWartend({ datei: d, ziel: k }); if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); }}
@@ -2125,7 +2129,7 @@ export default function ImportCenterPage() {
               const mitKatalog = (!z.nurMitKatalog || !!dbSpalten?.some((c) => c.tabelle === z.tabelle))
                 && (!z.kinder || !!dbSpalten?.some((c) => c.tabelle === z.kinder!.tabelle));
               const bereitKatalog = mitKatalog && !(z.nurChef && binMitarbeiter);
-              const recht = importErlaubt(z.key, rechtStand);
+              const recht = importErlaubt(z.key, rechtStand, freigabe.anwalt);
               const bereit = bereitKatalog && recht.ok;
               return (
                 <button

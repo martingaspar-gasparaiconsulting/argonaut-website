@@ -65,7 +65,7 @@ test('Neuer Shop-Text ist Zusatz: freigegebene Sprachen fallen nicht heraus', ()
 
 test('Server entscheidet: Bestellung abgelehnt, Schaufenster meldet den Schalter, Konto meldet den Nachweis', () => {
   const b = lies('app/api/oeffentlich/shop-bestellung/route.ts');
-  assert.match(b, /const erlaubt = bestellungErlaubt\(await ladeNurGewerbe\(db, ownerId\), kunde\);/);
+  assert.match(b, /const erlaubt = bestellungErlaubt\(await ladeNurGewerbe\(db, ownerId, freigabe\.gewerbeNachweis\), kunde\);/);
   assert.match(b, /if \(!erlaubt\.ok\) return NextResponse\.json\(\{ error: erlaubt\.grund, nur_gewerbe: true \}, \{ status: 403 \}\);/);
   assert.ok(b.indexOf('bestellungErlaubt(') < b.indexOf("db.from('shop_bestellungen').insert("), 'Prüfung vor dem Speichern');
   const p = lies('app/api/oeffentlich/shop-produkte/route.ts');

@@ -72,7 +72,7 @@ test('Bestell-Route: nur nach Freigabe, Pfad und PDF geprüft, Nachweis vom Serv
   assert.equal(START_FREIGABE.sdbVersand, false);
   assert.match(lies('docs/ARGONAUT-SPERR-GEDAECHTNIS.md'), /SCHALTER startSperre\.sdbVersand = aus/);
   const r = lies('app/api/oeffentlich/shop-bestellung/route.ts');
-  assert.match(r, /const sdb = startFrei\('sdbVersand'\) \? await sdbVorbereiten\(\) : null;/);
+  assert.match(r, /const sdb = startFrei\('sdbVersand', freigabe\) \? await sdbVorbereiten\(\) : null;/);
   assert.match(r, /const ok = pfadPasst\(pfad, ownerId, e\.artikel_id\);/);
   assert.match(r, /\.eq\('owner_user_id', ownerId\)\.eq\('art', 'sdb'\)\.eq\('aktuell', true\)/);
   assert.match(r, /'%PDF-'/);
@@ -83,7 +83,7 @@ test('Bestell-Route: nur nach Freigabe, Pfad und PDF geprüft, Nachweis vom Serv
 test('Nachversand-Route: nur Geschäftsleitung, Senden nur nach Freigabe, jede Sendung im Nachweis', () => {
   const r = lies('app/api/shop/sdb-nachversand/route.ts');
   assert.match(r, /if \(chef\) return \{ fehler: KEIN\(403/);
-  assert.match(r, /if \(!startFrei\('sdbVersand'\)\) return KEIN\(403/);
+  assert.match(r, /if \(!startFrei\('sdbVersand', freigabe\)\) return KEIN\(403/);
   assert.match(r, /pfadPasst\(pfad, betrieb, art\.id\)/);
   assert.match(r, /anlass: 'nachversand', status: ok \? 'versendet' : 'fehler'/);
   assert.match(r, /kundenPost: true/);

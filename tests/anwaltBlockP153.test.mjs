@@ -227,7 +227,7 @@ test('Route-Eingang: alles oder nichts, hoechstens 200, nur gueltige Arten; Prot
 
 test('Quelltext: Route sperrt serverseitig VOR allem anderen, Seite schreibt keine Eigenen Felder bei Gesundheitszielen', () => {
   const route = lies('app/api/gesundheit-notiz/stapel/route.ts');
-  const iSperre = route.indexOf("anwaltSperrGrund('gesundheit')");
+  const iSperre = route.indexOf("await anwaltSperrGrundServer('gesundheit')"); // P346: wirksamer Stand
   assert.ok(iSperre > 0 && iSperre < route.indexOf('req.json()'));
   assert.ok(route.indexOf("from('gesundheit_zugriff')") < route.indexOf("from('gesundheit_notiz')"), 'Protokoll vor dem Speichern');
   assert.ok(!/SERVICE_ROLE|service_role/.test(route));

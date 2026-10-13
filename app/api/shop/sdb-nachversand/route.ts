@@ -19,6 +19,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { sendeMail, kundenMailLayout } from '@/lib/mail';
 import { escapeHtml } from '@/lib/newsletter';
 import { startFrei, startSperrGrund } from '@/lib/startSperre';
+import { ladeFreigabeStand } from '@/lib/freigabeServer';
 import { pfadPasst } from '@/lib/produktDokumente';
 import { anhangName, nachversandPlan, type SdbDok, type VersandZeile } from '@/lib/sdbVersand';
 
@@ -59,8 +60,8 @@ export async function GET(req: Request) {
     if ('fehler' in v) return v.fehler;
     return NextResponse.json({
       empfaenger: v.plan.map((e) => ({ email: e.email, name: e.name, sprache: e.sprache, fassung: e.dok.version ?? null })),
-      frei: startFrei('sdbVersand'),
-      grund: startSperrGrund('sdbVersand'),
+      frei: startFrei('sdbVersand', (await ladeFreigabeStand()).start),
+      grund: startSperrGrund('sdbVersand', (await ladeFreigabeStand()).start),
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
     console.error('shop/sdb-nachversand GET:', e instanceof Error ? e.message : 'unbekannt');
@@ -70,7 +71,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    if (!startFrei('sdbVersand')) return KEIN(403, startSperrGrund('sdbVersand') || 'Noch nicht freigeschaltet.');
+    const freigabe = (await ladeFreigabeStand()).start; // Paket 346: Code ODER Freigabe-Zentrale
+    if (!startFrei('sdbVersand', freigabe)) return KEIN(403, startSperrGrund('sdbVersand', freigabe) || 'Noch nicht freigeschaltet.');
     const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
     const v = await vorbereiten(typeof b?.artikelId === 'string' ? b.artikelId : null);
     if ('fehler' in v) return v.fehler;

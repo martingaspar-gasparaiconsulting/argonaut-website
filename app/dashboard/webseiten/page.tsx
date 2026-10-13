@@ -16,6 +16,7 @@ import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
 import { baueVorlage, ZWECKE } from '@/lib/webVorlagen';
 import { leseDomainListe, baueEinbettSchnipsel, MAX_DOMAINS } from '@/lib/chatEinbetten';
 import { startFrei, startSperrGrund } from '@/lib/startSperre';
+import { useFreigabeStand } from '@/lib/useFreigabeStand';
 import SeitenEditor from './_components/SeitenEditor';
 
 const supabase = createBrowserClient(
@@ -42,6 +43,7 @@ const GERAETE: { key: string; label: string; icon: string; breite: number | null
 type Modus = 'vorlage' | 'ki' | 'editor';
 
 export default function WebseitenPage() {
+  const freigabe = useFreigabeStand().start; // Paket 346: Code ODER Freigabe-Zentrale
   const [uid, setUid] = useState<string | null>(null);
   const [ci, setCi] = useState<CiWeb | null>(null);
   const [laden, setLaden] = useState(true);
@@ -123,8 +125,8 @@ export default function WebseitenPage() {
 
   const html = useMemo(() => {
     if (!ci) return '';
-    return seiteHtml({ bloecke: aktuelleBloecke }, ci, new Date().getFullYear());
-  }, [ci, aktuelleBloecke]);
+    return seiteHtml({ bloecke: aktuelleBloecke }, ci, new Date().getFullYear(), { shopFrei: freigabe.shop });
+  }, [ci, aktuelleBloecke, freigabe.shop]);
 
   async function kiBauen() {
     setFehler(null); setMeldung(null); setGespeichert(null); setKiLaden(true);
@@ -421,9 +423,9 @@ export default function WebseitenPage() {
               Zwei Zeilen genügen, und der KI-Berater steht dort unten links, kennt Ihre Produkte, Preise und Bestände.
             </p>
 
-            {!startFrei('kiBeraterFremd') ? (
+            {!startFrei('kiBeraterFremd', freigabe) ? (
               /* Paket 216: bis zur Freigabe durch den Anwalt aus (lib/startSperre.ts) */
-              <p style={{ ...styles.mini, fontWeight: 600 }}>{startSperrGrund('kiBeraterFremd')}</p>
+              <p style={{ ...styles.mini, fontWeight: 600 }}>{startSperrGrund('kiBeraterFremd', freigabe)}</p>
             ) : liveInfo?.status === 'live' && liveInfo.oeffentlich_id ? (
               <>
                 <div style={styles.feldTitel}>Welche Adressen dürfen ihn einbetten?</div>

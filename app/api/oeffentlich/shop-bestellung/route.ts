@@ -19,6 +19,7 @@ import { drossel, drosselIp, drosselText } from '@/lib/drossel';
 import { baueBestellung, leseMenge, type ShopZeile } from '@/lib/shopUebernahme';
 import { centRunden } from '@/lib/zahlen';
 import { startSperrGrund } from '@/lib/startSperre';
+import { ladeFreigabeStand } from '@/lib/freigabeServer';
 import {
   baueB2bBestellung, centText, leseWunschMenge, endkundenPreis, euro, mengenRegel, mengePruefen, offenAusBestellungen,
   offenAusRechnungen, rahmenPruefen, zahlartPruefen, type B2bArtikel,
@@ -56,7 +57,8 @@ const FELDER = 'id, bezeichnung, verkaufspreis, artikelnummer, aktiv';
 
 export async function POST(req: Request) {
   // Paket 216: Webshop bis zur Abnahme durch den Anwalt abgeschaltet (lib/startSperre.ts).
-  const shopGesperrt = startSperrGrund('shop');
+  const freigabe = (await ladeFreigabeStand()).start; // Paket 346: Code ODER Freigabe-Zentrale
+  const shopGesperrt = startSperrGrund('shop', freigabe);
   if (shopGesperrt) return NextResponse.json({ error: shopGesperrt }, { status: 403 });
   try {
     const body = await req.json().catch(() => null);
@@ -126,7 +128,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Ihr Kundenlink ist nicht mehr gültig. Bitte fordern Sie beim Anbieter einen neuen an oder bestellen Sie ohne Firmenkonto.', konto_ungueltig: true }, { status: 403 });
     }
     // Paket 327 (S3b): Shop nur für geprüfte Geschäftskunden — der Server entscheidet, nicht der Browser.
-    const erlaubt = bestellungErlaubt(await ladeNurGewerbe(db, ownerId), kunde);
+    const erlaubt = bestellungErlaubt(await ladeNurGewerbe(db, ownerId, freigabe.gewerbeNachweis), kunde);
     if (!erlaubt.ok) return NextResponse.json({ error: erlaubt.grund, nur_gewerbe: true }, { status: 403 });
     const bestellnr = clean(b.bestellnummer, 60);
 
@@ -219,7 +221,7 @@ export async function POST(req: Request) {
     const betriebMail = (ci?.email || '').toString().trim();
 
     // Paket 328 (S5): Sicherheitsdatenblätter mit der Bestätigung (REACH Art. 31) — erst nach Freigabe R49.
-    const sdb = startFrei('sdbVersand') ? await sdbVorbereiten() : null;
+    const sdb = startFrei('sdbVersand', freigabe) ? await sdbVorbereiten() : null;
 
     type MailPos = { menge: number; bezeichnung: string; einzelpreis: number; einzelpreis_netto?: number };
     // Paket 324: Tabelle und Summen in der Sprache der Mail (Betrieb immer Deutsch, Käufer je Bestell-Sprache).

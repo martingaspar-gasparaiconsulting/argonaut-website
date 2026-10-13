@@ -95,7 +95,7 @@ test('Schalter aus bis R49, Sperr-Gedächtnis, Seite zeigt Ampel nur mit Schalte
   assert.equal(startFrei('zusammenlagerung'), false);
   assert.match(lies('docs/ARGONAUT-SPERR-GEDAECHTNIS.md'), /SCHALTER startSperre\.zusammenlagerung = aus/);
   const s = lies('app/dashboard/nachweise/gefahrstoffe/page.tsx');
-  assert.match(s, /const ZL_FREI = startFrei\('zusammenlagerung'\);/);
+  assert.match(s, /const ZL_FREI = startFrei\('zusammenlagerung', freigabe\);/);
   assert.match(s, /ZL_FREI \? plaetzeMitAnzahl\(zeilen\)/);
-  assert.match(s, /\{!ZL_FREI\s+\? <div[^>]*>\{startSperrGrund\('zusammenlagerung'\)\}/);
+  assert.match(s, /\{!ZL_FREI\s+\? <div[^>]*>\{startSperrGrund\('zusammenlagerung', freigabe\)\}/);
 });

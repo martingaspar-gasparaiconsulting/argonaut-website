@@ -110,7 +110,7 @@ test('Freigabe ist gesperrt bis zur Abnahme (R49) und im Sperr-Gedächtnis', () 
 
 test('Seite: Freigabe nur mit Schalter, nur Chef, Druck ohne Freigabe = ENTWURF; Link im Verzeichnis', () => {
   const s = lies('app/dashboard/nachweise/gefahrstoffe/[id]/betriebsanweisung/page.tsx');
-  assert.match(s, /const freigabeOffen = startFrei\('betriebsanweisung'\);/);
+  assert.match(s, /const freigabeOffen = startFrei\('betriebsanweisung', freigabe\);/);
   assert.match(s, /if \(!ba \|\| !freigabeOffen\) return;/);
   assert.match(s, /freigegeben: freigabeOffen && freigegeben && !geaendert/);
   assert.match(s, /const nurLesen = !istChef;/);

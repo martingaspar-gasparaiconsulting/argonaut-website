@@ -18,6 +18,7 @@ import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { leseZahlOder } from '@/lib/zahlen';
 import { startFrei } from '@/lib/startSperre';
+import { useFreigabeStand } from '@/lib/useFreigabeStand';
 
 const MODUL = 'shop_bestellungen';
 
@@ -76,6 +77,7 @@ function parseCsv(text: string): { extern_id: string; besteller: string; email: 
 }
 
 export default function ShopPage() {
+  const freigabe = useFreigabeStand().start; // Paket 346: Code ODER Freigabe-Zentrale
   // Paket 187: Rechnungs-Knopf nur mit Recht „Darf abrechnen" (Server prüft weiter selbst).
   const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
@@ -253,7 +255,7 @@ export default function ShopPage() {
             mit hinterlegtem Anbieter (unter „🔌 Schnittstellen") später automatisch per Schnittstelle.
           </p>
           {/* Paket 216: Website-Shop bis zur Freigabe durch den Anwalt geschlossen (lib/startSperre.ts) */}
-          {!startFrei('shop') && (
+          {!startFrei('shop', freigabe) && (
             <p style={{ ...styles.sub, color: '#E0A24C', fontWeight: 600 }}>
               Hinweis: Der Shop auf Ihrer ARGONAUT-Website nimmt bis zur rechtlichen Freigabe noch keine Bestellungen an. Besucher sehen dort einen Hinweis und können Sie per Telefon oder E-Mail erreichen.
             </p>

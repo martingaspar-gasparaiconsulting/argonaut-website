@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "r
 import { createBrowserClient } from "@supabase/ssr";
 import Leerzustand from "../../_components/Leerzustand";
 import { startFrei } from "@/lib/startSperre";
+import { useFreigabeStand } from "@/lib/useFreigabeStand";
 import {
   PIKTOGRAMME, LEER, STATUS_TEXT, ausVerzeichnis, bestaetigFehler, gefahrStatus, kurzText, plausiHinweise, sauber,
   type GefahrAngaben, type GefahrStatus, type Satz,
@@ -58,6 +59,7 @@ function datum(s: string | null): string {
 }
 
 export default function ShopGefahrSeite() {
+  const freigabe = useFreigabeStand().start; // Paket 346: Code ODER Freigabe-Zentrale
   const [betrieb, setBetrieb] = useState<string | null>(null);
   const [istChef, setIstChef] = useState(false);
   const [laden, setLaden] = useState(true);
@@ -115,7 +117,7 @@ export default function ShopGefahrSeite() {
         wie sie im Sicherheitsdatenblatt (Abschnitt 2.2 und 14) stehen. Die KI liest nur ab und schlägt vor; Sie vergleichen mit dem SDB und bestätigen.
         ARGONAUT stuft nichts selbst ein.
       </p>
-      {!startFrei("gefahrstoffShop") && (
+      {!startFrei("gefahrstoffShop", freigabe) && (
         <div style={S.hinweis}>Im Shop werden diese Angaben erst nach der rechtlichen Prüfung angezeigt. Sie können schon jetzt alles vorbereiten und bestätigen.</div>
       )}
       {fehler && <div style={S.fehler}>{fehler}</div>}
@@ -290,6 +292,7 @@ function Editor({ artikel, zeile, sdb, verz, betrieb, onGespeichert }: {
 type Versand = { id: string; empfaenger_email: string | null; empfaenger_name: string | null; anlass: string; status: string; versendet_am: string; sprache: string; dokument_version: string | null };
 
 function SdbVersand({ artikel, istChef, hatSdb, setMeldung }: { artikel: Artikel; istChef: boolean; hatSdb: boolean; setMeldung: (t: string | null) => void }) {
+  const sdbFrei = startFrei("sdbVersand", useFreigabeStand().start); // Paket 346: Code ODER Freigabe-Zentrale
   const [liste, setListe] = useState<Versand[] | null>(null);
   const [nach, setNach] = useState<{ empfaenger: { email: string; name: string | null; sprache: string; fassung: string | null }[]; frei: boolean; grund: string | null } | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -324,7 +327,7 @@ function SdbVersand({ artikel, istChef, hatSdb, setMeldung }: { artikel: Artikel
     <div style={{ marginTop: 14, borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
       <b>📨 Sicherheitsdatenblatt-Versand</b>
       <span style={{ color: C.textDim, fontSize: 13 }}> — geht mit der Bestellbestätigung mit (spätestens bei der ersten Lieferung, REACH Art. 31)</span>
-      {!startFrei("sdbVersand") && <div style={{ color: C.warn, fontSize: 13, marginTop: 6 }}>Der automatische Versand wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin senden Sie die Datenblätter bitte selbst.</div>}
+      {!sdbFrei && <div style={{ color: C.warn, fontSize: 13, marginTop: 6 }}>Der automatische Versand wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin senden Sie die Datenblätter bitte selbst.</div>}
       {!hatSdb && <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>Kein Sicherheitsdatenblatt hinterlegt — dann geht nichts mit, und die Bestell-Mail an Sie weist darauf hin.</div>}
       {fehler && <div style={S.fehler}>{fehler}</div>}
       {liste === null ? <div style={{ color: C.textDim, fontSize: 13, marginTop: 6 }}>Wird geladen …</div> : liste.length === 0 ? (

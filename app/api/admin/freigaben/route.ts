@@ -4,6 +4,7 @@ import { createClient as createServerClient } from '@/lib/supabase-server';
 import { betreiberPruefung } from '@/lib/betreiberGuard';
 import { zweiFaktorStand } from '@/lib/zweiFaktorServer';
 import { alleSchalter, freigebenPruefen, zeilenMitStand, type DbZeile } from '@/lib/freigabeZentrale';
+import { freigabeSpeicherLeeren } from '@/lib/freigabeServer';
 
 // ============================================================================
 // ARGONAUT OS · /api/admin/freigaben — Freigabe-Zentrale (Paket 345, A0 Teil 1)
@@ -11,11 +12,12 @@ import { alleSchalter, freigebenPruefen, zeilenMitStand, type DbZeile } from '@/
 // Nur der Betreiber (Doppelschloss) UND nur mit eingerichtetem und in dieser
 // Sitzung bestätigtem zweiten Faktor — hier reicht „hat keinen Faktor" nicht.
 // GET:  alle Schalter mit Code-Stand und Datenbank-Stand + letzte Protokoll-Zeilen
-// POST: { aktion: 'freigeben', schluessel, vermerk, anwalt_frage, anwalt_antwort_datum }
-//       { aktion: 'sperren', schluessel }            — Vormerkung zurücknehmen
+// POST: { aktion: 'freigeben', schluessel, vermerk, anwalt_frage, anwalt_antwort_datum, mitgezogen: true }
+//       { aktion: 'sperren', schluessel }            — Freigabe zurücknehmen
 //       { aktion: 'ausblenden', schluessel, getippt } — getippt = Titel exakt
 //       { aktion: 'einblenden', schluessel }
-// Teil 1: Eine Freigabe ist nur VORGEMERKT; wirksam bleibt der Code.
+// Teil 2 (Paket 346): Eine Freigabe WIRKT — auf diesem Server sofort, auf
+// allen anderen nach spätestens einer Minute (lib/freigabeServer.ts).
 // ============================================================================
 
 export const runtime = 'nodejs';
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
   const { absage, userId } = await pruefen();
   if (absage) return absage;
   const body = await req.json().catch(() => ({})) as {
-    aktion?: string; schluessel?: string; vermerk?: string; anwalt_frage?: string; anwalt_antwort_datum?: string; getippt?: string;
+    aktion?: string; schluessel?: string; vermerk?: string; anwalt_frage?: string; anwalt_antwort_datum?: string; getippt?: string; mitgezogen?: unknown;
   };
   const schluessel = String(body.schluessel ?? '');
   const s = alleSchalter().find((x) => x.schluessel === schluessel);
@@ -67,20 +69,22 @@ export async function POST(req: Request) {
   let zeile: typeof basis;
   let meldung: string;
   if (body.aktion === 'freigeben') {
-    const e = { schluessel, vermerk: String(body.vermerk ?? ''), anwalt_frage: String(body.anwalt_frage ?? ''), anwalt_antwort_datum: String(body.anwalt_antwort_datum ?? '') };
+    const e = { schluessel, vermerk: String(body.vermerk ?? ''), anwalt_frage: String(body.anwalt_frage ?? ''), anwalt_antwort_datum: String(body.anwalt_antwort_datum ?? ''), mitgezogen: body.mitgezogen === true };
     const f = freigebenPruefen(e, heute());
     if (f.length) return NextResponse.json({ ok: false, error: f.join(' ') }, { status: 400 });
-    zeile = { ...basis, an: true, vermerk: e.vermerk.trim(), anwalt_frage: e.anwalt_frage.trim() || null, anwalt_antwort_datum: e.anwalt_antwort_datum };
-    meldung = `„${s.titel}": Freigabe vorgemerkt. Wirksam wird sie mit Teil 2 der Freigabe-Zentrale; bis dahin gilt der Schalter im Code.`;
+    zeile = { ...basis, an: true, ausgeblendet: false, vermerk: e.vermerk.trim(), anwalt_frage: e.anwalt_frage.trim() || null, anwalt_antwort_datum: e.anwalt_antwort_datum };
+    meldung = `„${s.titel}": freigegeben. Wirkt sofort, auf allen Servern spätestens nach einer Minute. Zurücknehmen jederzeit mit „Wieder sperren".`;
   } else if (body.aktion === 'sperren') {
-    if (!basis.an) return NextResponse.json({ ok: false, error: 'Dieser Schalter ist nicht vorgemerkt.' }, { status: 400 });
+    if (!basis.an) return NextResponse.json({ ok: false, error: 'Dieser Schalter ist hier nicht freigegeben.' }, { status: 400 });
     zeile = { ...basis, an: false };
-    meldung = `„${s.titel}": Vormerkung zurückgenommen — bleibt gesperrt.`;
+    meldung = `„${s.titel}": wieder gesperrt — sofort, auf allen Servern spätestens nach einer Minute.`;
   } else if (body.aktion === 'ausblenden') {
     // Schritt 3 der drei Schritte wird am Server noch einmal geprüft: Titel exakt
     if (String(body.getippt ?? '').trim() !== s.titel.trim()) {
       return NextResponse.json({ ok: false, error: 'Zum Ausblenden bitte den Namen genau so eintippen, wie er dasteht.' }, { status: 400 });
     }
+    // Freigegebene Schalter bleiben sichtbar — erst sperren, dann ausblenden.
+    if (basis.an) return NextResponse.json({ ok: false, error: 'Ein freigegebener Schalter wird nicht ausgeblendet. Bitte zuerst wieder sperren.' }, { status: 400 });
     zeile = { ...basis, ausgeblendet: true };
     meldung = `„${s.titel}" ausgeblendet. Der Schalter im Code bleibt, „Ausgeblendete zeigen" holt ihn zurück.`;
   } else if (body.aktion === 'einblenden') {
@@ -91,5 +95,6 @@ export async function POST(req: Request) {
   }
   const { error } = await admin.from('freigabe_schalter').upsert({ ...zeile, geaendert_von: userId }, { onConflict: 'schluessel' });
   if (error) return NextResponse.json({ ok: false, error: 'Gerade nicht speicherbar (SQL Paket 345?).' }, { status: 500 });
+  freigabeSpeicherLeeren();
   return NextResponse.json({ ok: true, meldung });
 }

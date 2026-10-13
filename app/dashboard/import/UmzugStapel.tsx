@@ -17,6 +17,7 @@ import { dekodiere } from '@/lib/importFortschritt';
 import { leseXls } from '@/lib/xlsLeser';
 import { dateiArt, type KatalogSpalte } from '@/lib/importMotor';
 import { erkenneDatei, umzugPlan, datevStapel, type DateiErkennung } from '@/lib/umzugPlan';
+import type { AnwaltBereich } from '@/lib/anwaltFreigabe';
 import { istVcard, leseVcard } from '@/lib/vcardLeser';
 import { istDatanorm, leseDatanorm, datanormReihenfolge, DATANORM_ENDUNGEN } from '@/lib/datanormLeser';
 import { istBmecat, leseBmecat } from '@/lib/bmecatLeser';
@@ -67,6 +68,8 @@ async function kopfLesen(f: File): Promise<{ kopf: string[]; zeilen: string[][];
 export default function UmzugStapel(props: {
   dbSpalten: KatalogSpalte[] | null;
   erlaubt: (zielKey: string) => boolean;
+  /** Paket 346: wirksame Import-Sperren (Code ODER Freigabe-Zentrale). */
+  anwaltFreigabe?: Readonly<Record<AnwaltBereich, boolean>>;
   /** Dateinamen, die in dieser Sitzung schon importiert wurden */
   erledigt: readonly string[];
   busy: boolean;
@@ -110,7 +113,7 @@ export default function UmzugStapel(props: {
           }
         }
         const k = await kopfLesen(f);
-        const e = erkenneDatei(f.name, k.kopf, k.zeilen, { dbSpalten: props.dbSpalten, erlaubt: props.erlaubt, ersteZeile: k.ersteZeile });
+        const e = erkenneDatei(f.name, k.kopf, k.zeilen, { dbSpalten: props.dbSpalten, erlaubt: props.erlaubt, ersteZeile: k.ersteZeile, anwaltFreigabe: props.anwaltFreigabe });
         neu.push({ datei: f, erkennung: e, ziel: e.ziel ?? '', hinweis: k.hinweis });
       } catch {
         neu.push({ datei: f, erkennung: { datei: f.name, ziel: null, sicher: false, kandidaten: [], sonder: null }, ziel: '', hinweis: 'Konnte nicht gelesen werden — bitte einzeln öffnen.' });

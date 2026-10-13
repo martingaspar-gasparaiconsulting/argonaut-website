@@ -28,7 +28,7 @@ test('Shop bekommt Angaben nur bestätigt und nur nach Freigabe', () => {
 
 test('Schnittstelle: Schalter, nur bestätigte, eigener Betrieb, fail-soft', () => {
   const r = lies('app/api/oeffentlich/shop-produkte/route.ts');
-  assert.match(r, /const gefahrFrei = startFrei\('gefahrstoffShop'\);/);
+  assert.match(r, /const gefahrFrei = startFrei\('gefahrstoffShop', freigabe\);/);
   assert.match(r, /if \(gefahrFrei && rows\.length\)/);
   assert.match(r, /\.eq\('owner_user_id', inh\.owner_user_id as string\)\.eq\('status', 'bestaetigt'\)/);
   assert.match(r, /if \(!gzFehler\)/);

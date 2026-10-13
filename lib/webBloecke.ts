@@ -329,7 +329,9 @@ function einblendungSkript(): string {
     + '})()<\/script>';
 }
 
-export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; editor?: boolean } = {}): string {
+export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; editor?: boolean; shopFrei?: boolean } = {}): string {
+  // Paket 346: wirksamer Shop-Stand vom Server (Code ODER Freigabe-Zentrale); ohne Angabe gilt der Code.
+  const shopFrei = ctx.shopFrei ?? startFrei('shop');
   const ed = ctx.editor;
   // Editor-Marker: nur im Vollbild-Editor gesetzt. Macht Text direkt anklick-/editierbar.
   const ce = (feld: string) => (ed ? ' data-ao-feld="' + feld + '" contenteditable="true"' : '');
@@ -580,7 +582,7 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
       let inner: string;
       // Paket 216: Solange der Shop nicht freigeschaltet ist (lib/startSperre.ts),
       // zeigt die Live-Seite keinen Warenkorb, sondern einen Hinweis.
-      if (oid && !startFrei('shop')) {
+      if (oid && !shopFrei) {
         inner = '<div class="ao-shop-grid"><div class="ao-shop-leer">' + esc(startSperrGrund('shop') || '') + '</div></div>';
       } else if (oid) {
         inner = '<div class="ao-wk-bar" style="display:none"><span class="ao-wk-text"></span></div>'
@@ -597,7 +599,7 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
           + '<span class="btn ao-prod-add">In den Warenkorb</span></div></div></div>',
         ).join('');
         inner = '<div class="ao-shop-hinweis">Vorschau — echte Produkte übernehmen Sie unter „Produkte in den Shop".'
-          + (startFrei('shop') ? '' : ' Auf der Live-Seite ist der Shop bis zur rechtlichen Freigabe geschlossen; Besucher sehen einen Hinweis.')
+          + (shopFrei ? '' : ' Auf der Live-Seite ist der Shop bis zur rechtlichen Freigabe geschlossen; Besucher sehen einen Hinweis.')
           + '</div><div class="ao-shop-grid">' + bsp + '</div>';
       } else {
         inner = '<div class="ao-shop-grid"><div class="ao-shop-leer">Produkte folgen in Kürze.</div></div>';
@@ -634,13 +636,13 @@ export function blockHtml(b: Block, ci: CiWeb, ctx: { oeffentlichId?: string; ed
 
 // Paket 178: Welche Dienste setzt diese Seite ein? Daraus entsteht die
 // passende Datenschutzerklaerung (lib/webRecht.datenschutzText).
-export function webDiensteDerSeite(bloecke: { typ?: string }[]): WebDienste {
+export function webDiensteDerSeite(bloecke: { typ?: string }[], shopFrei: boolean = startFrei('shop')): WebDienste {
   const hat = (...t: string[]) => bloecke.some((b) => t.includes(String(b?.typ || '')));
   return {
     kontakt: hat('kontakt'),
     newsletter: hat('newsletter', 'einblendung'),
     termine: hat('termin', 'buchung'),
-    shop: hat('produkte') && startFrei('shop'),
+    shop: hat('produkte') && shopFrei,
     chatbot: hat('chatbot'),
     video: hat('video'),
     karte: hat('anfahrt'),
@@ -1034,8 +1036,10 @@ export function seiteHtml(
   seite: { titel?: string; bloecke: Block[] },
   ci: CiWeb,
   jahr: number,
-  opts: { oeffentlichId?: string; editor?: boolean; fahrzeugeLink?: string; verkaufenLink?: string } = {},
+  opts: { oeffentlichId?: string; editor?: boolean; fahrzeugeLink?: string; verkaufenLink?: string; shopFrei?: boolean } = {},
 ): string {
+  // Paket 346: /p/[id] und eigene Domains geben den wirksamen Stand mit (lib/freigabeServer.ts).
+  const shopFrei = opts.shopFrei ?? startFrei('shop');
   const firma = esc(z(ci.firma) || 'Ihr Firmenname');
   // Paket 273: Menüpunkt „Fahrzeuge", wenn der Betrieb seine Fahrzeugbörse eingeschaltet hat.
   // Nur relative Pfade (/fahrzeuge …) — nie eine fremde Adresse ins Menü.
@@ -1050,7 +1054,7 @@ export function seiteHtml(
     : '<span class="logo">' + esc((z(ci.firma) || 'A').charAt(0).toUpperCase()) + '</span>';
 
   const koerper = (seite.bloecke || []).map((b, i) => {
-    const inner = blockHtml(b, ci, { oeffentlichId: opts.oeffentlichId, editor: opts.editor });
+    const inner = blockHtml(b, ci, { oeffentlichId: opts.oeffentlichId, editor: opts.editor, shopFrei });
     return opts.editor ? '<div class="ao-b" data-ao-i="' + i + '">' + inner + '</div>' : inner;
   }).join('\n');
   const hatVideo = (seite.bloecke || []).some((b) => b.typ === 'video');
@@ -1059,7 +1063,7 @@ export function seiteHtml(
   const hatBuchung = (seite.bloecke || []).some((b) => b.typ === 'buchung');
   // Paket 216: Ohne Shop-Freigabe gibt es keine Bestellungen → kein Warenkorb-Skript,
   // kein Widerrufsformular (der Produkte-Block zeigt dann nur einen Hinweis).
-  const hatProdukte = startFrei('shop') && (seite.bloecke || []).some((b) => b.typ === 'produkte');
+  const hatProdukte = shopFrei && (seite.bloecke || []).some((b) => b.typ === 'produkte');
   const hatChatbot = (seite.bloecke || []).some((b) => b.typ === 'chatbot');
   const hatEinblendung = (seite.bloecke || []).some((b) => b.typ === 'einblendung');
 
@@ -1077,7 +1081,7 @@ export function seiteHtml(
     '<nav class="mainnav"><a href="#leistungen">Leistungen</a>' + fahrzeuge + verkaufen + '<a href="#ueber">Über uns</a><a href="#kontakt">Kontakt</a></nav>',
     '</div></header>',
     koerper,
-    rechtsSektionen(ci, webDiensteDerSeite(seite.bloecke || [])),
+    rechtsSektionen(ci, webDiensteDerSeite(seite.bloecke || [], shopFrei)),
     hatProdukte ? widerrufSektion(opts.oeffentlichId) : '',
     fussHtml(ci, jahr, { widerruf: hatProdukte, barrierefreiheit: !!z(ci.barrierefreiheit_text) }),
     anfrageSkript(),

@@ -33,6 +33,7 @@ import {
 import { qrMatrix } from '@/lib/qr';
 import { platzAmpel, konfliktText, STUFE_TEXT, type Stufe } from '@/lib/zusammenlagerung';
 import { startFrei, startSperrGrund } from '@/lib/startSperre';
+import { useFreigabeStand } from '@/lib/useFreigabeStand';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -60,9 +61,10 @@ const primaer: CSSProperties = { ...knopf, background: C.gold, color: C.navy, bo
 const lab: CSSProperties = { display: 'block', color: C.textDim, fontSize: 13, fontWeight: 700, marginTop: 8 };
 const FARBE = { rot: C.danger, gelb: C.warn, gruen: C.green } as const;
 const AMPEL_FARBE: Record<Stufe, string> = { rot: C.danger, gelb: C.warn, gruen: C.green, grau: C.textDim };
-const ZL_FREI = startFrei('zusammenlagerung');
 
 export default function GefahrstoffeSeite() {
+  const freigabe = useFreigabeStand().start; // Paket 346: Code ODER Freigabe-Zentrale
+  const ZL_FREI = startFrei('zusammenlagerung', freigabe);
   const [zeilen, setZeilen] = useState<Zeile[]>([]);
   const [form, setForm] = useState<Form | null>(null);
   const [istChef, setIstChef] = useState(true);
@@ -111,7 +113,7 @@ export default function GefahrstoffeSeite() {
   const plaetze = useMemo(() => [...new Set(zeilen.map((z) => String(z.lagerplatz ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'de')), [zeilen]);
   const bewertet = useMemo(() => zeilen.map((z) => ({ z, p: pruefeGefahrstoff(z, heute) }))
     .sort((a, b) => ({ rot: 0, gelb: 1, gruen: 2 }[a.p.stufe] - { rot: 0, gelb: 1, gruen: 2 }[b.p.stufe]) || String(a.z.bezeichnung).localeCompare(String(b.z.bezeichnung), 'de')), [zeilen, heute]);
-  const ampeln = useMemo(() => (ZL_FREI ? plaetzeMitAnzahl(zeilen).map((p) => ({ platz: p.platz, a: platzAmpel(stoffeAmPlatz(zeilen, p.platz)) })) : []), [zeilen]);
+  const ampeln = useMemo(() => (ZL_FREI ? plaetzeMitAnzahl(zeilen).map((p) => ({ platz: p.platz, a: platzAmpel(stoffeAmPlatz(zeilen, p.platz)) })) : []), [zeilen, ZL_FREI]);
   const rot = bewertet.filter((x) => x.p.stufe === 'rot').length;
   const cmr = bewertet.filter((x) => x.p.cmr).length;
   const vorschau = form ? pruefeGefahrstoff({ ...form, id: undefined, sdb_datum: form.sdb_datum || null, betriebsanweisung_am: form.betriebsanweisung_am || null, ersatz_geprueft_am: form.ersatz_geprueft_am || null }, heute) : null;
@@ -273,7 +275,7 @@ export default function GefahrstoffeSeite() {
             <div style={karte}>
               <b>🚦 Zusammenlagerung je Lagerplatz (TRGS 510)</b>
               {!ZL_FREI
-                ? <div style={{ color: C.textDim, fontSize: 13.5, marginTop: 4 }}>{startSperrGrund('zusammenlagerung')}</div>
+                ? <div style={{ color: C.textDim, fontSize: 13.5, marginTop: 4 }}>{startSperrGrund('zusammenlagerung', freigabe)}</div>
                 : ampeln.length === 0
                   ? <div style={{ color: C.textDim, fontSize: 13.5, marginTop: 4 }}>Noch kein Lagerplatz eingetragen.</div>
                   : ampeln.map(({ platz, a }) => (
