@@ -197,13 +197,13 @@ export async function fachdossierHtml(d: Dossier): Promise<string> {
   // 3 · Ablauf eines Auftrags
   nr++;
   seiten.push(`<section class="seite">${wz}
-    <div class="eyebrow">So läuft ein Auftrag</div>
-    <h2>Einmal erfasst.<br>Bis zum Geldeingang durchgereicht.</h2>
+    <div class="eyebrow">${t?.oeffentlich ? 'So läuft ein Anliegen' : 'So läuft ein Auftrag'}</div>
+    <h2>${t?.oeffentlich ? 'Einmal erfasst.<br>Bis zur Erledigung durchgereicht.' : 'Einmal erfasst.<br>Bis zum Geldeingang durchgereicht.'}</h2>
     ${t ? `<p class="sub">Ein Beispiel aus dem Alltag: ${esc(t.ablaufTitel)}</p>
     <div class="schritte">${t.ablauf.map((s, i) => `<div class="schritt"><i>${i + 1}</i><div><b>${esc(s.titel)}</b>${esc(s.text)}</div></div>`).join('')}</div>` : luecke('Der Ablauf eines typischen Auftrags')}
-    ${t ? `<h3>Was Ihr Kunde davon merkt</h3>
-    <div class="drei">${KUNDE_MERKT.map((k) => `<div><b>${esc(k.titel)}</b>${esc(k.text)}</div>`).join('')}</div>` : ''}
-    <div class="band"><b>Einmal eingeben. Überall richtig.</b>Kundendaten, Positionen und Preise tippen Sie einmal ein. Angebot, Auftrag, Einsatz und Rechnung greifen auf denselben Datensatz zu.</div>
+    ${t ? `<h3>${t.kundeMerkt ? 'Was Ihr Gegenüber davon merkt' : 'Was Ihr Kunde davon merkt'}</h3>
+    <div class="drei">${(t.kundeMerkt ?? KUNDE_MERKT).map((k) => `<div><b>${esc(k.titel)}</b>${esc(k.text)}</div>`).join('')}</div>` : ''}
+    <div class="band"><b>Einmal eingeben. Überall richtig.</b>${t?.oeffentlich ? 'Namen, Termine und Anliegen tippen Sie einmal ein. Kalender, Ticket und Schriftverkehr greifen auf denselben Datensatz zu.' : 'Kundendaten, Positionen und Preise tippen Sie einmal ein. Angebot, Auftrag, Einsatz und Rechnung greifen auf denselben Datensatz zu.'}</div>
     ${fusszeile(d, nr)}</section>`);
 
   // 4 · Schwerpunkt der Branche (nur mit geprüftem Text)
@@ -225,7 +225,7 @@ export async function fachdossierHtml(d: Dossier): Promise<string> {
     const f = t.fachseite;
     nr++;
     seiten.push(`<section class="seite">${wz}
-      <div class="eyebrow">Ihr Fachpaket</div>
+      <div class="eyebrow">${esc(f.eyebrow ?? 'Ihr Fachpaket')}</div>
       <h2>${esc(f.titel)}</h2>
       <p class="sub">${esc(f.text)}</p>
       <div class="fach">${f.gruppen.map((g) => `<div><b>${esc(g.titel)}</b><ul>${g.punkte.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('')}</div>
@@ -271,13 +271,13 @@ export async function fachdossierHtml(d: Dossier): Promise<string> {
     `<div class="block"><em>${esc(titel)}</em>${module.map((m) => `<span class="chip">${esc(m.name)}</span>`).join('')}</div>`;
   seiten.push(`<section class="seite">${wz}
     <div class="eyebrow">Was Sie bekommen</div>
-    <h2>Ein System für Ihren ganzen Betrieb.</h2>
-    <p class="sub">Grundausstattung für jeden Betrieb, dazu das Paket für Ihre Branche.</p>
+    <h2>${t?.oeffentlich ? 'Ein System für Ihr ganzes Haus.' : 'Ein System für Ihren ganzen Betrieb.'}</h2>
+    <p class="sub">${d.standard ? 'Die Grundausstattung, die jeder Betrieb bekommt. Ein eigenes Fachpaket für Ihre Branche gibt es nicht.' : 'Grundausstattung für jeden Betrieb, dazu das Paket für Ihre Branche.'}</p>
     <div class="gruppe"><h4>Grundausstattung</h4><small>Für jeden Betrieb</small>
       <div class="spalten">${d.kern.map((g) => block(g.titel, g.module)).join('')}</div></div>
     ${d.paket.length ? `<div class="gruppe gold"><h4>Paket ${esc(d.kategorie)}</h4><small>Speziell für ${esc(d.zielgruppe)}</small>${block('Fachmodule', d.paket)}</div>` : ''}
     <div class="luft"></div>
-    <div class="band"><b>Alles greift ineinander.</b>Grundausstattung und Branchenpaket arbeiten mit denselben Daten. Eine Anmeldung, eine Kundenliste, eine Rechnung von uns.</div>
+    <div class="band"><b>Alles greift ineinander.</b>${d.standard ? 'Alle Bereiche arbeiten mit denselben Daten.' : 'Grundausstattung und Branchenpaket arbeiten mit denselben Daten.'} Eine Anmeldung, eine Kundenliste, eine Rechnung von uns.</div>
     ${fusszeile(d, nr)}</section>`);
 
   // 7 · Einstieg + Kontakt

@@ -23,6 +23,7 @@ import { KERN_MODULE } from './pakete';
 import { KATEGORIE_MODULE, STANDARD_AUTOMATION } from './branchenkatalog';
 import { NAV_LINKS } from './rechte';
 import { dossierRecht, weglassenImDossier } from './dossierFreigabe';
+import { STANDARD_DOSSIER, STANDARD_ALLTAG, STANDARD_VORTEILE, STANDARD_BAND, STANDARD_GEGENUEBER, STANDARD_GEPRUEFT_AM, istStandardBranche } from './standardDossier';
 
 export const FACHDOSSIER_VERSION = 'fd1';
 export const BASIS_URL = 'https://argonaut-os.com';
@@ -78,10 +79,16 @@ export type FachText = {
   geprueftAm: string;       // ISO-Datum der Prüfung
   /** Paket 286: zusätzliche Seite für Pilot-Branchen mit eigenem Fachpaket (zuerst Kfz-Handel). */
   fachseite?: FachSeite;
+  /** Paket 351: eigene Kacheln „Was Ihr Gegenüber merkt" (öffentliche Stellen schreiben keine Angebote). */
+  kundeMerkt?: { titel: string; text: string }[];
+  /** Paket 351: öffentliche Stelle — „Anliegen" statt „Auftrag", kein Geldeingang. */
+  oeffentlich?: boolean;
 };
 
 /** Paket 286: „Ihr Fachpaket" — Gruppen mit Gebautem und Partner über das eigene Konto. Nur Gebautes (Regel aus Paket 217). */
 export type FachSeite = {
+  /** Paket 351: Überschrift über der Seite, Standard „Ihr Fachpaket". */
+  eyebrow?: string;
   titel: string;
   text: string;
   gruppen: { titel: string; punkte: string[] }[];
@@ -13232,6 +13239,8 @@ export type Dossier = {
   entwurf: boolean;
   /** Paket 221: gesetzt, wenn das Dossier „in rechtlicher Vorbereitung" ist (lib/dossierFreigabe.ts). */
   gesperrt: string | null;
+  /** Paket 351: Standard-Dossier (nur Grundausstattung, kein Fachpaket). */
+  standard: boolean;
   luecken: string[];
   kern: { titel: string; module: Modul[] }[];
   paket: Modul[];
@@ -13271,8 +13280,48 @@ export function zielgruppeAus(name: string): string {
   return String(name ?? '').trim() || 'Ihren Betrieb';
 }
 
+/**
+ * Paket 351 (A3): Standard-Dossier für die zehn Branchen ohne Fachmodule
+ * (lib/standardDossier.ts). Nur Grundausstattung, kein Fachpaket, dazu die
+ * Seite „Dafür passt es — dafür ist es nicht gedacht".
+ */
+export function standardFachText(slug: string): FachText | null {
+  if (!istStandardBranche(slug)) return null;
+  const e = STANDARD_DOSSIER[slug];
+  return {
+    zielgruppe: e.zielgruppe,
+    titel: e.titel,
+    lead: e.lead,
+    vorteile: [...STANDARD_VORTEILE],
+    rolle: e.rolle,
+    alltag: STANDARD_ALLTAG.map((a) => ({ ...a })),
+    ablaufTitel: e.ablaufTitel,
+    ablauf: e.ablauf.map((a) => ({ ...a })),
+    geprueftAm: STANDARD_GEPRUEFT_AM,
+    kundeMerkt: e.oeffentlich ? STANDARD_GEGENUEBER.map((a) => ({ ...a })) : undefined,
+    oeffentlich: e.oeffentlich === true,
+    fachseite: {
+      eyebrow: 'Ehrlich gesagt',
+      titel: 'Dafür passt ARGONAUT OS. Dafür ist es nicht gedacht.',
+      text: `Für ${e.zielgruppe} gibt es kein eigenes Fachpaket. Was die Grundausstattung für Sie leistet, und welche Fachverfahren Ihrer Branche sie nicht ersetzt:`,
+      gruppen: [
+        { titel: 'Dafür passt es', punkte: [...e.passt] },
+        { titel: 'Dafür ist es nicht gedacht', punkte: [...e.nicht] },
+      ],
+      partner: [],
+      band: { ...STANDARD_BAND },
+    },
+  };
+}
+
+/** Geprüfter Branchentext: eigener Text oder Standard-Dossier (Paket 351). */
+export function fachText(slug: string): FachText | null {
+  return FACH_TEXTE[slug] ?? standardFachText(slug);
+}
+
 export function baueDossier(b: DossierBranche, jetzt: Date = new Date()): Dossier {
-  const text = FACH_TEXTE[b.slug] ?? null;
+  const text = fachText(b.slug);
+  const standard = !FACH_TEXTE[b.slug] && istStandardBranche(b.slug);
   const kernSet = new Set(KERN_MODULE.filter((k) => !IN_AUFBAU_MODULE.has(k)));
   const kern = KERN_GRUPPEN.map((g) => ({
     titel: g.titel,
@@ -13285,7 +13334,8 @@ export function baueDossier(b: DossierBranche, jetzt: Date = new Date()): Dossie
 
   // Paket 234: in den 🟡-Bereichen keine Kasse und kein Shop im Paket (lib/dossierFreigabe.ts)
   const weglassen = weglassenImDossier(b.kategorie);
-  const paketKeys = [...new Set(KATEGORIE_MODULE[b.kategorie] ?? [])].filter((k) => !KERN_MODULE.includes(k) && !IN_AUFBAU_MODULE.has(k) && !weglassen.includes(k));
+  // Paket 351: Standard-Dossier ohne Fachpaket — das Kategorie-Paket passt dort nicht
+  const paketKeys = standard ? [] : [...new Set(KATEGORIE_MODULE[b.kategorie] ?? [])].filter((k) => !KERN_MODULE.includes(k) && !IN_AUFBAU_MODULE.has(k) && !weglassen.includes(k));
   const paket = paketKeys.map((key) => ({ key, name: modulName(key) }));
 
   const alle = new Set<string>([...KERN_MODULE, ...paketKeys]);
@@ -13296,13 +13346,13 @@ export function baueDossier(b: DossierBranche, jetzt: Date = new Date()): Dossie
   const gesperrt = recht.frei ? null : recht.grund;
   if (gesperrt) luecken.push('In rechtlicher Vorbereitung: ' + gesperrt);
   if (!text) luecken.push('Branchentexte (Alltag, Ablauf eines Auftrags, Schwerpunkt) fehlen — B11b');
-  if (!KATEGORIE_MODULE[b.kategorie]) luecken.push(`Kategorie „${b.kategorie}" hat kein Branchenpaket`);
+  if (!KATEGORIE_MODULE[b.kategorie] && !standard) luecken.push(`Kategorie „${b.kategorie}" hat kein Branchenpaket`);
 
   return {
     version: FACHDOSSIER_VERSION,
     slug: b.slug, name: b.name, kategorie: b.kategorie,
     zielgruppe: text?.zielgruppe ?? zielgruppeAus(b.name),
-    text, entwurf: luecken.length > 0, gesperrt, luecken,
+    text, entwurf: luecken.length > 0, gesperrt, luecken, standard,
     kern, paket, vorbereitung,
     qrUrl: `${BASIS_URL}/branchen/${encodeURIComponent(b.slug)}`,
     stand: standText(jetzt),
@@ -13318,14 +13368,14 @@ export function dossierStand(branchen: DossierBranche[]): { gesamt: number; fert
     const k = (jeKategorie[b.kategorie] ??= { gesamt: 0, fertig: 0, gesperrt: 0 });
     k.gesamt++;
     if (!dossierRecht(b).frei) { k.gesperrt++; gesperrt++; continue; }
-    if (FACH_TEXTE[b.slug] && KATEGORIE_MODULE[b.kategorie]) { k.fertig++; fertig++; }
+    if (fachText(b.slug) && (KATEGORIE_MODULE[b.kategorie] || istStandardBranche(b.slug))) { k.fertig++; fertig++; }
   }
   return { gesamt: branchen.length, fertig, entwurf: branchen.length - fertig - gesperrt, gesperrt, jeKategorie };
 }
 
 /** Paket 221: Darf das neue Fachdossier öffentlich heraus? Nur mit geprüftem Text und ohne Sperre. */
 export function dossierFertig(b: DossierBranche): boolean {
-  return !!FACH_TEXTE[b.slug] && !!KATEGORIE_MODULE[b.kategorie] && dossierRecht(b).frei;
+  return !!fachText(b.slug) && (!!KATEGORIE_MODULE[b.kategorie] || istStandardBranche(b.slug)) && dossierRecht(b).frei;
 }
 
 /** Verbotene Wörter in Dossier-Texten (Vertriebsregeln). */

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { betreiberPruefung } from '@/lib/betreiberGuard';
 import { websiteBranchen, websiteBrancheBySlug } from '@/app/vorschau/_lib/branchen-web';
-import { baueDossier, dossierStand, FACH_TEXTE } from '@/lib/fachdossier';
+import { baueDossier, dossierStand, fachText } from '@/lib/fachdossier';
 import { dossierRecht } from '@/lib/dossierFreigabe';
 import { fachdossierHtml, mitWasserzeichen } from '@/lib/fachdossierHtml';
 import { dossierPdf } from '@/lib/dossierPdf';
@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       ok: true, stand,
       // Paket 221: gesperrt = „in rechtlicher Vorbereitung"
-      branchen: alle.map((b) => { const r = dossierRecht(b); return { ...b, fertig: !!FACH_TEXTE[b.slug] && r.frei, gesperrt: r.frei ? null : r.grund }; }),
+      branchen: alle.map((b) => { const r = dossierRecht(b); return { ...b, fertig: !!fachText(b.slug) && r.frei, gesperrt: r.frei ? null : r.grund }; }),
     });
   }
 

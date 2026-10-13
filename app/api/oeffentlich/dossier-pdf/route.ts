@@ -4,7 +4,7 @@ import { dossierHtml, dossierKey, brancheAufloesen } from '../../../vorschau/_li
 import { dossierPdf } from '@/lib/dossierPdf';
 import { dossierDateiPfad } from '@/lib/dossierDatei';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
-import { baueDossier, dossierFertig, FACH_TEXTE, FACHDOSSIER_VERSION } from '@/lib/fachdossier';
+import { baueDossier, dossierFertig, fachText, FACHDOSSIER_VERSION } from '@/lib/fachdossier';
 import { fachdossierHtml } from '@/lib/fachdossierHtml';
 import { dossierRecht, IN_VORBEREITUNG_TEXT } from '@/lib/dossierFreigabe';
 import { fachdossierCacheName, vorbereitungsSeite } from '@/lib/dossierAuslieferung';
@@ -73,7 +73,7 @@ export async function GET(req: Request) {
   }
   const fach = b && dossierFertig({ slug: b.slug, name: b.name, kategorie: b.kategorie }) ? b : null;
   const pfad = fach
-    ? fachdossierCacheName(fach.slug, FACHDOSSIER_VERSION, JSON.stringify(FACH_TEXTE[fach.slug]))
+    ? fachdossierCacheName(fach.slug, FACHDOSSIER_VERSION, JSON.stringify(fachText(fach.slug)))
     : dossierDateiPfad(dossierKey(branche));
 
   try {
