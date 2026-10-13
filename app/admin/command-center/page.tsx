@@ -108,6 +108,8 @@ export default async function CommandCenter({ searchParams }: { searchParams: Pr
     { titel: 'Betriebe einrichten', sub: 'Kunden-Akte · Checkliste · KI-Berater', href: '/admin/command-center/betrieb' },
     { titel: 'WhatsApp', sub: 'Webhook, Prüf-Token & App-Secret je Betrieb', href: '/admin/command-center/whatsapp' },
     { titel: 'Zwei-Faktor', sub: 'Hilfe-Anfragen · zurücksetzen · Vertretungen je Betrieb', href: '/admin/command-center/zwei-faktor' },
+    // Paket 345 (A0): alle Sperren auf einen Blick, Freigabe nur mit Vermerk, Ausblenden in drei Schritten
+    { titel: 'Freigabe-Zentrale', sub: 'Alle Sperren · Anwalt-Fragen · Freigabe vormerken', href: '/admin/command-center/freigaben' },
     { titel: 'Website-Anfragen', sub: 'Eingehende Anfragen & Leads', href: '/admin/anfragen' },
     { titel: 'Rechnungen & SEPA-Einzug', sub: 'Abo-Lastschrift & Zahlungen', href: '/admin/abo-einzug' },
     { titel: 'KI-Verbrauch & Kosten', sub: 'Marge- & Ressourcen-Kontrolle', href: '/admin/verbrauch' },

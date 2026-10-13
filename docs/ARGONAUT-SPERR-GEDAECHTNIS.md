@@ -19,6 +19,16 @@ Die Nummern in Klammern (z. B. **2.01**) sind die Fragen der Anwalt-Liste „ARG
 7. **Klicktest.** Den Bereich einmal echt durchklicken (Testtag-Liste).
 8. **Bauliste** und dieses Gedächtnis auf „live" setzen.
 
+## Freigabe-Zentrale im Command Center (seit Paket 345)
+
+Alle Schalter dieser Datei stehen im Command Center unter **Freigabe-Zentrale** (`/admin/command-center/freigaben`, `lib/freigabeZentrale.ts`, Tabellen `freigabe_schalter` und `freigabe_protokoll`, SQL p345). Nur der Betreiber mit eingerichteter und bestätigter Zwei-Faktor-Anmeldung.
+
+- **Freigabe vormerken** nur für Start-Schalter und Import-Sperren, nur mit Vermerk (mind. 20 Zeichen) und Datum der Anwalt-Antwort. Jede Änderung landet unveränderbar im Protokoll.
+- **Ausbaustufe 1 (Paket 345):** Eine Vormerkung **wirkt noch nicht**. Wirksam ist allein der Schalter im Code (Abschnitte 1 und 2). Teil 2 (A0, nächster Push) liest die Freigabe am Server.
+- **Code-Standard bleibt „aus".** Die Zeilen `SCHALTER …` unten beschreiben den Code, nicht die Datenbank.
+- Neue Start-Schalter oder Import-Bereiche brauchen zusätzlich einen Eintrag in `START_INFO` bzw. `IMPORT_INFO` (`lib/freigabeZentrale.ts`) — der Test `tests/freigabeZentraleP345.test.mjs` wird sonst rot.
+- **Ausblenden** (statt Löschen) in drei getrennten Schritten: Klick → Rückfrage → Namen eintippen. Der Schalter im Code bleibt.
+
 ---
 
 ## 1 · Start-Schalter (`lib/startSperre.ts`, `START_FREIGABE`)
