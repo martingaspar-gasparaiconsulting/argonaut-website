@@ -68,6 +68,8 @@ export const DATEN_ORTE: DatenOrt[] = [
   { tabelle: 'kunden_mandate', label: 'SEPA-Mandate', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Nachweispflicht für erteilte Lastschriftmandate — ohne Mandat wären eingezogene Beträge nicht belegbar.', imExport: true },
   { tabelle: 'gutschein', label: 'Gutscheine', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Ausgegebene Gutscheine sind eine offene Verbindlichkeit des Betriebs.', imExport: true },
   { tabelle: 'spende', label: 'Spenden', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Zuwendungsbestätigungen unterliegen der Aufbewahrungspflicht.', imExport: true },
+  // Paket 352 (A4a): Sterbefall-Akte — der Kontakt ist der Auftraggeber (Angehörige/r)
+  { tabelle: 'sterbefall', label: 'Bestattungsaufträge (als Auftraggeber/in)', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Auftragsunterlage mit Kostenvoranschlag und Vollmacht — bleibt als Geschäftsunterlage für die Aufbewahrungsfrist.', imExport: true },
   { tabelle: 'signatur_anfragen', label: 'Unterschriften', spalte: 'kontakt_id', art: 'behalten', begruendung: 'Nachweis erteilter Unterschriften — Beweismittel bei Streit über Vertragsschluss.', imExport: true },
 
   // --- Wird anonymisiert: Vorgang bleibt, Person geht ------------------------

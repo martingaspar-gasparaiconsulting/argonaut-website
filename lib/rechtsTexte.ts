@@ -149,6 +149,21 @@ export const RECHTS_TEXTE: readonly RechtsTextEintrag[] = Object.freeze([
     gliederung: ['Empfänger und Zweck', 'Umfang der Weitergabe', 'Freiwilligkeit und Widerruf'],
     platzhalter: [BETRIEB, KUNDE, DATUM, { key: 'empfaenger', label: 'Empfänger' }], angebunden: true,
   },
+  // Paket 352 (A4a): Bestatter — Vollmacht und Bedingungen zum Kostenvoranschlag
+  {
+    schluessel: 'bestattung.vollmacht', titel: 'Vollmacht der Angehörigen', bereich: 'Bestattung',
+    wofuer: 'Vollmacht, mit der die Angehörigen Ihren Betrieb beauftragen, Behördengänge und Absprachen zur Bestattung zu erledigen (z. B. Standesamt, Friedhof, Krematorium).',
+    wo: 'Bestattung → Sterbefall → „🖨 Vollmacht"', empfaenger: 'Auftraggeber/in (unterschreibt), vorzulegen bei Behörden und Friedhof',
+    gliederung: ['Umfang der Vollmacht', 'Stellen und Behörden', 'Unterlagen und Urkunden', 'Dauer und Widerruf'],
+    platzhalter: [BETRIEB, KUNDE, DATUM, { key: 'verstorben', label: 'Name der verstorbenen Person' }], angebunden: true,
+  },
+  {
+    schluessel: 'bestattung.auftrag', titel: 'Bedingungen zum Kostenvoranschlag (Bestattung)', bereich: 'Bestattung',
+    wofuer: 'Steht unter dem Kostenvoranschlag: Verbindlichkeit des Voranschlags, Auslagen für Dritte, Zahlung, Änderungen. Ohne eigenen Text erscheint kein Abschnitt „Bedingungen".',
+    wo: 'Bestattung → Sterbefall → Kostenvoranschlag → „🖨 Drucken"', empfaenger: 'Auftraggeber/in',
+    gliederung: ['Verbindlichkeit des Voranschlags', 'Auslagen für Dritte', 'Zahlung', 'Änderungen und Zusatzleistungen'],
+    platzhalter: [BETRIEB, KUNDE, DATUM, { key: 'verstorben', label: 'Name der verstorbenen Person' }], angebunden: true,
+  },
   {
     schluessel: 'web.agb', titel: 'AGB auf Ihrer Website', bereich: 'Website und Shop',
     wofuer: 'Ihre Allgemeinen Geschäftsbedingungen. Erscheinen auf Ihrer ARGONAUT-Website im Abschnitt „AGB" und im Seitenfuß — ohne eigenen Text gibt es dort keinen AGB-Abschnitt.',

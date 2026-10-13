@@ -126,6 +126,8 @@ export const WEITERE_TABELLEN: string[] = [
   'reife_messung', 'rezeptur_version', 'sdb_versand', 'shop_kunde', 'shop_preis',
   'shop_preisliste', 'shop_sprache', 'shop_uebersetzung', 'shop_widerrufe', 'vorbestell_aktion',
   'vorbestell_posten', 'vormerkung', 'werbe_sperre', 'zweirad', 'zweirad_garantie',
+  // Paket 352 (A4a): Bestatter — Sterbefall-Akte mit Checkliste, Kostenvoranschlag, Partnern
+  'bestattung_aufgabe_vorlage', 'sterbefall', 'sterbefall_aufgabe', 'sterbefall_partner', 'sterbefall_posten',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

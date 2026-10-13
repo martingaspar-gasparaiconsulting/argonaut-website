@@ -124,7 +124,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 13.10.2026 · _p351 unterwegs · A3 Standard-Dossier für 10 Branchen · nächster A4a Fachpaket Bestatter</div>
+<div class="eyebrow">ARGONAUT OS · Stand 13.10.2026 · _p352 unterwegs · A4a Fachpaket Bestatter · nächster A4b Fachpaket Bewachung</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

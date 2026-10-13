@@ -12,6 +12,7 @@
 
 import { KERN_MODULE } from './pakete';
 import { einzelstueckHandelZusatz } from './einzelstueckBestand';
+import { bestattungZusatz, BESTATTUNG_MODULE } from './bestattung';
 
 /** Standard-Automatisierung, in jedem Branchen-Paket enthalten. */
 export const STANDARD_AUTOMATION = 'automatisierungen';
@@ -56,16 +57,23 @@ export function kategorieZusatz(kategorie: string): string[] {
  * Einzelstücken (Juweliere, Kunst/Antik, Second Hand, Land-/Baumaschinen, Galerien, Werften)
  * zusätzlich „kfz" (Bestand, Akte, Ankauf, Verkauf, Börse in den Wörtern der Art).
  * Nur additiv — bestehende Betriebe ändert das nicht (Freischaltung im Command Center).
+ * Paket 352: Bestattungsunternehmen zusätzlich „bestattung" und „leistungskatalog".
  */
 export function brancheModule(kategorie: string, branche: string | null | undefined): string[] {
   const set = kategorieModule(kategorie);
-  return einzelstueckHandelZusatz(kategorie, branche) && !set.includes('kfz') ? [...set, 'kfz'] : set;
+  return mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !set.includes('kfz') ? [...set, 'kfz'] : set, branche);
+}
+
+/** Paket 352 (A4a): Bestattungsunternehmen bekommen die Sterbefall-Akte und den Leistungskatalog (Kostenvoranschlag). Nur additiv. */
+function mitBestattung(set: string[], branche: string | null | undefined): string[] {
+  if (!bestattungZusatz(branche)) return set;
+  return [...set, ...BESTATTUNG_MODULE.filter((m) => !set.includes(m))];
 }
 
 /** Wie kategorieZusatz, mit dem Einzelstück-Zusatz der Branche. */
 export function brancheZusatz(kategorie: string, branche: string | null | undefined): string[] {
   const z = kategorieZusatz(kategorie);
-  return einzelstueckHandelZusatz(kategorie, branche) && !z.includes('kfz') ? [...z, 'kfz'] : z;
+  return mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !z.includes('kfz') ? [...z, 'kfz'] : z, branche);
 }
 
 /** Ist diese Kategorie im Katalog bekannt? */

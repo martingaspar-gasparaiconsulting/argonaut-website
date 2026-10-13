@@ -306,6 +306,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🌲 Baumkataster', href: '/dashboard/forst', modul: 'forst', ebene: 3, gruppe: 'betrieb' },
   { label: '🏛 Objekt-Register', href: '/dashboard/objekte', modul: 'objekte', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
+  // Paket 352 (13.10.26): A4a Fachpaket Bestatter — Sterbefall-Akte, Checkliste, Kostenvoranschlag, Vollmacht, Partner.
+  { label: '🕊️ Bestattung', href: '/dashboard/bestattung', modul: 'bestattung', ebene: 3, gruppe: 'betrieb' },
   // Paket 303 (10.10.26): N1 Betriebs-Netzwerk fuer alle Branchen — ohne eigenen Modul-Schluessel (Chef immer;
   // die Rechte je Auftrag prueft die Datenbank nach Projekte/Auftraege/Objektzeiten/Kfz).
   // Paket 304 (10.10.26): Mitarbeiter mit einem dieser Module sehen und erreichen es (vorher: nur Chef,

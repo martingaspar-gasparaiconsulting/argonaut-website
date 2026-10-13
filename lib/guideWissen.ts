@@ -2709,6 +2709,24 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Eine Box „Test-Kiste" mit 10 € Grundpreis anlegen, ein Fach „Test" mit 1 nach Wahl und einem Artikel mit 2 € Aufpreis, Kapazität morgen 1 Box. Bestellbar machen, eine Bestellung eintragen (12 €) — der Tag ist voll, eine zweite wird abgelehnt.', loeschen: 'Bestellung „stornieren", die Box „archivieren".' },
     vorher: [{ text: 'Artikel im Lager', href: '/dashboard/erp' }, { text: 'Etiketten (Allergene der Artikel)', href: '/dashboard/etiketten' }, { text: 'Vorbestellung & Vormerkliste', href: '/dashboard/lebensmittel/vorbestellung' }],
   },
+  // Paket 352 (A4a): Fachpaket Bestatter
+  '/dashboard/bestattung': {
+    zweck: 'Die Sterbefall-Akte für Bestatter: verstorbene Person, Auftraggeber (Angehörige), Bestattungsart, Friedhof und Termine. Je Sterbefall eine Checkliste (Standesamt, Friedhof, Rente, Krankenkasse …), der Kostenvoranschlag aus Ihrem Leistungskatalog mit Auslagen für Dritte (z. B. Friedhofsgebühren) getrennt und ohne Umsatzsteuer, die beteiligten Partner (Steinmetz, Florist, Trauerredner …) und die Vollmacht zum Drucken — mit Ihrem eigenen Text aus „Meine Rechtstexte". Fristen gibt ARGONAUT nicht vor: Sie tragen sie in „Meine Checkliste" ein.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „Bestattung" sehen alle Sterbefälle; mit Schreibrecht legen sie Akten, Aufgaben, Positionen und Partner an und ändern sie. Löschen (Akte, Aufgabe, Position, Partner, eigene Checkliste) darf nur die Geschäftsleitung — Mitarbeiter stornieren, haken ab, setzen Partner auf „abgesagt" oder blenden Aufgaben aus. Die Vollmacht-Vorlage hinterlegt die Geschäftsleitung unter „Meine Rechtstexte".',
+    schritte: [
+      'Einmalig: Reiter „Meine Checkliste" → „ARGONAUT-Stationen als Startpunkt übernehmen" und je Aufgabe Ihre Frist in Tagen nach dem Sterbetag eintragen (leer = ohne Frist). „Nur bei" begrenzt eine Aufgabe auf Bestattungsarten, z. B. Krematorium nur bei Feuerbestattung',
+      'Einmalig (Geschäftsleitung): unter „📜 Meine Rechtstexte" im Bereich Bestattung Ihre „Vollmacht der Angehörigen" und — wenn gewünscht — die „Bedingungen zum Kostenvoranschlag" hinterlegen',
+      '„+ Neuer Sterbefall": verstorbene Person, Bestattungsart und Auftraggeber eintragen (aus Kontakten übernehmbar), „Sterbefall anlegen". Die Nummer (z. B. 2026-001) und die Checkliste passend zur Bestattungsart entstehen automatisch',
+      'Sterbefall aufklappen → Reiter „Checkliste": Aufgaben abhaken, Fälligkeit ändern, weitere Aufgaben ergänzen. Überfällige stehen rot',
+      'Reiter „Kostenvoranschlag": „Aus dem Leistungskatalog" wählen — Bezeichnung, Menge, Einheit und Preis kommen von dort und bleiben änderbar — oder frei eintragen. Art „Auslage für Dritte" für Friedhofs- oder Standesamtsgebühren: steht getrennt und immer ohne Umsatzsteuer. Den Betrag je Zeile rechnet ARGONAUT',
+      'Reiter „Partner": Rolle wählen, Partner aus dem Betriebs-Netzwerk, aus Kontakten oder frei eintragen, Termin und Notiz; Status angefragt → bestätigt → erledigt',
+      'Oben „🖨 Kostenvoranschlag" bzw. „🖨 Vollmacht" — öffnet die Druckansicht. Die Vollmacht gibt es nur mit Ihrem eigenen Text',
+      'Reiter „Akte": Daten, Trauerfeier und Beisetzung ändern, Status setzen. Ist die Akte „Abgeschlossen" oder „Storniert", bleibt der Kostenvoranschlag, wie er ist',
+    ],
+    probe: { anlegen: 'Einen Sterbefall „Test" mit Feuerbestattung und Auftraggeber „Probe" anlegen — die Checkliste enthält „Einäscherung anmelden". Im Kostenvoranschlag eine Leistung aus dem Katalog und eine Auslage „Friedhofsgebühr 500 €" eintragen: die Auslage steht getrennt mit 0 %. „🖨 Vollmacht" ohne eigenen Text: Hinweis statt Dokument.', loeschen: 'Akte auf „Storniert" setzen oder als Geschäftsleitung „Sterbefall löschen".' },
+    vorher: [{ text: 'Leistungskatalog (Preise für den Kostenvoranschlag)', href: '/dashboard/leistungskatalog' }, { text: 'Meine Rechtstexte (Vollmacht)', href: '/dashboard/rechtstexte' }, { text: 'Betriebs-Netzwerk (Partner)', href: '/dashboard/netzwerk' }],
+  },
   '/dashboard/etiketten': {
     zweck: 'Etiketten nach LMIV: Zutaten mit hervorgehobenen Allergenen (14 Pflichtallergene), Nährwerte je 100 g oder 100 ml, laufende Prüfung der Pflichtangaben und Etikett als PDF. Bei loser Ware werden nur die Allergene verlangt.',
     wer: 'beide',
