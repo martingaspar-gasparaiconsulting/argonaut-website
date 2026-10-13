@@ -13,6 +13,7 @@
 import { KERN_MODULE } from './pakete';
 import { einzelstueckHandelZusatz } from './einzelstueckBestand';
 import { bestattungZusatz, BESTATTUNG_MODULE } from './bestattung';
+import { bewachungZusatz, BEWACHUNG_MODULE } from './bewachung';
 
 /** Standard-Automatisierung, in jedem Branchen-Paket enthalten. */
 export const STANDARD_AUTOMATION = 'automatisierungen';
@@ -58,10 +59,11 @@ export function kategorieZusatz(kategorie: string): string[] {
  * zusätzlich „kfz" (Bestand, Akte, Ankauf, Verkauf, Börse in den Wörtern der Art).
  * Nur additiv — bestehende Betriebe ändert das nicht (Freischaltung im Command Center).
  * Paket 352: Bestattungsunternehmen zusätzlich „bestattung" und „leistungskatalog".
+ * Paket 353: Bewachungsgewerbe (§ 34a) zusätzlich „bewachung" und „objektzeiten" (Objekte).
  */
 export function brancheModule(kategorie: string, branche: string | null | undefined): string[] {
   const set = kategorieModule(kategorie);
-  return mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !set.includes('kfz') ? [...set, 'kfz'] : set, branche);
+  return mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !set.includes('kfz') ? [...set, 'kfz'] : set, branche), branche);
 }
 
 /** Paket 352 (A4a): Bestattungsunternehmen bekommen die Sterbefall-Akte und den Leistungskatalog (Kostenvoranschlag). Nur additiv. */
@@ -70,10 +72,16 @@ function mitBestattung(set: string[], branche: string | null | undefined): strin
   return [...set, ...BESTATTUNG_MODULE.filter((m) => !set.includes(m))];
 }
 
+/** Paket 353 (A4b): Bewachungsbetriebe (§ 34a GewO) bekommen Wachbuch/Kontrollgänge und die Objekte. Nur additiv. */
+function mitBewachung(set: string[], branche: string | null | undefined): string[] {
+  if (!bewachungZusatz(branche)) return set;
+  return [...set, ...BEWACHUNG_MODULE.filter((m) => !set.includes(m))];
+}
+
 /** Wie kategorieZusatz, mit dem Einzelstück-Zusatz der Branche. */
 export function brancheZusatz(kategorie: string, branche: string | null | undefined): string[] {
   const z = kategorieZusatz(kategorie);
-  return mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !z.includes('kfz') ? [...z, 'kfz'] : z, branche);
+  return mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !z.includes('kfz') ? [...z, 'kfz'] : z, branche), branche);
 }
 
 /** Ist diese Kategorie im Katalog bekannt? */

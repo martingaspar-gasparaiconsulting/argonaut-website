@@ -128,6 +128,8 @@ export const WEITERE_TABELLEN: string[] = [
   'vorbestell_posten', 'vormerkung', 'werbe_sperre', 'zweirad', 'zweirad_garantie',
   // Paket 352 (A4a): Bestatter — Sterbefall-Akte mit Checkliste, Kostenvoranschlag, Partnern
   'bestattung_aufgabe_vorlage', 'sterbefall', 'sterbefall_aufgabe', 'sterbefall_partner', 'sterbefall_posten',
+  // Paket 353 (A4b): Bewachung — Kontrollpunkte, Rundgaenge, Scans, Wachbuch
+  'wach_kontrollpunkt', 'wach_rundgang', 'wach_scan', 'wachbuch_eintrag',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

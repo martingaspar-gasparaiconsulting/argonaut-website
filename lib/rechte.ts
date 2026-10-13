@@ -308,6 +308,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
   // Paket 352 (13.10.26): A4a Fachpaket Bestatter — Sterbefall-Akte, Checkliste, Kostenvoranschlag, Vollmacht, Partner.
   { label: '🕊️ Bestattung', href: '/dashboard/bestattung', modul: 'bestattung', ebene: 3, gruppe: 'betrieb' },
+  // Paket 353 (13.10.26): A4b Fachpaket Bewachung Teil 1 — Wachbuch und Kontrollgaenge mit QR-Kontrollpunkten.
+  { label: '🛡️ Bewachung', href: '/dashboard/bewachung', modul: 'bewachung', ebene: 3, gruppe: 'betrieb' },
   // Paket 303 (10.10.26): N1 Betriebs-Netzwerk fuer alle Branchen — ohne eigenen Modul-Schluessel (Chef immer;
   // die Rechte je Auftrag prueft die Datenbank nach Projekte/Auftraege/Objektzeiten/Kfz).
   // Paket 304 (10.10.26): Mitarbeiter mit einem dieser Module sehen und erreichen es (vorher: nur Chef,

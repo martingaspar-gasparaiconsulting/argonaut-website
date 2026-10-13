@@ -2727,6 +2727,22 @@ export const WISSEN: Record<string, SeitenWissen> = {
     probe: { anlegen: 'Einen Sterbefall „Test" mit Feuerbestattung und Auftraggeber „Probe" anlegen — die Checkliste enthält „Einäscherung anmelden". Im Kostenvoranschlag eine Leistung aus dem Katalog und eine Auslage „Friedhofsgebühr 500 €" eintragen: die Auslage steht getrennt mit 0 %. „🖨 Vollmacht" ohne eigenen Text: Hinweis statt Dokument.', loeschen: 'Akte auf „Storniert" setzen oder als Geschäftsleitung „Sterbefall löschen".' },
     vorher: [{ text: 'Leistungskatalog (Preise für den Kostenvoranschlag)', href: '/dashboard/leistungskatalog' }, { text: 'Meine Rechtstexte (Vollmacht)', href: '/dashboard/rechtstexte' }, { text: 'Betriebs-Netzwerk (Partner)', href: '/dashboard/netzwerk' }],
   },
+  // Paket 353 (A4b): Fachpaket Bewachung, Teil 1 — Wachbuch und Kontrollgänge
+  '/dashboard/bewachung': {
+    zweck: 'Wachbuch und Kontrollgänge für Bewachungsbetriebe, je Objekt: Kontrollpunkte mit QR-Aufkleber, Rundgänge per Handy-Scan (oder Code eintippen) mit Serverzeit, ein Wachbuch, das nur angehängt wird (Korrekturen als Nachtrag), und ein Nachweis für den Auftraggeber mit allen Rundgängen, erreichten und fehlenden Punkten.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit Recht „Bewachung" sehen Kontrollpunkte, Rundgänge und Wachbuch aller Objekte; mit Schreibrecht gehen sie Rundgänge, schreiben ins Wachbuch und legen Kontrollpunkte an. Einen Rundgang beendet, wer ihn geht — oder die Geschäftsleitung. Wachbuch-Einträge und Scans ändert und löscht niemand, auch nicht die Geschäftsleitung. Kontrollpunkte entfernen darf nur die Geschäftsleitung und nur, solange sie nie gescannt wurden.',
+    schritte: [
+      'Oben das Objekt wählen oder „+ Objekt" anlegen (Bezeichnung, Adresse) — es steht dann auch unter „Objektzeiten"',
+      'Reiter „Kontrollpunkte": je Stelle einen Namen eintragen (z. B. „Tor Nord"), „＋ Kontrollpunkt". Mit ↑↓ die Reihenfolge des Rundgangs festlegen. „🖨 QR-Aufkleber drucken" und die Aufkleber am Punkt anbringen',
+      'Reiter „Kontrollgang" auf dem Handy: „▶ Rundgang beginnen", dann „📷 Kontrollpunkt scannen" — oder den Code unter dem Aufkleber eintippen. Erfasste Punkte bekommen ein Häkchen mit Uhrzeit. „Standort beim Scan mitsenden" ist freiwillig und bleibt auf dem Gerät gemerkt',
+      '„■ Rundgang beenden" — fehlen Punkte, nennt ARGONAUT sie vorher; sie stehen dann im Nachweis. „Abbrechen" behält den Rundgang mit Vermerk',
+      'Reiter „Wachbuch": Art wählen (Meldung, Vorkommnis, Schichtübergabe, Schaden, Polizei/Feuerwehr/Rettung), beschreiben, „Ins Wachbuch eintragen". War das Ereignis früher, den Zeitpunkt dazu eintragen. Korrektur: beim Eintrag „✎ Nachtrag"',
+      'Reiter „Nachweis": Zeitraum wählen (höchstens drei Monate), „mit Wachbuch" an oder aus, „🖨 Nachweis erstellen" — als PDF über Drucken speichern und dem Auftraggeber geben. Standorte stehen nicht darin',
+    ],
+    probe: { anlegen: 'Ein Objekt „Test-Objekt" mit zwei Kontrollpunkten anlegen, Aufkleber drucken. Rundgang beginnen, einen Punkt über den Code eintippen, beenden — die Rückfrage nennt den fehlenden Punkt. Im Wachbuch eine Meldung „Test" eintragen und einen Nachtrag dazu. Nachweis für heute erstellen: ein Rundgang mit 1/2 und dem fehlenden Punkt in Rot.', loeschen: 'Wachbuch und Scans bleiben bewusst stehen. Kontrollpunkte ohne Scans entfernt die Geschäftsleitung, sonst ausblenden; das Objekt unter „Objektzeiten" archivieren.' },
+    vorher: [{ text: 'Objektzeiten (Objekte)', href: '/dashboard/objektzeiten' }, { text: 'Rechte („Bewachung") je Mitarbeiter vergeben', href: '/dashboard/rechte' }],
+  },
   '/dashboard/etiketten': {
     zweck: 'Etiketten nach LMIV: Zutaten mit hervorgehobenen Allergenen (14 Pflichtallergene), Nährwerte je 100 g oder 100 ml, laufende Prüfung der Pflichtangaben und Etikett als PDF. Bei loser Ware werden nur die Allergene verlangt.',
     wer: 'beide',

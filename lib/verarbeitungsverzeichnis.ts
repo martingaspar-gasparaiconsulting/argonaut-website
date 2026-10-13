@@ -167,6 +167,19 @@ export const VERFAHREN_KATALOG: VerfahrenVorschlag[] = [
     tom: TOM_STANDARD + ' Auswertungen erfolgen nicht zur Verhaltens- oder Leistungskontrolle.',
   },
   {
+    // Paket 353 (13.10.2026): Wachbuch und Kontrollgaenge (Fachpaket Bewachung)
+    wenn: 'bewachung',
+    name: 'Wachbuch und Kontrollgaenge (Bewachung)',
+    zweck: 'Nachweis der vereinbarten Bewachungsleistung gegenueber dem Auftraggeber, Dokumentation von Vorkommnissen und Schichtuebergaben.',
+    rechtsgrundlage: 'Art. 6 Abs. 1 lit. b DSGVO (Bewachungsvertrag), lit. f (Nachweis und Beweissicherung), § 26 Abs. 1 BDSG fuer Beschaeftigtendaten',
+    kategorien_betroffene: 'Beschaeftigte (Wachkraefte), im Wachbuch genannte Personen (z. B. Besucher, Verursacher von Vorkommnissen)',
+    kategorien_daten: 'Name der Wachkraft, Beginn und Ende des Kontrollgangs, Zeitpunkt je Kontrollpunkt, Standort nur wenn freiwillig mitgesendet, Wachbuch-Texte',
+    empfaenger: 'Auftraggeber der Bewachung (Nachweis ohne Standortdaten), Behoerden bei Vorkommnissen, ' + EMPF_BASIS,
+    drittland: KEIN_DRITTLAND,
+    loeschfrist: 'Vorschlag: 3 Jahre nach Ende des Kalenderjahres des Eintrags (regelmaessige Verjaehrung, § 195 BGB); laenger nur, solange ein Streitfall oder eine Ermittlung laeuft. Vom Betrieb anzupassen.',
+    tom: TOM_STANDARD + ' Wachbuch und Scans sind nur anhaengbar (keine Aenderung, kein Loeschen durch Nutzer); Zeitstempel vom Server. Auswertungen nicht zur Verhaltens- oder Leistungskontrolle ohne Beteiligung des Betriebsrats.',
+  },
+  {
     wenn: 'marketing',
     name: 'Newsletter und Direktwerbung',
     zweck: 'Versand von Informationen und Angeboten an Interessenten und Kunden, Messung der Wirkung.',
