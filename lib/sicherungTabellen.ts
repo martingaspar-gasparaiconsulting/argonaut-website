@@ -140,6 +140,8 @@ export const WEITERE_TABELLEN: string[] = [
   'tier_arznei_anwendung', 'tier_arznei_eingang',
   // Paket 358 (VK1): Verkaufsteam — Funktion je Person
   'vk_funktion',
+  // Paket 359 (VK1 Teil 2): eigene Pipelines und ihre Stufen
+  'crm_pipeline', 'crm_pipeline_stufe',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

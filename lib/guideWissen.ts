@@ -503,11 +503,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Nachweise & Fristen', href: '/dashboard/nachweise' }],
   },
   '/dashboard/pipeline': {
-    zweck: 'Verkaufschancen als Karten über Stufen: Lead → Qualifiziert → Angebot → Verhandlung → Gewonnen/Verloren, mit Pipeline-Wert, gewichteter Prognose und Abschlussquote.',
+    zweck: 'Verkaufschancen als Karten über Stufen: Lead → Qualifiziert → Angebot → Verhandlung → Gewonnen/Verloren, mit Pipeline-Wert, gewichteter Prognose und Abschlussquote. Dazu eigene Pipelines mit eigenen Stufen (z. B. Neukunden, Bestandskunden, je Auftraggeber) und Setter/Closer je Deal.',
     wer: 'beide',
-    werText: 'Chef und Mitarbeiter mit Freigabe.',
-    schritte: ['„＋ Deal anlegen": Kontakt, Wert, Wahrscheinlichkeit', 'Deal in die nächste Stufe setzen, wenn es vorangeht', 'Gewonnene Deals erscheinen in Provisionen'],
-    probe: { anlegen: 'Deal „Test" mit 1 € anlegen.', loeschen: '✕ an der Karte (mit Rückfrage).' },
+    werText: 'Chef und Mitarbeiter mit Freigabe. Pipelines und Stufen anlegen oder ändern nur die Geschäftsleitung.',
+    schritte: [
+      'Oben „Pipeline" wählen — „Standard" ist die eingebaute mit 6 Stufen, daneben stehen die eigenen',
+      '„＋ Neuer Deal": Titel, Kontakt, Wert, Stufe, bei Bedarf Setter und Closer — der Deal landet in der gewählten Pipeline',
+      'Deal über das Stufen-Menü der Karte weitersetzen; die Wahrscheinlichkeit kommt aus der Stufe',
+      '„👤" an der Karte: Setter und Closer ändern, „Ich übernehme" oder den Deal in eine andere Pipeline verschieben (er startet dort in der ersten Stufe)',
+      '„Zuständig" filtert auf „Meine Deals", „Ohne Zuständige" oder eine bestimmte Person',
+      'Geschäftsleitung: „⚙️ Pipelines verwalten" — neue Pipeline aus einer Vorlage, Stufen umbenennen, Wahrscheinlichkeit, Reihenfolge, Start-Ansicht, inaktiv setzen',
+      '„Gewonnen" und „Verloren" hat jede Pipeline automatisch (nur umbenennen) — gewonnene Deals erscheinen deshalb aus jeder Pipeline in Provisionen und Aufträgen',
+    ],
+    probe: { anlegen: 'Pipeline „Test" aus der Vorlage „Neukunden" anlegen und einen Deal „Test" mit 1 € hineinsetzen.', loeschen: '✕ an der Karte (mit Rückfrage), danach die leere Pipeline unter „⚙️ Pipelines verwalten" löschen.' },
     landetIn: [{ text: 'Provisionen', href: '/dashboard/provisionen' }, { text: 'Aufträge', href: '/dashboard/auftraege' }],
   },
   '/dashboard/provisionen': {

@@ -46,8 +46,13 @@ export function tageZwischen(a: string | null | undefined, b: Date): number | nu
   return Math.floor((b.getTime() - da.getTime()) / 86_400_000);
 }
 
+// Paket 359: eigene Pipelines haben eigene Stufen-Schluessel (z. B. "termin").
+// Offen ist jede Stufe, die nicht gewonnen oder verloren ist — in jeder Pipeline
+// tragen diese beiden dieselben Schluessel. Leer bleibt wie bisher nicht offen.
 export function istOffeneStufe(stufe: string | null | undefined): boolean {
-  return OFFEN.has((stufe ?? '') as string);
+  const s = (stufe ?? '') as string;
+  if (OFFEN.has(s)) return true;
+  return s !== '' && s !== 'gewonnen' && s !== 'verloren';
 }
 
 /** Wahrscheinlichkeit: eigener Wert vor Stufen-Standard (0–100). */

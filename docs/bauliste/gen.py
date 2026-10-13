@@ -146,7 +146,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 13.10.2026 · _p358 unterwegs · VK1 Teil 1 Zuständige und freie Setter gebaut · nächster VK1 Teil 2 eigene Pipelines</div>
+<div class="eyebrow">ARGONAUT OS · Stand 13.10.2026 · _p359 unterwegs · VK1 komplett (eigene Pipelines, Zuständige je Deal) · nächster VK4 Anruf-Sitzung</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

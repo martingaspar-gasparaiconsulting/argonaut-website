@@ -13,7 +13,8 @@ import { useState, useEffect, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
 import { augeHeute, augeGesamt, augePipeline, augeProvisionen, type AugeErgebnis } from '@/lib/auge';
-import { zaehlePipeline, OFFENE_STUFEN } from '@/lib/pipeline';
+import { zaehlePipeline } from '@/lib/pipeline';
+import { istEntschieden } from '@/lib/pipelineEigene';
 import { provisionSummen } from '@/lib/provision';
 
 const supabase = createBrowserClient(
@@ -129,7 +130,6 @@ export default function HeutePage() {
         provOffen: 0, provAusgezahlt: 0, provGesamt: 0, provDeals: 0, provEmpf: 0,
         angeboteWartend: 0, freigabeNoetig: 0,
       };
-      const offeneKeys = new Set(OFFENE_STUFEN.map((s) => s.key));
       try {
         const { data: dealData } = await supabase.from('crm_deal')
           .select('stufe, wert_netto, erwartetes_datum, provision_prozent, provision_empfaenger, provision_ausgezahlt');
@@ -140,7 +140,8 @@ export default function HeutePage() {
           neuOp.winRate = k.winRate; neuOp.gewonnen = k.gewonnen; neuOp.verloren = k.verloren;
           neuOp.pipelineUeberfaellig = deals.filter((d) => {
             const iso = d.erwartetes_datum;
-            return offeneKeys.has(String(d.stufe)) && !!iso && inTagen(String(iso).slice(0, 10)) < 0;
+            // P359: offen = nicht gewonnen/verloren, damit auch eigene Pipelines zaehlen
+            return !!d.stufe && !istEntschieden(String(d.stufe)) && !!iso && inTagen(String(iso).slice(0, 10)) < 0;
           }).length;
           const ps = provisionSummen(deals);
           neuOp.provOffen = ps.offen; neuOp.provAusgezahlt = ps.ausgezahlt; neuOp.provGesamt = ps.gesamt;
