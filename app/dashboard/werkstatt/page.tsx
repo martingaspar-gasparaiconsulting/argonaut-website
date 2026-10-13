@@ -52,6 +52,7 @@ import {
 } from '../_components/buchungsLogik';
 import AnhaengeBox from '../_components/AnhaengeBox';
 import { werkstattAuftragPdf } from '../_components/werkstattAuftragPdf';
+import { ladeDokumentText } from '@/lib/rechtsTexteLaden';
 import MaterialEntnahme from '../_components/MaterialEntnahme';
 import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
@@ -596,11 +597,15 @@ export default function WerkstattPage() {
     `${auftraege.length} Werkstatt-Aufträge, ${offen} offen, ${inArbeit} in Arbeit. Ø Durchlaufzeit: ${oDurchlauf}.`;
 
   // --- PDF erzeugen -----------------------------------------------------
-  function pdfErzeugen() {
+  async function pdfErzeugen() {
     if (!form.id) return;
     const a = auftraege.find((x) => x.id === form.id);
     if (!a) return;
     const fz = fahrzeuge.find((f) => f.id === form.fahrzeug_id) || null;
+    // Paket 348: Auftragsbedingungen aus „Meine Rechtstexte" (kfz.werkstattauftrag), sonst ohne Bedingungen.
+    const bedingungen = await ladeDokumentText(supabase, besitzer ?? uid, 'kfz.werkstattauftrag', {
+      kunde: form.kunde_name || a.kunde_name || '', datum: new Date().toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' }),
+    });
     werkstattAuftragPdf(
       {
         nummer: form.nummer || a.nummer, titel: form.titel || a.titel, status: a.status,
@@ -614,6 +619,8 @@ export default function WerkstattPage() {
       },
       fz ? { fin: fz.fin, kennzeichen: fz.kennzeichen, hersteller: fz.hersteller, modell: fz.modell, halter_name: fz.halter_name } : null,
       positionen,
+      undefined,
+      bedingungen,
     );
   }
 
@@ -1449,7 +1456,7 @@ export default function WerkstattPage() {
                   style={{ ...styles.ghostBtn, color: C.textDim, marginRight: 'auto' }}>Archivieren</button>
               )}
               {form.id && (
-                <button onClick={pdfErzeugen} disabled={speichert} style={styles.ghostBtn}>🖨 Als PDF</button>
+                <button onClick={() => void pdfErzeugen()} disabled={speichert} style={styles.ghostBtn}>🖨 Als PDF</button>
               )}
               {form.id && darfAbrechnen !== false && (
                 <button onClick={rechnungErstellen} disabled={speichert || rechnungBusy || positionen.length === 0}

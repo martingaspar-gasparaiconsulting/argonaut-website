@@ -20,6 +20,7 @@
 
 import { centRunden } from './zahlen';
 import type { DokInhalt, Firmenkopf } from './kfzVerkauf';
+import type { DokumentText } from './rechtsTexte';
 
 export type FahrtArt = 'probefahrt' | 'vorfuehrwagen' | 'ersatzwagen' | 'ueberfuehrung';
 export type FahrtStatus = 'geplant' | 'unterwegs' | 'zurueck' | 'storniert';
@@ -210,7 +211,22 @@ export const FAHRT_DOKS: { key: FahrtDok; label: string }[] = [
   { key: 'rueckgabe', label: 'Rückgabeprotokoll' },
 ];
 
-export function fahrtDokument(art: FahrtDok, f: Fahrt, fz: FahrzeugKurz, firma: Firmenkopf | null, heuteIso: string): DokInhalt {
+/** Paket 348: Braucht diese Unterlage den eigenen Text „kfz.probefahrt" (Meine Rechtstexte)? */
+export function fahrtBrauchtText(art: FahrtDok, f: Pick<Fahrt, 'art'>): boolean {
+  return art === 'vereinbarung' && f.art !== 'ueberfuehrung';
+}
+
+/** Werte für die Platzhalter im eigenen Text des Betriebs. */
+export function fahrtPlatzhalter(f: Fahrt, firma: Firmenkopf | null, heuteIso: string): Record<string, string> {
+  return {
+    betrieb: firma?.name ?? '', kunde: f.fahrer_name?.trim() ?? '', datum: de(heuteIso),
+    selbstbeteiligung: f.selbstbeteiligung !== null && f.selbstbeteiligung !== undefined && f.selbstbeteiligung > 0 ? geld(f.selbstbeteiligung) : '',
+    km_frei: f.km_frei !== null && f.km_frei !== undefined ? km(f.km_frei) : '',
+    rueckgabe: f.ende_geplant ? deZeit(f.ende_geplant) : '',
+  };
+}
+
+export function fahrtDokument(art: FahrtDok, f: Fahrt, fz: FahrzeugKurz, firma: Firmenkopf | null, heuteIso: string, eigenText?: DokumentText | null): DokInhalt {
   const kzText = f.kennzeichen_art === 'eigen'
     ? (f.kennzeichen?.trim() || fz.kennzeichen || '—')
     : `${kzNorm(f.kennzeichen) || '—'} (${f.kennzeichen_art === 'rot' ? 'rotes Kennzeichen' : 'Kurzzeitkennzeichen'})`;
@@ -251,17 +267,17 @@ export function fahrtDokument(art: FahrtDok, f: Fahrt, fz: FahrzeugKurz, firma: 
     };
   }
 
+  // Paket 348 (A1 Vorlagen-Prinzip): Die Vereinbarung (Haftung, Bußgelder, Rückgabe …) kommt NUR aus
+  // „Meine Rechtstexte" (kfz.probefahrt). ARGONAUT nennt nur Fakten, keinen Klauseltext.
   const text: string[] = [];
+  const fakten: [string, string][] = [];
   if (f.art === 'ueberfuehrung') {
     text.push('Die Fahrt dient ausschließlich der Überführung des Fahrzeugs im Auftrag des Betriebs.');
   } else {
-    text.push(`Der Betrieb überlässt dem Fahrer das Fahrzeug unentgeltlich zur ${f.art === 'ersatzwagen' ? 'Nutzung als Ersatzwagen' : f.art === 'vorfuehrwagen' ? 'Erprobung (Vorführwagen)' : 'Probefahrt'} bis zum vereinbarten Rückgabezeitpunkt.`);
-    text.push('Der Fahrer fährt das Fahrzeug nur selbst, nicht unter Alkohol- oder Drogeneinfluss, beachtet die Verkehrsregeln und gibt das Fahrzeug pünktlich, im übernommenen Zustand und mit allen Schlüsseln und Papieren zurück.');
-    text.push('Ordnungs- und Bußgelder während der Nutzung trägt der Fahrer.');
-    text.push(f.selbstbeteiligung !== null && f.selbstbeteiligung !== undefined && f.selbstbeteiligung > 0
-      ? `Bei einem vom Fahrer verschuldeten Schaden haftet er bis zur Höhe der Selbstbeteiligung der Fahrzeugversicherung von ${geld(f.selbstbeteiligung)}, bei Vorsatz und grober Fahrlässigkeit unbeschränkt.`
-      : 'Bei einem vom Fahrer verschuldeten Schaden gelten die gesetzlichen Regeln.');
-    if (f.km_frei !== null && f.km_frei !== undefined) text.push(`Vereinbart sind höchstens ${km(f.km_frei)}.`);
+    fakten.push(['Selbstbeteiligung der Fahrzeugversicherung', f.selbstbeteiligung !== null && f.selbstbeteiligung !== undefined && f.selbstbeteiligung > 0 ? geld(f.selbstbeteiligung) : '—']);
+    if (f.km_frei !== null && f.km_frei !== undefined) fakten.push(['Höchstens', km(f.km_frei)]);
+    if (eigenText && eigenText.eigen) text.push(...eigenText.text.split(/\n+/).map((z) => z.trim()).filter(Boolean), `(${eigenText.stand})`);
+    else text.push(eigenText && !eigenText.eigen ? eigenText.hinweis : 'Kein eigener Text des Betriebs hinterlegt.');
   }
   return {
     ...kopf,
@@ -281,7 +297,7 @@ export function fahrtDokument(art: FahrtDok, f: Fahrt, fz: FahrzeugKurz, firma: 
           ...(f.art === 'probefahrt' ? [['Begleitet', f.begleitet ? 'ja' : 'nein'] as [string, string]] : []),
         ],
       },
-      { titel: 'Vereinbarung', text },
+      { titel: 'Vereinbarung', ...(fakten.length ? { zeilen: fakten } : {}), text },
     ],
     unterschriften: ['Betrieb', 'Fahrer / Nutzer'],
   };

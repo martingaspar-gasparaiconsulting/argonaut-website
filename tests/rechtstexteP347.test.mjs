@@ -32,7 +32,7 @@ test('Katalog: Schlüssel eindeutig, passen zur Datenbank, jeder Eintrag vollst�
     assert.ok(e.gliederung.length >= 2, 'Gerüst mit Überschriften: ' + e.schluessel);
     assert.ok(e.platzhalter.every((p) => /^[a-z_]+$/.test(p.key)));
   }
-  assert.equal(V.angebunden, true, 'Verwahrung ist in diesem Paket angebunden');
+  assert.equal(V.angebunden, true, 'Verwahrung ist angebunden (P347), Kfz seit P348');
   assert.ok(Object.isFrozen(RECHTS_TEXTE));
   assert.equal(nachBereich().reduce((n, b) => n + b.eintraege.length, 0), RECHTS_TEXTE.length);
   assert.match(HINWEIS_ANWALT, /keinen Mustertext/);
@@ -86,7 +86,7 @@ test('Dokument: eigener Text oder Hinweis — nie ein Mustertext', () => {
   assert.equal(standText({ fassung: 2, geaendert_am: '2026-10-12T22:30:00Z' }), 'Fassung 2 vom 13.10.2026', 'Berliner Datum');
   const u = uebersicht([{ schluessel: 'kfz.kaufvertrag' }]);
   assert.equal(u.hinterlegt, 1);
-  assert.equal(u.fehlenAngebunden, RECHTS_TEXTE.filter((e) => e.angebunden).length);
+  assert.equal(u.fehlenAngebunden, RECHTS_TEXTE.filter((e) => e.angebunden && e.schluessel !== 'kfz.kaufvertrag').length);
 });
 
 test('Verwahrprotokoll: keine ARGONAUT-Klauseln mehr, Text des Betriebs oder Hinweis', () => {

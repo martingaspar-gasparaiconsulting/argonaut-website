@@ -14,11 +14,12 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { leseZahl } from '@/lib/zahlen';
 import { signaturStarten } from '@/lib/signaturStart';
+import { ladeDokumentText } from '@/lib/rechtsTexteLaden';
 import { alsText, type Firmenkopf } from '@/lib/kfzVerkauf';
 import { verkaufPdf } from '@/lib/kfzVerkaufPdf';
 import {
   ARTEN, TANK, KZ_ARTEN, ERGEBNISSE, naechsteFahrtNr, artLabel, freieKennzeichen, startPruefen, rueckgabePruefen,
-  gefahren, mehrKm, ueberfaellig, nachfassDatum, nachfassFaellig, fahrtDokument, fahrtDateiName, FAHRT_DOKS, kzNorm,
+  gefahren, mehrKm, ueberfaellig, nachfassDatum, nachfassFaellig, fahrtDokument, fahrtDateiName, fahrtBrauchtText, fahrtPlatzhalter, FAHRT_DOKS, kzNorm,
   type Fahrt, type RotesKz, type FahrzeugKurz, type FahrtDok,
 } from '@/lib/kfzProbefahrt';
 
@@ -221,10 +222,22 @@ export default function KfzProbefahrt({ f, onGeaendert }: { f: ProbefahrtFahrzeu
     } catch { return null; }
   }
 
+  /** Paket 348: Unterlage mit dem eigenen Text des Betriebs — oder null + Meldung, wenn er fehlt. */
+  async function dokument(z: Zeile, art: FahrtDok, firma: Firmenkopf | null) {
+    if (!fahrtBrauchtText(art, z)) return fahrtDokument(art, z, f.fz, firma, heute());
+    const t = await ladeDokumentText(supabase, f.owner_user_id, 'kfz.probefahrt', fahrtPlatzhalter(z, firma, heute()));
+    if (!t.eigen) {
+      setFehler('Für die Vereinbarung fehlt noch Ihr eigener Text „Probefahrt, Vorführwagen, Ersatzwagen". ARGONAUT liefert dafür keinen Mustertext — hinterlegen Sie Ihren von Ihrem Anwalt geprüften Text unter Verwaltung → Meine Rechtstexte.');
+      return null;
+    }
+    return fahrtDokument(art, z, f.fz, firma, heute(), t);
+  }
+
   async function drucken(z: Zeile, art: FahrtDok) {
     meld();
     const firma = await firmaHolen();
-    verkaufPdf(fahrtDokument(art, z, f.fz, firma, heute()), fahrtDateiName(art, z.nr));
+    const d = await dokument(z, art, firma); if (!d) return;
+    verkaufPdf(d, fahrtDateiName(art, z.nr));
     if (!firma?.name) setOk('PDF erstellt. Ihre Firmendaten fehlen darin (Einstellungen → Firmendaten).');
   }
 
@@ -232,7 +245,7 @@ export default function KfzProbefahrt({ f, onGeaendert }: { f: ProbefahrtFahrzeu
     meld(); setBusy(true);
     try {
       const firma = await firmaHolen();
-      const d = fahrtDokument(art, z, f.fz, firma, heute());
+      const d = await dokument(z, art, firma); if (!d) return;
       const s = await signaturStarten(supabase, f.owner_user_id, {
         titel: `${d.titel} ${z.nr ?? ''}`.trim(), empfaenger_name: z.fahrer_name, empfaenger_email: z.fahrer_email,
         dokument: alsText(d), aufbewahrung_jahre: 6,
@@ -371,7 +384,7 @@ export default function KfzProbefahrt({ f, onGeaendert }: { f: ProbefahrtFahrzeu
 
           <div style={s.karte}>
             <h3 style={s.h3}>Unterlagen</h3>
-            <div style={{ ...s.dim, marginBottom: 8 }}>Die Unterlagen nutzen den <b>gespeicherten</b> Stand. Texte sind Vorlagen von ARGONAUT — bitte vor dem ersten Einsatz von Ihrem Anwalt prüfen lassen.</div>
+            <div style={{ ...s.dim, marginBottom: 8 }}>Die Unterlagen nutzen den <b>gespeicherten</b> Stand. Die Vereinbarung (Haftung, Bußgelder, Rückgabe) kommt aus Ihrem eigenen, von Ihrem Anwalt geprüften Text unter <a href="/dashboard/rechtstexte" style={{ color: C.info }}>Meine Rechtstexte</a> — ARGONAUT liefert dafür keinen Mustertext.</div>
             <div style={s.dokZeile}>
               <span style={{ fontWeight: 700, flex: 1 }}>{FAHRT_DOKS[0].label}</span>
               <button style={s.btn} onClick={() => void drucken(aktiv, 'vereinbarung')}>🖨 PDF</button>

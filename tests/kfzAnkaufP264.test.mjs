@@ -104,7 +104,10 @@ test('Ankaufschein: Inhalt vollständig, Schäden ohne Beträge, nichts geschön
   assert.deepEqual(d.maengel, ['Tür vorn links: Kratzer (mittel), bis Grundierung']);
   assert.ok(!JSON.stringify(d).includes('777'), 'interne Schadensbeträge nie auf dem Schein');
   assert.deepEqual(d.preis, ['Kaufpreis: 14.000,00 €']);
-  assert.ok(d.erklaerungen.length >= 3);
+  assert.equal(d.erklaerungen.length, 1, 'P348: ohne eigenen Text nur der Hinweis');
+  assert.match(d.erklaerungen[0], /keine eigenen Erklärungen/);
+  const e = ankaufscheinInhalt(ankauf, firma, '2026-10-08', { eigen: true, text: 'Erklärung A\nErklärung B', fassung: 1, stand: 'Fassung 1' });
+  assert.deepEqual(e.erklaerungen, ['Erklärung A', 'Erklärung B', '(Fassung 1)']);
 });
 
 test('Ankaufschein: Unternehmen mit USt, fehlende Angaben, ohne Firmendaten', () => {

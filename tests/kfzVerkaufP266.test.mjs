@@ -83,7 +83,8 @@ test('Sachmängelhaftung: Verbraucher nie ausgeschlossen, Verkürzung nur gesond
   assert.equal(pruefen({ ...basis(), gewaehr: 'ein_jahr', gewaehr_gesondert: true }, fz(), 'vertrag', HEUTE).fehler.length, 0);
   assert.equal(pruefen({ ...basis(), kaeufer_art: 'unternehmer', kaeufer_firma: 'X GmbH', gewaehr: 'ein_jahr' }, fz(), 'vertrag', HEUTE).fehler.length, 0, 'Unternehmer: ohne gesondert');
   assert.deepEqual(haftungText('verbraucher', 'gesetzlich'), ['Es gelten die gesetzlichen Rechte bei Sachmängeln.']);
-  assert.match(haftungText('unternehmer', 'ausgeschlossen').join(' '), /Leben, Körper oder Gesundheit/);
+  assert.match(haftungText('unternehmer', 'ausgeschlossen').join(' '), /Ausschluss der Sachmängelhaftung/);
+  assert.doesNotMatch(haftungText('unternehmer', 'ausgeschlossen').join(' '), /Leben, Körper/, 'P348: kein Klauseltext mehr, nur die Variante');
   assert.deepEqual(haftungText('verbraucher', 'ausgeschlossen'), ['Es gelten die gesetzlichen Rechte bei Sachmängeln.'], 'Ausschluss gegenüber Verbraucher fällt auf gesetzlich zurück');
 });
 
@@ -118,14 +119,17 @@ test('Kaufvertrag: Vorschaden nie geschönt, gesonderte Vereinbarung mit eigener
   assert.match(vorschadenSatz({ vorschaden: 'ja', vorschaden_text: 'Heckschaden 2021 repariert' }), /Heckschaden 2021 repariert/);
   const v = { ...basis(), gewaehr: 'ein_jahr', gewaehr_gesondert: true, inzahlung_ankauf_id: 'a1', inzahlung_betrag: 5000, anzahlung: 1000, anzahlung_art: 'bar' };
   const inz = { nr: 'A-0003', marke: 'Altmarke', modell: 'Klein', fin: null, kennzeichen: 'BB-X 1', km_stand: 1, verkaeufer_art: 'privat', ankaufpreis: 5000, angebot: null };
-  const d = dokumentInhalt('kaufvertrag', v, { ...fz(), vorschaden: 'ja', vorschaden_text: 'Heckschaden' }, null, inz, HEUTE);
+  const T = (text) => ({ eigen: true, text, fassung: 1, stand: 'Fassung 1 vom 13.10.2026' });
+  const texte = { 'kfz.kaufvertrag': T('Eigentumsvorbehalt des Betriebs bis zur Zahlung.'), 'kfz.verjaehrung': T('Eigene Verjährungsvereinbarung des Betriebs.') };
+  const d = dokumentInhalt('kaufvertrag', v, { ...fz(), vorschaden: 'ja', vorschaden_text: 'Heckschaden' }, null, inz, HEUTE, texte);
   const text = alsText(d);
   assert.match(text, /Heckschaden/);
   assert.match(text, /Differenzbesteuerung nach § 25a/);
   assert.match(text, /Inzahlungnahme \(Altmarke Klein, BB-X 1\)/);
   assert.match(text, /Noch zu zahlen: 14\.000,00 €/);
   assert.match(text, /Ankauf A-0003/);
-  assert.match(text, /Eigentum des Verkäufers/);
+  assert.match(text, /Eigentumsvorbehalt des Betriebs bis zur Zahlung\./, 'P348: Text des Betriebs');
+  assert.doesNotMatch(alsText(dokumentInhalt('kaufvertrag', v, fz(), null, inz, HEUTE)), /Eigentum des Verkäufers|bleibt bis zur vollständigen Zahlung/, 'P348: kein ARGONAUT-Wortlaut');
   const ges = d.abschnitte.find((a) => a.titel === 'Gesonderte Vereinbarung zur Verjährung');
   assert.ok(ges && ges.eigeneUnterschrift, 'eigene Unterschrift');
   assert.equal(dokumentInhalt('kaufvertrag', basis(), fz(), null, null, HEUTE).abschnitte.some((a) => a.eigeneUnterschrift), false);

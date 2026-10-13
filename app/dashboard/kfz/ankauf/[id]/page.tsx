@@ -22,6 +22,7 @@ import { leseZahl } from '@/lib/zahlen';
 import { verkleinereBild } from '@/lib/bildKlein';
 import { finPruefen, ezAusEingabe, ezText, euro, naechsteNr } from '@/lib/kfzBestand';
 import { vorlageFuer, mitKunde, type KundenEinstellung } from '@/lib/branchenVorlage';
+import { ladeDokumentText } from '@/lib/rechtsTexteLaden';
 import { MEDIEN_BUCKET, pruefeMedium, endungFuer } from '@/lib/kfzMedien';
 import {
   ANKAUF_STATUS, QUELLEN, PRUEFPUNKTE, BEREICHE, SCHADEN_ARTEN, STUFEN, pruefBereinigen, pruefStand,
@@ -304,7 +305,11 @@ export default function AnkaufAktePage() {
       }
     } catch { firma = null; }
     const preis = betrag(abs.ankaufpreis) ?? a.ankaufpreis;
-    const inhalt = ankaufscheinInhalt({ ...a, ankaufpreis: preis, schaeden }, firma, heute());
+    // Paket 348: Erklärungen aus „Meine Rechtstexte" (kfz.ankauf) — ohne eigenen Text nur der Hinweis.
+    const eigen = await ladeDokumentText(supabase, a.owner_user_id, 'kfz.ankauf', {
+      betrieb: firma?.name ?? '', kunde: a.verkaeufer_firma || a.verkaeufer_name || '', datum: heute().split('-').reverse().join('.'),
+    });
+    const inhalt = ankaufscheinInhalt({ ...a, ankaufpreis: preis, schaeden }, firma, heute(), eigen);
     ankaufscheinPdf(inhalt, `Ankaufschein-${a.nr ?? 'Ankauf'}.pdf`);
     if (!firma?.name) setOk('Ankaufschein erstellt. Ihre Firmendaten fehlen darin (Einstellungen → Firmendaten oder Recht für Rechnungen) — Ankäufer bitte von Hand eintragen.');
   }
@@ -540,6 +545,7 @@ export default function AnkaufAktePage() {
               <dt>Angelegt</dt><dd>{a.erstellt_am.slice(0, 10).split('-').reverse().join('.')}</dd>
             </dl>
             <button style={{ ...s.btn, marginTop: 12 }} onClick={() => void scheinDrucken()}>🖨 Ankaufschein (PDF)</button>
+            <div style={{ ...s.dim, marginTop: 6, fontSize: 12.5 }}>Die Erklärungen des Verkäufers auf dem Schein kommen aus Ihrem eigenen, von Ihrem Anwalt geprüften Text unter <a href="/dashboard/rechtstexte" style={{ color: 'inherit' }}>Meine Rechtstexte</a> — ARGONAUT liefert dafür keinen Mustertext.</div>
             <div style={{ ...s.dim, marginTop: 6 }}>Zum Ausdrucken und Unterschreiben: Verkäufer, Fahrzeug, Angaben des Verkäufers, festgestellte Schäden (ohne Beträge), Kaufpreis und Erklärungen. Vorher Preis im Feld links eintragen.</div>
             {istChef && (loeschFrage === 'akte'
               ? <div style={{ marginTop: 12 }}><button style={{ ...s.btn, color: C.bad }} onClick={() => void ankaufLoeschen()}>Ja, Ankauf, Schadenfotos und Fahrzeugmappe löschen</button> <button style={s.btn} onClick={() => setLoeschFrage(null)}>Nein</button>{a.bestand_id && <div style={{ ...s.dim, marginTop: 6 }}>Das Fahrzeug im Bestand bleibt erhalten.</div>}</div>

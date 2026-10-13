@@ -75,14 +75,16 @@ test('Rückgabe: km, Tank, Mehr-km, Überfällig, Nachfass nur bei Probefahrt un
 });
 
 test('Unterlagen: keine Führerscheinnummer, Schäden nie geschönt, Selbstbeteiligung, Fahrtenliste', () => {
-  const v = fahrtDokument('vereinbarung', fahrt({ selbstbeteiligung: 1000, km_frei: 50 }), fz(), null, HEUTE);
+  const v = fahrtDokument('vereinbarung', fahrt({ selbstbeteiligung: 1000, km_frei: 50 }), fz(), null, HEUTE, { eigen: true, text: 'Eigene Probefahrt-Regeln des Betriebs.', fassung: 2, stand: 'Fassung 2' });
   const txt = alsText(v);
   assert.match(txt, /Vorgelegt und geprüft: ja/);
   assert.doesNotMatch(txt, /Führerscheinnummer|Nummer des Führerscheins/);
-  assert.match(txt, /Selbstbeteiligung der Fahrzeugversicherung von 1\.000,00 €/);
+  assert.match(txt, /Selbstbeteiligung der Fahrzeugversicherung: 1\.000,00 €/);
+  assert.match(txt, /Eigene Probefahrt-Regeln des Betriebs\./);
   assert.match(txt, /Vorhandene Schäden: keine erfasst/);
-  assert.match(txt, /höchstens 50 km/);
-  assert.match(alsText(fahrtDokument('vereinbarung', fahrt(), fz(), null, HEUTE)), /gesetzlichen Regeln/);
+  assert.match(txt, /Höchstens: 50 km/);
+  assert.match(alsText(fahrtDokument('vereinbarung', fahrt(), fz(), null, HEUTE)), /Kein eigener Text des Betriebs/, 'P348: ohne eigenen Text kein Mustertext');
+  assert.doesNotMatch(alsText(fahrtDokument('vereinbarung', fahrt(), fz(), null, HEUTE)), /gesetzlichen Regeln|Bußgelder während der Nutzung trägt/);
   const u = alsText(fahrtDokument('vereinbarung', fahrt({ art: 'ueberfuehrung' }), fz(), null, HEUTE));
   assert.match(u, /ausschließlich der Überführung/);
   const rg = alsText(fahrtDokument('rueckgabe', fahrt({ status: 'zurueck', km_ende: 85150, tank_ende: '1/2', schaeden_ende: 'Delle Tür hinten links' }), fz(), null, HEUTE));

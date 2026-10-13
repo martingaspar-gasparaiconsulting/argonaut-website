@@ -18,9 +18,11 @@ import { signaturStarten } from '@/lib/signaturStart';
 import {
   VERKAUF_STATUS, ZAHLARTEN, GEWAEHR, PAPIERE, DOK_ARTEN, betraege, gwgInfo, gwgBetragText, inzahlungVorschlag, pruefen,
   wechselErlaubt, statusLabel, bestandNachVerkauf, naechsteVerkaufNr, zusatzBereinigen, gewaehrErlaubt, dokumentInhalt,
-  alsText, dateiName, geld, type Verkauf, type FahrzeugFuerVerkauf, type InzahlungFahrzeug, type Firmenkopf, type DokArt, type Zusatz,
+  alsText, dateiName, geld, noetigeRechtstexte, fehlendeRechtstexte, type VerkaufTexte, type Verkauf, type FahrzeugFuerVerkauf, type InzahlungFahrzeug, type Firmenkopf, type DokArt, type Zusatz,
 } from '@/lib/kfzVerkauf';
 import { verkaufPdf } from '@/lib/kfzVerkaufPdf';
+import { ladeDokumentText } from '@/lib/rechtsTexteLaden';
+import { eintragFuer } from '@/lib/rechtsTexte';
 // Paket 268 (K7): Rechnung aus dem Verkauf — § 25a / Regelsteuer / EU / Ausfuhr
 import { LIEFERUNGEN, lieferungLesen, steuerfall, rechnungBauen, type Lieferung } from '@/lib/kfzRechnung';
 import { sonderfallLabel } from '@/lib/steuerSonderfall';
@@ -92,6 +94,8 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
   const [liste, setListe] = useState<Zeile[]>([]);
   const [ankaeufe, setAnkaeufe] = useState<Ankauf[]>([]);
   const [sig, setSig] = useState<Record<string, SigStand>>({});
+  // Paket 348: welche eigenen Rechtstexte der Betrieb hinterlegt hat (Meine Rechtstexte)
+  const [rechtstexte, setRechtstexte] = useState<Set<string> | null>(null);
   const [e, setE] = useState<Entwurf | null>(null);
   const [busy, setBusy] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -139,6 +143,10 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
   }, [f.id, f.owner_user_id]);
 
   useEffect(() => { void lade(); }, [lade]);
+  useEffect(() => {
+    void supabase.from('rechtstext').select('schluessel').eq('owner_user_id', f.owner_user_id).like('schluessel', 'kfz.%')
+      .then(({ data }) => setRechtstexte(new Set(((data as { schluessel: string }[] | null) ?? []).map((x) => x.schluessel))));
+  }, [f.owner_user_id]);
   useEffect(() => {
     void (async () => {
       try {
@@ -238,16 +246,28 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
     } catch { return null; }
   }
 
+  /** Paket 348: Titel der fehlenden eigenen Rechtstexte für eine Unterlage (leer = alles da). */
+  function fehltText(art: DokArt, texte: VerkaufTexte): string | null {
+    if (!aktiv) return null;
+    const fehlt = fehlendeRechtstexte(art, aktiv, texte).map((k) => `„${eintragFuer(k)?.titel ?? k}"`);
+    return fehlt.length ? `Für diese Unterlage fehlt noch Ihr eigener Text: ${fehlt.join(', ')}. ARGONAUT liefert dafür keinen Mustertext — hinterlegen Sie Ihren von Ihrem Anwalt geprüften Text unter Verwaltung → Meine Rechtstexte.` : null;
+  }
+
   async function inhalt(art: DokArt) {
     if (!aktiv) return null;
     const firma = await firmaHolen();
     const inz = ankaeufe.find((a) => a.id === aktiv.inzahlung_ankauf_id) ?? null;
-    return { d: dokumentInhalt(art, aktiv, f.fz, firma, inz, heute()), firma };
+    const werte = { betrieb: firma?.name ?? '', kunde: aktiv.kaeufer_firma || aktiv.kaeufer_name || '', datum: heute().split('-').reverse().join('.') };
+    const texte: Record<string, Awaited<ReturnType<typeof ladeDokumentText>>> = {};
+    for (const k of noetigeRechtstexte(art, aktiv)) texte[k] = await ladeDokumentText(supabase, f.owner_user_id, k, werte);
+    const fehlt = fehltText(art, texte);
+    return { d: dokumentInhalt(art, aktiv, f.fz, firma, inz, heute(), texte), firma, fehlt };
   }
 
   async function drucken(art: DokArt) {
     setFehler(null); setOk(null); setLink(null);
     const r = await inhalt(art); if (!r) return;
+    if (r.fehlt) { setFehler(r.fehlt); return; }
     verkaufPdf(r.d, dateiName(art, aktiv?.nr ?? null));
     if (!r.firma?.name) setOk('PDF erstellt. Ihre Firmendaten fehlen darin (Einstellungen → Firmendaten) — bitte von Hand eintragen.');
   }
@@ -257,6 +277,7 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
     setBusy(true); setFehler(null); setOk(null); setLink(null);
     try {
       const r = await inhalt(art); if (!r) return;
+      if (r.fehlt) { setFehler(r.fehlt); return; }
       const name = DOK_ARTEN.find((d) => d.key === art)?.label ?? art;
       const s = await signaturStarten(supabase, f.owner_user_id, {
         titel: `${name} ${aktiv.nr ?? ''}`.trim(), empfaenger_name: aktiv.kaeufer_firma || aktiv.kaeufer_name, empfaenger_email: aktiv.kaeufer_email,
@@ -436,17 +457,18 @@ export default function KfzVerkauf({ f, onGeaendert }: { f: VerkaufFahrzeug; onG
             const token = (aktiv.signaturen ?? {})[d.key];
             const stand = token ? sig[token] : undefined;
             const leerAnz = d.key === 'anzahlung' && !(aktiv.anzahlung && aktiv.anzahlung > 0);
+            const ohneText = rechtstexte !== null && noetigeRechtstexte(d.key, aktiv).some((k) => !rechtstexte.has(k));
             return (
               <div key={d.key} style={s.dokZeile}>
                 <span style={{ fontWeight: 700 }}>{d.label}</span>
-                <span style={{ ...s.dim, flex: 1 }}>{leerAnz ? 'erst mit Anzahlung' : stand ? (stand.status === 'signiert' ? `✓ unterschrieben${stand.signiert_am ? ` am ${stand.signiert_am.slice(0, 10).split('-').reverse().join('.')}` : ''}` : stand.status === 'angesehen' ? 'Link geöffnet, noch nicht unterschrieben' : 'Link verschickt') : ''}</span>
+                <span style={{ ...s.dim, flex: 1 }}>{ohneText ? <a href="/dashboard/rechtstexte" style={{ color: C.warn }}>⚠ eigener Text fehlt (Meine Rechtstexte)</a> : leerAnz ? 'erst mit Anzahlung' : stand ? (stand.status === 'signiert' ? `✓ unterschrieben${stand.signiert_am ? ` am ${stand.signiert_am.slice(0, 10).split('-').reverse().join('.')}` : ''}` : stand.status === 'angesehen' ? 'Link geöffnet, noch nicht unterschrieben' : 'Link verschickt') : ''}</span>
                 <button style={s.btn} disabled={leerAnz} onClick={() => void drucken(d.key)}>🖨 PDF</button>
                 {d.sign && <button style={s.btn} disabled={busy || leerAnz} onClick={() => void zurUnterschrift(d.key)}>✍ {token ? 'Neuer Link' : 'Unterschrift'}</button>}
               </div>
             );
           })}
         </div>
-        <div style={{ ...s.hinweis, marginTop: 10 }}>Die Vertragstexte sind Vorlagen von ARGONAUT. Bitte lassen Sie sie vor dem ersten Einsatz von Ihrem Anwalt prüfen. Unterschriebene Fassungen finden Sie unter <a href="/dashboard/signaturen" style={{ color: C.info }}>Signaturen</a>.</div>
+        <div style={{ ...s.hinweis, marginTop: 10 }}>Vertragsbedingungen, Reservierungsbedingungen, Vollmacht und die gesonderte Verjährungs-Vereinbarung kommen aus Ihren eigenen, von Ihrem Anwalt geprüften Texten unter <a href="/dashboard/rechtstexte" style={{ color: C.info }}>Meine Rechtstexte</a> — ARGONAUT liefert dafür keinen Mustertext. Unterschriebene Fassungen finden Sie unter <a href="/dashboard/signaturen" style={{ color: C.info }}>Signaturen</a>.</div>
       </div>
 
       {(aktiv.status === 'vertrag' || aktiv.status === 'uebergeben') && (() => {

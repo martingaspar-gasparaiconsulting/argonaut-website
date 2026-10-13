@@ -27,6 +27,7 @@
 
 import { gwgPruefung, artDef } from './einzelstueck';
 import { centRunden } from './zahlen';
+import type { DokumentText } from './rechtsTexte';
 
 export const UST_SATZ = 19;
 export const GWG_BAR_GRENZE = 10000;
@@ -352,17 +353,42 @@ export function vorschadenSatz(fz: Pick<FahrzeugFuerVerkauf, 'vorschaden' | 'vor
   if (fz.vorschaden === 'ja') return `Bekannte Unfall- oder Vorschäden: ${fz.vorschaden_text?.trim() || 'ja (siehe Akte)'}.`;
   return 'Ob das Fahrzeug Unfall- oder Vorschäden hat, ist dem Verkäufer nicht bekannt.';
 }
-/** Text zur Sachmängelhaftung (Vorlage, Anwalt-Liste R45). */
+/**
+ * Die gewählte Variante der Sachmängelhaftung — nur als Angabe. Seit Paket 347/348
+ * (A1 Vorlagen-Prinzip) liefert ARGONAUT keinen Klauseltext mehr: Ausnahmen,
+ * Vorbehalte und Wortlaut stehen in den Vertragsbedingungen des Betriebs
+ * („Meine Rechtstexte", kfz.kaufvertrag).
+ */
 export function haftungText(kaeuferArt: string, g: string): string[] {
-  const vorbehalt = 'Unberührt bleiben Ansprüche auf Schadensersatz wegen Verletzung von Leben, Körper oder Gesundheit, bei Vorsatz oder grober Fahrlässigkeit, bei arglistig verschwiegenen Mängeln sowie aus einer ausdrücklich vereinbarten Beschaffenheit.';
-  if (g === 'ausgeschlossen' && kaeuferArt === 'unternehmer') return ['Das Fahrzeug wird unter Ausschluss der Sachmängelhaftung verkauft.', vorbehalt];
+  if (g === 'ausgeschlossen' && kaeuferArt === 'unternehmer') return ['Vereinbart: Ausschluss der Sachmängelhaftung (Käufer ist Unternehmer), Einzelheiten in den Vertragsbedingungen.'];
   if (g === 'ein_jahr') {
-    return [
-      'Ansprüche wegen Sachmängeln verjähren ein Jahr nach Übergabe des Fahrzeugs.' + (kaeuferArt === 'verbraucher' ? ' Diese Verkürzung ist gesondert vereinbart (eigener Abschnitt unten).' : ''),
-      vorbehalt,
-    ];
+    return ['Vereinbart: Verjährung von Ansprüchen wegen Sachmängeln ein Jahr ab Übergabe, Einzelheiten in den Vertragsbedingungen.' + (kaeuferArt === 'verbraucher' ? ' Gesondert vereinbart (eigener Abschnitt unten).' : '')];
   }
   return ['Es gelten die gesetzlichen Rechte bei Sachmängeln.'];
+}
+
+/** Paket 348: Texte aus „Meine Rechtstexte" je Schlüssel (lib/rechtsTexte.dokumentText). */
+export type VerkaufTexte = Readonly<Partial<Record<string, DokumentText>>>;
+
+/** Welche eigenen Rechtstexte eine Unterlage braucht — ohne sie gibt es kein PDF und keine Unterschrift. */
+export function noetigeRechtstexte(art: DokArt, v: Pick<Verkauf, 'kaeufer_art' | 'gewaehr'>): string[] {
+  if (art === 'kaufvertrag') return v.kaeufer_art === 'verbraucher' && v.gewaehr === 'ein_jahr' ? ['kfz.kaufvertrag', 'kfz.verjaehrung'] : ['kfz.kaufvertrag'];
+  if (art === 'reservierung') return ['kfz.reservierung'];
+  if (art === 'vollmacht') return ['kfz.zulassungsvollmacht'];
+  return [];
+}
+
+/** Schlüssel, deren eigener Text fehlt (leer = alles da). */
+export function fehlendeRechtstexte(art: DokArt, v: Pick<Verkauf, 'kaeufer_art' | 'gewaehr'>, texte: VerkaufTexte): string[] {
+  return noetigeRechtstexte(art, v).filter((k) => texte[k]?.eigen !== true);
+}
+
+/** Abschnitt aus einem eigenen Rechtstext — oder der Hinweis, dass er fehlt. Nie ein Mustertext. */
+function rechtsAbschnitt(titel: string, t: DokumentText | undefined, eigeneUnterschrift?: string): DokAbschnitt {
+  if (t && t.eigen) {
+    return { titel, text: [...t.text.split(/\n+/).map((z) => z.trim()).filter(Boolean), `(${t.stand})`], ...(eigeneUnterschrift ? { eigeneUnterschrift } : {}) };
+  }
+  return { titel, text: [t && !t.eigen ? t.hinweis : 'Kein eigener Text des Betriebs hinterlegt.'] };
 }
 
 function preisAbschnitt(v: Verkauf, fz: FahrzeugFuerVerkauf, inz: InzahlungFahrzeug | null, mitZahlung: boolean): DokAbschnitt {
@@ -384,7 +410,7 @@ function preisAbschnitt(v: Verkauf, fz: FahrzeugFuerVerkauf, inz: InzahlungFahrz
 }
 
 /** Inhalt einer Unterlage — reine Daten, das PDF und ARGONAUT-Sign zeichnen nur. */
-export function dokumentInhalt(art: DokArt, v: Verkauf, fz: FahrzeugFuerVerkauf, firma: Firmenkopf | null, inz: InzahlungFahrzeug | null, heuteIso: string): DokInhalt {
+export function dokumentInhalt(art: DokArt, v: Verkauf, fz: FahrzeugFuerVerkauf, firma: Firmenkopf | null, inz: InzahlungFahrzeug | null, heuteIso: string, texte: VerkaufTexte = {}): DokInhalt {
   const nr = v.nr ?? '—';
   const verk = { titel: 'VERKÄUFER', zeilen: firmaZeilen(firma) };
   const kaeu = { titel: 'KÄUFER', zeilen: kaeuferZeilen(v) };
@@ -412,11 +438,7 @@ export function dokumentInhalt(art: DokArt, v: Verkauf, fz: FahrzeugFuerVerkauf,
       abschnitte: [
         fzA,
         { titel: 'Reservierung', zeilen: [['Reserviert bis', de(v.reserviert_bis)], ['Vereinbarter Fahrzeugpreis', geld(b.fahrzeug)], ...(b.anzahlung > 0 ? [['Anzahlung', `${geld(b.anzahlung)} (${zahlartText(v.anzahlung_art)})`] as [string, string]] : [])] },
-        { titel: 'Bedingungen', text: [
-          'Der Verkäufer bietet das Fahrzeug bis zum genannten Tag keinem anderen Interessenten an.',
-          'Kommt bis dahin kein Kaufvertrag zustande, endet die Reservierung ohne weitere Erklärung.' + (b.anzahlung > 0 ? ' Eine geleistete Anzahlung wird dann in voller Höhe zurückgezahlt, soweit unten nichts anderes vereinbart ist.' : ''),
-          'Kommt der Kaufvertrag zustande, wird die Anzahlung auf den Kaufpreis angerechnet.',
-        ] },
+        rechtsAbschnitt('Bedingungen der Reservierung', texte['kfz.reservierung']),
         ...sonst,
       ],
       unterschriften: ['Ort, Datum, Unterschrift Käufer', 'Ort, Datum, Unterschrift Verkäufer'],
@@ -438,8 +460,8 @@ export function dokumentInhalt(art: DokArt, v: Verkauf, fz: FahrzeugFuerVerkauf,
       titel: 'Vollmacht zur Zulassung', nr, datum: de(heuteIso), links: { titel: 'VOLLMACHTGEBER (HALTER)', zeilen: kaeuferZeilen(v) }, rechts: { titel: 'BEVOLLMÄCHTIGT', zeilen: firmaZeilen(firma) },
       abschnitte: [
         fzA,
-        { titel: 'Umfang', text: [
-          'Der Vollmachtgeber bevollmächtigt den oben genannten Betrieb und dessen Beauftragte, das genannte Fahrzeug auf seinen Namen bei der Zulassungsbehörde zuzulassen und alle dafür nötigen Erklärungen abzugeben und Unterlagen entgegenzunehmen.',
+        rechtsAbschnitt('Umfang der Vollmacht', texte['kfz.zulassungsvollmacht']),
+        { titel: 'Hinweise', text: [
           'Für die Kraftfahrzeugsteuer ist zusätzlich das SEPA-Lastschriftmandat für die Zollverwaltung nötig (eigenes Formular).',
           'Bitte eine Kopie des Personalausweises oder Reisepasses beilegen; bei Firmen zusätzlich einen aktuellen Handelsregisterauszug oder die Gewerbeanmeldung.',
         ] },
@@ -465,23 +487,17 @@ export function dokumentInhalt(art: DokArt, v: Verkauf, fz: FahrzeugFuerVerkauf,
     fzA,
     { titel: 'Zustand und Beschaffenheit', text: [vorschadenSatz(fz), 'Der Kilometerstand ist der vom Tacho abgelesene Wert.'] },
     preisAbschnitt(v, fz, inz, true),
-    { titel: 'Übergabe und Eigentum', text: [
+    { titel: 'Übergabe', text: [
       v.liefertermin ? `Übergabe voraussichtlich am ${de(v.liefertermin)}.` : 'Der Übergabetermin wird gesondert vereinbart.',
-      'Das Fahrzeug bleibt bis zur vollständigen Zahlung des Kaufpreises Eigentum des Verkäufers. Die Zulassungsbescheinigung Teil II wird nach vollständiger Zahlung übergeben.',
-      ...(v.inzahlung_ankauf_id && inz ? [`Das Fahrzeug des Käufers (Ankauf ${inz.nr ?? '—'}) geht mit der Übergabe in das Eigentum des Verkäufers über. Für dieses Fahrzeug gilt der Ankaufschein.`] : []),
+      ...(v.inzahlung_ankauf_id && inz ? [`Inzahlungnahme: Fahrzeug aus Ankauf ${inz.nr ?? '—'} (siehe Ankaufschein).`] : []),
     ] },
     { titel: 'Sachmängelhaftung', text: haftungText(v.kaeufer_art, v.gewaehr) },
+    rechtsAbschnitt('Vertragsbedingungen', texte['kfz.kaufvertrag']),
     ...sonst,
   ];
   if (v.kaeufer_art === 'verbraucher' && v.gewaehr === 'ein_jahr') {
-    abschnitte.push({
-      titel: 'Gesonderte Vereinbarung zur Verjährung',
-      text: [
-        'Der Käufer wurde vor Abgabe seiner Vertragserklärung eigens darauf hingewiesen, dass die Verjährungsfrist für Ansprüche wegen Sachmängeln bei diesem gebrauchten Fahrzeug auf ein Jahr ab Übergabe verkürzt werden soll.',
-        'Diese Verkürzung wird hiermit ausdrücklich und gesondert vereinbart.',
-      ],
-      eigeneUnterschrift: 'Ort, Datum, Unterschrift Käufer (gesonderte Vereinbarung)',
-    });
+    // Eigener Abschnitt mit eigener Unterschrift — Wortlaut aus „Meine Rechtstexte" (kfz.verjaehrung).
+    abschnitte.push(rechtsAbschnitt('Gesonderte Vereinbarung zur Verjährung', texte['kfz.verjaehrung'], 'Ort, Datum, Unterschrift Käufer (gesonderte Vereinbarung)'));
   }
   return {
     titel: 'Kaufvertrag über ein gebrauchtes Kraftfahrzeug', nr, datum: de(v.vertrag_am ?? heuteIso), links: verk, rechts: kaeu,

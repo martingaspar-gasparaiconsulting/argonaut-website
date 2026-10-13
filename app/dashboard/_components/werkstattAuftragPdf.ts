@@ -13,6 +13,7 @@
 import { jsPDF } from 'jspdf';
 import { unterschriftUeberLinie } from '@/lib/unterschriftPdf';
 import { meineUnterschriftCache } from '@/lib/meineUnterschrift';
+import type { DokumentText } from '@/lib/rechtsTexte';
 import {
   positionsMinuten, positionsBetrag, auftragsSumme, zeitText, eur,
   type PositionBasis,
@@ -64,6 +65,8 @@ export function werkstattAuftragPdf(
   fahrzeug: PdfFahrzeug | null,
   positionen: PdfPosition[],
   firma?: PdfFirma,
+  /** Paket 348: Auftragsbedingungen aus „Meine Rechtstexte" (kfz.werkstattauftrag) — ohne eigenen Text keine. */
+  bedingungen?: DokumentText | null,
 ) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const seiteB = doc.internal.pageSize.getWidth();
@@ -266,6 +269,20 @@ export function werkstattAuftragPdf(
     const t = doc.splitTextToSize(auftrag.beschreibung, seiteB - rand * 2) as string[];
     doc.text(t, rand, y);
     y += t.length * 4.5 + 2;
+  }
+
+  // ---- Paket 348: Auftragsbedingungen nur aus dem eigenen Text des Betriebs, nie ein Mustertext ----
+  if (bedingungen && bedingungen.eigen) {
+    y += 4; neueSeiteWennNoetig();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAU);
+    doc.text('AUFTRAGSBEDINGUNGEN', rand, y); y += 5;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...NAVY);
+    for (const zeile of doc.splitTextToSize(bedingungen.text, seiteB - rand * 2) as string[]) {
+      if (y > seiteH - 20) { doc.addPage(); y = 20; }
+      doc.text(zeile, rand, y); y += 4;
+    }
+    doc.setFontSize(7.5); doc.setTextColor(...GRAU);
+    doc.text(`Auftragsbedingungen des Betriebs, ${bedingungen.stand}`, rand, y + 1); y += 4;
   }
 
   // ---- Feinschliff 2: Unterschriftenzeile (macht den Annahmebeleg rechtsfest) ----

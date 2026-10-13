@@ -20,6 +20,7 @@
 // ============================================================================
 
 import { centRunden, leseZahl } from './zahlen';
+import type { DokumentText } from './rechtsTexte';
 
 export const UST_SATZ = 19;
 
@@ -477,7 +478,7 @@ function geld(n: number): string {
  * Schäden erscheinen OHNE Beträge (die sind intern). Angaben, die nicht
  * erfasst sind, stehen als „—" da und werden nie geschönt.
  */
-export function ankaufscheinInhalt(a: AnkaufFuerSchein, firma: Firmenkopf | null, heuteIso: string): ScheinInhalt {
+export function ankaufscheinInhalt(a: AnkaufFuerSchein, firma: Firmenkopf | null, heuteIso: string, eigenText?: DokumentText | null): ScheinInhalt {
   const ankaeufer = firma && firma.name
     ? [firma.name, firma.strasse, [firma.plz, firma.ort].filter(Boolean).join(' '), [firma.telefon, firma.email].filter(Boolean).join(' · ')].filter((x): x is string => !!x && x.trim() !== '')
     : ['______________________________'];
@@ -516,11 +517,9 @@ export function ankaufscheinInhalt(a: AnkaufFuerSchein, firma: Firmenkopf | null
     ],
     maengel: schaeden.map((s) => `${s.bereich}: ${art(s.art)} (${s.stufe})${s.notiz ? `, ${s.notiz}` : ''}`),
     preis,
-    erklaerungen: [
-      'Der Verkäufer erklärt, Eigentümer des Fahrzeugs zu sein und dass es frei von Rechten Dritter ist.',
-      'Die Angaben des Verkäufers oben sind nach bestem Wissen gemacht.',
-      'Übergeben werden Fahrzeug, Zulassungsbescheinigung Teil I und II und die genannten Schlüssel.',
-      'Die oben genannten Mängel und Schäden wurden bei der Besichtigung festgestellt und sind im Kaufpreis berücksichtigt.',
-    ],
+    // Paket 348 (A1 Vorlagen-Prinzip): Erklärungen nur aus „Meine Rechtstexte" (kfz.ankauf), kein Mustertext.
+    erklaerungen: eigenText && eigenText.eigen
+      ? [...eigenText.text.split(/\n+/).map((z) => z.trim()).filter(Boolean), `(${eigenText.stand})`]
+      : ['Es sind keine eigenen Erklärungen des Betriebs hinterlegt. Dieser Schein hält nur Fahrzeug, Angaben, festgestellte Mängel und Preis fest.'],
   };
 }
