@@ -134,6 +134,8 @@ export const WEITERE_TABELLEN: string[] = [
   'wach_dienst', 'wach_objekt_vorgabe',
   // Paket 355 (A4c): Entsorgung — Abfallschluessel, Container, Auftraege, Wiegescheine
   'abfall_schluessel', 'container_auftrag', 'container_bestand', 'wiegeschein',
+  // Paket 356 (A4c Teil 2): Abfallregister und ADR-Befoerderungspapiere
+  'abfall_register', 'adr_papier',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

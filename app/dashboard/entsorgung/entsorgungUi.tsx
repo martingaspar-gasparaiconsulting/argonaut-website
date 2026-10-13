@@ -14,11 +14,12 @@ export type Db = SupabaseClient;
 export type Kontakt = { id: string; anzeige: string; telefon: string | null; adresse: string };
 
 /** Meldungen der Datenbank-Wächter (deutsch, verständlich) durchreichen, sonst eine Rechte-Meldung. */
-const WAECHTER = /Container|Auftrag|Kontakt|Abfallschlüssel|Wiegeschein|Tara|Brutto|Abschließen|Storno|Geschäftsleitung|Betrieb|Kunde|bleibt/;
+const WAECHTER = /Container|Auftrag|Kontakt|Abfallschlüssel|Wiegeschein|Tara|Brutto|Abschließen|Storno|Geschäftsleitung|Betrieb|Kunde|bleibt|Register|Zukunft|Beförderungspapier|Pflichtangaben|Position|Ausstellen|erhalten/;
 export function fehlerText(msg: string | undefined, sonst: string): string {
   if (!msg) return sonst;
   if (/container_bestand_nummer_eindeutig/.test(msg)) return 'Diese Container-Nummer ist schon vergeben.';
   if (/abfall_schluessel_eindeutig/.test(msg)) return 'Diesen Abfallschlüssel gibt es in Ihrer Liste schon.';
+  if (/abfall_register_ein_schein/.test(msg)) return 'Zu diesem Wiegeschein gibt es schon einen gültigen Registereintrag.';
   if (/foreign key|violates foreign key/.test(msg)) return 'Das wird noch von Aufträgen oder Wiegescheinen gebraucht und bleibt deshalb erhalten — blenden Sie es stattdessen aus.';
   return WAECHTER.test(msg) ? msg : sonst;
 }

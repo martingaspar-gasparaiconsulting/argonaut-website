@@ -182,11 +182,11 @@ export const VERFAHREN_KATALOG: VerfahrenVorschlag[] = [
   {
     // Paket 355 (13.10.2026): Container-Dienst und Wiegeschein (Fachpaket Entsorgung)
     wenn: 'entsorgung',
-    name: 'Container-Auftraege und Wiegescheine (Entsorgung)',
+    name: 'Container-Auftraege, Wiegescheine, Abfallregister und Gefahrgut-Papiere (Entsorgung)',
     zweck: 'Durchfuehrung und Abrechnung von Containerdienst und Entsorgung, Nachweis der angenommenen bzw. abgegebenen Abfallmengen.',
     rechtsgrundlage: 'Art. 6 Abs. 1 lit. b DSGVO (Entsorgungsvertrag), lit. c (handels- und steuerrechtliche Aufbewahrung; abfallrechtliche Nachweis- und Registerpflichten), lit. f (Beweissicherung)',
     kategorien_betroffene: 'Kunden und Ansprechpartner, Fahrer (eigene und fremde), Beschaeftigte',
-    kategorien_daten: 'Name und Adresse des Kunden, Stellplatz, Telefon, Kennzeichen, Name des Fahrers, Gewichte mit Zeitpunkt, Abfallschluessel, Name der Person, die den Wiegeschein abschliesst',
+    kategorien_daten: 'Name und Adresse des Kunden, Stellplatz, Telefon, Kennzeichen, Name des Fahrers, Gewichte mit Zeitpunkt, Abfallschluessel, Name der Person, die den Wiegeschein abschliesst; im Abfallregister Erzeuger, Befoerderer und Entsorger mit Nummern, Nachweis- und Begleitscheinnummern, Name der erfassenden Person; im ADR-Papier Absender, Empfaenger, Befoerderer, Kennzeichen',
     empfaenger: 'Kunden (Wiegeschein), Behoerden auf Anforderung, ' + EMPF_BASIS,
     drittland: KEIN_DRITTLAND,
     loeschfrist: 'Vorschlag: 8 Jahre nach Ende des Kalenderjahres (Buchungsbelege, § 147 AO), soweit abrechnungsrelevant; sonst 3 Jahre (Register nach Nachweisverordnung). Vom Betrieb anzupassen.',

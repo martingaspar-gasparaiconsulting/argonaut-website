@@ -7,6 +7,9 @@
 // Container (Bestand: Hof / beim Kunden / voll / Reparatur) · Wiegescheine
 // (Erst- und Zweitwägung, Netto von der Datenbank, Druck) · Abfallschlüssel
 // (eigene Liste des Betriebs).
+// Paket 356: Register (Abfallregister, nur anhängen, Übernahme aus dem Wiegeschein,
+// Druck/CSV) · Gefahrgut (ADR-Beförderungspapier Inland, 1000-Punkte-Rechnung,
+// Ausstellen erst nach Freigabe „adrPapier").
 // Logik: lib/entsorgung.ts (tests/entsorgungP355).
 // Datenbank: supabase-sql/p355-entsorgung-container-wiegeschein.sql (Modul „entsorgung").
 // ============================================================
@@ -20,13 +23,18 @@ import Auftraege, { type Vorlage } from './Auftraege';
 import ContainerBestand from './ContainerBestand';
 import Wiegescheine, { WIEGE_FELDER } from './Wiegescheine';
 import SchluesselListe, { type Schluessel } from './Schluessel';
+import Register from './Register';
+import Gefahrgut, { ADR_FELDER } from './Gefahrgut';
+import { nummernLesen, EINSTELLUNG_MODUL, type RegisterEintrag, type BetriebNummern } from '@/lib/abfallRegister';
+import type { AdrPapier } from '@/lib/adrPapier';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 );
 
-type Reiter = 'auftraege' | 'container' | 'wiege' | 'schluessel';
+type Reiter = 'auftraege' | 'container' | 'wiege' | 'register' | 'gefahrgut' | 'schluessel';
+const REGISTER_FELDER = 'id, datum, richtung, abfall_schluessel_id, abfall_schluessel, abfall_bezeichnung, gefaehrlich, menge, einheit, erzeuger, erzeuger_nr, befoerderer, befoerderer_nr, entsorger, entsorger_nr, nachweis_nr, schein_nr, verfahren, kennzeichen, wiegeschein_id, notiz, status, storno_grund, storniert_am, erfasst_am, erfasst_name';
 const AUFTRAG_FELDER = 'id, art, termin, zeitfenster, kontakt_id, kunde_name, stellplatz, telefon, container_id, container_alt_id, groesse_m3, abfall_schluessel_id, fahrer, status, erledigt_am, notiz';
 
 type KontaktRoh = { id: string; name?: string | null; firma?: string | null; vorname?: string | null; nachname?: string | null; telefon?: string | null; strasse?: string | null; plz?: string | null; ort?: string | null };
@@ -45,6 +53,11 @@ export default function EntsorgungPage() {
   const [schluessel, setSchluessel] = useState<Schluessel[]>([]);
   const [kontakte, setKontakte] = useState<Kontakt[]>([]);
   const [istChef, setIstChef] = useState(false);
+  const [ich, setIch] = useState<string | null>(null);
+  const [register, setRegister] = useState<RegisterEintrag[]>([]);
+  const [papiere, setPapiere] = useState<AdrPapier[]>([]);
+  const [nummern, setNummern] = useState<BetriebNummern>(nummernLesen(null));
+  const [teil2Fehlt, setTeil2Fehlt] = useState(false);
   const [sqlFehlt, setSqlFehlt] = useState(false);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -63,6 +76,7 @@ export default function EntsorgungPage() {
     try { chef = (await supabase.rpc('mein_chef_id')).data; } catch { chef = null; }
     const chefId = typeof chef === 'string' && chef ? chef : null;
     setIstChef(!chefId || chefId === me);
+    setIch(chefId ?? me);
     const seit = new Date(Date.now() - 60 * 86400000).toISOString();
     const seitTag = seit.slice(0, 10);
     const [c, a, ag, w, k] = await Promise.all([
@@ -83,6 +97,17 @@ export default function EntsorgungPage() {
     const kt = await supabase.from('kontakte').select('id, name, firma, vorname, nachname, telefon, strasse, plz, ort').limit(3000);
     const kl = kt.error ? [] : (((kt.data as unknown) as KontaktRoh[]) ?? []).map(kontaktAnzeige);
     setKontakte(kl.sort((x, y) => x.anzeige.localeCompare(y.anzeige, 'de')));
+    // Paket 356: Register, ADR-Papiere, Betriebsnummern (Fehler = leer, Teil 1 bleibt nutzbar)
+    const seitJahr = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
+    const [rg, ad, ne] = await Promise.all([
+      supabase.from('abfall_register').select(REGISTER_FELDER).gte('datum', seitJahr).order('datum', { ascending: false }).limit(5000),
+      supabase.from('adr_papier').select(ADR_FELDER).gte('datum', seitTag).order('datum', { ascending: false }).limit(1000),
+      supabase.from('modul_einstellung').select('einstellung').eq('owner_user_id', chefId ?? me).eq('modul', EINSTELLUNG_MODUL).maybeSingle(),
+    ]);
+    setTeil2Fehlt(!!(rg.error || ad.error));
+    setRegister(rg.error ? [] : (((rg.data as unknown) as RegisterEintrag[]) ?? []));
+    setPapiere(ad.error ? [] : (((ad.data as unknown) as AdrPapier[]) ?? []));
+    setNummern(nummernLesen(ne.error ? null : (ne.data as { einstellung?: unknown } | null)?.einstellung));
     setLaden(false);
   }, []);
   useEffect(() => { void lade(); }, [lade]);
@@ -99,7 +124,8 @@ export default function EntsorgungPage() {
         So geht&apos;s: Unter „Abfallschlüssel" die Schlüssel eintragen, mit denen Ihr Betrieb arbeitet, und unter „Container" Ihren Bestand anlegen.
         Aufträge (Stellen, Tauschen, Abholen) planen Sie je Tag; mit „✓ erledigt" setzt ARGONAUT die Container um — der neue steht dann beim Kunden,
         der alte wieder auf dem Hof. Am Wiegeschein tragen Sie Brutto und Tara von Ihrer Waage ein; Nummer, Uhrzeit und Netto setzt ARGONAUT, und nach dem
-        Abschluss bleibt der Schein, wie er ist.
+        Abschluss bleibt der Schein, wie er ist. Im „Register" übernehmen Sie abgeschlossene Wiegescheine mit einem Klick ins Abfallregister; unter
+        „Gefahrgut" bereiten Sie das ADR-Beförderungspapier mit der 1000-Punkte-Rechnung vor.
       </p>
       {fehler && <div style={s.fehler} role="alert">{fehler}</div>}
       {ok && <div style={s.ok}>{ok}</div>}
@@ -123,6 +149,8 @@ export default function EntsorgungPage() {
           <button style={reiter === 'auftraege' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('auftraege')}>🚛 Aufträge</button>
           <button style={reiter === 'container' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('container')}>🗑️ Container ({container.filter((c) => c.aktiv).length})</button>
           <button style={reiter === 'wiege' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('wiege')}>⚖️ Wiegescheine</button>
+          <button style={reiter === 'register' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('register')}>📒 Register</button>
+          <button style={reiter === 'gefahrgut' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('gefahrgut')}>⚠️ Gefahrgut (ADR)</button>
           <button style={reiter === 'schluessel' ? s.reiterAn : s.reiterAus} onClick={() => setReiter('schluessel')}>🏷️ Abfallschlüssel ({schluessel.filter((x) => x.aktiv).length})</button>
         </div>
 
@@ -132,6 +160,10 @@ export default function EntsorgungPage() {
           onAuftrag={(art, c) => { setVorlage({ art, container: c }); setReiter('auftraege'); melde(null); }} />}
         {reiter === 'wiege' && <Wiegescheine supabase={supabase} scheine={scheine} container={container} schluessel={schluessel} kontakte={kontakte} istChef={istChef}
           ausAuftrag={ausAuftrag} melde={melde} onGeaendert={lade} />}
+        {(reiter === 'register' || reiter === 'gefahrgut') && teil2Fehlt && <div style={s.hinweis}>Register und Gefahrgut sind noch nicht eingerichtet (SQL Paket 356 fehlt).</div>}
+        {reiter === 'register' && !teil2Fehlt && <Register supabase={supabase} eintraege={register} scheine={scheine} schluessel={schluessel} nummern={nummern} ich={ich}
+          istChef={istChef} heute={tag} melde={melde} onGeaendert={lade} />}
+        {reiter === 'gefahrgut' && !teil2Fehlt && <Gefahrgut supabase={supabase} papiere={papiere} scheine={scheine} istChef={istChef} heute={tag} melde={melde} onGeaendert={lade} />}
         {reiter === 'schluessel' && <SchluesselListe supabase={supabase} liste={schluessel} istChef={istChef} melde={melde} onGeaendert={lade} />}
       </>)}
     </div>

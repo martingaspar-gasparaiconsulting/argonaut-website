@@ -52,6 +52,7 @@ export const START_INFO: Readonly<Record<StartBereich, SchalterInfo>> = Object.f
   zusammenlagerung: { titel: 'Zusammenlagerungs-Ampel (TRGS 510)', aus: 'Ampel je Lagerplatz im Gefahrstoffverzeichnis', anwalt: 'R49' },
   reifePreisTreppe: { titel: 'Preis-Treppe nach Reife und MHD', aus: 'Preisschild ohne „ENTWURF" und mit Streichpreis', anwalt: 'R51' },
   vorbestellShop: { titel: 'Vorbestellung im Shop', aus: 'Vorbestell-Kacheln und Vormerkliste im Shop (wirkt nur mit „Webshop")', anwalt: 'R52, R53' },
+  adrPapier: { titel: 'ADR-Beförderungspapier', aus: 'Ausstellen; Druck immer „ENTWURF" (Entsorgung → Gefahrgut)', anwalt: 'R58' },
 });
 
 /** Je Import-Sperre. Neue Bereiche MÜSSEN hier stehen (Test). */

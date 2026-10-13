@@ -25,7 +25,8 @@ export type StartBereich =
   | 'betriebsanweisung' // Paket 329 (G2b): Betriebsanweisung freigeben und ohne „ENTWURF“ drucken (R49)
   | 'zusammenlagerung' // Paket 330 (G2c): Zusammenlagerungs-Ampel je Lagerplatz nach TRGS 510 (R49)
   | 'reifePreisTreppe' // Paket 341 (BV3a): Preis-Treppe nach Reife/MHD auf dem Preisschild, Streichpreis (R51)
-  | 'vorbestellShop'; // Paket 343 (BV3b): Vorbestellung und Vormerkliste im Shop-Schaufenster (R52, R53) — wirkt nur mit „shop“
+  | 'vorbestellShop' // Paket 343 (BV3b): Vorbestellung und Vormerkliste im Shop-Schaufenster (R52, R53) — wirkt nur mit „shop“
+  | 'adrPapier'; // Paket 356 (A4c): ADR-Beförderungspapier ausstellen und ohne „ENTWURF“ drucken (R58)
 
 /** Der Schalter. false = abgeschaltet bis zur Freigabe durch den Anwalt. */
 export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.freeze({
@@ -40,6 +41,7 @@ export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.fr
   zusammenlagerung: false,
   reifePreisTreppe: false,
   vorbestellShop: false,
+  adrPapier: false,
 });
 
 const GRUND: Record<StartBereich, string> = {
@@ -54,6 +56,7 @@ const GRUND: Record<StartBereich, string> = {
   zusammenlagerung: 'Die Zusammenlagerungs-Ampel (TRGS 510) wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin tragen Sie bitte Lagerklasse und Lagerplatz je Stoff ein.',
   reifePreisTreppe: 'Das Preisschild mit der Preis-Treppe nach Reife und Mindesthaltbarkeit wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie die Stufen einrichten und den Preis von heute intern ansehen; der Druck trägt „ENTWURF“.',
   vorbestellShop: 'Vorbestellungen im Online-Shop werden nach der rechtlichen Prüfung freigeschaltet. Bis dahin nehmen Sie Vorbestellungen an der Theke, am Telefon oder per E-Mail auf; die Aktionen können Sie für den Shop schon vorbereiten.',
+  adrPapier: 'Das Ausstellen von ADR-Beförderungspapieren wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie Papiere als Entwurf vorbereiten und die 1000-Punkte-Rechnung nutzen; der Druck trägt „ENTWURF“.',
 };
 
 /** true, wenn der Bereich freigeschaltet ist. `freigabe` nur für Tests. */
