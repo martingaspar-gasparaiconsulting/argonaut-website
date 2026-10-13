@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import LeadDetailClient, { type LeadDetail } from './LeadDetailClient'
 import AblaufKnoepfe from '../../_components/AblaufKnoepfe'
 import ZustaendigBox from './ZustaendigBox'
+import AnrufVerlauf from '../../_components/AnrufVerlauf'
 import { ladeVerkaufsteam, ladeZustaendige } from '@/lib/verkaufsteamLaden'
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,6 +36,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         {/* Paket 168: Ablauf-Knöpfe (nur Geschäftsleitung, nur eingeschaltete) */}
         <AblaufKnoepfe modul="leads" vorgangId={lead.id} />
         {stand.bereit ? <ZustaendigBox leadId={lead.id} team={stand.team} setter={z.setter_user_id} closer={z.closer_user_id} frei={stand.frei} ich={stand.ich} /> : null}
+        {/* Paket 361: Anrufe mit Ergebnis, Nummer zum Antippen, Zeit bis zum ersten Anruf */}
+        <AnrufVerlauf leadId={lead.id} telefon={lead.telefon} angelegt={lead.created_at} />
         <LeadDetailClient lead={lead} ohneAngebot={stand.frei} />
       </main>
     </div>

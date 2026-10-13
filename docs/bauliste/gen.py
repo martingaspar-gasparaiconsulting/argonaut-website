@@ -5,7 +5,7 @@ esc=html.escape
 WER={"G":("gemeinsam","g"),"C":("Claude","c"),"M":("Martin","m")}
 def st_cls(s):
     return {"live":"ok","läuft":"run","nächster":"next"}.get(s,"wait" if "wartet" in s else "open")
-tot_bis_test=0; tot_s3=0; tot_kfz=0; tot_mob=0; tot_alle=0; tot_chem=0; tot_ext=0; tot_acad=0; tot_vk=0; tot_co=0; tot_lk=0; done=0
+tot_bis_test=0; tot_s3=0; tot_kfz=0; tot_mob=0; tot_alle=0; tot_chem=0; tot_ext=0; tot_acad=0; tot_vk=0; tot_co=0; tot_lk=0; tot_mo=0; done=0
 def pz(x):
     return int(x) if str(x).isdigit() else 0
 for sid,_,_,rows in S:
@@ -22,8 +22,9 @@ for sid,_,_,rows in S:
         elif sid=="vk": tot_vk+=p
         elif sid=="co": tot_co+=p
         elif sid=="lk": tot_lk+=p
+        elif sid=="mo": tot_mo+=p
         else: tot_ext+=p
-gesamt=tot_bis_test+tot_s3+tot_kfz+tot_mob+tot_alle+tot_chem+tot_ext+tot_acad+tot_vk+tot_co+tot_lk
+gesamt=tot_bis_test+tot_s3+tot_kfz+tot_mob+tot_alle+tot_chem+tot_ext+tot_acad+tot_vk+tot_co+tot_lk+tot_mo
 alle=gesamt+done
 proz=round(done*100/alle)
 secs=[]
@@ -152,19 +153,19 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 13.10.2026 · _p360 unterwegs · VK4 Teil 1 Anruf-Sitzung gebaut · nächster VK4 Teil 2 Zeit bis zum ersten Anruf, Verlauf, Auswertung</div>
+<div class="eyebrow">ARGONAUT OS · Stand 13.10.2026 · _p361 unterwegs · VK4 komplett (Anruf-Sitzung, Zeit bis zum ersten Anruf, Verlauf) · nächster VK11 Anruf-Sperrliste und Erlaubnis-Ampel</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
 <div class="zahl gold"><b>{tot_bis_test}</b><span>Pushes Stufe 0–2 (Rest wartet)</span></div>
 <div class="zahl"><b>{tot_s3}</b><span>Pushes Stufe 3 + Dossiers</span></div>
-<div class="zahl"><b>{tot_kfz}</b><span>Pushes Kfz-Pilot</span></div><div class="zahl"><b>{tot_alle}</b><span>Pushes für alle Branchen</span></div><div class="zahl"><b>{tot_mob}</b><span>Pushes Mobilität</span></div><div class="zahl"><b>{tot_chem}</b><span>Pushes Chemie und Shop</span></div><div class="zahl"><b>{tot_ext}</b><span>Pushes externe Partner</span></div><div class="zahl"><b>{tot_acad}</b><span>Pushes Academy</span></div><div class="zahl"><b>{tot_vk}</b><span>Pushes Verkaufsteam</span></div><div class="zahl"><b>{tot_co}</b><span>Pushes Live und Coaching</span></div><div class="zahl"><b>{tot_lk}</b><span>Pushes Lücken für alle</span></div>
+<div class="zahl"><b>{tot_kfz}</b><span>Pushes Kfz-Pilot</span></div><div class="zahl"><b>{tot_alle}</b><span>Pushes für alle Branchen</span></div><div class="zahl"><b>{tot_mob}</b><span>Pushes Mobilität</span></div><div class="zahl"><b>{tot_chem}</b><span>Pushes Chemie und Shop</span></div><div class="zahl"><b>{tot_ext}</b><span>Pushes externe Partner</span></div><div class="zahl"><b>{tot_acad}</b><span>Pushes Academy</span></div><div class="zahl"><b>{tot_vk}</b><span>Pushes Verkaufsteam</span></div><div class="zahl"><b>{tot_co}</b><span>Pushes Live und Coaching</span></div><div class="zahl"><b>{tot_lk}</b><span>Pushes Lücken für alle</span></div><div class="zahl"><b>{tot_mo}</b><span>Pushes Motoren (Stufe 4)</span></div><div class="zahl"><b>≈ 200</b><span>Pushes Einzelfälle auf Abruf (nicht eingerechnet)</span></div>
 <div class="zahl"><b>{gesamt}</b><span>Pushes gesamt offen</span></div>
 <div class="zahl"><b>≈ {round(gesamt/2)}</b><span>Blöcke à 2 Std. + 1 Testtag</span></div>
 </div>
 <div class="fort"><span>{done} von {alle} Pushes erledigt · {proz} %</span><div class="balken" role="progressbar" aria-valuenow="{proz}" aria-valuemin="0" aria-valuemax="100"><i style="width:{proz}%"></i></div></div>
 <div class="leg">Wer: <span class="w w-g">gemeinsam</span><span class="w w-c">Claude</span><span class="w w-m">Martin</span> · Status: <span class="st st-ok">✓ erledigt</span><span class="st st-run">läuft</span><span class="st st-next">nächster</span><span class="st st-open">offen</span><span class="st st-wait">wartet</span></div>
-<nav class="sprung" aria-label="Abschnitte"><a href="#offen" style="border-color:var(--gold);font-weight:700">📌 Offen</a><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#alle">Für alle</a><a href="#mob">Mobilität</a><a href="#chem">Chemie und Shop</a><a href="#amp">Ampel-Beschluss</a><a href="#acad">Academy</a><a href="#vk">Verkaufsteam</a><a href="#co">Live und Coaching</a><a href="#lk">Lücken für alle</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#s6">Erste Kunden</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
+<nav class="sprung" aria-label="Abschnitte"><a href="#offen" style="border-color:var(--gold);font-weight:700">📌 Offen</a><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#alle">Für alle</a><a href="#mob">Mobilität</a><a href="#chem">Chemie und Shop</a><a href="#amp">Ampel-Beschluss</a><a href="#acad">Academy</a><a href="#vk">Verkaufsteam</a><a href="#co">Live und Coaching</a><a href="#lk">Lücken für alle</a><a href="#mo">Motoren</a><a href="#ef">Auf Abruf</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#s6">Erste Kunden</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
 </div>
 {OFFEN}
 {secs[0]}{secs[1]}{secs[2]}

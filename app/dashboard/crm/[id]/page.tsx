@@ -7,6 +7,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import AdressBlock from "../../_components/AdressBlock";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
+import AnrufVerlauf from "../../_components/AnrufVerlauf";
 import { useBranchenVorlage } from "../../_components/useBranchenVorlage";
 import { KONTAKT_MODUL } from "../KontaktAnsicht";
 import { kontaktAmpel, tageSeitKontakt, intervallVon } from "@/lib/kontaktVorlage";
@@ -1579,6 +1580,10 @@ export default function CrmDetailPage() {
                 <Info label="Angelegt am" wert={datumLang(kontakt.created_at)} />
                 {erfasserName(kontakt) && <Info label="Angelegt von" wert={erfasserName(kontakt) as string} />}
                 {tagDe((kontakt as { geaendert_am?: unknown }).geaendert_am) && <Info label="Zuletzt geändert" wert={tagDe((kontakt as { geaendert_am?: unknown }).geaendert_am)} />}
+              </div>
+              {/* Paket 361: Anrufe an diesem Kontakt (vk_anruf) */}
+              <div style={{ marginTop: 16 }}>
+                <AnrufVerlauf kontaktId={kontakt.id} telefon={kontakt.telefon || kontakt.mobil || null} />
               </div>
               {kontakt.firma_id && (
                 <div style={{ marginTop: 16 }}>

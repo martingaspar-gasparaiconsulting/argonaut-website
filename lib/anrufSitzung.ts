@@ -60,6 +60,7 @@ export type LeadRoh = {
   quelle?: string | null; created_at?: string | null; nachricht?: string | null; dienstleistung?: string | null;
   setter_user_id?: string | null; closer_user_id?: string | null;
   anruf_versuche?: number | null; letzter_anruf_ergebnis?: string | null; letzter_anruf_am?: string | null; naechster_anruf_am?: string | null;
+  erster_anruf_am?: string | null;
 };
 export type KontaktRoh = Record<string, unknown> & { id: string };
 export type AnrufKurz = { kontakt_id?: string | null; lead_id?: string | null; ergebnis: string; rueckruf_am?: string | null; erstellt_am: string };
@@ -226,6 +227,90 @@ export function seitText(iso: string | null | undefined, jetzt: Date): string {
   const std = Math.round(min / 60);
   if (std < 48) return `vor ${std} Std.`;
   return `vor ${Math.round(std / 24)} Tagen`;
+}
+
+// ============================================================================
+// Paket 361 (VK4 Teil 2): Zeit bis zum ersten Anruf, Glocke, Auswertung.
+// ============================================================================
+
+export const ERSTANRUF_SCHWELLE_MIN = 15;   // so lange darf ein neuer Lead warten, dann Glocke
+export const ERSTANRUF_FENSTER_STD = 24;    // ältere Leads lösen keine Glocke mehr aus
+
+export type Reaktion = { minuten: number | null; laeuft: boolean; ampel: 'gruen' | 'gelb' | 'rot' | 'grau'; text: string };
+
+/** Minuten von der Anfrage bis zum ersten Anruf; ohne Anruf läuft die Uhr (bei offenen Leads mit Nummer). */
+export function ersteReaktion(l: Partial<LeadRoh>, jetzt: Date): Reaktion {
+  const start = l.created_at ? new Date(l.created_at).getTime() : NaN;
+  if (Number.isNaN(start)) return { minuten: null, laeuft: false, ampel: 'grau', text: '—' };
+  const erst = l.erster_anruf_am ? new Date(l.erster_anruf_am).getTime() : NaN;
+  const laeuft = Number.isNaN(erst);
+  if (laeuft && (!telefonNorm(l.telefon) || !leadAktiv(l as LeadRoh))) return { minuten: null, laeuft: false, ampel: 'grau', text: 'nicht angerufen' };
+  const minuten = Math.max(0, Math.round(((laeuft ? jetzt.getTime() : erst) - start) / 60_000));
+  const ampel = minuten <= 5 ? 'gruen' : minuten <= 60 ? 'gelb' : 'rot';
+  return { minuten, laeuft, ampel, text: (laeuft ? 'wartet seit ' : 'angerufen nach ') + dauerText(minuten) };
+}
+
+/** „4 Min." / „2 Std. 10 Min." / „3 Tage". */
+export function dauerText(min: number): string {
+  if (min < 60) return `${min} Min.`;
+  if (min < 48 * 60) { const h = Math.floor(min / 60), m = min % 60; return m ? `${h} Std. ${m} Min.` : `${h} Std.`; }
+  return `${Math.round(min / 1440)} Tage`;
+}
+
+/** Kennzahlen „Zeit bis zum ersten Anruf" über Leads mit Telefonnummer. */
+export function reaktionsZahlen(leads: readonly LeadRoh[], jetzt: Date): { angerufen: number; median: number | null; unter5: number; unter60: number; wartend: number } {
+  const zeiten: number[] = []; let wartend = 0;
+  for (const l of leads) {
+    const r = ersteReaktion(l, jetzt);
+    if (r.minuten == null) continue;
+    if (r.laeuft) wartend++; else zeiten.push(r.minuten);
+  }
+  zeiten.sort((a, b) => a - b);
+  const n = zeiten.length;
+  const median = n ? (n % 2 ? zeiten[(n - 1) / 2] : Math.round((zeiten[n / 2 - 1] + zeiten[n / 2]) / 2)) : null;
+  const anteil = (g: number) => (n ? Math.round((zeiten.filter((z) => z <= g).length / n) * 100) : 0);
+  return { angerufen: n, median, unter5: anteil(5), unter60: anteil(60), wartend };
+}
+
+/** Für den Glocken-Cron: neue Leads, die seit SCHWELLE Minuten (aber höchstens FENSTER Stunden) auf den ersten Anruf warten. */
+export function erstanrufFaellig<T extends LeadRoh & { owner_user_id?: string | null }>(leads: readonly T[], jetzt: Date, schwelleMin = ERSTANRUF_SCHWELLE_MIN, fensterStd = ERSTANRUF_FENSTER_STD): T[] {
+  return leads.filter((l) => {
+    if (l.erster_anruf_am || !l.created_at || !telefonNorm(l.telefon) || !leadAktiv(l)) return false;
+    const alter = (jetzt.getTime() - new Date(l.created_at).getTime()) / 60_000;
+    return Number.isFinite(alter) && alter >= schwelleMin && alter <= fensterStd * 60;
+  });
+}
+
+/** Wer bekommt die Glocke: der Setter, sonst die Geschäftsleitung. */
+export function glockeAn(l: { setter_user_id?: string | null; owner_user_id?: string | null }): string | null {
+  return l.setter_user_id || l.owner_user_id || null;
+}
+
+export function glockeText(l: LeadRoh, jetzt: Date): { titel: string; nachricht: string; link: string } {
+  const min = l.created_at ? Math.max(0, Math.round((jetzt.getTime() - new Date(l.created_at).getTime()) / 60_000)) : 0;
+  const name = txt(l.name) || 'Neuer Lead';
+  return {
+    titel: `☎️ ${name} wartet seit ${dauerText(min)} auf den ersten Anruf`,
+    nachricht: `Neue Anfrage${l.quelle ? ` (${l.quelle})` : ''}${l.dienstleistung ? `: ${txt(l.dienstleistung).slice(0, 80)}` : ''}. Je schneller der erste Anruf, desto eher wird ein Termin daraus.`,
+    link: `/dashboard/akquise/sitzung`,
+  };
+}
+
+export type AnrufZeile = { user_id?: string | null; anrufer_name?: string | null; ergebnis: string; erstellt_am: string };
+export type PersonZahlen = { user_id: string; name: string; anrufe: number; erreicht: number; termine: number; quote: number; jeTermin: number | null };
+/** Auswertung je Person: Anrufe, Erreicht-Quote, Termine, Anrufe je Termin. Meiste Anrufe zuerst. */
+export function personenZahlen(anrufe: readonly AnrufZeile[], namen?: ReadonlyMap<string, string>): PersonZahlen[] {
+  const m = new Map<string, AnrufZeile[]>();
+  for (const a of anrufe) { const k = a.user_id ?? 'unbekannt'; if (!m.has(k)) m.set(k, []); m.get(k)!.push(a); }
+  return [...m.entries()].map(([user_id, liste]) => {
+    const t = tagesZahlen(liste);
+    return { user_id, name: namen?.get(user_id) ?? liste.find((x) => x.anrufer_name)?.anrufer_name ?? 'Unbekannt', anrufe: t.anrufe, erreicht: t.erreicht, termine: t.termine, quote: t.quote, jeTermin: t.termine ? Math.round((t.anrufe / t.termine) * 10) / 10 : null };
+  }).sort((a, b) => b.anrufe - a.anrufe || a.name.localeCompare(b.name, 'de'));
+}
+
+/** Verteilung der Ergebnisse (für die Auswertung). */
+export function ergebnisVerteilung(anrufe: readonly { ergebnis: string }[]): { key: string; name: string; anzahl: number; farbe: string }[] {
+  return ERGEBNISSE.map((e) => ({ key: e.key, name: e.name, farbe: e.farbe, anzahl: anrufe.filter((a) => a.ergebnis === e.key).length })).filter((x) => x.anzahl > 0);
 }
 
 export { zeitDe, uhrDe, berlinTag };

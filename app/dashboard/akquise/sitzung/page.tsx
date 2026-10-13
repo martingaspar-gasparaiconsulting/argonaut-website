@@ -16,6 +16,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import {
   ERGEBNISSE, GRUND_TEXT, MAX_VERSUCHE, warteschlange, rueckrufVorschlaege, lokalZuIso, anrufPruefen, anrufZeile,
   tagesZahlen, seitText, ergebnis as ergebnisInfo, zeitDe, berlinTag, uhrDe,
+  ersteReaktion, reaktionsZahlen, personenZahlen, ergebnisVerteilung, dauerText, type AnrufZeile,
   type Eintrag, type LeadRoh, type KontaktRoh, type AnrufKurz, type Quellen, type ErgebnisKey,
 } from '@/lib/anrufSitzung';
 import { filtere, type Segment } from '@/lib/segmente';
@@ -32,7 +33,7 @@ const C = {
   text: '#E8EDF4', dim: '#8FA3BE', rand: 'rgba(143,163,190,0.18)', rot: '#E06666', warn: '#E0A24C',
 };
 
-const LEAD_SPALTEN = 'id, name, telefon, email, status, stufe, quelle, created_at, nachricht, dienstleistung, setter_user_id, closer_user_id, anruf_versuche, letzter_anruf_ergebnis, letzter_anruf_am, naechster_anruf_am';
+const LEAD_SPALTEN = 'id, name, telefon, email, status, stufe, quelle, created_at, nachricht, dienstleistung, setter_user_id, closer_user_id, anruf_versuche, letzter_anruf_ergebnis, letzter_anruf_am, naechster_anruf_am, erster_anruf_am';
 const KONTAKT_SPALTEN = 'id, vorname, nachname, firma, email, telefon, mobil, ort, plz, land, position, status, quelle, kunde_seit, letzter_kontakt_am, betreuungs_intervall_tage, werbe_einwilligung, werbe_widerspruch_am';
 type Gruppe = Segment & { id: string; name: string };
 type Gespeichert = { id: string; name: string; ergebnis: string; zeit: string };
@@ -75,6 +76,8 @@ export default function AnrufSitzungSeite() {
   const [busy, setBusy] = useState(false);
   const [zuletzt, setZuletzt] = useState<Gespeichert | null>(null);
   const [erledigt, setErledigt] = useState(0);
+  const [auswertungAuf, setAuswertungAuf] = useState(false);
+  const [anrufe30, setAnrufe30] = useState<AnrufZeile[] | null>(null);
 
   const ich = stand?.ich ?? null;
 
@@ -132,6 +135,19 @@ export default function AnrufSitzungSeite() {
     for (const x of liste) z[x.grund]++;
     return z;
   }, [liste]);
+
+  // Paket 361: Auswertung 30 Tage — nur Geschäftsleitung und Teamleitung.
+  const darfAuswertung = !!stand && (stand.istChef || stand.team.some((p) => p.user_id === stand.ich && p.funktion === 'teamleitung'));
+  async function auswertungLaden() {
+    setAuswertungAuf((v) => !v);
+    if (anrufe30) return;
+    const seit = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const { data } = await supabase.from('vk_anruf').select('user_id, anrufer_name, ergebnis, erstellt_am').gte('erstellt_am', seit).limit(10000);
+    setAnrufe30(((data as AnrufZeile[]) ?? []));
+  }
+  const seit30 = jetzt.getTime() - 30 * 86_400_000;
+  const reaktion30 = useMemo(() => reaktionsZahlen(leads.filter((l) => l.created_at && new Date(l.created_at).getTime() >= seit30), jetzt), [leads, jetzt, seit30]);
+  const namen = useMemo(() => new Map((stand?.team ?? []).map((p) => [p.user_id, p.name] as [string, string])), [stand]);
 
   function neuStart() { setWahl(null); setRueckruf(null); setRueckLokal(''); setNotiz(''); }
 
@@ -199,7 +215,46 @@ export default function AnrufSitzungSeite() {
         <Kpi wert={String(heute.erreicht)} label="Erreicht" sub={heute.anrufe ? `${heute.quote} %` : undefined} farbe={C.cyan} />
         <Kpi wert={String(heute.termine)} label="Termine" farbe={C.green} />
         <Kpi wert={String(liste.length)} label="In der Liste" farbe={C.gold} sub={`${zaehl.rueckruf} Rückrufe · ${zaehl.neu} neu`} />
+        <Kpi wert={reaktion30.median == null ? '—' : dauerText(reaktion30.median)} label="Bis zum 1. Anruf (Median)" farbe={reaktion30.median == null ? C.dim : reaktion30.median <= 5 ? C.green : reaktion30.median <= 60 ? C.warn : C.rot}
+          sub={reaktion30.angerufen ? `${reaktion30.unter5} % in 5 Min. · ${reaktion30.wartend} warten` : (reaktion30.wartend ? `${reaktion30.wartend} warten` : 'letzte 30 Tage')} />
       </div>
+
+      {darfAuswertung && (
+        <div style={{ marginBottom: 14 }}>
+          <button style={st.knopf} onClick={() => void auswertungLaden()}>{auswertungAuf ? 'Auswertung schließen' : '📊 Auswertung 30 Tage'}</button>
+          {auswertungAuf && (
+            <div style={{ ...st.karte, marginTop: 10 }}>
+              <div style={st.titel}>Anrufe je Person (letzte 30 Tage)</div>
+              {!anrufe30 ? <div style={st.dim}>Lädt …</div> : anrufe30.length === 0 ? <div style={st.dim}>Noch keine Anrufe in den letzten 30 Tagen.</div> : (
+                <>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                      <thead><tr>{['Person', 'Anrufe', 'Erreicht', 'Quote', 'Termine', 'Anrufe je Termin'].map((h) => <th key={h} style={st.th}>{h}</th>)}</tr></thead>
+                      <tbody>{personenZahlen(anrufe30, namen).map((z) => (
+                        <tr key={z.user_id}><td style={st.td}>{z.name}</td><td style={st.tdz}>{z.anrufe}</td><td style={st.tdz}>{z.erreicht}</td><td style={st.tdz}>{z.quote} %</td><td style={st.tdz}>{z.termine}</td><td style={st.tdz}>{z.jeTermin ?? '—'}</td></tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                  <div style={{ ...st.titel, marginTop: 14 }}>Ergebnisse</div>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    {ergebnisVerteilung(anrufe30).map((e) => {
+                      const max = Math.max(...ergebnisVerteilung(anrufe30).map((x) => x.anzahl));
+                      return (
+                        <div key={e.key} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 48px', gap: 8, alignItems: 'center', fontSize: 13.5 }}>
+                          <span style={{ color: e.farbe }}>{e.name}</span>
+                          <div style={{ background: 'rgba(143,163,190,0.12)', borderRadius: 6, height: 12 }}><div style={{ width: `${Math.round((e.anzahl / max) * 100)}%`, background: e.farbe, height: '100%', borderRadius: 6 }} /></div>
+                          <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{e.anzahl}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p style={{ ...st.dim, marginTop: 12 }}>Die Zahlen dienen der Planung im Team (wie viele Anrufe kostet ein Termin), nicht der Leistungskontrolle einzelner Personen.</p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {!laeuft && (
         <div style={st.karte}>
@@ -250,6 +305,10 @@ export default function AnrufSitzungSeite() {
           <div style={st.infos}>
             {aktuell.grund === 'rueckruf' && aktuell.faellig && <span>🔁 Rückruf vereinbart für {zeitDe(aktuell.faellig)}</span>}
             {aktuell.angelegt && <span>Anfrage {seitText(aktuell.angelegt, jetzt)}{aktuell.quelle ? ` · ${aktuell.quelle}` : ''}</span>}
+            {aktuell.typ === 'lead' && aktuell.grund === 'neu' && (() => {
+              const r = ersteReaktion({ created_at: aktuell.angelegt, telefon: aktuell.telefon }, jetzt);
+              return r.minuten != null ? <span style={{ color: r.ampel === 'gruen' ? C.green : r.ampel === 'gelb' ? C.warn : C.rot, fontWeight: 700 }}>⏱ {r.text}</span> : null;
+            })()}
             <span>{aktuell.versuche ? `${aktuell.versuche}. Versuch war ${seitText(aktuell.letzterAm, jetzt)} (${ergebnisInfo(aktuell.letztes)?.name ?? '—'})` : 'Erster Anruf'}</span>
             <Link href={aktuell.typ === 'lead' ? `/dashboard/leads/${aktuell.id}` : `/dashboard/crm/${aktuell.id}`} style={{ color: C.gold }} target="_blank">
               {aktuell.typ === 'lead' ? 'Lead öffnen ↗' : 'Kontakt öffnen ↗'}
@@ -336,5 +395,8 @@ const st: Record<string, CSSProperties> = {
   ergebnisse: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 },
   erg: { display: 'flex', alignItems: 'center', gap: 8, border: '1px solid', borderRadius: 12, padding: '12px 12px', fontSize: 14.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' },
   zuletzt: { color: C.dim, fontSize: 14, background: C.navy2, border: `1px solid ${C.rand}`, borderRadius: 10, padding: '10px 14px' },
+  th: { textAlign: 'left', color: C.dim, fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '6px 8px', borderBottom: `1px solid ${C.rand}` },
+  td: { padding: '7px 8px', borderBottom: `1px solid ${C.rand}` },
+  tdz: { padding: '7px 8px', borderBottom: `1px solid ${C.rand}`, textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
   linkKnopf: { background: 'none', border: 'none', color: C.gold, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, padding: 0, textDecoration: 'underline' },
 };
