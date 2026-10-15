@@ -7,7 +7,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import EinsatzNachweis from "../../_components/EinsatzNachweis";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import ERechnungDialog from "../../_components/ERechnungDialog";
-import { steuerGruppen, cent, satzText, type SteuerPosten } from "../../_components/steuerLogik";
+import { cent, satzText, type SteuerPosten } from "../../_components/steuerLogik";
 import { NurVoll } from "../../_components/Ansicht";
 // P54 Paket 3 — Abschlags- und Schlussrechnung. Die gesamte neue Oberflaeche
 // liegt in AbschlagsKarten.tsx, damit dieses Kern-Geld-Formular klein bleibt.
@@ -27,6 +27,7 @@ import { istMitarbeiterKennung, RECHNUNG_NUR_CHEF, ZAHLUNG_NUR_CHEF, STORNO_NUR_
 // Paket 197 (GoBD): verschickte Rechnungen fest ablegen, danach festgeschrieben.
 import { stornoKnoepfe, stornoFrage, stornoFehlerText, grundBereinigen } from '@/lib/stornoRechnung';
 import { sonderfallLesen, sonderfallLabel } from '@/lib/steuerSonderfall';
+import { kopfSummen } from '@/lib/rechnungKopf';
 import { anschriftZerlegen } from '@/lib/rechnungAnschrift';
 import { ABLAGE_ANLASS_TEXT, FESTGESCHRIEBEN_HINWEIS, istFestgeschrieben, originalPdf, pruefsummeKurz, type AblageZeile } from '@/lib/rechnungAblage';
 
@@ -404,13 +405,10 @@ export default function RechnungDetail() {
       netto: zeileNetto(z),
       satz: kleinunternehmer ? 0 : parseZahl(z.mwst_satz),
     }));
-    const s = steuerGruppen(posten);
-    if (kleinunternehmer) {
-      return { netto: s.netto, mwst: 0, brutto: s.netto, gruppen: [] as typeof s.gruppen };
-    }
-    return { netto: s.netto, mwst: s.steuer, brutto: s.brutto, gruppen: s.gruppen };
+    // HW-5: § 13b -> Steuer 0, Brutto = Netto (wie PDF und E-Rechnung)
+    return kopfSummen(posten, { kleinunternehmer, reverseCharge: zusatz.reverseCharge });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zeilen, kleinunternehmer]);
+  }, [zeilen, kleinunternehmer, zusatz.reverseCharge]);
 
   // ---------- Speichern ----------
   async function speichernJetzt() {
@@ -1531,12 +1529,12 @@ export default function RechnungDetail() {
       <Karte titel="Summen">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           <SummeFeld label="Netto" wert={geld(summen.netto, waehrung)} farbe={C.cyan} />
-          <SummeFeld label={kleinunternehmer ? "MwSt (§19: keine)" : "Umsatzsteuer"} wert={geld(summen.mwst, waehrung)} farbe={C.textDim} />
+          <SummeFeld label={kleinunternehmer ? "MwSt (§19: keine)" : summen.ohneSteuer === "reverse_charge" ? "Umsatzsteuer (§ 13b: schuldet der Auftraggeber)" : "Umsatzsteuer"} wert={geld(summen.mwst, waehrung)} farbe={C.textDim} />
           <SummeFeld label="Brutto" wert={geld(summen.brutto, waehrung)} farbe={C.gold} />
         </div>
 
         {/* Aufschluesselung nach Steuersaetzen — genau diese Aufstellung erscheint im PDF */}
-        {!kleinunternehmer && summen.gruppen.length > 0 && (
+        {!kleinunternehmer && !summen.ohneSteuer && summen.gruppen.length > 0 && (
           <div
             style={{
               marginTop: 16,
