@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { kontaktAusLead } from '@/lib/leadKontakt'
+import { angebotAusLeadUrl, aufmassTerminUrl } from '@/lib/leadWeiter'
 import { STUFEN_ALLE, STUFEN_INFO, istStufe, stufeAusStatus, feldwerteFuerStufe, type Stufe } from '@/lib/leadStufen'
 import { startWerte, stoppWerte, sollStoppen, NACHFASS_SCHRITTE } from '@/lib/leadNachfass'
 
@@ -438,7 +439,7 @@ export default function LeadDetailClient({ lead, ohneAngebot = false }: { lead: 
             </div>
           ) : (
             <>
-              <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)', margin: '6px 0 12px' }}>{'Ü'}bernimm diesen Lead als dauerhaften Kontakt ins CRM {'–'} z.{' '}B. wenn er gewonnen ist.</p>
+              <p style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', color: 'rgba(255,255,255,0.55)', margin: '6px 0 12px' }}>{'Ü'}bernehmen Sie diesen Lead als dauerhaften Kontakt ins CRM {'–'} z.{' '}B. vor dem Angebot.</p>
               <button
                 onClick={uebernehmeInCrm}
                 disabled={crmBusy}
@@ -449,6 +450,26 @@ export default function LeadDetailClient({ lead, ohneAngebot = false }: { lead: 
             </>
           )}
           {crmMeldung && <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.6)', margin: '8px 0 0' }}>{crmMeldung}</p>}
+        </section>
+
+        {/* HW-12: vom Lead direkt weiter — Aufmass-Termin und echtes Angebot (vorbelegt, ohne Preise) */}
+        <section style={card}>
+          <div style={labelStil}>Weiter</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+            <a href={aufmassTerminUrl({ ...lead, kontakt_id: kontaktId })}
+              style={{ padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(0,229,255,0.4)', color: '#00e5ff', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, textDecoration: 'none', textAlign: 'center' }}>
+              {'📅'} Aufma{'ß'}-Termin eintragen
+            </a>
+            {!ohneAngebot && (
+              <a href={angebotAusLeadUrl({ ...lead, kontakt_id: kontaktId })}
+                style={{ padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(201,168,76,0.4)', color: '#C9A84C', fontSize: 'clamp(14px, 1.25vw, 20px)', fontWeight: 700, textDecoration: 'none', textAlign: 'center' }}>
+                {'📝'} Angebot anlegen
+              </a>
+            )}
+            <p style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+              Kunde und Anfrage werden übernommen{kontaktId ? '' : ' – mit Kontakt im CRM auch E-Mail und Zuordnung'}. Preise tragen Sie selbst ein.
+            </p>
+          </div>
         </section>
 
         {(lead.score != null || lead.ki_intent || lead.ki_zusammenfassung || lead.ki_naechster_schritt) && (

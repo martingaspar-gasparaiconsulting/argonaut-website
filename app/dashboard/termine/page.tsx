@@ -16,6 +16,7 @@ import Leerzustand from "../_components/Leerzustand";
 import KiAuge from "../_components/KiAuge";
 import { augeTermine } from "@/lib/auge";
 import { zaehleTermine } from "@/lib/augeZaehler";
+import { vorbelegungLesen } from "@/lib/leadWeiter";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -133,6 +134,20 @@ export default function TermineCockpit() {
     for (const k of kontakte) m[k.id] = k.anzeigename || k.email || "Kunde im CRM";
     return m;
   }, [kontakte]);
+
+  // HW-12: Aufmass-Termin vom Lead (?neu=1&titel=…&kontakt=…&email=…&notiz=…) — Formular oeffnet vorbelegt
+  useEffect(() => {
+    try {
+      const v = vorbelegungLesen(window.location.search);
+      if (!v) return;
+      if (v.titel) setTitel(v.titel);
+      if (v.email) setWer(v.email);
+      if (v.kontakt) setKontaktId(v.kontakt);
+      if (v.ort) setOrt(v.ort);
+      if (v.notiz) setNotiz(v.notiz);
+      setModalOffen(true);
+    } catch { /* Vorbelegung ist Zugabe */ }
+  }, []);
 
   useEffect(() => {
     (async () => {

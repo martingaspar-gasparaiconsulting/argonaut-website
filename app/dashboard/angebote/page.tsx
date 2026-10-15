@@ -28,6 +28,7 @@ import AngebotSprache from '../_components/AngebotSprache';
 import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { fehlendePreise, type FormPos } from '@/lib/angebotSprache';
 import { leseZahlOder, centRunden, inCent, rundeStellen } from '@/lib/zahlen';
+import { vorbelegungLesen } from '@/lib/leadWeiter';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -114,6 +115,19 @@ export default function AngebotePage() {
     const { count } = await supabase.from('angebote').select('id', { count: 'exact', head: true }).eq('status', ARCHIV);
     setArchivAnzahl(count ?? 0);
   }, [zeigeArchiv]);
+
+  // HW-12: Vorbelegung vom Lead (?neu=1&kunde=…&kontakt=…&titel=…&notiz=…) — nichts wird ohne Klick gespeichert
+  useEffect(() => {
+    try {
+      const v = vorbelegungLesen(window.location.search);
+      if (!v) return;
+      if (v.kunde) setKunde(v.kunde);
+      if (v.kontakt) setKontaktId(v.kontakt);
+      if (v.titel) setTitel(v.titel);
+      if (v.notiz) setNotiz(v.notiz);
+      setOk('Kunde und Anfrage aus dem Lead übernommen — bitte Positionen und Preise eintragen.');
+    } catch { /* Vorbelegung ist Zugabe */ }
+  }, []);
 
   useEffect(() => {
     (async () => {
