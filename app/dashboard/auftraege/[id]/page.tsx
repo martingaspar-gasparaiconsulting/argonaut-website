@@ -419,11 +419,17 @@ export default function AuftragDetail() {
   }
 
   // ---------- Modul 6: Rechnung aus Auftrag erzeugen ----------
-  async function rechnungOeffnen() {
+  async function rechnungOeffnen(art: "normal" | "abschlag" | "schluss" = "normal") {
     if (rechnungLaedt) return;
+    // HW-9: Abschlag nach Leistungsstand
+    let prozent: string | null = null;
+    if (art === "abschlag") {
+      prozent = window.prompt("Abschlagsrechnung: Wie viel Prozent der Leistung sind erbracht? (z. B. 40)", "");
+      if (prozent === null || prozent.trim() === "") return;
+    }
 
     // Bereits fakturiert? -> direkt zur bestehenden Rechnung
-    if (auftrag?.rechnung_id) {
+    if (auftrag?.rechnung_id && art !== "abschlag") {
       router.push("/dashboard/rechnungen/" + auftrag.rechnung_id);
       return;
     }
@@ -441,7 +447,7 @@ export default function AuftragDetail() {
       const senden = (trotzdem: boolean) => fetch("/api/rechnung-aus-auftrag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auftragId: id, trotzdem }),
+        body: JSON.stringify({ auftragId: id, trotzdem, art, prozent }),
       });
       let res = await senden(false);
       let daten = await res.json().catch(() => ({}));
@@ -461,8 +467,8 @@ export default function AuftragDetail() {
         return;
       }
 
-      // Nahtstelle greift: Auftrag lokal als fakturiert markieren (Badge)
-      setAuftrag((prev: any) => (prev ? { ...prev, rechnung_id: daten.rechnungId } : prev));
+      // Nahtstelle greift: Auftrag lokal als fakturiert markieren (Badge) — nicht bei Abschlaegen
+      if (art !== "abschlag") setAuftrag((prev: any) => (prev ? { ...prev, rechnung_id: daten.rechnungId } : prev));
 
       // Weiter zur Rechnungs-Detailseite (kommt in R4)
       router.push("/dashboard/rechnungen/" + daten.rechnungId);
@@ -710,8 +716,9 @@ export default function AuftragDetail() {
                 ✓ Fakturiert
               </span>
             ) : darfAbrechnen === false ? null : (
+              <>
               <button
-                onClick={rechnungOeffnen}
+                onClick={() => rechnungOeffnen("normal")}
                 disabled={rechnungLaedt}
                 style={{
                   background: "transparent",
@@ -728,6 +735,24 @@ export default function AuftragDetail() {
               >
                 {rechnungLaedt ? "ARGONAUT erstellt die Rechnung…" : "🧾 Rechnung erstellen"}
               </button>
+              {/* HW-9: Abschlag nach Leistungsstand und Schlussrechnung mit Absetzung der Abschlaege */}
+              <button
+                onClick={() => rechnungOeffnen("abschlag")}
+                disabled={rechnungLaedt}
+                title="Abschlagsrechnung nach Leistungsstand (§ 632a BGB) – jede Position mit ihrem Anteil"
+                style={{ background: "transparent", color: C.gold, border: `1px solid ${C.gold}55`, borderRadius: 10, padding: "11px 16px", fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, cursor: rechnungLaedt ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", opacity: rechnungLaedt ? 0.6 : 1 }}
+              >
+                ➗ Abschlag
+              </button>
+              <button
+                onClick={() => rechnungOeffnen("schluss")}
+                disabled={rechnungLaedt}
+                title="Schlussrechnung über den ganzen Auftrag – bisherige Abschläge werden abgesetzt"
+                style={{ background: "transparent", color: C.gold, border: `1px solid ${C.gold}55`, borderRadius: 10, padding: "11px 16px", fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, cursor: rechnungLaedt ? "wait" : "pointer", fontFamily: "'DM Sans', sans-serif", opacity: rechnungLaedt ? 0.6 : 1 }}
+              >
+                🏁 Schlussrechnung
+              </button>
+              </>
             )}
             <button
               onClick={speichernJetzt}

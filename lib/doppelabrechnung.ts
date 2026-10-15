@@ -33,9 +33,18 @@ export function zaehlendeRechnungen(rows: readonly VorhandeneRechnung[] | null |
   return (Array.isArray(rows) ? rows : []).filter((r) => String(r?.zahlungsstatus ?? '') !== 'storniert');
 }
 
-/** Warntext oder null, wenn nichts dagegen spricht. */
-export function doppelWarnung(rows: readonly VorhandeneRechnung[] | null | undefined, wofuer: string): string | null {
-  const z = zaehlendeRechnungen(rows);
+/**
+ * Warntext oder null, wenn nichts dagegen spricht.
+ * HW-9: Fuer eine Abschlags- oder Schlussrechnung sind vorhandene ABSCHLAEGE
+ * gewollt (sie werden in der Schlussrechnung abgesetzt) — es zaehlen dann nur
+ * normale und Schlussrechnungen.
+ */
+export function doppelWarnung(
+  rows: readonly VorhandeneRechnung[] | null | undefined,
+  wofuer: string,
+  neueArt: 'normal' | 'abschlag' | 'schluss' = 'normal',
+): string | null {
+  const z = zaehlendeRechnungen(rows).filter((r) => neueArt === 'normal' || r?.rechnungsart !== 'abschlag');
   if (z.length === 0) return null;
   const liste = z.map((r) => {
     const art = ART_TEXT[String(r?.rechnungsart ?? '')] || 'Rechnung';
