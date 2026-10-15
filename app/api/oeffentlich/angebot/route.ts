@@ -26,6 +26,7 @@ import { createClient } from '@supabase/supabase-js';
 import { perLinkSichtbar, entscheidbar, zusageName, abgelaufen as istAbgelaufenAm, ZUSAGE_ERKLAERUNG } from '@/lib/angebotZusage';
 import { annahmeNachweis, type AnnahmeKopf, type AnnahmePosition } from '@/lib/belegAblage';
 import { legeBelegAb } from '@/lib/belegAblageServer';
+import { auftragAusAngebot } from '@/lib/auftragAusAngebotServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -143,13 +144,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // HW-10: Angenommenes Angebot wird sofort zum Auftrag (Positionen, Rabatt,
+    // Steuersatz). Fehler hier halten die Zusage nicht auf — der Betrieb kann
+    // den Auftrag auf der Angebotsseite per „→ Auftrag" nachholen.
+    let auftragHinweis = '';
+    if (entscheidung === 'annehmen') {
+      try {
+        const r = await auftragAusAngebot(db, String(a.id), { betrieb: String(a.owner_user_id) });
+        if (r.ok) auftragHinweis = ' · Auftrag angelegt';
+        else console.error('[angebot] Auftrag nicht angelegt:', r.fehler);
+      } catch (e: unknown) {
+        console.error('[angebot] Auftrag Fehler:', e instanceof Error ? e.message : 'unbekannt');
+      }
+    }
+
     // Meldung an den Betrieb (Glocke). Fehler hier hält die Zusage nicht auf.
     try {
       const nr = a.angebotsnummer ? `${a.angebotsnummer} ` : '';
       await db.rpc('benachrichtigung_erstellen', {
         p_owner: a.owner_user_id, p_typ: 'angebot_entscheidung',
         p_titel: entscheidung === 'annehmen' ? `Angebot ${nr}angenommen` : `Angebot ${nr}abgelehnt`,
-        p_nachricht: `${a.titel || 'Angebot'}${name ? ` — ${name}` : ''}`,
+        p_nachricht: `${a.titel || 'Angebot'}${name ? ` — ${name}` : ''}${auftragHinweis}`,
         p_link: '/dashboard/angebote', p_ref_tabelle: 'angebote', p_ref_id: a.id, p_dedup_stunden: 24,
       });
     } catch { /* Glocke ist Zugabe */ }

@@ -44,6 +44,7 @@ type Pos = { bezeichnung: string; menge: string; einheit: string; einzelpreis: s
 type Angebot = {
   id: string; angebotsnummer: string | null; titel: string; kunde_name: string | null;
   status: string; gueltig_bis: string | null; brutto_summe: number; token: string; rechnung_id: string | null;
+  auftrag_id?: string | null; // HW-10 (SQL p373)
   kunde_email: string | null; kontakt_id: string | null;
   erstellt_von_name?: string | null; erstellt_am?: string | null; geaendert_am?: string | null;
 };
@@ -105,7 +106,7 @@ export default function AngebotePage() {
     // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Angebote.
     const sid = konkreterStandort(leseStandortCookie());
     let q = supabase.from('angebote')
-      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, kunde_email, kontakt_id, erstellt_von_name, erstellt_am, geaendert_am');
+      .select('id, angebotsnummer, titel, kunde_name, status, gueltig_bis, brutto_summe, token, rechnung_id, auftrag_id, kunde_email, kontakt_id, erstellt_von_name, erstellt_am, geaendert_am');
     if (sid) q = q.or(standortOrFilter(sid));
     q = zeigeArchiv ? q.eq('status', ARCHIV) : q.neq('status', ARCHIV);
     const { data } = await q.order('erstellt_am', { ascending: false }).limit(zeigeArchiv ? 500 : 1000);
@@ -204,11 +205,29 @@ export default function AngebotePage() {
   async function inRechnung(a: Angebot) {
     setBusy(a.id); setFehler(null); setOk(null);
     try {
-      const res = await fetch('/api/rechnung-aus-angebot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ angebotId: a.id }) });
-      const j = await res.json();
+      const senden = (trotzdem: boolean) => fetch('/api/rechnung-aus-angebot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ angebotId: a.id, trotzdem }) });
+      let res = await senden(false);
+      let j = await res.json();
+      // HW-8/HW-10: zum Auftrag gibt es schon Rechnungen -> nur auf ausdrueckliche Bestaetigung
+      if (res.status === 409 && j?.doppelt) {
+        if (!window.confirm(`${j.warnung}\n\nTrotzdem eine Rechnung direkt aus dem Angebot anlegen?`)) return;
+        res = await senden(true);
+        j = await res.json();
+      }
       if (!res.ok) { setFehler(j?.error || 'Umwandlung fehlgeschlagen.'); return; }
       setOk(j.bereitsVorhanden ? 'Zu diesem Angebot gibt es bereits eine Rechnung.' : 'Rechnung erstellt — sie liegt jetzt unter „🧾 Rechnungen".');
       setListe((l) => l.map((x) => (x.id === a.id ? { ...x, rechnung_id: j.rechnungId } : x)));
+    } finally { setBusy(null); }
+  }
+  // HW-10: angenommenes Angebot -> Auftrag (Positionen, Rabatt, Steuersatz, Kontakt)
+  async function inAuftrag(a: Angebot) {
+    setBusy(a.id); setFehler(null); setOk(null);
+    try {
+      const res = await fetch('/api/auftrag-aus-angebot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ angebotId: a.id }) });
+      const j = await res.json();
+      if (!res.ok) { setFehler(j?.error || 'Auftrag konnte nicht angelegt werden.'); return; }
+      setListe((l) => l.map((x) => (x.id === a.id ? { ...x, auftrag_id: j.auftragId } : x)));
+      window.location.href = '/dashboard/auftraege/' + j.auftragId;
     } finally { setBusy(null); }
   }
   async function loeschen(a: Angebot) {
@@ -361,6 +380,9 @@ export default function AngebotePage() {
                 {a.status !== ARCHIV && <button style={styles.mini} disabled={busy === a.id} onClick={() => zurUnterschrift(a)}>✍️ Unterschrift</button>}
                 {a.status === 'entwurf' && <button style={styles.mini} disabled={busy === a.id} onClick={() => statusSetzen(a, 'gesendet')}>✓ gesendet</button>}
                 {a.status === 'gesendet' && <button style={{ ...styles.mini, color: C.navy, background: C.green, borderColor: C.green }} disabled={busy === a.id} onClick={() => statusSetzen(a, 'angenommen')}>✓ angenommen</button>}
+                {a.status === 'angenommen' && (a.auftrag_id
+                  ? <a href={`/dashboard/auftraege/${a.auftrag_id}`} style={{ ...styles.miniLink, color: C.green }}>📋 Auftrag</a>
+                  : <button style={styles.mini} disabled={busy === a.id} onClick={() => inAuftrag(a)} title="Aus dem Angebot einen Auftrag anlegen – mit allen Positionen">→ Auftrag</button>)}
                 {a.status === 'angenommen' && (a.rechnung_id
                   ? <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>✓ Rechnung</span>
                   : darfAbrechnen !== false && <button style={{ ...styles.mini, color: C.navy, background: C.gold, borderColor: C.gold }} disabled={busy === a.id} onClick={() => inRechnung(a)}>→ Rechnung</button>)}

@@ -6,6 +6,7 @@ import { positionsNetto } from "@/lib/angebotRabatt";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
 import { steuersatz } from "@/lib/steuersatz";
+import { doppelWarnung, trotzdemGewollt } from "@/lib/doppelabrechnung";
 
 export const runtime = "nodejs";
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
 
     // 1) Angebot laden (RLS: nur eigene)
     const { data: ang, error: aErr } = await supabase.from("angebote")
-      .select("id, titel, kunde_name, kontakt_id, status, rechnung_id, standort_id").eq("id", angebotId).single();
+      .select("id, titel, kunde_name, kontakt_id, status, rechnung_id, standort_id, auftrag_id").eq("id", angebotId).single();
     if (aErr || !ang) return NextResponse.json({ error: "Angebot nicht gefunden." }, { status: 404 });
 
     // 2) Doppel-Schutz
@@ -48,6 +49,16 @@ export async function POST(req: Request) {
     }
     if (ang.status !== "angenommen") {
       return NextResponse.json({ error: "Nur angenommene Angebote können in eine Rechnung umgewandelt werden." }, { status: 400 });
+    }
+    // HW-10 + HW-8: Gibt es zum Auftrag dieses Angebots schon Rechnungen? (z. B. Abschlaege, Einsatz)
+    const auftragId: string | null = (ang as { auftrag_id?: string | null }).auftrag_id ?? null;
+    if (auftragId) {
+      const { data: andere } = await supabase.from("rechnungen")
+        .select("id, rechnungsnummer, rechnungsart, zahlungsstatus").eq("auftrag_id", auftragId);
+      const warnung = doppelWarnung(andere, "dem Auftrag dieses Angebots");
+      if (warnung && !trotzdemGewollt(body)) {
+        return NextResponse.json({ error: warnung, doppelt: true, warnung }, { status: 409 });
+      }
     }
 
     // 3) Positionen laden
@@ -84,7 +95,7 @@ export async function POST(req: Request) {
     // Filial-Stempel: bevorzugt der Standort des Angebots, sonst der aktive Standort (Cookie). Fail-open: null.
     const standortId = ang.standort_id ?? standortAusCookieHeader(req.headers.get("cookie"));
     const { data: neueRechnung, error: rErr } = await supabase.from("rechnungen").insert({
-      owner_user_id: betrieb, standort_id: standortId, auftrag_id: null, kontakt_id: ang.kontakt_id ?? null, firma_id: null,
+      owner_user_id: betrieb, standort_id: standortId, auftrag_id: auftragId, kontakt_id: ang.kontakt_id ?? null, firma_id: null,
       titel: ang.titel || "Angebot", empfaenger_name: ang.kunde_name?.trim() || null, zahlungsstatus: "offen",
       rechnungsdatum, leistungsdatum: rechnungsdatum, faelligkeitsdatum: faellig.toISOString().slice(0, 10),
       zahlungsziel_tage: 14, netto_summe: summe.netto, mwst_summe: summe.steuer, brutto_summe: summe.brutto, waehrung: "EUR",
