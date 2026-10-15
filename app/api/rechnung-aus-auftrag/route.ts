@@ -3,13 +3,17 @@ import { standortAusCookieHeader } from "@/lib/standortDaten";
 import { NextResponse } from "next/server";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { auftragZuRechnung } from "@/lib/rechnungAusAuftrag";
 
 export const runtime = "nodejs";
 
 // ============================================================
 // ARGONAUT OS · MODUL 6 (Rechnung) · R3 — "Rechnung aus Auftrag"
 // Nimmt eine Auftrags-ID, erzeugt daraus eine Rechnung:
-//   - Positionen / Summen / Kontakt / Firma / Titel werden 1:1 uebernommen
+//   - Positionen / Kontakt / Firma / Titel werden uebernommen; die Summen
+//     werden aus den Positionen je Steuersatz NEU gerechnet (HW-7)
+//   - Leistungsdatum = Lieferdatum des Auftrags (sonst Rechnungsdatum)
+//   - Positionen scheitern -> Rechnung wird storniert (HW-7, wie Angebot)
 //   - Rechnungsnummer kommt automatisch aus dem DB-Trigger (RE-JJJJ-XXXX)
 //   - Faelligkeit = Rechnungsdatum + Zahlungsziel (Tage)
 //   - schreibt die neue rechnung_id zurueck in auftraege
@@ -42,7 +46,7 @@ export async function POST(req: Request) {
     const { data: auftrag, error: auftragErr } = await supabase
       .from("auftraege")
       .select(
-        "id, titel, kontakt_id, firma_id, netto_summe, mwst_summe, brutto_summe, waehrung, rechnung_id, standort_id"
+        "id, titel, kontakt_id, firma_id, waehrung, rechnung_id, standort_id, lieferdatum"
       )
       .eq("id", auftragId)
       .single();
@@ -75,6 +79,11 @@ export async function POST(req: Request) {
     if (posErr) {
       return NextResponse.json({ error: "Positionen konnten nicht geladen werden." }, { status: 500 });
     }
+    if (!positionen || positionen.length === 0) {
+      return NextResponse.json({ error: "Der Auftrag hat keine Positionen. Bitte zuerst Positionen im Auftrag erfassen." }, { status: 400 });
+    }
+    // Kleinunternehmer setzt der Datenbank-Trigger (rechnung_ku_position/_kopf) wie bei allen Rechnungswegen
+    const { posten, summen } = auftragZuRechnung(positionen);
 
     // ---------- 4) Rechnung anlegen (Nummer via Trigger) ----------
     const heute = new Date();
@@ -97,12 +106,12 @@ export async function POST(req: Request) {
         titel: auftrag.titel ?? null,
         zahlungsstatus: "offen",
         rechnungsdatum,
-        leistungsdatum: rechnungsdatum,
+        leistungsdatum: (auftrag as { lieferdatum?: string | null }).lieferdatum || rechnungsdatum,
         faelligkeitsdatum,
         zahlungsziel_tage: zahlungszielTage,
-        netto_summe: auftrag.netto_summe ?? 0,
-        mwst_summe: auftrag.mwst_summe ?? 0,
-        brutto_summe: auftrag.brutto_summe ?? 0,
+        netto_summe: summen.netto,
+        mwst_summe: summen.mwst,
+        brutto_summe: summen.brutto,
         waehrung: auftrag.waehrung || "EUR",
       })
       .select("id")
@@ -116,25 +125,17 @@ export async function POST(req: Request) {
     const rechnungId = neueRechnung.id;
 
     // ---------- 5) Positionen 1:1 uebernehmen ----------
-    const posListe = (positionen || []).map((p: any, i: number) => ({
-      owner_user_id: betrieb,
-      rechnung_id: rechnungId,
-      position: p.position ?? i + 1,
-      bezeichnung: p.bezeichnung ?? null,
-      beschreibung: p.beschreibung ?? null,
-      menge: p.menge ?? 1,
-      einheit: p.einheit ?? "Stk",
-      einzelpreis: p.einzelpreis ?? 0,
-      mwst_satz: p.mwst_satz ?? 19,
-      gesamt_netto: p.gesamt_netto ?? 0,
-    }));
-
-    if (posListe.length > 0) {
-      const { error: insPosErr } = await supabase.from("rechnung_positionen").insert(posListe);
-      if (insPosErr) {
-        // Rechnung existiert bereits — Positionen-Fehler nicht verschweigen, aber Rechnung bleibt nutzbar
-        console.error("Positionen kopieren fehlgeschlagen:", insPosErr.message);
-      }
+    const posListe = posten.map((p) => ({ ...p, owner_user_id: betrieb, rechnung_id: rechnungId }));
+    const { error: insPosErr } = await supabase.from("rechnung_positionen").insert(posListe);
+    if (insPosErr) {
+      // HW-7: keine Rechnung ohne Positionen stehen lassen — stornieren (keine Nummernluecke)
+      console.error("Positionen kopieren fehlgeschlagen:", insPosErr.message);
+      await supabase.from("rechnungen").update({
+        zahlungsstatus: "storniert", netto_summe: 0, mwst_summe: 0, brutto_summe: 0,
+        notizen: "Automatisch storniert: Auftragspositionen konnten nicht übernommen werden.",
+        updated_at: new Date().toISOString(),
+      }).eq("id", rechnungId);
+      return NextResponse.json({ error: "Positionen konnten nicht übernommen werden. Die Rechnung wurde storniert." }, { status: 500 });
     }
 
     // ---------- 6) Nahtstelle zurueckschreiben ----------

@@ -9,6 +9,8 @@ import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
 import PartnerKnopf from "../../netzwerk/PartnerKnopf";
 import { useDarfAbrechnen } from "../../_components/useDarfAbrechnen";
 import { leseZahlOder, centRunden } from '@/lib/zahlen';
+import { kopfSummen } from '@/lib/rechnungKopf';
+import { steuersatz } from '@/lib/steuersatz';
 import { useAuftragVorlage } from "../useAuftragVorlage";
 
 // ============================================================
@@ -252,17 +254,10 @@ export default function AuftragDetail() {
     markDirty();
   }
 
+  // HW-7: je Zeile runden, Steuer je Steuersatz (§ 14 Abs. 4 Nr. 8 UStG) — wie Rechnung
   const summen = useMemo(() => {
-    let netto = 0;
-    let mwst = 0;
-    for (const z of zeilen) {
-      const zn = parseZahl(z.menge) * parseZahl(z.einzelpreis);
-      netto += zn;
-      mwst += zn * (parseZahl(z.mwst_satz) / 100);
-    }
-    netto = r2(netto);
-    mwst = r2(mwst);
-    return { netto, mwst, brutto: r2(netto + mwst) };
+    const s = kopfSummen(zeilen.map((z) => ({ netto: zeileNetto(z), satz: steuersatz(z.mwst_satz) })), {});
+    return { netto: s.netto, mwst: s.mwst, brutto: s.brutto };
   }, [zeilen]);
 
   function zeileNetto(z: Zeile): number {
@@ -294,7 +289,7 @@ export default function AuftragDetail() {
       menge: parseZahl(z.menge),
       einheit: z.einheit || "Stk",
       einzelpreis: parseZahl(z.einzelpreis),
-      mwst_satz: parseZahl(z.mwst_satz),
+      mwst_satz: steuersatz(z.mwst_satz),
       gesamt_netto: zeileNetto(z),
     }));
 
@@ -384,7 +379,7 @@ export default function AuftragDetail() {
         menge: parseZahl(z.menge),
         einheit: z.einheit,
         einzelpreis: parseZahl(z.einzelpreis),
-        mwst_satz: parseZahl(z.mwst_satz),
+        mwst_satz: steuersatz(z.mwst_satz),
         gesamt_netto: zeileNetto(z),
       })),
       kontaktName: gewaehlterKontakt ? kontaktName(gewaehlterKontakt) : "",
