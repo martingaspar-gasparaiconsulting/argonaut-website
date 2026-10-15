@@ -42,6 +42,7 @@ import { parseGaeb, baueGaeb, type GaebLV } from '@/lib/gaeb';
 import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelder, ladeWerte, speichereWerte } from '../_components/EigeneFelder';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
+import { kontaktLabel, kontaktZuName, type KontaktKurz } from '@/lib/aufmassZuAngebot';
 
 const MODUL = 'aufmasse';
 
@@ -62,6 +63,7 @@ type AufmassRow = {
   projekt: string | null; ort: string | null; status: string;
   aufmass_datum: string; bearbeiter: string | null; notiz: string | null;
   archiviert: boolean; rechnung_id: string | null;
+  kontakt_id?: string | null; angebot_id?: string | null; // HW-11 (SQL p374)
 };
 type PositionRow = PositionBasis & {
   id: string; owner_user_id: string; aufmass_id: string; position_nr: number | null; notiz: string | null;
@@ -96,6 +98,9 @@ export default function AufmassPage() {
   const [besitzer, setBesitzer] = useState<string | null>(null);
   const [aufmasse, setAufmasse] = useState<AufmassRow[]>([]);
   const [katalog, setKatalog] = useState<KatalogRow[]>([]);
+  // HW-11: Kunden aus den Kontakten (Auswahl im Feld „Kunde")
+  const [kontakte, setKontakte] = useState<KontaktKurz[]>([]);
+  const [angebotBusy, setAngebotBusy] = useState(false);
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -141,12 +146,14 @@ export default function AufmassPage() {
       const sid = konkreterStandort(leseStandortCookie());
       let aq = supabase.from('aufmasse').select('*').eq('archiviert', false);
       if (sid) aq = aq.or(standortOrFilter(sid));
-      const [aRes, kRes] = await Promise.all([
+      const [aRes, kRes, ktRes] = await Promise.all([
         aq.order('aufmass_datum', { ascending: false }),
         supabase.from('leistungskatalog').select('*')
           .eq('aktiv', true)
           .order('bezeichnung', { ascending: true }),
+        supabase.from('kontakte').select('*').range(0, 999),
       ]);
+      setKontakte(((ktRes.data as KontaktKurz[] | null) ?? []).filter((k) => kontaktLabel(k)));
       if (aRes.error) throw aRes.error;
       const aRows = (aRes.data as AufmassRow[]) ?? [];
       setAufmasse(aRows);
@@ -201,6 +208,11 @@ export default function AufmassPage() {
         kunde_name: form.kunde_name.trim() || null, projekt: form.projekt.trim() || null,
         ort: form.ort.trim() || null, status: form.status, aufmass_datum: form.aufmass_datum,
         bearbeiter: form.bearbeiter.trim() || null, notiz: form.notiz.trim() || null,
+        // HW-11: Kunde als Kontakt (nur bei eindeutigem Namen); laeuft auch vor SQL p374
+        ...(() => {
+          const kid = kontaktZuName(form.kunde_name, kontakte);
+          return kid || aktAufmass?.kontakt_id != null ? { kontakt_id: kid } : {};
+        })(),
       };
       if (istNeu) {
         const { data, error } = await supabase.from('aufmasse').insert({ ...payload, standort_id: konkreterStandort(leseStandortCookie()) }).select('id').single();
@@ -371,6 +383,31 @@ export default function AufmassPage() {
   }
 
   // --- Rechnung aus Aufmaß ---------------------------------------------
+  // HW-11: Angebot aus dem Aufmass (Entwurf, alle Positionen, Kunde)
+  async function angebotErstellen() {
+    if (!form.id || angebotBusy) return;
+    if (aktAufmass?.angebot_id) { router.push('/dashboard/angebote'); return; }
+    if (positionen.length === 0) { setFehler('Das Aufmaß hat keine Positionen.'); return; }
+    if (summe.betragUnvollstaendig) {
+      setFehler(`Kein Preis für: ${summe.ohnePreis.join(' · ')}. Bitte zuerst ergänzen.`);
+      return;
+    }
+    if (!window.confirm(`Aus diesem Aufmaß ein Angebot (Entwurf) erstellen?\n\n${eur(summe.brutto)} brutto · ${positionen.length} Positionen.`)) return;
+    setAngebotBusy(true); setFehler(null);
+    try {
+      const res = await fetch('/api/angebot-aus-aufmass', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aufmassId: form.id }),
+      });
+      const daten = await res.json();
+      if (!res.ok) { setFehler(daten?.error || 'Angebot konnte nicht erstellt werden.'); return; }
+      setAufmasse((l) => l.map((x) => (x.id === form.id ? { ...x, angebot_id: daten.angebotId } : x)));
+      if (window.confirm('Angebot (Entwurf) wurde erstellt. Jetzt zu den Angeboten?')) router.push('/dashboard/angebote');
+    } catch (e: unknown) {
+      setFehler('Angebot erstellen fehlgeschlagen: ' + (e instanceof Error ? e.message : 'Fehler'));
+    } finally { setAngebotBusy(false); }
+  }
+
   async function rechnungErstellen() {
     if (!form.id || rechnungBusy) return;
     if (positionen.length === 0) { setFehler('Das Aufmaß hat keine Positionen.'); return; }
@@ -531,7 +568,15 @@ export default function AufmassPage() {
                 <input style={styles.input} value={form.titel} onChange={(e) => setF('titel', e.target.value)} placeholder="z. B. Pflasterarbeiten Hof Müller / Durchforstung Abt. 7" />
               </Feld>
               <Feld label="Kunde">
-                <input style={styles.input} value={form.kunde_name} onChange={(e) => setF('kunde_name', e.target.value)} />
+                <input style={styles.input} value={form.kunde_name} onChange={(e) => setF('kunde_name', e.target.value)} list="aufmass-kontakte" placeholder="Name eingeben oder aus Kontakten wählen" />
+                <datalist id="aufmass-kontakte">
+                  {kontakte.slice(0, 500).map((k) => <option key={k.id} value={kontaktLabel(k)} />)}
+                </datalist>
+                {form.kunde_name.trim() && (
+                  <div style={{ fontSize: 'clamp(11.5px, 1vw, 15px)', color: kontaktZuName(form.kunde_name, kontakte) ? C.gold : C.textDim, marginTop: 4 }}>
+                    {kontaktZuName(form.kunde_name, kontakte) ? '✓ mit Kontakt verknüpft' : 'kein eindeutiger Kontakt – bleibt als Name gespeichert'}
+                  </div>
+                )}
               </Feld>
               <Feld label="Projekt / Objekt">
                 <input style={styles.input} value={form.projekt} onChange={(e) => setF('projekt', e.target.value)} />
@@ -751,6 +796,14 @@ export default function AufmassPage() {
               )}
               {form.id && (
                 <button onClick={pdfErzeugen} disabled={speichert} style={styles.ghostBtn}>🖨 Aufmaßblatt PDF</button>
+              )}
+              {form.id && (
+                <button onClick={angebotErstellen}
+                  disabled={speichert || angebotBusy || (!aktAufmass?.angebot_id && (positionen.length === 0 || summe.betragUnvollstaendig))}
+                  title={summe.betragUnvollstaendig ? 'Erst alle Preise ergänzen' : 'Angebot (Entwurf) mit allen Positionen'}
+                  style={{ ...styles.ghostBtn, opacity: angebotBusy ? 0.6 : 1 }}>
+                  {angebotBusy ? 'Erstellt …' : (aktAufmass?.angebot_id ? '📝 Angebot öffnen' : '📝 Angebot erstellen')}
+                </button>
               )}
               {form.id && darfAbrechnen !== false && (
                 <button onClick={rechnungErstellen}

@@ -142,7 +142,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 15.10.2026 · P372 live (a4b95d9) · HW-17 erledigt · _p373 HW-10 Auftrag aus Angebot unterwegs</div>
+<div class="eyebrow">ARGONAUT OS · Stand 15.10.2026 · P373 live (7cde83d) · HW-10 erledigt · _p374 HW-11 Angebot aus Aufmass unterwegs</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Neu seit 15.10.2026: gebaut wird nach Branchen – Handwerk zuerst und komplett, dann Plätze 2–19, dann eigener Server, Partner und zum Schluss die Dossiertexte. Was der Anwalt freigeben muss, wird gebaut und bleibt bis dahin gesperrt. Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
