@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
 import { auftragZuRechnung } from "@/lib/rechnungAusAuftrag";
+import { doppelWarnung, trotzdemGewollt } from "@/lib/doppelabrechnung";
 
 export const runtime = "nodejs";
 
@@ -67,6 +68,16 @@ export async function POST(req: Request) {
         return NextResponse.json({ rechnungId: vorhanden.id, bereitsVorhanden: true });
       }
       // Verknuepfung war verwaist -> wir legen sauber neu an (faellt unten durch)
+    }
+
+    // ---------- 2b) HW-8: andere Rechnungen zum selben Auftrag (z. B. aus Einsaetzen, Abschlaege)? ----------
+    const { data: andere } = await supabase
+      .from("rechnungen")
+      .select("id, rechnungsnummer, rechnungsart, zahlungsstatus")
+      .eq("auftrag_id", auftrag.id);
+    const warnung = doppelWarnung(andere, "diesem Auftrag");
+    if (warnung && !trotzdemGewollt(body)) {
+      return NextResponse.json({ error: warnung, doppelt: true, warnung }, { status: 409 });
     }
 
     // ---------- 3) Auftrags-Positionen laden ----------

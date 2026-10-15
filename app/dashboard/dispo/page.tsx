@@ -355,12 +355,20 @@ export default function DispoPage() {
   async function rechnungErstellen() {
     if (!form?.id) return;
     setRechnungBusy(true); setFehler(null); setErfolg(null);
+    const eid = form.id;
     try {
-      const resp = await fetch('/api/rechnung-aus-einsatz', {
+      const senden = (trotzdem: boolean) => fetch('/api/rechnung-aus-einsatz', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ einsatzId: form.id }),
+        body: JSON.stringify({ einsatzId: eid, trotzdem }),
       });
-      const j = await resp.json();
+      let resp = await senden(false);
+      let j = await resp.json();
+      // HW-8: Auftrag schon abgerechnet -> nur auf ausdrueckliche Bestaetigung
+      if (resp.status === 409 && j?.doppelt) {
+        if (!window.confirm(`${j.warnung}\n\nTrotzdem eine eigene Rechnung für diesen Einsatz anlegen?`)) return;
+        resp = await senden(true);
+        j = await resp.json();
+      }
       if (!resp.ok) throw new Error(j?.error || 'Rechnung konnte nicht erstellt werden.');
       setRechnungErgebnis(j?.bereitsVorhanden ? 'bereits' : 'neu');
       setF('rechnungId', j?.rechnungId ?? null);

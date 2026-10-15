@@ -5,6 +5,7 @@ import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_compone
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
 import { steuersatz } from "@/lib/steuersatz";
+import { doppelWarnung, trotzdemGewollt } from "@/lib/doppelabrechnung";
 
 export const runtime = "nodejs";
 
@@ -71,6 +72,18 @@ export async function POST(req: Request) {
         return NextResponse.json({ rechnungId: vorhanden.id, bereitsVorhanden: true });
       }
       // Verknüpfung war verwaist -> sauber neu anlegen (fällt unten durch)
+    }
+
+    // ---------- 2b) HW-8: ist der Auftrag dieses Einsatzes schon abgerechnet? ----------
+    if (einsatz.auftrag_id) {
+      const { data: andere } = await supabase
+        .from("rechnungen")
+        .select("id, rechnungsnummer, rechnungsart, zahlungsstatus")
+        .eq("auftrag_id", einsatz.auftrag_id);
+      const warnung = doppelWarnung(andere, "dem Auftrag dieses Einsatzes");
+      if (warnung && !trotzdemGewollt(body)) {
+        return NextResponse.json({ error: warnung, doppelt: true, warnung }, { status: 409 });
+      }
     }
 
     // ---------- 3) Erfasste Leistungen laden ----------

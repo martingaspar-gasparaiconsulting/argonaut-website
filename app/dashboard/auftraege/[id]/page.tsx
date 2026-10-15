@@ -438,12 +438,22 @@ export default function AuftragDetail() {
     setFehler(null);
     setRechnungLaedt(true);
     try {
-      const res = await fetch("/api/rechnung-aus-auftrag", {
+      const senden = (trotzdem: boolean) => fetch("/api/rechnung-aus-auftrag", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ auftragId: id }),
+        body: JSON.stringify({ auftragId: id, trotzdem }),
       });
-      const daten = await res.json().catch(() => ({}));
+      let res = await senden(false);
+      let daten = await res.json().catch(() => ({}));
+      // HW-8: es gibt schon Rechnungen zu diesem Auftrag -> nur auf ausdrueckliche Bestaetigung
+      if (res.status === 409 && daten?.doppelt) {
+        if (!window.confirm(`${daten.warnung}\n\nTrotzdem eine weitere Rechnung zu diesem Auftrag anlegen?`)) {
+          setRechnungLaedt(false);
+          return;
+        }
+        res = await senden(true);
+        daten = await res.json().catch(() => ({}));
+      }
 
       if (!res.ok || !daten?.rechnungId) {
         setFehler(daten?.error || "Rechnung konnte nicht erstellt werden.");

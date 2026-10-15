@@ -44,12 +44,19 @@ export default function EinsatzRechnungButton({ einsatzId, rechnungId, onErstell
     setLaden(true);
     setFehler("");
     try {
-      const res = await fetch("/api/rechnung-aus-einsatz", {
+      const senden = (trotzdem: boolean) => fetch("/api/rechnung-aus-einsatz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ einsatzId }),
+        body: JSON.stringify({ einsatzId, trotzdem }),
       });
-      const j = await res.json();
+      let res = await senden(false);
+      let j = await res.json();
+      // HW-8: Auftrag schon abgerechnet -> nur auf ausdrueckliche Bestaetigung
+      if (res.status === 409 && j?.doppelt) {
+        if (!window.confirm(`${j.warnung}\n\nTrotzdem eine eigene Rechnung für diesen Einsatz anlegen?`)) return;
+        res = await senden(true);
+        j = await res.json();
+      }
       if (!res.ok) {
         setFehler(j?.error || "Rechnung konnte nicht erstellt werden.");
         return;
