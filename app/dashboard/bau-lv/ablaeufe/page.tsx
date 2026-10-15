@@ -22,6 +22,7 @@
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../../_components/Leerzustand';
+import { useDarfAbrechnen } from '../../_components/useDarfAbrechnen';
 import { heuteIso } from '@/lib/nachweisMotor';
 import {
   NACHTRAG_ARTEN, NACHTRAG_STATUS, REGELWERKE, RUEGE_STATUS, MUSTER, HINWEIS_ANWALT,
@@ -33,6 +34,7 @@ import {
 } from '@/lib/bauAblaeufe';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
 import { gewaehrleistungsKandidaten } from '@/lib/bauAbnahme';
+import { satzVorschlag, satzAusEingabe, nachtragZeilen, nachtragAbrechenbar, insLvErlaubt } from '@/lib/nachtragAbrechnen';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -60,6 +62,7 @@ type Nachtrag = {
   entdeckt_am: string | null; angekuendigt_am: string | null; ausfuehrung_ab: string | null; angeboten_am: string | null;
   antwort_bis: string | null; beauftragt_am: string | null; beauftragt_durch: string | null; abgelehnt_am: string | null;
   positionen: NachtragPosition[] | null; betrag_netto: number | string | null; in_lv_uebernommen: boolean; notiz: string | null;
+  rechnung_id?: string | null; // HW-15 (SQL p378)
 };
 type Gewaehrleistung = {
   id: string; projekt_id: string | null; lv_id: string | null; abnahme_id: string | null; bezeichnung: string; kunde_name: string | null;
@@ -99,6 +102,8 @@ function plusTage(iso: string, tage: number): string {
 
 export default function BauAblaeufeSeite() {
   const heute = heuteIso(new Date());
+  // HW-15: Rechnungs-Knopf am Nachtrag nur mit „Darf abrechnen" (Server prüft selbst).
+  const darfAbrechnen = useDarfAbrechnen();
   const [uid, setUid] = useState<string | null>(null);
   const [istMitarbeiter, setIstMitarbeiter] = useState(false);
   const [firma, setFirma] = useState('');
@@ -267,24 +272,47 @@ export default function BauAblaeufeSeite() {
     await laden();
   }
 
+  /** HW-15: Gibt es zur rechnung_id des Nachtrags eine nicht stornierte Rechnung? */
+  async function rechnungGueltig(n: Nachtrag): Promise<boolean> {
+    if (!n.rechnung_id) return false;
+    const { data } = await supabase.from('rechnungen').select('id, zahlungsstatus').eq('id', n.rechnung_id).maybeSingle();
+    const r = data as { id?: string; zahlungsstatus?: string } | null;
+    return !!r?.id && r.zahlungsstatus !== 'storniert';
+  }
+
+  /** HW-15: Steuersatz erfragen — Vorschlag aus dem LV, nur 0, 7 oder 19. */
+  function satzErfragen(vorschlag: number): number | null {
+    const e = window.prompt('Steuersatz für den Nachtrag in Prozent (0, 7 oder 19):', String(vorschlag));
+    if (e === null) return null;
+    const satz = satzAusEingabe(e);
+    if (satz === null) { setFehler('Bitte als Steuersatz 0, 7 oder 19 eingeben.'); return null; }
+    return satz;
+  }
+
   /** Beauftragten Nachtrag als Nachtragspositionen ins LV schreiben. */
   async function insLv(n: Nachtrag) {
     if (!uid) return;
     const lv = lvs.find((l) => l.id === n.lv_id);
     const pruef = lvUebernahmeMoeglich(n, lv?.status);
     if (!pruef.ok) { setFehler(pruef.grund); return; }
+    const doppelt = insLvErlaubt(n, await rechnungGueltig(n));
+    if (!doppelt.ok) { setFehler(doppelt.fehler); return; }
+    const gelesen = nachtragZeilen(n.positionen);
+    if (!gelesen.ok) { setFehler(gelesen.fehler); return; }
     setBusy(true); setFehler(null);
     try {
-      const { data: vorhanden } = await supabase.from('bau_lv_positionen').select('id').eq('lv_id', n.lv_id as string);
-      let pos = ((vorhanden as { id: string }[]) ?? []).length;
-      const zeilen = (n.positionen ?? []).filter((p) => String(p.kurztext ?? '').trim()).map((p) => {
-        const menge = Number(p.menge) || 0;
-        const ep = Number(p.einzelpreis) || 0;
+      const { data: vorhanden, error: vErr } = await supabase.from('bau_lv_positionen').select('id, mwst_satz').eq('lv_id', n.lv_id as string);
+      if (vErr) { setFehler('LV-Positionen konnten nicht geladen werden.'); return; }
+      const liste = (vorhanden as { id: string; mwst_satz: unknown }[]) ?? [];
+      const satz = satzErfragen(satzVorschlag(liste.map((x) => x.mwst_satz)));
+      if (satz === null) return;
+      let pos = liste.length;
+      const zeilen = gelesen.zeilen.map((p) => {
         pos += 1;
         return {
-          owner_user_id: uid, lv_id: n.lv_id, ordnungszahl: n.nummer ? `${n.nummer}.${pos}` : null, kurztext: String(p.kurztext).trim(),
-          menge, einheit: String(p.einheit ?? '').trim() || 'Stk', einzelpreis: ep, mwst_satz: 19,
-          gesamt_netto: Math.round(menge * ep * 100) / 100, ist_nachtrag: true,
+          owner_user_id: uid, lv_id: n.lv_id, ordnungszahl: n.nummer ? `${n.nummer}.${pos}` : null, kurztext: p.kurztext,
+          menge: p.menge, einheit: p.einheit, einzelpreis: p.einzelpreis, mwst_satz: satz,
+          gesamt_netto: p.gesamt_netto, ist_nachtrag: true,
           nachtrag_grund: `${n.nummer ?? 'Nachtrag'} ${n.titel}`.slice(0, 200), position: pos,
         };
       });
@@ -294,7 +322,31 @@ export default function BauAblaeufeSeite() {
       const summe = ((alle as { gesamt_netto: number }[]) ?? []).reduce((s, p) => s + (Number(p.gesamt_netto) || 0), 0);
       await supabase.from('bau_lv').update({ netto_summe: Math.round(summe * 100) / 100, aktualisiert_am: new Date().toISOString() }).eq('id', n.lv_id as string);
       await supabase.from('bau_nachtrag').update({ in_lv_uebernommen: true, aktualisiert_am: new Date().toISOString() }).eq('id', n.id);
-      melde(`${n.nummer ?? 'Nachtrag'} steht jetzt im LV „${lv?.titel ?? ''}" (MwSt. 19 % — im LV bei Bedarf anpassen).`);
+      melde(`${n.nummer ?? 'Nachtrag'} steht jetzt im LV „${lv?.titel ?? ''}" (${satz} % Umsatzsteuer).`);
+      await laden();
+    } finally { setBusy(false); }
+  }
+
+  /** HW-15: Beauftragter Nachtrag ohne LV-Übernahme -> eigene Rechnung. */
+  async function nachtragRechnung(n: Nachtrag) {
+    const pruef = nachtragAbrechenbar(n, await rechnungGueltig(n));
+    if (!pruef.ok) {
+      if (pruef.bereitsVorhanden && n.rechnung_id) { window.location.href = `/dashboard/rechnungen/${n.rechnung_id}`; return; }
+      setFehler(pruef.fehler); return;
+    }
+    let vorschlag = 19;
+    if (n.lv_id) {
+      const { data } = await supabase.from('bau_lv_positionen').select('mwst_satz').eq('lv_id', n.lv_id);
+      vorschlag = satzVorschlag(((data as { mwst_satz: unknown }[]) ?? []).map((x) => x.mwst_satz));
+    }
+    const satz = satzErfragen(vorschlag);
+    if (satz === null) return;
+    setBusy(true); setFehler(null);
+    try {
+      const res = await fetch('/api/rechnung-aus-nachtrag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nachtragId: n.id, steuersatz: satz }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setFehler(j?.error || 'Rechnung konnte nicht erstellt werden.'); return; }
+      melde(j.bereitsVorhanden ? 'Zu diesem Nachtrag gibt es bereits eine Rechnung.' : `Rechnung zu ${n.nummer ?? 'Nachtrag'} erstellt — unter „🧾 Rechnungen".`);
       await laden();
     } finally { setBusy(false); }
   }
@@ -513,8 +565,12 @@ export default function BauAblaeufeSeite() {
                         <button style={{ ...s.klein, color: uebernahme.ok ? C.gold : C.textDim }} disabled={busy}
                           title={uebernahme.grund ?? ''} onClick={() => insLv(n)}>📐 Ins LV übernehmen</button>
                       )}
+                      {darfAbrechnen !== false && n.status === 'beauftragt' && !n.in_lv_uebernommen && (
+                        <button style={{ ...s.klein, color: C.gold }} disabled={busy} title="Eigene Rechnung für diesen Nachtrag (z. B. wenn das LV schon abgerechnet ist)" onClick={() => nachtragRechnung(n)}>🧾 Rechnung</button>
+                      )}
                       {n.status === 'beauftragt' && <button style={s.klein} onClick={() => statusSetzen(n, 'abgerechnet')}>✔ Abgerechnet</button>}
                       {n.in_lv_uebernommen && <span style={{ ...s.dim, marginTop: 0 }}>✓ im LV</span>}
+                      {n.rechnung_id && <a href={`/dashboard/rechnungen/${n.rechnung_id}`} style={{ ...s.klein, color: C.gold, textDecoration: 'none' }}>🧾 Zur Rechnung</a>}
                       <button style={{ ...s.klein, color: C.danger }} onClick={() => nachtragLoeschen(n)}>🗑</button>
                     </div>
                   )}
