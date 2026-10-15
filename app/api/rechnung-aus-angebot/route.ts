@@ -5,6 +5,7 @@ import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_compone
 import { positionsNetto } from "@/lib/angebotRabatt";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,6 @@ export const runtime = "nodejs";
 //  · Nur angenommene Angebote sind fakturierbar.
 // ============================================================
 
-const MWST_STD = 19;
 
 type AngPos = { bezeichnung: string | null; menge: number | null; einheit: string | null; einzelpreis: number | null; mwst_satz: number | null; rabatt_prozent: number | null };
 
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
         owner_user_id: betrieb, position: i + 1,
         bezeichnung: p.bezeichnung || "(ohne Bezeichnung)",
         menge: cent(mengeRoh), einheit: (p.einheit || "").trim() || "Stk", einzelpreis: einzelEff,
-        mwst_satz: Number(p.mwst_satz) || MWST_STD,
+        mwst_satz: steuersatz(p.mwst_satz),
         gesamt_netto: cent(netto),
       };
     });

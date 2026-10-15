@@ -20,6 +20,7 @@
 // ============================================================================
 
 import { centRunden, inCent, rundeStellen } from './zahlen';
+import { steuersatz } from './steuersatz';
 export type AngebotsPosition = {
   bezeichnung: string;
   menge: number;
@@ -88,7 +89,7 @@ export function alsAngebotsposition(q: UebergabeQuelle): AngebotsPosition {
     menge,
     einheit: String(q.einheit || 'Stk').trim() || 'Stk',
     einzelpreis: preis,
-    mwst_satz: Number(q.mwstSatz) || 19,
+    mwst_satz: steuersatz(q.mwstSatz),
     gesamt_netto: positionsNetto(menge, preis),
   };
 }
@@ -150,7 +151,7 @@ export function alsKatalogEintrag(q: UebergabeQuelle & { kategorie?: string }): 
     einheitspreis_netto: istStunde ? 0 : preis,
     stundensatz_netto: istStunde ? preis : 0,
     festpreis_netto: 0,
-    mwst_satz: Number(q.mwstSatz) || 19,
+    mwst_satz: steuersatz(q.mwstSatz),
     aktiv: true,
   };
 }

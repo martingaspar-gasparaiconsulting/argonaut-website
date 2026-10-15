@@ -26,6 +26,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { leseZahlOder } from '@/lib/zahlen';
+import { steuersatz } from "@/lib/steuersatz";
 
 const MODUL = 'gutschein';
 
@@ -142,7 +143,7 @@ export default function GutscheinePage() {
 
   const vorschauSteuer = useMemo(() => {
     if (ng.mwst_typ !== 'einzweck' || !ng.wert) return null;
-    return nettoAusBrutto(num(ng.wert), num(ng.mwst_satz) || 19);
+    return nettoAusBrutto(num(ng.wert), steuersatz(ng.mwst_satz));
   }, [ng.mwst_typ, ng.wert, ng.mwst_satz]);
 
   function artWechsel(art: GutscheinArt) {
@@ -165,7 +166,7 @@ export default function GutscheinePage() {
     try {
       const { data: neu, error } = await supabase.from('gutschein').insert({
         owner_user_id: besitzer, code: ng.code.trim() || neuerCode(), art: ng.art, mwst_typ: ng.mwst_typ,
-        wert: num(ng.wert), mwst_satz: num(ng.mwst_satz) || 19,
+        wert: num(ng.wert), mwst_satz: steuersatz(ng.mwst_satz),
         nutzungen_gesamt: info.hatNutzungen ? Math.round(num(ng.nutzungen_gesamt)) : null,
         leistung_text: ng.leistung_text.trim() || null,
         kontakt_id: ng.kontakt_id || null, empfaenger_name: ng.empfaenger_name.trim() || null,

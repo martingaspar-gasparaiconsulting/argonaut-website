@@ -29,6 +29,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { leseZahlOder } from '@/lib/zahlen';
+import { steuersatz } from "@/lib/steuersatz";
 
 const MODUL = 'reservierung_vorgang';
 
@@ -143,7 +144,7 @@ export default function ReservierungPage() {
 
   // --- Live-Vorschau: Betrag (Einlagerung/Vorbestellung) + Tisch-Konflikt ---
   const vorschau = useMemo(() => {
-    const b = info.hatBetrag && nv.betrag ? betragBrutto(num(nv.betrag), num(nv.mwst_satz) || 19) : null;
+    const b = info.hatBetrag && nv.betrag ? betragBrutto(num(nv.betrag), steuersatz(nv.mwst_satz)) : null;
     let konflikt = false, dauer = 0;
     if (nv.art === 'tischreservierung' && nv.platz_id && nv.von && nv.bis && nv.bis > nv.von) {
       konflikt = konflikteTisch(nv.platz_id, nv.von, nv.bis, vorgaenge).length > 0;
@@ -196,7 +197,7 @@ export default function ReservierungPage() {
         von: nv.von, bis: info.hatZeitfenster ? nv.bis : null,
         anzahl: nv.anzahl.trim() ? Math.round(num(nv.anzahl)) : null,
         gegenstand: nv.gegenstand.trim() || null, kennzeichen: nv.kennzeichen.trim() || null,
-        betrag: info.hatBetrag ? num(nv.betrag) : 0, mwst_satz: num(nv.mwst_satz) || 19,
+        betrag: info.hatBetrag ? num(nv.betrag) : 0, mwst_satz: steuersatz(nv.mwst_satz),
         status: START_STATUS[nv.art],
       }).select('id').single();
       if (error) throw error;

@@ -14,6 +14,7 @@ import { NextResponse } from 'next/server';
 import { signiereBeleg } from '@/lib/kasse-tse';
 import { standortAusCookieHeader } from '@/lib/standortDaten';
 import { standortFuerBuchung, buchenArgumente, RPC_BUCHEN } from '@/lib/lagerBuchung';
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = 'nodejs';
 
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
     const posten = posIn.map((p, i) => {
       const menge = Number(p.menge) || 0;
       const einzel = r2(Number(p.einzelpreis) || 0);
-      const satz = Number(p.mwst_satz) || 19;
+      const satz = steuersatz(p.mwst_satz);
       const brutto = r2(menge * einzel * vz);
       return {
         owner_user_id: ownerId, position: i + 1,

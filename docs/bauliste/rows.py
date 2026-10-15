@@ -331,3 +331,219 @@ S.append(("s5","Nach der Abnahme durch den Anwalt","Erst wenn alles rechtlich fr
 S.append(("s6","Ganz zum Schluss · Empfehlungen für die ersten Kunden","Nach dem Anwalt: welche Kunden ARGONAUT am stärksten weitertragen (Multiplikatoren)",[
 ("EK1","Erste Kunden nach Multiplikator-Wirkung wählen","Erste Kunden kommen zufällig; der Partner-Effekt aus K18 (Partner lernen ARGONAUT über Aufträge und Gastlinks kennen) wird nicht gezielt genutzt.","Rangliste Platz 1–13 in docs/strategie/ARGONAUT-MULTIPLIKATOR-BRANCHEN-12-10-2026.md: zuerst Hausverwaltung (ca. 140 im Kreis Böblingen, ca. 950 in Region und Nachbarkreisen, Hochrechnung), Generalunternehmer/Bauträger und Architekt – sie ziehen das Handwerk nach. Technik: Partner-Auftrag an ein allgemeines Objekt (Wohnung, Baustelle, Event, Schadensfall) statt nur ans Fahrzeug. Pflege, Praxen, Steuerberater erst nach Anwalt (R50). Keine Werbe-Mails an Partner unserer Kunden (UWG).","G","0","wartet auf Anwalt"),
 ]))
+
+# ============================================================================
+# BAUPLAN 15.10.2026 (Beschluss mit Martin): Reihenfolge nach Branchen statt nach Themen.
+# Plaetze 1-19 nach Verkaufbarkeit und Sinn; Handwerk zuerst und komplett (inkl. allem, was
+# jeder Betrieb bekommt). Anwalt-Teile werden gebaut und bleiben bis zur Freigabe gesperrt
+# (Freigabe-Zentrale). Danach B (eigener Server), C (Partner/Zugaenge, laeuft dazwischen),
+# E (Dossiertexte ganz am Schluss). Die Einzelfaelle (Querschau 13.10.) sind jetzt einzelne
+# Zeilen in ihrer Branche und zaehlen mit. Offene Zeilen werden aus ihren alten Abschnitten
+# hierher verschoben (gleiche Tupel, Texte bleiben oben gepflegt); die alten Abschnitte
+# zeigen danach nur noch Erledigtes.
+# ============================================================================
+EF_HW=[
+('HW-5', '§ 13b: Rechnung speichert 19 % zu viel', 'Handwerk-Durchgang 15.10.: Bei Steuerschuldnerschaft des Leistungsempfängers rechnet die Rechnungsseite die Summen mit 19 % und speichert Brutto inkl. Steuer, das PDF zeigt nur Netto. Mahnung, Überfällig-Lauf und Offene Posten fordern dann 19 % zu viel.', 'Summen bei § 13b mit Satz 0 und Brutto = Netto, Wächter-Test. Kern-Geld: gemeinsam.', 'G', '1', 'offen'),
+('HW-6', 'Mahnung: zahlbar jetzt statt Brutto', 'Handwerk-Durchgang 15.10.: Die Mahnung einer Schlussrechnung fordert die volle Summe – abgesetzte Abschläge werden nicht abgezogen, der noch nicht fällige Sicherheitseinbehalt wird mit angemahnt. Ohne Kontakt geht die Mahnung an den Rechnungstitel statt an den Empfänger.', 'Eine Rechenstelle „zahlbar jetzt“ (Abschläge, Einbehalt, § 13b) für Mahnung, Mahnliste und Überfällig-Lauf; Empfänger statt Titel; ein Rechenweg für den Einbehalt. Kern-Geld: gemeinsam.', 'G', '1', 'offen'),
+('HW-7', 'Rechnung aus Auftrag angleichen', 'Handwerk-Durchgang 15.10.: Scheitern die Positionen, bleibt eine leere Rechnung stehen; Summen kommen ungeprüft aus dem Auftragskopf; Empfänger und Leistungsdatum fehlen; der Auftrag rundet die Steuer über alle Sätze statt je Satz.', 'Wie Angebot → Rechnung: Summen neu je Steuersatz, Rückbau bei Fehler, Empfänger und Leistungszeitraum übernehmen; Auftragssumme je Satz runden. Kern-Geld: gemeinsam.', 'G', '1', 'offen'),
+('HW-8', 'Doppelabrechnung verhindern', 'Handwerk-Durchgang 15.10.: Angebot, Auftrag und Einsatz können denselben Vorgang je einmal abrechnen, ohne sich zu sehen; Rechnungen aus Aufmaß/LV/Angebot verlieren den Auftrag, die Schlussrechnung findet ihre Abschläge dann nicht.', 'Gemeinsame Prüfung „zu diesem Vorgang gibt es schon Rechnung X“ über die ganze Kette, Auftrag an der Rechnung mitführen. Kern-Geld: gemeinsam.', 'G', '1', 'offen'),
+('HW-9', 'Abschlag und Schlussrechnung am Auftrag', 'Handwerk-Durchgang 15.10.: Abschlagsrechnungen gibt es, aber nicht als Ablauf am Auftrag; der Doppelschutz lässt nur eine Rechnung je Auftrag zu.', 'Knöpfe „Abschlagsrechnung (% oder Betrag)“ und „Schlussrechnung“ am Auftrag; Doppelschutz gilt nur für die Schlussrechnung. Kern-Geld: gemeinsam.', 'G', '1', 'offen'),
+('HW-10', 'Auftrag aus Angebot', 'Handwerk-Durchgang 15.10.: Ein angenommenes Angebot wird nirgends zum Auftrag – weder per Knopf noch bei Annahme durch den Kunden. Spalte rabatt_prozent der Angebotspositionen hat keine SQL-Datei im Repo.', 'Auftrag aus Angebot mit Positionen, Rabatt, Steuersatz, Einheit, Kontakt und Standort; optional automatisch bei Annahme; SQL rabatt_prozent additiv absichern.', 'C', '1', 'offen'),
+('HW-11', 'Angebot aus Aufmaß', 'Handwerk-Durchgang 15.10.: Aus dem Aufmaß geht nur GAEB oder direkt die Rechnung; das Aufmaß hat keinen Kunden.', 'Angebot aus Aufmaß (Mengen und Rechenweg übernehmen), Kunde am Aufmaß wählbar.', 'C', '1', 'offen'),
+('HW-12', 'Lead → Angebot und Aufmaß-Termin', 'Handwerk-Durchgang 15.10.: Das Angebot am Lead ist nur ein Text, kein echtes Angebot; kein Weg zum Aufmaß-Termin.', '„Als Angebot anlegen“ (mit Kontakt) und „Aufmaß-Termin“ direkt am Lead.', 'C', '1', 'offen'),
+('HW-13', 'Eine Pipeline statt zwei', 'Handwerk-Durchgang 15.10.: Zwei Pipelines (/dashboard/pipeline und /dashboard/crm/pipeline); nur die alte kann einen Auftrag erzeugen, und das mit festen 19 %. Menü und Hilfe zeigen auf die neue.', 'Martin entscheidet, welche bleibt; „Auftrag aus Chance“ in der bleibenden, mit Steuersatz-Auswahl; die andere leitet um.', 'C', '1', 'offen'),
+('HW-14', 'Abnahme vollständig', 'Handwerk-Durchgang 15.10.: Die Abnahme speichert weder LV noch Projekt; verweigerte Abnahmen werden zur Gewährleistung angeboten; kein Abnahmeprotokoll als PDF.', 'LV/Projekt mitspeichern, verweigerte ausfiltern, Abnahmeprotokoll-PDF, Abnahme startet die Gewährleistung (zusammen mit LK2).', 'C', '1', 'offen'),
+('HW-15', 'Nachtrag abrechnen', 'Handwerk-Durchgang 15.10.: Ein Nachtrag auf ein schon abgerechnetes LV sagt „gesondert abrechnen“, aber dafür gibt es keinen Weg; bei der Übernahme ins LV gilt fest 19 %.', 'Rechnung aus Nachtrag, Steuersatz je Nachtragsposition. Kern-Geld: gemeinsam.', 'G', '1', 'offen'),
+('HW-16', 'Projekt als Klammer', 'Handwerk-Durchgang 15.10.: Auftrag, Einsatz und Aufmaß kennen kein Projekt, das Bautagebuch nur das Projekt; Dispo legt Einsätze ohne Auftrag an; zwei Mängellisten nebeneinander.', 'Projekt an Auftrag, Einsatz und Aufmaß (SQL additiv), Auftragswahl in der Dispo, Bautagebuch zeigt die Vorgänge des Projekts.', 'C', '1', 'offen'),
+('HW-1', 'Kupferzuschlag in Angebot/Rechnung', 'Aus der Branchen-Querschau 13.10.2026: Fachlogik ohne Motor-Abdeckung.', 'Kupferzuschlag in Angebot/Rechnung. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'offen'),
+('HW-2', 'Bauzeitenplan mit Abhängigkeiten der Gewerke', 'Aus der Branchen-Querschau 13.10.2026: Fachlogik ohne Motor-Abdeckung.', 'Bauzeitenplan mit Abhängigkeiten der Gewerke.', 'C', '3', 'offen'),
+('HW-3', 'Förderantrag Heizungstausch für Endkunden', 'Aus der Branchen-Querschau 13.10.2026: Fachlogik ohne Motor-Abdeckung.', 'Förderantrag Heizungstausch für Endkunden. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('HW-4', 'Schlechtwetterstunden/Saison-Kurzarbeit als Anbau an LK5', 'Aus der Branchen-Querschau 13.10.2026: Fachlogik ohne Motor-Abdeckung.', 'Schlechtwetterstunden/Saison-Kurzarbeit als Anbau an LK5.', 'C', '1', 'offen'),
+]
+EF_IM=[
+('IM-1', 'Wirtschaftsplan, Hausgeld, Erhaltungsrücklage', 'Aus der Branchen-Querschau 13.10.2026: WEG-Kern fehlt.', 'Wirtschaftsplan, Hausgeld, Erhaltungsrücklage.', 'G', '3', 'offen'),
+('IM-2', 'WEG-Jahresabrechnung mit Vermögensbericht', 'Aus der Branchen-Querschau 13.10.2026: WEG-Kern fehlt.', 'WEG-Jahresabrechnung mit Vermögensbericht. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '3', 'offen'),
+('IM-3', 'CO2-Kostenaufteilung', 'Aus der Branchen-Querschau 13.10.2026: WEG-Kern fehlt.', 'CO2-Kostenaufteilung. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '1', 'offen'),
+('IM-4', 'Export zu Immobilienportalen', 'Aus der Branchen-Querschau 13.10.2026: WEG-Kern fehlt.', 'Export zu Immobilienportalen. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '3', 'offen'),
+('IM-5', 'Suchprofile und Besichtigungen', 'Aus der Branchen-Querschau 13.10.2026: WEG-Kern fehlt.', 'Suchprofile und Besichtigungen.', 'C', '2', 'offen'),
+('IM-6', 'Maklervertrag/Provisionsteilung', 'Aus der Branchen-Querschau 13.10.2026: WEG-Kern fehlt.', 'Maklervertrag/Provisionsteilung. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '1', 'offen'),
+]
+EF_DL=[
+('DL-1', 'Zeitarbeit mit 18-Monats- und Equal-Pay-Uhr', 'Aus der Branchen-Querschau 13.10.2026: Zeitarbeit, Umzug, Übersetzung.', 'Zeitarbeit mit 18-Monats- und Equal-Pay-Uhr. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '3', 'offen'),
+('DL-2', 'Umzug: Volumenrechner, Halteverbot', 'Aus der Branchen-Querschau 13.10.2026: Zeitarbeit, Umzug, Übersetzung.', 'Umzug: Volumenrechner, Halteverbot. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('DL-3', 'Übersetzungsaufträge', 'Aus der Branchen-Querschau 13.10.2026: Zeitarbeit, Umzug, Übersetzung.', 'Übersetzungsaufträge.', 'C', '2', 'offen'),
+('DL-4', 'Stempeln am Objekt per QR', 'Aus der Branchen-Querschau 13.10.2026: Zeitarbeit, Umzug, Übersetzung.', 'Stempeln am Objekt per QR. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+]
+EF_EN=[
+('EN-1', 'Fachakte Energieberatung', 'Aus der Branchen-Querschau 13.10.2026: Beratung und Verkauf.', 'Fachakte Energieberatung. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '3', 'offen'),
+('EN-2', 'PV-Angebot mit Ertrag und Amortisation', 'Aus der Branchen-Querschau 13.10.2026: Beratung und Verkauf.', 'PV-Angebot mit Ertrag und Amortisation. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('EN-3', 'Schrottankauf mit Sortenpreisen und Umkehr der Steuerschuld', 'Aus der Branchen-Querschau 13.10.2026: Beratung und Verkauf.', 'Schrottankauf mit Sortenpreisen und Umkehr der Steuerschuld. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'offen'),
+]
+EF_FZ=[
+('FZ-1', 'Reifenhotel ausbauen', 'Aus der Branchen-Querschau 13.10.2026: Kern fertig, Nebenbranchen fehlen.', 'Reifenhotel ausbauen.', 'C', '2', 'offen'),
+('FZ-2', 'Service-Erinnerungen als Serie', 'Aus der Branchen-Querschau 13.10.2026: Kern fertig, Nebenbranchen fehlen.', 'Service-Erinnerungen als Serie. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('FZ-3', 'Fahrzeugdaten/Teile-Partner', 'Aus der Branchen-Querschau 13.10.2026: Kern fertig, Nebenbranchen fehlen.', 'Fahrzeugdaten/Teile-Partner.', 'C', '2', 'offen'),
+('FZ-4', 'Unfall-Kalkulation Karosserie/Lack/Glas', 'Aus der Branchen-Querschau 13.10.2026: Kern fertig, Nebenbranchen fehlen.', 'Unfall-Kalkulation Karosserie/Lack/Glas. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'offen'),
+('FZ-5', 'Kfz-Gutachten', 'Aus der Branchen-Querschau 13.10.2026: Kern fertig, Nebenbranchen fehlen.', 'Kfz-Gutachten. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('FZ-6', 'Abschlepp-/Pannendienst', 'Aus der Branchen-Querschau 13.10.2026: Kern fertig, Nebenbranchen fehlen.', 'Abschlepp-/Pannendienst. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('FZ-7', 'Fahrschule', 'Aus der Branchen-Querschau 13.10.2026: Kern fertig, Nebenbranchen fehlen.', 'Fahrschule. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '3', 'offen'),
+('FZ-8', 'Altauto-Annahme', 'Aus der Branchen-Querschau 13.10.2026: Kern fertig, Nebenbranchen fehlen.', 'Altauto-Annahme. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '1', 'offen'),
+]
+EF_IN=[
+('IN-1', 'Arbeitsplan mehrstufig', 'Aus der Branchen-Querschau 13.10.2026: Fertigung ist heute nur Status + einstufige Stückliste.', 'Arbeitsplan mehrstufig.', 'C', '3', 'offen'),
+('IN-2', 'Maschinenstundensatz und Nachkalkulation je Fertigungsauftrag', 'Aus der Branchen-Querschau 13.10.2026: Fertigung ist heute nur Status + einstufige Stückliste.', 'Maschinenstundensatz und Nachkalkulation je Fertigungsauftrag.', 'G', '2', 'offen'),
+('IN-3', 'Belegungsplan je Maschine mit Liefertermin', 'Aus der Branchen-Querschau 13.10.2026: Fertigung ist heute nur Status + einstufige Stückliste.', 'Belegungsplan je Maschine mit Liefertermin.', 'C', '3', 'offen'),
+('IN-4', 'Rahmenaufträge und Abrufe', 'Aus der Branchen-Querschau 13.10.2026: Fertigung ist heute nur Status + einstufige Stückliste.', 'Rahmenaufträge und Abrufe.', 'C', '2', 'offen'),
+('IN-5', 'Lohnfertigung/Fremdbearbeitung', 'Aus der Branchen-Querschau 13.10.2026: Fertigung ist heute nur Status + einstufige Stückliste.', 'Lohnfertigung/Fremdbearbeitung.', 'C', '2', 'offen'),
+('IN-6', 'Produkt-Konformität, Maschinenverordnung ab 20.01.2027', 'Aus der Branchen-Querschau 13.10.2026: Fertigung ist heute nur Status + einstufige Stückliste.', 'Produkt-Konformität, Maschinenverordnung ab 20.01.2027. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale). Vorziehen empfohlen.', 'C', '3', 'offen'),
+('IN-7', 'Außenhandel am Artikel', 'Aus der Branchen-Querschau 13.10.2026: Fertigung ist heute nur Status + einstufige Stückliste.', 'Außenhandel am Artikel. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('IN-8', 'EDI Autoindustrie über Partner', 'Aus der Branchen-Querschau 13.10.2026: Fertigung ist heute nur Status + einstufige Stückliste.', 'EDI Autoindustrie über Partner.', 'C', '2', 'offen'),
+]
+EF_LO=[
+('LO-1', 'Lenk-/Ruhezeiten aus der Fahrerkarte für Güterverkehr', 'Aus der Branchen-Querschau 13.10.2026: Lkw-Pflichten und Fulfillment.', 'Lenk-/Ruhezeiten aus der Fahrerkarte für Güterverkehr. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '3', 'offen'),
+('LO-2', 'Empfänger-Ankündigung mit Zeitfenster', 'Aus der Branchen-Querschau 13.10.2026: Lkw-Pflichten und Fulfillment.', 'Empfänger-Ankündigung mit Zeitfenster. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '1', 'offen'),
+('LO-3', 'Fulfillment-Kommissionierliste nach Lagerplatz', 'Aus der Branchen-Querschau 13.10.2026: Lkw-Pflichten und Fulfillment.', 'Fulfillment-Kommissionierliste nach Lagerplatz.', 'C', '2', 'offen'),
+]
+EF_LW=[
+('LW-1', 'Rohholz: Polter, Holzliste, Waldbesitzer-Abrechnung', 'Aus der Branchen-Querschau 13.10.2026: Forst und Saisonbetrieb.', 'Rohholz: Polter, Holzliste, Waldbesitzer-Abrechnung. Vorziehen empfohlen.', 'G', '3', 'offen'),
+('LW-2', 'Pflanzenschutz-Export', 'Aus der Branchen-Querschau 13.10.2026: Forst und Saisonbetrieb.', 'Pflanzenschutz-Export.', 'C', '1', 'offen'),
+('LW-3', 'Saisonkräfte/Erntehelfer', 'Aus der Branchen-Querschau 13.10.2026: Forst und Saisonbetrieb.', 'Saisonkräfte/Erntehelfer. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('LW-4', 'Vorbereitung Agrarantrag', 'Aus der Branchen-Querschau 13.10.2026: Forst und Saisonbetrieb.', 'Vorbereitung Agrarantrag.', 'C', '2', 'offen'),
+('LW-5', 'Pflanzenpass und Satzplan', 'Aus der Branchen-Querschau 13.10.2026: Forst und Saisonbetrieb.', 'Pflanzenpass und Satzplan.', 'C', '2', 'offen'),
+]
+EF_IT=[
+('IT-1', 'Kunden-Dokumentation und Passwort-Tresor', 'Aus der Branchen-Querschau 13.10.2026: Systemhaus-Kernwerkzeuge.', 'Kunden-Dokumentation und Passwort-Tresor. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '3', 'offen'),
+('IT-2', 'NIS2-Mappe für Endkunden', 'Aus der Branchen-Querschau 13.10.2026: Systemhaus-Kernwerkzeuge.', 'NIS2-Mappe für Endkunden. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('IT-3', 'AV-Verträge und Datenpannen-Uhr je Mandant', 'Aus der Branchen-Querschau 13.10.2026: Systemhaus-Kernwerkzeuge.', 'AV-Verträge und Datenpannen-Uhr je Mandant. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('IT-4', 'Sprints, Backlog, Abnahme', 'Aus der Branchen-Querschau 13.10.2026: Systemhaus-Kernwerkzeuge.', 'Sprints, Backlog, Abnahme.', 'C', '2', 'offen'),
+]
+EF_MK=[
+('MK-1', 'Künstlersozialabgabe berechnen', 'Aus der Branchen-Querschau 13.10.2026: Spezialabrechnungen.', 'Künstlersozialabgabe berechnen.', 'C', '1', 'offen'),
+('MK-2', 'Gagen/Buchungen für Künstler- und Model-Agenturen', 'Aus der Branchen-Querschau 13.10.2026: Spezialabrechnungen.', 'Gagen/Buchungen für Künstler- und Model-Agenturen. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'offen'),
+('MK-3', 'Honorar-/Tantiemen-Abrechnung Verlage', 'Aus der Branchen-Querschau 13.10.2026: Spezialabrechnungen.', 'Honorar-/Tantiemen-Abrechnung Verlage. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'offen'),
+]
+EF_HA=[
+('HA-1', 'Ladenkasse ausbauen: Scan, Rabatt, Gutschein, Varianten, Umtausch', 'Aus der Branchen-Querschau 13.10.2026: Ladenkasse und Shop-Versand zu einfach.', 'Ladenkasse ausbauen: Scan, Rabatt, Gutschein, Varianten, Umtausch.', 'G', '3', 'offen'),
+('HA-2', 'Versandkosten und Lieferart im Shop', 'Aus der Branchen-Querschau 13.10.2026: Ladenkasse und Shop-Versand zu einfach.', 'Versandkosten und Lieferart im Shop. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('HA-3', 'Varianten im Shop', 'Aus der Branchen-Querschau 13.10.2026: Ladenkasse und Shop-Versand zu einfach.', 'Varianten im Shop.', 'C', '1', 'offen'),
+('HA-4', 'Preisschilder mit Grundpreis', 'Aus der Branchen-Querschau 13.10.2026: Ladenkasse und Shop-Versand zu einfach.', 'Preisschilder mit Grundpreis. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('HA-5', 'Sonderbestellung für Kunden', 'Aus der Branchen-Querschau 13.10.2026: Ladenkasse und Shop-Versand zu einfach.', 'Sonderbestellung für Kunden.', 'C', '2', 'offen'),
+('HA-6', 'Marktplätze', 'Aus der Branchen-Querschau 13.10.2026: Ladenkasse und Shop-Versand zu einfach.', 'Marktplätze.', 'C', '3', 'offen'),
+('HA-7', 'Streckengeschäft', 'Aus der Branchen-Querschau 13.10.2026: Ladenkasse und Shop-Versand zu einfach.', 'Streckengeschäft.', 'C', '2', 'offen'),
+('HA-8', 'Verpackungs-/Elektrogeräte-Mengen', 'Aus der Branchen-Querschau 13.10.2026: Ladenkasse und Shop-Versand zu einfach.', 'Verpackungs-/Elektrogeräte-Mengen. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'offen'),
+('HA-9', 'EU-Versand mit Zielland-Steuer', 'Aus der Branchen-Querschau 13.10.2026: Ladenkasse und Shop-Versand zu einfach.', 'EU-Versand mit Zielland-Steuer. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'offen'),
+]
+EF_LM=[
+('LM-1', 'Filialbestellung → Backzettel', 'Aus der Branchen-Querschau 13.10.2026: Filial- und Backstuben-Abläufe fehlen.', 'Filialbestellung → Backzettel.', 'C', '3', 'offen'),
+('LM-2', 'Retourenquote je Filiale/Wochentag', 'Aus der Branchen-Querschau 13.10.2026: Filial- und Backstuben-Abläufe fehlen.', 'Retourenquote je Filiale/Wochentag.', 'C', '2', 'offen'),
+('LM-3', 'Feste Lieferkunden mit Stichzeit und Sammelrechnung', 'Aus der Branchen-Querschau 13.10.2026: Filial- und Backstuben-Abläufe fehlen.', 'Feste Lieferkunden mit Stichzeit und Sammelrechnung.', 'G', '2', 'offen'),
+('LM-4', 'Gewichtsware an der Theke', 'Aus der Branchen-Querschau 13.10.2026: Filial- und Backstuben-Abläufe fehlen.', 'Gewichtsware an der Theke. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('LM-5', 'Verbrauchsteuer-Buch Brennerei/Sekt', 'Aus der Branchen-Querschau 13.10.2026: Filial- und Backstuben-Abläufe fehlen.', 'Verbrauchsteuer-Buch Brennerei/Sekt. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'offen'),
+]
+EF_GA=[
+('GA-1', 'Gastro-Kasse mit Tischplan, Rechnung teilen, Bons', 'Aus der Branchen-Querschau 13.10.2026: Kasse ohne Tische und Küchenbons.', 'Gastro-Kasse mit Tischplan, Rechnung teilen, Bons. Vorziehen empfohlen.', 'G', '3', 'offen'),
+('GA-2', 'Küchenmonitor', 'Aus der Branchen-Querschau 13.10.2026: Kasse ohne Tische und Küchenbons.', 'Küchenmonitor.', 'C', '2', 'offen'),
+('GA-3', 'QR-Bestellen/Bezahlen am Tisch', 'Aus der Branchen-Querschau 13.10.2026: Kasse ohne Tische und Küchenbons.', 'QR-Bestellen/Bezahlen am Tisch. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '3', 'offen'),
+('GA-4', 'Online-Check-in und Gästemappe', 'Aus der Branchen-Querschau 13.10.2026: Kasse ohne Tische und Küchenbons.', 'Online-Check-in und Gästemappe. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('GA-5', 'Beherbergungssteuer der Städte', 'Aus der Branchen-Querschau 13.10.2026: Kasse ohne Tische und Küchenbons.', 'Beherbergungssteuer der Städte.', 'G', '1', 'offen'),
+('GA-6', 'Bankett-/Tagungsangebot mit Ablaufblatt', 'Aus der Branchen-Querschau 13.10.2026: Kasse ohne Tische und Küchenbons.', 'Bankett-/Tagungsangebot mit Ablaufblatt. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('GA-7', 'Theken-Inventur/Schankverlust', 'Aus der Branchen-Querschau 13.10.2026: Kasse ohne Tische und Küchenbons.', 'Theken-Inventur/Schankverlust.', 'C', '2', 'offen'),
+]
+EF_BI=[
+('BI-1', 'Einstufungstest und Kurszuordnung', 'Aus der Branchen-Querschau 13.10.2026: Träger- und Sprachschul-Abläufe.', 'Einstufungstest und Kurszuordnung.', 'C', '2', 'offen'),
+('BI-2', 'Abrechnung Bildungsgutschein', 'Aus der Branchen-Querschau 13.10.2026: Träger- und Sprachschul-Abläufe.', 'Abrechnung Bildungsgutschein.', 'G', '3', 'offen'),
+('BI-3', 'Integrationskurse', 'Aus der Branchen-Querschau 13.10.2026: Träger- und Sprachschul-Abläufe.', 'Integrationskurse.', 'C', '2', 'offen'),
+('BI-4', 'Lehrkräfte-Einsatzplan mit Vertretung', 'Aus der Branchen-Querschau 13.10.2026: Träger- und Sprachschul-Abläufe.', 'Lehrkräfte-Einsatzplan mit Vertretung.', 'C', '1', 'offen'),
+('BI-5', 'Prüfungsanmeldung mit Fristen', 'Aus der Branchen-Querschau 13.10.2026: Träger- und Sprachschul-Abläufe.', 'Prüfungsanmeldung mit Fristen.', 'C', '1', 'offen'),
+]
+EF_SB=[
+('SB-1', 'Salon-Buchung mit Wunsch-Mitarbeiter und Kombi-Leistungen', 'Aus der Branchen-Querschau 13.10.2026: Salon- und Studio-Kern.', 'Salon-Buchung mit Wunsch-Mitarbeiter und Kombi-Leistungen.', 'C', '2', 'offen'),
+('SB-2', 'Anzahlung/Ausfallgebühr online', 'Aus der Branchen-Querschau 13.10.2026: Salon- und Studio-Kern.', 'Anzahlung/Ausfallgebühr online. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'offen'),
+('SB-3', 'Umsatz, Provision, Trinkgeld je Mitarbeiter', 'Aus der Branchen-Querschau 13.10.2026: Salon- und Studio-Kern.', 'Umsatz, Provision, Trinkgeld je Mitarbeiter.', 'G', '2', 'offen'),
+('SB-4', 'Online-Mitgliedschaft, Probetraining, Ruhezeit', 'Aus der Branchen-Querschau 13.10.2026: Salon- und Studio-Kern.', 'Online-Mitgliedschaft, Probetraining, Ruhezeit. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '3', 'offen'),
+('SB-5', 'Trainingspläne', 'Aus der Branchen-Querschau 13.10.2026: Salon- und Studio-Kern.', 'Trainingspläne. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+]
+EF_TI=[
+('TI-1', 'Pferde-Einstellbetrieb Rest', 'Aus der Branchen-Querschau 13.10.2026: Rest nach Motoren.', 'Pferde-Einstellbetrieb Rest.', 'C', '1', 'offen'),
+('TI-2', 'Zuchtbuch', 'Aus der Branchen-Querschau 13.10.2026: Rest nach Motoren.', 'Zuchtbuch. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('TI-3', 'Stall-Tour mit Rechnung je Halter', 'Aus der Branchen-Querschau 13.10.2026: Rest nach Motoren.', 'Stall-Tour mit Rechnung je Halter.', 'G', '2', 'offen'),
+]
+EF_RE=[
+('RE-1', 'Fristen mit Vier-Augen-Prinzip', 'Aus der Branchen-Querschau 13.10.2026: Kanzlei- und Makler-Kern.', 'Fristen mit Vier-Augen-Prinzip.', 'C', '1', 'offen'),
+('RE-2', 'Kollisionsprüfung', 'Aus der Branchen-Querschau 13.10.2026: Kanzlei- und Makler-Kern.', 'Kollisionsprüfung.', 'C', '1', 'offen'),
+('RE-3', 'Zwei Kanzlei-Module zusammenführen', 'Aus der Branchen-Querschau 13.10.2026: Kanzlei- und Makler-Kern.', 'Zwei Kanzlei-Module zusammenführen.', 'C', '2', 'offen'),
+('RE-4', 'Versicherungsbestand', 'Aus der Branchen-Querschau 13.10.2026: Kanzlei- und Makler-Kern.', 'Versicherungsbestand.', 'C', '2', 'offen'),
+('RE-5', 'Courtage-Abgleich', 'Aus der Branchen-Querschau 13.10.2026: Kanzlei- und Makler-Kern.', 'Courtage-Abgleich.', 'G', '2', 'offen'),
+]
+EF_GE=[
+('GE-1', 'Präventionskurs-Nachweis für die Krankenkasse', 'Aus der Branchen-Querschau 13.10.2026: Kassen-Abläufe.', 'Präventionskurs-Nachweis für die Krankenkasse.', 'G', '1', 'offen'),
+('GE-2', 'Reha-Sport mit Verordnung und Einheiten', 'Aus der Branchen-Querschau 13.10.2026: Kassen-Abläufe.', 'Reha-Sport mit Verordnung und Einheiten.', 'C', '3', 'offen'),
+('GE-3', 'Betriebliches Gesundheitsmanagement für Firmenkunden', 'Aus der Branchen-Querschau 13.10.2026: Kassen-Abläufe.', 'Betriebliches Gesundheitsmanagement für Firmenkunden.', 'C', '2', 'offen'),
+]
+EF_KU=[
+('KU-1', 'Abo-Reihen Rest', 'Aus der Branchen-Querschau 13.10.2026: Soziale Träger und Kultur.', 'Abo-Reihen Rest.', 'C', '2', 'offen'),
+('KU-2', 'Vereinsverwaltung Rest', 'Aus der Branchen-Querschau 13.10.2026: Soziale Träger und Kultur.', 'Vereinsverwaltung Rest.', 'C', '2', 'offen'),
+('KU-3', 'Kita-/Betreuungsverwaltung', 'Aus der Branchen-Querschau 13.10.2026: Soziale Träger und Kultur.', 'Kita-/Betreuungsverwaltung. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '3', 'offen'),
+('KU-4', 'Abrechnung mit Kostenträgern', 'Aus der Branchen-Querschau 13.10.2026: Soziale Träger und Kultur.', 'Abrechnung mit Kostenträgern. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '3', 'offen'),
+('KU-5', 'Kirchengemeinde', 'Aus der Branchen-Querschau 13.10.2026: Soziale Träger und Kultur.', 'Kirchengemeinde. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('KU-6', 'Ehrenamt-Schichten mit Führungszeugnis-Frist', 'Aus der Branchen-Querschau 13.10.2026: Soziale Träger und Kultur.', 'Ehrenamt-Schichten mit Führungszeugnis-Frist. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+]
+NEU_PLAN=[
+('HW-D','Handwerk-Durchgang im Code','Unklar, ob von der Anfrage bis zur Gewährleistung wirklich jeder Schritt eines Handwerksbetriebs sauber durchläuft.','Jedes Handwerks-Modul am echten Code prüfen: Anfrage, Aufmaß, Angebot, Auftrag, Einsatz, Bautagebuch, Abnahme, Rechnung, Mahnung, Gewährleistung. Ergebnis: echte Push-Zahl, Funde in die Bauliste.','C','0','live'),
+('HW-0','0 % Umsatzsteuer wird beim Übernehmen zu 19 %','Eine Position mit 0 % wird beim Weiterreichen zu 19 % (Befund P352) – der Handwerk-Durchgang fand das Muster an 23 Stellen: 11 Routen (Angebot, LV, Projekt, Einsatz, Fachpaket, Abo, Objektzeit, Wartung, Reservierung, Wiederkehr-Lauf, Kasse), Kalkulator-Übergabe und 6 Seiten.','Ein Leser lib/steuersatz.ts (0 bleibt 0, nur leer wird 19 %) an allen 23 Stellen, Wächter-Test gegen das Muster „|| 19“.','G','1','nächster'),
+('HW-B','Bedenkenanmeldung (VOB/B § 4 Abs. 3)','Es gibt keine Bedenkenanmeldung im Code.','Als eigener Rechtstext des Betriebs (Meine Rechtstexte) mit Schreiben aus dem Projekt; ARGONAUT liefert nur das leere Gerüst.','C','1','offen'),
+('MO1v-HW','Protokoll-Vorlagen Handwerk/Energie','Ohne Vorlagen bleibt der Protokoll-Motor leer.','Gerüst, Heizung/Lüftung/Trinkwasser, Kältemittel, Sicherheitsmappe, Heizlast, PV-Anmeldemappe, Kanal-TV, Prüfmittel; Fachwerte als Startwerte gekennzeichnet.','C','1','offen'),
+('MO1v-LLD','Protokoll-Vorlagen Logistik/Lebensmittel/Dienstleistung','Ohne Vorlagen bleibt der Protokoll-Motor leer.','Temperaturliste, Abfahrtskontrolle, Übergabe mit Vorbehalt, Reinigungskontrolle, Winterdienst, Zähler.','C','1','offen'),
+('MO1v-KTB','Protokoll-Vorlagen Kunde/Tier/Beratung','Ohne Vorlagen bleibt der Protokoll-Motor leer.','Behandlungskarte, Optik, Pflegekarte, Stockkarte, Artenschutz, Lernstand, Beratungsdoku, Pensions-Gastakte.','C','1','offen'),
+]
+_NEU={r[0]:r for r in NEU_PLAN+EF_HW+EF_IM+EF_DL+EF_EN+EF_FZ+EF_IN+EF_LO+EF_LW+EF_IT+EF_MK+EF_HA+EF_LM+EF_GA+EF_BI+EF_SB+EF_TI+EF_RE+EF_GE+EF_KU}
+_EF_LISTEN={'HW':EF_HW,'IM':EF_IM,'DL':EF_DL,'EN':EF_EN,'FZ':EF_FZ,'IN':EF_IN,'LO':EF_LO,'LW':EF_LW,'IT':EF_IT,'MK':EF_MK,'HA':EF_HA,'LM':EF_LM,'GA':EF_GA,'BI':EF_BI,'SB':EF_SB,'TI':EF_TI,'RE':EF_RE,'GE':EF_GE,'KU':EF_KU}
+def _ids(k): return [r[0] for r in _EF_LISTEN[k]]
+# (id, titel, untertitel, zeilen-ids) — Reihenfolge = Bau-Reihenfolge
+PLAN=[
+("p1a","Platz 1a · Handwerk & Bau: Handwerks-Kern zuerst","Beschluss 15.10.2026 · Was ein Handwerksbetrieb zum Start braucht oder was vor dem Start Pflicht ist · Anwalt-Teile (Kupferzuschlag, Förderantrag) gebaut und gesperrt",
+ ['HW-D','HW-0','HW-5','HW-6','HW-7','HW-8','HW-9','HW-10','HW-11','HW-12','HW-13','HW-14','HW-15','HW-16','MO0a','MO0b','MO0c','MO1','MO1v-HW','LK2','LK7','LK5','HW-4','MO4','HW-2','HW-B','C1','D1','HW-1','HW-3']),
+("p1b","Platz 1b · Für alle Betriebe (gehört zum Handwerk-Paket)","Verkaufsteam, Academy, Lücken für alle, Kundenportal und Motoren – jeder Betrieb bekommt das, Handwerker zuerst",
+ ['VK2','VK3','VK5','VK6','VK7','VK8','VK9','VK10','VK13','VK14','VK16','VK17','VK18','VK19','AK1','AK2','AK3','AK6','LK1','LK3','LK4','LK6','LK8','LK9','LK10','LK11','LK12','LK13','LK14','LK15','LK17','MO3','MO5','MO6','CO4','CO1','CO10']),
+("b02","Platz 2 · Immobilien & Verwaltung","Hausverwaltung ist Multiplikator Nr. 1 und bringt Handwerker mit · WEG-Kern zuerst",_ids('IM')),
+("b03","Platz 3 · Dienstleistungen","Reinigung, Hausmeister, Vermittlung, Zeitarbeit, Umzug – Partner der Hausverwaltung",['A4g','MO7']+_ids('DL')),
+("b04","Platz 4 · Energie & Umwelt","SHK, PV, Energieberatung grenzen ans Handwerk · fast alles gesperrt bis Anwalt",_ids('EN')),
+("b05","Platz 5 · Fahrzeuge & Mobilität","Pilot läuft, schon tief gebaut · Partner-Andockungen warten auf Verträge",_ids('FZ')+['A4h','E5','K11b','K19']),
+("b06","Platz 6 · Industrie & Produktion","Zahlungskräftiger Mittelstand · Produkt-Konformität vor dem 20.01.2027",_ids('IN')+['CH-D1']),
+("b07","Platz 7 · Logistik & Transport","Spedition als Multiplikator · Taxi und Telematik",_ids('LO')+['P1','V3','MO1v-LLD']),
+("b08","Platz 8 · Landwirtschaft, Garten & Forst","Rohholz-Pilotkunde zuerst",_ids('LW')),
+("b09","Platz 9 · IT & Technologie","Kauft schnell, NIS2 als Verkaufsargument",_ids('IT')),
+("b10","Platz 10 · Marketing, Medien & Kreativ","Agenturen sind zugleich Vertriebsweg",_ids('MK')+['VK12','VK15']),
+("b11","Platz 11 · Handel & E-Commerce","Großer Markt, hängt an Kasse (TSE-Partner) und Shop-Rechtstexten",_ids('HA')+['LK16']),
+("b12","Platz 12 · Lebensmittel & Nahversorgung","Bäcker, Metzger, Brennerei",_ids('LM')),
+("b13","Platz 13 · Gastronomie & Hotellerie","Braucht die echte Kassen-TSE",_ids('GA')+['MO0d','E2']),
+("b14","Platz 14 · Bildung & Wissenschaft","Coaching, Kurse, Academy für Kunden – nichts davon braucht den Anwalt",_ids('BI')+['CO2','CO3','CO5','CO6','CO7','CO8','CO9']),
+("b15","Platz 15 · Sport, Beauty & Lifestyle","Salons, Studios, Bäder, Belegungs-Motor",_ids('SB')+['MO2','A4i']),
+("b16","Platz 16 · Tiere","Klein, fast alles frei",_ids('TI')+['MO1v-KTB']),
+("b17","Platz 17 · Recht, Steuern & Finanzen","Berufsgeheimnis – bauen, gesperrt bis Anwalt",_ids('RE')),
+("b18","Platz 18 · Gesundheit & Wellness","Gesundheitsdaten – bauen, gesperrt bis Anwalt",_ids('GE')),
+("b19","Platz 19 · Kultur, Soziales & Öffentliches","Vereine, Kita, Kirchen · Schutz-Paket für besondere Daten",_ids('KU')+['A5']),
+("pB","B · Eigener Server (für alle)","Läuft, sobald Martins Hetzner-Server steht (15 Minuten mit Anleitung) – kann jederzeit dazwischen",['LV0','LV1','LV2','LV3','LV4','LV5','AK4','188','189']),
+("pC","C · Partner, Zugänge, App-Prüfungen","Läuft dazwischen, sobald der Partner oder Zugang da ist",['VK20','VK21','VK22','VK23','VK24','AK5','B2','B8','E1','E3','E4','35–40']),
+("pE","E · Dossiertexte ganz am Schluss","Erst wenn wirklich alles gebaut ist",['A6','A7','B11b']),
+]
+_ALT={}
+for _sid,_t,_u,_rows in S:
+    for _r in _rows: _ALT[_r[0]]=_r
+_GEZOGEN=set()
+_PS=[]
+for _pid,_pt,_pu,_liste in PLAN:
+    _z=[]
+    for _nr in _liste:
+        _r=_ALT.get(_nr) or _NEU.get(_nr)
+        if _r is None: raise SystemExit('Bauplan: Zeile fehlt '+_nr)
+        if _nr in _GEZOGEN: raise SystemExit('Bauplan: doppelt '+_nr)
+        if _nr=='A4g' and _r[6]=='nächster': _r=_r[:6]+('offen',)
+        _GEZOGEN.add(_nr); _z.append(_r)
+    _PS.append((_pid,_pt,_pu,_z))
+# Alte Abschnitte: gezogene Zeilen raus; MO1v (in drei Vorlagen-Pakete geteilt) und die EF-Sammelzeilen (jetzt einzelne Zeilen) raus
+_WEG=_GEZOGEN|{'MO1v'}|{'EF-'+k for k in _EF_LISTEN}
+S=_PS+[(sid,t,u,[('EF0','Einzelfälle jetzt bauen? Entschieden','Nach den Motoren sollte entschieden werden, ob die Einzelfälle kommen.','Entschieden 15.10.2026: alles bauen, eingeplant je Branche im Bauplan oben (Plätze 1–19); Anwalt-Teile bauen und gesperrt lassen.','M','–','live') if r[0]=='EF0' else r for r in rows if r[0] not in _WEG]) for sid,t,u,rows in S]
+_REST=[r[0] for sid,t,u,rows in S[len(_PS):] for r in rows if r[6]!='live' and str(r[5]).isdigit() and int(r[5])>0]
+if _REST: raise SystemExit('Bauplan: offene Zeilen nicht eingeplant: '+', '.join(_REST))
+BAUPLAN_IDS=[p[0] for p in PLAN]

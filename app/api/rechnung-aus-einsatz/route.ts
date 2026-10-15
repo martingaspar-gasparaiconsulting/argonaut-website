@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,6 @@ type EinsatzPos = {
   mwst_satz: number | null;
 };
 
-const MWST_STD = 19;
 
 export async function POST(req: Request) {
   try {
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
         menge,
         einheit: (p.einheit || "").trim() || "Stk",
         einzelpreis,
-        mwst_satz: Number(p.mwst_satz) || MWST_STD,
+        mwst_satz: steuersatz(p.mwst_satz),
         gesamt_netto: cent(menge * einzelpreis),
       };
     });

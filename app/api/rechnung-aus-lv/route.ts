@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,6 @@ export const runtime = "nodejs";
 //  · Positions-Insert scheitert -> Rechnung STORNIEREN (keine Nummernlücke).
 // ============================================================
 
-const MWST_STD = 19;
 
 type LvPos = { kurztext: string | null; ordnungszahl: string | null; menge: number | null; einheit: string | null; einzelpreis: number | null; mwst_satz: number | null; ist_nachtrag: boolean | null };
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         owner_user_id: betrieb, position: i + 1,
         bezeichnung: `${nt}${oz}${p.kurztext || "Position"}`,
         menge, einheit: (p.einheit || "").trim() || "Stk", einzelpreis,
-        mwst_satz: Number(p.mwst_satz) || MWST_STD,
+        mwst_satz: steuersatz(p.mwst_satz),
         gesamt_netto: cent(menge * einzelpreis),
       };
     });

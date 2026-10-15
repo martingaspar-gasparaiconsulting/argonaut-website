@@ -5,6 +5,7 @@ import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_compone
 import { resArtInfo, type ResArt } from "@/lib/reservierung";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
 
     const betragNetto = Number(v.betrag) || 0;
     if (betragNetto <= 0) return NextResponse.json({ error: 'Kein abrechenbarer Betrag (dieser Vorgang hat keine Gebühr).' }, { status: 400 });
-    const satz = Number(v.mwst_satz) || 19;
+    const satz = steuersatz(v.mwst_satz);
 
     const ai = resArtInfo(String(v.art) as ResArt);
     let platzBez = '';

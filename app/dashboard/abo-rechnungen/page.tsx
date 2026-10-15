@@ -13,6 +13,7 @@ import { anlegenFuerBetrieb, betriebsKennung, istZugriffsFehler } from '@/lib/be
 import Leerzustand from '../_components/Leerzustand';
 import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { leseZahlOder } from '@/lib/zahlen';
+import { steuersatz } from "@/lib/steuersatz";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -130,7 +131,7 @@ export default function AboRechnungenPage() {
     if (!form.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     const positionen: PosJson[] = posRows
       .filter((p) => p.bezeichnung.trim() || num(p.einzelpreis) > 0)
-      .map((p) => ({ bezeichnung: p.bezeichnung.trim() || 'Leistung', menge: num(p.menge) || 1, einheit: p.einheit.trim() || 'Pauschal', einzelpreis: num(p.einzelpreis), mwst_satz: num(p.mwst_satz) || 19 }));
+      .map((p) => ({ bezeichnung: p.bezeichnung.trim() || 'Leistung', menge: num(p.menge) || 1, einheit: p.einheit.trim() || 'Pauschal', einzelpreis: num(p.einzelpreis), mwst_satz: steuersatz(p.mwst_satz) }));
     if (!positionen.length) { setFehler('Bitte mindestens eine Position mit Preis erfassen.'); return; }
     setBusy(true); setFehler(null); setOk(null);
     try {

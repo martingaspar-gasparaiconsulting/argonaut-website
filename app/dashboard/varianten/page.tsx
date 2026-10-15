@@ -18,6 +18,7 @@ import {
 } from "@/lib/varianten";
 import { variantenMatrixPdf } from "@/lib/variantenMatrixPdf";
 import { zahlAusFeld, zahlFeld } from '@/lib/zahlen';
+import { steuersatz } from "@/lib/steuersatz";
 
 // ---------------------------------------------------------------------
 // ARGONAUT OS · L2-1 · Artikel-Varianten & Matrix
@@ -256,7 +257,7 @@ export default function VariantenSeite() {
       achse2_name: gForm.achse2_name.trim() || null,
       achse2_werte: gForm.achse2_werte.trim() || null,
       basis_vk: zahl(gForm.basis_vk),
-      mwst_satz: zahl(gForm.mwst_satz) || 19,
+      mwst_satz: steuersatz(gForm.mwst_satz),
       status: gForm.status || "aktiv",
     };
     let error = null as { message: string } | null;
@@ -449,7 +450,7 @@ export default function VariantenSeite() {
         achse2_name: val("achse2_name") || null,
         achse2_werte: val("achse2_werte") || null,
         basis_vk: zahl(val("basis_vk")),
-        mwst_satz: zahl(val("mwst_satz")) || 19,
+        mwst_satz: steuersatz(val("mwst_satz")),
         status: "aktiv",
       };
       rows.push(besitzer ? { ...base, owner_user_id: besitzer } : base);

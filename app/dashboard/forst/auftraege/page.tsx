@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { leseZahlOder } from '@/lib/zahlen';
+import { steuersatz } from "@/lib/steuersatz";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -148,7 +149,7 @@ export default function ForstAuftraegePage() {
       owner_user_id: besitzer ?? uid, auftrag_id: aktiv.id, art: 'leistung', bezeichnung: freie.bezeichnung.trim(),
       menge: num(freie.menge) || 1, einheit: freie.einheit,
       einzelpreis_netto: num(freie.einzelpreis), wegepauschale_netto: 0,
-      steuersatz_prozent: num(freie.steuersatz) || 19, sortierung: positionen.length,
+      steuersatz_prozent: steuersatz(freie.steuersatz), sortierung: positionen.length,
     });
     if (error) { setFehler('Position konnte nicht gespeichert werden.'); return; }
     setFreie({ bezeichnung: '', menge: '1', einheit: 'Std', einzelpreis: '', steuersatz: '19' });

@@ -8,6 +8,7 @@ import {
   wartungPositionen, darfAbrechnen, darfAboAbrechnen,
   naechsteFaelligkeitAb, intervallZuMonate, datumPlusMonate, datumPlusTage, istDatum,
 } from "@/lib/wiederkehr";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -35,7 +36,6 @@ export const runtime = "nodejs";
 // ein Abo, das heute schon abgerechnet wurde. Beides ist dort node-getestet.
 // ============================================================
 
-const MWST_STD = 19;
 
 type Sb = Awaited<ReturnType<typeof createClient>>;
 type Posten = { bezeichnung?: string; menge?: number; einheit?: string; einzelpreis?: number; mwst_satz?: number };
@@ -81,7 +81,7 @@ async function rechnungAnlegen(supabase: Sb, userId: string, kopf: Kopf, posten:
       menge,
       einheit: String(p.einheit || "Pauschal").slice(0, 20),
       einzelpreis,
-      mwst_satz: Number(p.mwst_satz) || MWST_STD,
+      mwst_satz: steuersatz(p.mwst_satz),
       gesamt_netto: cent(menge * einzelpreis),
     };
   });

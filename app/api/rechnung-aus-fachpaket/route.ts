@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -20,7 +21,6 @@ export const runtime = "nodejs";
 //    als abgerechnet markiert (Doppel-Schutz). Nur erlaubte Tabellen.
 // ============================================================
 
-const MWST_STD = 19;
 
 // Nur diese Tabellen dürfen als "abgerechnet" markiert werden (Sicherheit).
 const ERLAUBTE_QUELLEN = new Set<string>([
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         menge,
         einheit: String(p.einheit || "Leistung").slice(0, 20),
         einzelpreis,
-        mwst_satz: Number(p.mwst_satz) || MWST_STD,
+        mwst_satz: steuersatz(p.mwst_satz),
         gesamt_netto: cent(menge * einzelpreis),
       };
     });

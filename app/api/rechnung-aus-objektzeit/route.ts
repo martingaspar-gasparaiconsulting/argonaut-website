@@ -5,6 +5,7 @@ import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_compone
 import { pruefeEmpfaenger, reservierteZeiten } from "@/lib/objektzeitRechnung";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,6 @@ export const runtime = "nodejs";
 // Empfänger (Kontakt oder Name) entsteht keine Rechnung mehr.
 // ============================================================
 
-const MWST_STD = 19;
 
 type Zeit = {
   id: string; datum: string | null; dauer_minuten: number | null;
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
         owner_user_id: betrieb, position: i + 1,
         bezeichnung: (datumTxt ? `${datumTxt} · ` : "") + (z.taetigkeit || "Objektzeit"),
         menge, einheit: "Std", einzelpreis,
-        mwst_satz: Number(z.mwst_satz) || MWST_STD,
+        mwst_satz: steuersatz(z.mwst_satz),
         gesamt_netto: cent(menge * einzelpreis),
       };
     });

@@ -5,26 +5,14 @@ esc=html.escape
 WER={"G":("gemeinsam","g"),"C":("Claude","c"),"M":("Martin","m")}
 def st_cls(s):
     return {"live":"ok","läuft":"run","nächster":"next"}.get(s,"wait" if "wartet" in s else "open")
-tot_bis_test=0; tot_s3=0; tot_kfz=0; tot_mob=0; tot_alle=0; tot_chem=0; tot_ext=0; tot_acad=0; tot_vk=0; tot_co=0; tot_lk=0; tot_mo=0; done=0
 def pz(x):
     return int(x) if str(x).isdigit() else 0
-for sid,_,_,rows in S:
-    for r in rows:
-        p=pz(r[5])
-        if r[6]=="live": done+=p; continue
-        if sid in("s0","s1","s2"): tot_bis_test+=p
-        elif sid in ("s3","s5","s6","amp"): tot_s3+=p
-        elif sid=="kfz": tot_kfz+=p
-        elif sid=="mob": tot_mob+=p
-        elif sid=="alle": tot_alle+=p
-        elif sid=="chem": tot_chem+=p
-        elif sid=="acad": tot_acad+=p
-        elif sid=="vk": tot_vk+=p
-        elif sid=="co": tot_co+=p
-        elif sid=="lk": tot_lk+=p
-        elif sid=="mo": tot_mo+=p
-        else: tot_ext+=p
-gesamt=tot_bis_test+tot_s3+tot_kfz+tot_mob+tot_alle+tot_chem+tot_ext+tot_acad+tot_vk+tot_co+tot_lk+tot_mo
+# 15.10.2026: Summen je Bauplan-Abschnitt (rows.py BAUPLAN_IDS); alte Abschnitte zeigen nur Erledigtes
+done=sum(pz(r[5]) for sid,_,_,rows in S for r in rows if r[6]=="live")
+offen_je={sid:sum(pz(r[5]) for r in rows if r[6]!="live") for sid,_,_,rows in S}
+gesamt=sum(offen_je.values())
+p1=offen_je.get("p1a",0)+offen_je.get("p1b",0)
+branchen=sum(offen_je.get(f"b{i:02d}",0) for i in range(2,20))
 alle=gesamt+done
 proz=round(done*100/alle)
 secs=[]
@@ -71,6 +59,7 @@ for _gi,(_t,_c,_f) in enumerate(_gruppen):
         _chips.append(f'<a class="ogc" style="{_k}" href="#og{_gi}">{esc(_t)} · {_gp}</a>')
         _offen_html.append(f'<div class="ogr" style="{_k}"><h3 id="og{_gi}"><span class="pill">{esc(_t)}</span><small>{len(_z)} Pakete · {_gp} Pushes</small></h3><div class="tw"><table><thead><tr><th>Nr</th><th>Paket</th><th>Bereich</th><th>Wer</th><th>Pushes</th></tr></thead><tbody>{"".join(_z)}</tbody></table></div></div>')
 OFFEN=f'<section id="offen"><header class="sh"><h2>Offen auf einen Blick</h2><p>Alles, was noch nicht live ist – oben das Nächste, dann frei baubar (nur Claude / gemeinsam), dann was wartet, nach Grund · <b>{_offen_summe} offene Pushes</b></p></header><nav class="sprung" aria-label="Gruppen">{"".join(_chips)}</nav>{"".join(_offen_html)}</section>'
+BAUNAV=''.join(f'<a href="#{sid}" style="border-color:var(--gold)">{esc(t.split(" · ")[0])}</a>' for sid,t,u,rows in S if sid in BAUPLAN_IDS)
 body=f'''<title>ARGONAUT Bauliste</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap">
@@ -153,19 +142,22 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 13.10.2026 · P363 live (4e9286e) · _p364 unterwegs (A4f Weinbau) · nächster A4g Fachpaket Vermittlung</div>
+<div class="eyebrow">ARGONAUT OS · Stand 15.10.2026 · P364 live (e8ce476) · Handwerk-Durchgang erledigt (12 neue Pushes) · nächster: HW-0 Steuersatz 0 %</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
-<p class="lead">Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
+<p class="lead">Neu seit 15.10.2026: gebaut wird nach Branchen – Handwerk zuerst und komplett, dann Plätze 2–19, dann eigener Server, Partner und zum Schluss die Dossiertexte. Was der Anwalt freigeben muss, wird gebaut und bleibt bis dahin gesperrt. Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">
-<div class="zahl gold"><b>{tot_bis_test}</b><span>Pushes Stufe 0–2 (Rest wartet)</span></div>
-<div class="zahl"><b>{tot_s3}</b><span>Pushes Stufe 3 + Dossiers</span></div>
-<div class="zahl"><b>{tot_kfz}</b><span>Pushes Kfz-Pilot</span></div><div class="zahl"><b>{tot_alle}</b><span>Pushes für alle Branchen</span></div><div class="zahl"><b>{tot_mob}</b><span>Pushes Mobilität</span></div><div class="zahl"><b>{tot_chem}</b><span>Pushes Chemie und Shop</span></div><div class="zahl"><b>{tot_ext}</b><span>Pushes externe Partner</span></div><div class="zahl"><b>{tot_acad}</b><span>Pushes Academy</span></div><div class="zahl"><b>{tot_vk}</b><span>Pushes Verkaufsteam</span></div><div class="zahl"><b>{tot_co}</b><span>Pushes Live und Coaching</span></div><div class="zahl"><b>{tot_lk}</b><span>Pushes Lücken für alle</span></div><div class="zahl"><b>{tot_mo}</b><span>Pushes Motoren (Stufe 4)</span></div><div class="zahl"><b>≈ 200</b><span>Pushes Einzelfälle auf Abruf (nicht eingerechnet)</span></div>
+<div class="zahl gold"><b>{offen_je.get("p1a",0)}</b><span>Platz 1a · Handwerks-Kern zuerst</span></div>
+<div class="zahl gold"><b>{offen_je.get("p1b",0)}</b><span>Platz 1b · für alle Betriebe</span></div>
+<div class="zahl"><b>{branchen}</b><span>Plätze 2–19 · Branchen</span></div>
+<div class="zahl"><b>{offen_je.get("pB",0)}</b><span>B · eigener Server</span></div>
+<div class="zahl"><b>{offen_je.get("pC",0)}</b><span>C · Partner und Zugänge</span></div>
+<div class="zahl"><b>{offen_je.get("pE",0)}</b><span>E · Dossiertexte am Schluss</span></div>
 <div class="zahl"><b>{gesamt}</b><span>Pushes gesamt offen</span></div>
 <div class="zahl"><b>≈ {round(gesamt/2)}</b><span>Blöcke à 2 Std. + 1 Testtag</span></div>
 </div>
 <div class="fort"><span>{done} von {alle} Pushes erledigt · {proz} %</span><div class="balken" role="progressbar" aria-valuenow="{proz}" aria-valuemin="0" aria-valuemax="100"><i style="width:{proz}%"></i></div></div>
 <div class="leg">Wer: <span class="w w-g">gemeinsam</span><span class="w w-c">Claude</span><span class="w w-m">Martin</span> · Status: <span class="st st-ok">✓ erledigt</span><span class="st st-run">läuft</span><span class="st st-next">nächster</span><span class="st st-open">offen</span><span class="st st-wait">wartet</span></div>
-<nav class="sprung" aria-label="Abschnitte"><a href="#offen" style="border-color:var(--gold);font-weight:700">📌 Offen</a><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#alle">Für alle</a><a href="#mob">Mobilität</a><a href="#chem">Chemie und Shop</a><a href="#amp">Ampel-Beschluss</a><a href="#acad">Academy</a><a href="#vk">Verkaufsteam</a><a href="#co">Live und Coaching</a><a href="#lk">Lücken für alle</a><a href="#mo">Motoren</a><a href="#ef">Auf Abruf</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#s6">Erste Kunden</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
+<nav class="sprung" aria-label="Abschnitte"><a href="#offen" style="border-color:var(--gold);font-weight:700">📌 Offen</a>{BAUNAV}<span style="color:var(--mut);font-size:13px;align-self:center">Erledigt:</span><a href="#s0">Stufe 0</a><a href="#s1">Stufe 1</a><a href="#s2">Stufe 2</a><a href="#s3">Stufe 3</a><a href="#kfz">Kfz-Pilot jetzt</a><a href="#alle">Für alle</a><a href="#mob">Mobilität</a><a href="#chem">Chemie und Shop</a><a href="#amp">Ampel-Beschluss</a><a href="#acad">Academy</a><a href="#vk">Verkaufsteam</a><a href="#co">Live und Coaching</a><a href="#lk">Lücken für alle</a><a href="#mo">Motoren</a><a href="#s4">Externe Partner</a><a href="#s5">Nach dem Anwalt</a><a href="#s6">Erste Kunden</a><a href="#test">Testtag</a><a href="#kosten">Kosten</a><a href="#selbst">Martin selbst</a></nav>
 </div>
 {OFFEN}
 {secs[0]}{secs[1]}{secs[2]}
@@ -186,4 +178,4 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 <p class="fuss">Quelle: Rechts- und Sicherheitsprüfung vom 29.09.2026 (273 API-Routen, 180 SQL-Dateien, Mail-Wege, KI-Aufrufe, Uploads, Admin-Wege) und die Liste der offenen Punkte. Das Doc „ARGONAUT Rundumschlag“ enthält die Fundstellen im Code.</p>
 </div>'''
 open('bauliste.html','w').write(body)
-print(tot_bis_test,tot_s3,tot_kfz,tot_ext,gesamt,done)
+print(p1,branchen,offen_je.get("pB",0),offen_je.get("pC",0),offen_je.get("pE",0),gesamt,done)

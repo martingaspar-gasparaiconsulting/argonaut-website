@@ -27,6 +27,7 @@ import { EigeneFelderManager, EigeneFelderInputs, EigeneFelderAnzeige, ladeFelde
 import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { leseZahlOder } from '@/lib/zahlen';
+import { steuersatz } from "@/lib/steuersatz";
 
 const MODUL = 'bestellung';
 
@@ -176,7 +177,7 @@ export default function EinkaufPage() {
       const bid = (data as { id: string }).id;
       const rows = posEntwurf.map((p) => ({
         owner_user_id: besitzer ?? uid, bestellung_id: bid, artikel: p.artikel.trim(), menge: num(p.menge),
-        einheit: p.einheit.trim() || null, ek_preis: num(p.ek_preis), mwst_satz: num(p.mwst_satz) || 19,
+        einheit: p.einheit.trim() || null, ek_preis: num(p.ek_preis), mwst_satz: steuersatz(p.mwst_satz),
         menge_erhalten: 0, retoure_menge: 0,
       }));
       const { error: e2 } = await supabase.from('bestellung_position').insert(rows);
@@ -270,7 +271,7 @@ export default function EinkaufPage() {
   function druckeBestellung(b: Bestellung) {
     const ps = posByBest(b.id);
     const l = lieferanten.find((x) => x.id === b.lieferant_id);
-    const brutto = ps.reduce((s, p) => s + bruttoAusNetto(Number(p.menge) * Number(p.ek_preis), Number(p.mwst_satz) || 19).brutto, 0);
+    const brutto = ps.reduce((s, p) => s + bruttoAusNetto(Number(p.menge) * Number(p.ek_preis), steuersatz(p.mwst_satz)).brutto, 0);
     bestellPdf({
       aussteller: aussteller || 'Mein Betrieb',
       bestellNr: b.bestell_nr || '',

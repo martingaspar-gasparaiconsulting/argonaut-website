@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_components/steuerLogik";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,6 @@ export const runtime = "nodejs";
 //  · Danach werden die Leistungen als abgerechnet markiert (+ rechnung_id).
 // ============================================================
 
-const MWST_STD = 19;
 
 type Leistung = {
   id: string; beschreibung: string | null; datum: string | null;
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         owner_user_id: betrieb, position: i + 1,
         bezeichnung: (datumTxt ? `${datumTxt} · ` : "") + (p.beschreibung || "Leistung"),
         menge, einheit: "Std", einzelpreis,
-        mwst_satz: Number(p.mwst_satz) || MWST_STD,
+        mwst_satz: steuersatz(p.mwst_satz),
         gesamt_netto: cent(menge * einzelpreis),
       };
     });

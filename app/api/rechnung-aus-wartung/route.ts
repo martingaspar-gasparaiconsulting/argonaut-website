@@ -5,6 +5,7 @@ import { steuerGruppen, cent, type SteuerPosten } from "@/app/dashboard/_compone
 import { wartungPositionen, darfAbrechnen } from "@/lib/wiederkehr";
 import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
         menge,
         einheit: String(p.einheit || "Pauschal").slice(0, 20),
         einzelpreis,
-        mwst_satz: Number(p.mwst_satz) || 19,
+        mwst_satz: steuersatz(p.mwst_satz),
         gesamt_netto: cent(menge * einzelpreis),
       };
     });

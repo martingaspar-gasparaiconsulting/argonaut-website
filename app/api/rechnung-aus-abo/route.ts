@@ -6,6 +6,7 @@ import { abrechnungPruefen } from "@/lib/nurGeschaeftsleitung";
 import { quellSchreiber } from "@/lib/abrechnungServer";
 import { datumPlusMonate } from "@/lib/wiederkehr";
 import { heuteIso, istIsoDatum } from "@/lib/nachweisMotor";
+import { steuersatz } from "@/lib/steuersatz";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,6 @@ export const runtime = "nodejs";
 // rechnung-aus-projekt/-fachpaket (MwSt je Satz, Storno bei Positionsfehler).
 // ============================================================
 
-const MWST_STD = 19;
 
 type Pos = { bezeichnung?: string; menge?: number; einheit?: string; einzelpreis?: number; mwst_satz?: number };
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
         owner_user_id: betrieb, position: i + 1,
         bezeichnung: String(p.bezeichnung || 'Leistung').slice(0, 300),
         menge, einheit: String(p.einheit || 'Leistung').slice(0, 20), einzelpreis,
-        mwst_satz: Number(p.mwst_satz) || MWST_STD, gesamt_netto: cent(menge * einzelpreis),
+        mwst_satz: steuersatz(p.mwst_satz), gesamt_netto: cent(menge * einzelpreis),
       };
     });
     const summe = steuerGruppen(rechnungsPosten.map<SteuerPosten>((p) => ({ netto: p.gesamt_netto, satz: p.mwst_satz })));
