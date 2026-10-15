@@ -4,6 +4,8 @@
 // ARGONAUT OS · Bündel 19 · Bau & Handwerk komplett (Dashboard)
 // Reiter "LV / Kalkulation" (Leistungsverzeichnis + Nachträge -> Rechnung)
 // und "Abnahme" (Abnahmeprotokoll mit Mängelliste).
+// HW-14 (15.10.2026): Abnahme hängt am LV/Projekt, Prüfung vor dem Speichern
+// (lib/bauAbnahme.ts), Mängel abhaken (Chef), Protokoll drucken.
 // Pfad: app/dashboard/bau-lv/page.tsx
 // ============================================================
 
@@ -17,6 +19,8 @@ import { NurVoll } from '../_components/Ansicht';
 import type { EigenesFeld } from '@/lib/eigeneFelder';
 import { leseZahlOder } from '@/lib/zahlen';
 import { lvGesperrt, pruefePosition } from '@/lib/bauLvRegeln';
+import { heuteIso } from '@/lib/nachweisMotor';
+import { ABNAHME_ARTEN, artLabel, lvZuAbnahme, pruefeAbnahme, mangelUmschalten, maengelStand, abnahmeProtokollHtml, type Mangel } from '@/lib/bauAbnahme';
 
 const MODUL = 'bau_lv';
 
@@ -30,18 +34,19 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', danger: '#E06666', warn: '#E0A24C',
 };
 
-type LV = { id: string; titel: string; kunde_name: string | null; status: string; netto_summe: number; rechnung_id: string | null };
+type LV = { id: string; titel: string; kunde_name: string | null; status: string; netto_summe: number; rechnung_id: string | null; projekt_id?: string | null };
 type Pos = { id: string; ordnungszahl: string | null; kurztext: string; menge: number; einheit: string; einzelpreis: number; mwst_satz: number; gesamt_netto: number; ist_nachtrag: boolean; nachtrag_grund: string | null; position: number };
-type Mangel = { beschreibung: string; frist: string; behoben: boolean };
-type Abnahme = { id: string; titel: string; datum: string; ort: string | null; art: string; maengel: Mangel[]; unterschrift_name: string | null };
+type Abnahme = { id: string; titel: string; datum: string; ort: string | null; teilnehmer: string | null; art: string; maengel: Mangel[]; unterschrift_name: string | null; notiz: string | null; lv_id: string | null; projekt_id: string | null };
+type Projekt = { id: string; name: string | null };
 
 function eur(n: number) { return (Number(n) || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' }); }
 function num(s: string) { return leseZahlOder(s, 0); }
 function heute() { return new Date().toISOString().slice(0, 10); }
 function dHu(iso: string) { const p = (iso || '').split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso; }
 
-const ART_LABEL: Record<string, string> = { voll: 'Abnahme ohne Vorbehalt', unter_vorbehalt: 'Abnahme unter Vorbehalt', verweigert: 'Abnahme verweigert' };
 const ART_FARBE: Record<string, string> = { voll: C.green, unter_vorbehalt: C.warn, verweigert: C.danger };
+
+const LEER_AB = { titel: 'Abnahme', datum: heute(), ort: '', teilnehmer: '', art: 'voll', unterschrift_name: '', lv_id: '', projekt_id: '', notiz: '' };
 
 const LEER_POS = { ordnungszahl: '', kurztext: '', menge: '1', einheit: 'm²', einzelpreis: '', mwst_satz: '19', ist_nachtrag: false, nachtrag_grund: '' };
 
@@ -55,6 +60,8 @@ export default function BauLvPage() {
   const [aktivLv, setAktivLv] = useState<LV | null>(null);
   const [positionen, setPositionen] = useState<Pos[]>([]);
   const [abnahmen, setAbnahmen] = useState<Abnahme[]>([]);
+  const [projekte, setProjekte] = useState<Projekt[]>([]);
+  const [firma, setFirma] = useState('');
   const [laden, setLaden] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
@@ -66,19 +73,19 @@ export default function BauLvPage() {
   const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
   const [werteMap, setWerteMap] = useState<Record<string, Record<string, string>>>({});
 
-  const [ab, setAb] = useState({ titel: 'Abnahme', datum: heute(), ort: '', teilnehmer: '', art: 'voll', unterschrift_name: '' });
+  const [ab, setAb] = useState({ ...LEER_AB });
   const [maengel, setMaengel] = useState<Mangel[]>([]);
   const [mangel, setMangel] = useState({ beschreibung: '', frist: '' });
 
   const ladeLvs = useCallback(async () => {
-    const { data } = await supabase.from('bau_lv').select('id, titel, kunde_name, status, netto_summe, rechnung_id').order('erstellt_am', { ascending: false });
+    const { data } = await supabase.from('bau_lv').select('id, titel, kunde_name, status, netto_summe, rechnung_id, projekt_id').order('erstellt_am', { ascending: false });
     const rows = (data as LV[]) ?? [];
     setLvs(rows);
     setFelder(await ladeFelder(MODUL));
     setWerteMap(await ladeWerte(MODUL, rows.map((r) => r.id)));
   }, []);
   const ladeAbnahmen = useCallback(async () => {
-    const { data } = await supabase.from('bau_abnahmen').select('id, titel, datum, ort, art, maengel, unterschrift_name').order('datum', { ascending: false });
+    const { data } = await supabase.from('bau_abnahmen').select('id, titel, datum, ort, teilnehmer, art, maengel, unterschrift_name, notiz, lv_id, projekt_id').order('datum', { ascending: false });
     setAbnahmen(((data as Record<string, unknown>[]) ?? []).map((a) => ({ ...a, maengel: (a.maengel as Mangel[]) || [] })) as Abnahme[]);
   }, []);
   const ladePositionen = useCallback(async (lvId: string) => {
@@ -93,9 +100,15 @@ export default function BauLvPage() {
       if (!id) { setFehler('Nicht angemeldet.'); setLaden(false); return; }
       const { data: chef } = await supabase.rpc('mein_chef_id');
       // B1: owner_user_id ist der Betrieb (beim Mitarbeiter der Chef), nicht die angemeldete Person.
-      setBesitzer(typeof chef === 'string' && chef ? chef : id);
+      const betrieb = typeof chef === 'string' && chef ? chef : id;
+      setBesitzer(betrieb);
       setUid(id);
       await ladeLvs(); await ladeAbnahmen();
+      // HW-14: Projekte für die Abnahme, Firmenname fürs Protokoll (beides optional).
+      const { data: pr } = await supabase.from('projekte').select('id, name').eq('archiviert', false).order('name', { ascending: true });
+      setProjekte((pr as Projekt[]) ?? []);
+      const { data: prof } = await supabase.from('profiles').select('firma_name').eq('id', betrieb).maybeSingle();
+      setFirma(String((prof as { firma_name?: string } | null)?.firma_name ?? ''));
       setLaden(false);
     })();
   }, [ladeLvs, ladeAbnahmen]);
@@ -105,7 +118,7 @@ export default function BauLvPage() {
     setBusy(true); setFehler(null); setOk(null);
     try {
       const { data, error } = await supabase.from('bau_lv').insert({ owner_user_id: besitzer ?? uid, titel: neuLv.titel.trim(), kunde_name: neuLv.kunde.trim() || null })
-        .select('id, titel, kunde_name, status, netto_summe, rechnung_id').single();
+        .select('id, titel, kunde_name, status, netto_summe, rechnung_id, projekt_id').single();
       if (error || !data) { setFehler('LV konnte nicht angelegt werden.'); return; }
       try { await speichereWerte(MODUL, (data as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
       setLvs((l) => [data as LV, ...l]); setNeuLv({ titel: '', kunde: '' }); setNmExtra({});
@@ -176,18 +189,51 @@ export default function BauLvPage() {
   }
 
   function mangelDazu() { if (!mangel.beschreibung.trim()) return; setMaengel((m) => [...m, { beschreibung: mangel.beschreibung.trim(), frist: mangel.frist, behoben: false }]); setMangel({ beschreibung: '', frist: '' }); }
+  // HW-14: LV gewählt -> lv_id, Projekt, Titel und Ort vorbelegen (eigene Eingaben bleiben).
+  function abnahmeLvWaehlen(lvId: string) {
+    const lv = lvs.find((l) => l.id === lvId) ?? null;
+    const v = lvZuAbnahme(lv);
+    setAb((a) => ({
+      ...a, lv_id: v.lv_id, projekt_id: v.projekt_id || a.projekt_id,
+      titel: !a.titel.trim() || a.titel.startsWith('Abnahme') ? v.titel : a.titel,
+      ort: a.ort.trim() ? a.ort : v.ort,
+    }));
+  }
+
   async function abnahmeSpeichern() {
     if (!uid) return;
+    const pruefung = pruefeAbnahme({ datum: ab.datum, art: ab.art, maengel }, heuteIso(new Date()));
+    if (!pruefung.ok) { setFehler(pruefung.fehler); setOk(null); return; }
     setBusy(true); setFehler(null); setOk(null);
     try {
       const { error } = await supabase.from('bau_abnahmen').insert({
         owner_user_id: besitzer ?? uid, titel: ab.titel.trim() || 'Abnahme', datum: ab.datum, ort: ab.ort.trim() || null,
         teilnehmer: ab.teilnehmer.trim() || null, art: ab.art, maengel, unterschrift_name: ab.unterschrift_name.trim() || null,
+        lv_id: ab.lv_id || null, projekt_id: ab.projekt_id || null, notiz: ab.notiz.trim() || null,
       });
       if (error) { setFehler('Abnahme konnte nicht gespeichert werden.'); return; }
-      setAb({ titel: 'Abnahme', datum: heute(), ort: '', teilnehmer: '', art: 'voll', unterschrift_name: '' }); setMaengel([]);
-      setOk('Abnahmeprotokoll gespeichert.'); await ladeAbnahmen();
+      setAb({ ...LEER_AB, datum: heute() }); setMaengel([]);
+      setOk(ab.art === 'verweigert' ? 'Abnahmeprotokoll gespeichert — Abnahme verweigert, die Gewährleistung beginnt nicht.' : 'Abnahmeprotokoll gespeichert. Die Gewährleistung erfassen Sie unter „Nachträge & Gewährleistung".');
+      await ladeAbnahmen();
     } finally { setBusy(false); }
+  }
+
+  // HW-14: Mangel abhaken / wieder öffnen — nur der Chef (RLS: Mitarbeiter dürfen nur anlegen).
+  async function mangelAbhaken(a: Abnahme, i: number) {
+    const neu = mangelUmschalten(a.maengel, i, heuteIso(new Date()));
+    setFehler(null); setOk(null);
+    const { data: geschrieben, error } = await supabase.from('bau_abnahmen').update({ maengel: neu }).eq('id', a.id).select('id');
+    if (error || nichtsGeschrieben(geschrieben)) { setFehler('Mangel konnte nicht geändert werden — das darf nur die Inhaberin bzw. der Inhaber.'); return; }
+    setAbnahmen((l) => l.map((x) => (x.id === a.id ? { ...x, maengel: neu } : x)));
+  }
+
+  function protokollDrucken(a: Abnahme) {
+    const lv = a.lv_id ? lvs.find((l) => l.id === a.lv_id) : undefined;
+    const projekt = a.projekt_id ? projekte.find((p) => p.id === a.projekt_id) : undefined;
+    const w = window.open('', '_blank');
+    if (!w) { setFehler('Bitte Pop-ups für den Druck erlauben.'); return; }
+    w.document.write(abnahmeProtokollHtml(a, { firma, lvTitel: lv?.titel ?? null, kunde: lv?.kunde_name ?? null, projekt: projekt?.name ?? null }));
+    w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
   }
 
   return (
@@ -280,6 +326,20 @@ export default function BauLvPage() {
           <div style={styles.card}>
             <div style={{ fontWeight: 800 }}>Neues Abnahmeprotokoll</div>
             <div style={styles.row}>
+              <label style={styles.lab}>Leistungsverzeichnis
+                <select style={styles.inp} value={ab.lv_id} onChange={(e) => abnahmeLvWaehlen(e.target.value)}>
+                  <option value="">— ohne LV —</option>
+                  {lvs.map((l) => <option key={l.id} value={l.id}>{l.titel}{l.kunde_name ? ` · ${l.kunde_name}` : ''}</option>)}
+                </select>
+              </label>
+              <label style={styles.lab}>Projekt
+                <select style={styles.inp} value={ab.projekt_id} onChange={(e) => setAb({ ...ab, projekt_id: e.target.value })}>
+                  <option value="">— ohne Projekt —</option>
+                  {projekte.map((p) => <option key={p.id} value={p.id}>{p.name || 'Projekt'}</option>)}
+                </select>
+              </label>
+            </div>
+            <div style={styles.row}>
               <input style={styles.inp} value={ab.titel} onChange={(e) => setAb({ ...ab, titel: e.target.value })} placeholder="Titel" />
               <label style={styles.lab}>Datum<input type="date" style={styles.inp} value={ab.datum} onChange={(e) => setAb({ ...ab, datum: e.target.value })} /></label>
               <input style={styles.inp} value={ab.ort} onChange={(e) => setAb({ ...ab, ort: e.target.value })} placeholder="Ort / Bauvorhaben" />
@@ -287,10 +347,11 @@ export default function BauLvPage() {
             <div style={styles.row}>
               <input style={styles.inp} value={ab.teilnehmer} onChange={(e) => setAb({ ...ab, teilnehmer: e.target.value })} placeholder="Teilnehmer" />
               <select style={styles.inp} value={ab.art} onChange={(e) => setAb({ ...ab, art: e.target.value })}>
-                {Object.entries(ART_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                {ABNAHME_ARTEN.map((x) => <option key={x.wert} value={x.wert}>{x.label}</option>)}
               </select>
               <input style={styles.inp} value={ab.unterschrift_name} onChange={(e) => setAb({ ...ab, unterschrift_name: e.target.value })} placeholder="Name (Bauherr)" />
             </div>
+            <div style={{ color: ART_FARBE[ab.art] || C.textDim, fontSize: 13 }}>{ABNAHME_ARTEN.find((x) => x.wert === ab.art)?.erklaerung}</div>
 
             <div style={{ fontWeight: 700, fontSize: 14, marginTop: 4 }}>Mängel</div>
             {maengel.map((m, i) => (
@@ -305,20 +366,41 @@ export default function BauLvPage() {
               <label style={styles.lab}>Frist<input type="date" style={styles.inp} value={mangel.frist} onChange={(e) => setMangel({ ...mangel, frist: e.target.value })} /></label>
               <button style={styles.dazuBtn} onClick={mangelDazu}>＋ Mangel</button>
             </div>
+            <textarea style={{ ...styles.inp, minHeight: 54 }} value={ab.notiz} onChange={(e) => setAb({ ...ab, notiz: e.target.value })} placeholder="Bemerkungen (optional)" />
 
             <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={abnahmeSpeichern}>💾 Abnahme speichern</button>
           </div>
 
           <div style={styles.liste}>
-            {abnahmen.map((a) => (
-              <div key={a.id} style={styles.item}>
+            {abnahmen.map((a) => {
+              const stand = maengelStand(a.maengel, heuteIso(new Date()));
+              const lvName = a.lv_id ? lvs.find((l) => l.id === a.lv_id)?.titel : null;
+              const projektName = a.projekt_id ? projekte.find((p) => p.id === a.projekt_id)?.name : null;
+              const istChef = !!uid && besitzer === uid;
+              return (
+              <div key={a.id} style={{ ...styles.item, flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700 }}>{a.titel} <span style={{ color: C.textDim, fontWeight: 400 }}>· {dHu(a.datum)}{a.ort ? ` · ${a.ort}` : ''}</span></div>
-                  <div style={{ color: C.textDim, fontSize: 13 }}>{(a.maengel || []).length} Mangel/Mängel{a.unterschrift_name ? ` · ${a.unterschrift_name}` : ''}</div>
+                  <div style={{ color: C.textDim, fontSize: 13 }}>
+                    {lvName ? `LV: ${lvName} · ` : ''}{projektName ? `Projekt: ${projektName} · ` : ''}
+                    {stand.gesamt ? `${stand.offen} offen, ${stand.behoben} behoben${stand.ueberfaellig ? ` · ${stand.ueberfaellig} über der Frist` : ''}` : 'keine Mängel'}
+                    {a.unterschrift_name ? ` · ${a.unterschrift_name}` : ''}
+                  </div>
+                  {a.maengel.map((m, i) => (
+                    <label key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, marginTop: 4, color: m.behoben ? C.textDim : C.text }}>
+                      <input type="checkbox" checked={!!m.behoben} disabled={!istChef} onChange={() => mangelAbhaken(a, i)} />
+                      <span style={{ textDecoration: m.behoben ? 'line-through' : 'none' }}>{m.beschreibung}</span>
+                      <span style={{ color: C.textDim }}>{m.frist ? `Frist ${dHu(m.frist)}` : ''}{m.behoben && m.behoben_am ? ` · behoben ${dHu(m.behoben_am)}` : ''}</span>
+                    </label>
+                  ))}
                 </div>
-                <span style={{ ...styles.badge, color: ART_FARBE[a.art] || C.textDim, borderColor: ART_FARBE[a.art] || C.border }}>{ART_LABEL[a.art] || a.art}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                  <span style={{ ...styles.badge, color: ART_FARBE[a.art] || C.textDim, borderColor: ART_FARBE[a.art] || C.border }}>{artLabel(a.art)}</span>
+                  <button style={styles.dazuBtn} onClick={() => protokollDrucken(a)}>🖨 Protokoll</button>
+                </div>
               </div>
-            ))}
+              );
+            })}
             {!abnahmen.length && <Leerzustand icon="✅" titel="Noch keine Abnahmen" text="Dokumentieren Sie Abnahmen mit Mängelliste." schritte={["Abnahme anlegen", "Mängel erfassen", "Protokoll abschließen"]} />}
           </div>
         </>

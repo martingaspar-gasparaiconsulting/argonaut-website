@@ -32,6 +32,7 @@ import {
   type Hinweis, type Musterart, type MusterDaten, type NachtragPosition, type NachtragStatus, type RuegeStatus,
 } from '@/lib/bauAblaeufe';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
+import { gewaehrleistungsKandidaten } from '@/lib/bauAbnahme';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -52,7 +53,7 @@ const GW_LABEL: Record<string, string> = { laeuft: 'läuft', endet_bald: 'endet 
 
 type LV = { id: string; titel: string; kunde_name: string | null; status: string; projekt_id?: string | null };
 type Projekt = { id: string; name: string | null };
-type Abnahme = { id: string; titel: string; datum: string; lv_id: string | null; projekt_id: string | null };
+type Abnahme = { id: string; titel: string; datum: string; lv_id: string | null; projekt_id: string | null; art: string | null };
 type Nachtrag = {
   id: string; owner_user_id: string; projekt_id: string | null; lv_id: string | null; nummer: string | null; titel: string;
   art: string; vertragsart: string; status: string; beschreibung: string | null; ursache: string | null;
@@ -133,7 +134,7 @@ export default function BauAblaeufeSeite() {
     const [g, r, a] = await Promise.all([
       supabase.from('bau_gewaehrleistung').select('*').order('abnahme_am', { ascending: false }),
       supabase.from('bau_maengelruege').select('*').order('eingang_am', { ascending: false }),
-      supabase.from('bau_abnahmen').select('id, titel, datum, lv_id, projekt_id').order('datum', { ascending: false }),
+      supabase.from('bau_abnahmen').select('id, titel, datum, lv_id, projekt_id, art').order('datum', { ascending: false }),
     ]);
     setGws((g.data as Gewaehrleistung[]) ?? []);
     setRuegen((r.data as Ruege[]) ?? []);
@@ -549,10 +550,11 @@ export default function BauAblaeufeSeite() {
 
               <div style={s.leiste}>
                 <button style={s.primaer} onClick={() => neueGewaehrleistung()}>＋ Gewährleistung erfassen</button>
-                {abnahmen.filter((a) => !gws.some((g) => g.abnahme_id === a.id)).length > 0 && (
+                {/* HW-14: verweigerte Abnahmen starten keine Gewährleistung und werden nicht angeboten. */}
+                {gewaehrleistungsKandidaten(abnahmen, gws).length > 0 && (
                   <select style={s.inp} value="" onChange={(e) => { const a = abnahmen.find((x) => x.id === e.target.value); if (a) neueGewaehrleistung(a); }}>
                     <option value="">Aus Abnahmeprotokoll übernehmen …</option>
-                    {abnahmen.filter((a) => !gws.some((g) => g.abnahme_id === a.id)).map((a) => (
+                    {gewaehrleistungsKandidaten(abnahmen, gws).map((a) => (
                       <option key={a.id} value={a.id}>{datumDe(a.datum)} · {a.titel}{a.lv_id && lvName(a.lv_id) ? ` · ${lvName(a.lv_id)}` : ''}</option>
                     ))}
                   </select>
