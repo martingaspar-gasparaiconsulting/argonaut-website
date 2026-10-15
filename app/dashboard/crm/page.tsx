@@ -855,7 +855,7 @@ export default function CrmCockpitPage() {
               🎯 Wochenfokus
             </button>
             <button
-              onClick={() => router.push("/dashboard/crm/pipeline")}
+              onClick={() => router.push("/dashboard/pipeline")}
               style={{
                 background: "transparent",
                 color: C.cyan,

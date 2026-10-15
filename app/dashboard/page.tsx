@@ -127,7 +127,8 @@ export default async function DashboardPage() {
   // Live-Daten aus allen Modulen (parallel, defensiv) — inkl. Feld fuer den Feed
   const [leadsR, chancenR, auftraegeR, rechnungenR, projekteR, abwR, zeitR, mitarbeiterR, kontakteR, aktivR, zahlungenR, ausgabenR] = await Promise.all([
     supabase.from('leads').select('id, status, name, created_at'),
-    supabase.from('verkaufschancen').select('id, phase, wert, titel, created_at'),
+    // HW-13: eine Pipeline — die Kachel zaehlt die Deals der Deal-Pipeline (crm_deal), nicht mehr die alten Verkaufschancen
+    supabase.from('crm_deal').select('id, phase:stufe, wert:wert_netto, titel, created_at:erstellt_am'),
     supabase.from('auftraege').select('id, status, auftragsnummer, created_at'),
     supabase.from('rechnungen').select('id, zahlungsstatus, faelligkeitsdatum, netto_summe, mwst_summe, brutto_summe, bezahlter_betrag, rechnungsnummer, created_at, bezahlt_am'),
     supabase.from('projekte').select('id, status, archiviert, name, erstellt_am'),
@@ -238,7 +239,7 @@ export default async function DashboardPage() {
   const ev: FeedEvent[] = []
 
   for (const l of leads as any[]) if (ts(l.created_at) > grenze) ev.push({ zeit: ts(l.created_at), icon: '🎯', farbe: '#00e5ff', text: `Neuer Lead: ${l.name || 'Anfrage'}`, href: '/dashboard/leads' })
-  for (const c of chancen as any[]) if (ts(c.created_at) > grenze) ev.push({ zeit: ts(c.created_at), icon: '💼', farbe: '#A98CE0', text: `Neue Verkaufschance: ${c.titel || '—'}`, href: '/dashboard/crm/pipeline' })
+  for (const c of chancen as any[]) if (ts(c.created_at) > grenze) ev.push({ zeit: ts(c.created_at), icon: '💼', farbe: '#A98CE0', text: `Neuer Deal: ${c.titel || '—'}`, href: '/dashboard/pipeline' })
   for (const a of auftraege as any[]) if (ts(a.created_at) > grenze) ev.push({ zeit: ts(a.created_at), icon: '📋', farbe: '#C9A84C', text: `Neuer Auftrag ${a.auftragsnummer || ''}`.trim(), href: '/dashboard/auftraege' })
   for (const r of rechnungen as any[]) {
     if (ts(r.created_at) > grenze) ev.push({ zeit: ts(r.created_at), icon: '🧾', farbe: '#4CAF7D', text: `Rechnung ${r.rechnungsnummer || ''} erstellt`.trim(), href: '/dashboard/rechnungen' })
@@ -382,7 +383,7 @@ export default async function DashboardPage() {
             <div style={{ fontSize: 'clamp(12px, 1.06vw, 17px)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#C9A84C', marginBottom: '12px', opacity: 0.85 }}>🤝 Vertrieb</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
               <KpiKachel href="/dashboard/leads" icon="🎯" label="Offene Leads" wert={leadsOffen} sub={`${leads.length} gesamt`} akzent="#00e5ff" />
-              <KpiKachel href="/dashboard/crm/pipeline" icon="💼" label="Aktive Verkaufschancen" wert={chancenAktiv.length} sub={chancenSumme > 0 ? `Pipeline: ${geld(chancenSumme)}` : undefined} akzent="#A98CE0" />
+              <KpiKachel href="/dashboard/pipeline" icon="💼" label="Offene Deals" wert={chancenAktiv.length} sub={chancenSumme > 0 ? `Pipeline: ${geld(chancenSumme)}` : undefined} akzent="#A98CE0" />
               <KpiKachel href="/dashboard/auftraege" icon="📋" label="Offene Aufträge" wert={auftraegeOffen} sub={`${auftraege.length} gesamt`} akzent="#C9A84C" />
             </div>
           </div>

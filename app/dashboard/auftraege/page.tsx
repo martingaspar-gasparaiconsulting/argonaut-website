@@ -12,6 +12,7 @@ import Leerzustand from "../_components/Leerzustand";
 import AuftragAnsicht from "./AuftragAnsicht";
 import { useAuftragVorlage } from "./useAuftragVorlage";
 import { auftragAmpel, suchePasst, zaehlen, nichtAbgerechnet, type AmpelKey } from "@/lib/auftragVorlage";
+import { steuersatz } from "@/lib/steuersatz";
 
 // ============================================================
 // ARGONAUT OS · Modul 5 (Vertrag/Auftrag) · Cockpit A2 + A5 + A6
@@ -334,6 +335,14 @@ export default function AuftraegeCockpit() {
       return;
     }
 
+    // HW-13: Steuersatz der ersten Position abfragen (0, 7 oder 19 %); leer/Abbruch = 19 %
+    const satzEingabe = Number(f.wert) > 0
+      ? window.prompt("Steuersatz für den Auftragswert in Prozent (0, 7 oder 19):", "19")
+      : "19";
+    if (satzEingabe === null) { setErstelltVon(null); return; }
+    const mwstSatzDeal = steuersatz(satzEingabe);
+    if (![0, 7, 19].includes(mwstSatzDeal)) { setErstelltVon(null); setFehler("Bitte 0, 7 oder 19 als Steuersatz angeben."); return; }
+
     const waehrung = f.waehrung || "EUR";
     const gewonnen = f.phase === "gewonnen";
     const wert = Number(f.wert) || 0;
@@ -361,11 +370,11 @@ export default function AuftraegeCockpit() {
     }
     const auftragId = (aData as any).id as string;
 
-    // 2) Wert als erste Position übernehmen
+    // 2) Wert als erste Position übernehmen — HW-13: Steuersatz waehlen statt fest 19 %
     let netto = 0;
     let mwst = 0;
     if (wert > 0) {
-      const mwstSatz = 19;
+      const mwstSatz = mwstSatzDeal;
       netto = r2(wert);
       mwst = r2(wert * (mwstSatz / 100));
       const { error: pErr } = await supabase.from("auftrag_positionen").insert({

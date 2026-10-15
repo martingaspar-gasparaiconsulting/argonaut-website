@@ -316,6 +316,16 @@ export default function PipelinePage() {
           ← Zurück zu Kontakten
         </button>
 
+        {/* HW-13: eine Pipeline — diese Liste ist abgeloest, sie bleibt nur fuer alte/importierte Verkaufschancen */}
+        <div style={{ margin: "16px 0 0", padding: "14px 18px", borderRadius: 12, border: `1px solid ${C.gold}`, background: "rgba(201,168,76,0.08)", color: "#fff", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ flex: 1, minWidth: 240 }}>
+            Diese Liste ist abgelöst. Neue Chancen, eigene Pipelines, Setter/Closer, Provisionen und „Auftrag aus Deal" gibt es in der <b>Deal-Pipeline</b>. Hier stehen nur noch ältere bzw. importierte Verkaufschancen.
+          </span>
+          <button onClick={() => router.push("/dashboard/pipeline")} style={{ background: C.gold, color: C.navy, border: "none", borderRadius: 10, padding: "10px 16px", fontWeight: 700, cursor: "pointer" }}>
+            Zur Deal-Pipeline →
+          </button>
+        </div>
+
         {/* Kopf */}
         <div
           style={{
