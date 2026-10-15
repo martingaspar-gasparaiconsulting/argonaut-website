@@ -10,6 +10,7 @@ import { leseStandortCookie } from "@/lib/aktiverStandort";
 import { konkreterStandort, standortOrFilter } from "@/lib/standortDaten";
 import { verzugszinsen, pauschale, verbraucherVorschlag } from "@/lib/verzugszins";
 import { zahlText } from '@/lib/zahlen';
+import { zahlbarJetzt, brauchtAbschlaege, type ZahlbarAbschlag } from '@/lib/zahlbarJetzt';
 import { abrechnungPruefen, MAHNUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 
 // ============================================================
@@ -49,6 +50,14 @@ type Rechnung = {
   waehrung: string | null;
   mahnstufe: number | null;
   letzte_mahnung_am: string | null;
+  // HW-6: fuer „jetzt faellig" (Abschlaege, Einbehalt, § 13b)
+  rechnungsart?: string | null;
+  netto_summe?: number | null;
+  einbehalt_prozent?: number | null;
+  einbehalt_basis?: string | null;
+  reverse_charge?: boolean | null;
+  kleinunternehmer?: boolean | null;
+  offen_jetzt?: number;
 };
 
 // Mahnstufen: 0 = überfällig/nicht gemahnt, 1 = Erinnerung, 2 = 1. Mahnung, 3 = 2. Mahnung, 4 = Letzte Mahnung (Inkasso)
@@ -94,8 +103,10 @@ function tageBisFaellig(faellig: string | null | undefined): number | null {
   return Math.round((f.getTime() - heute.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+// HW-6: jetzt faellig statt Brutto (Abschlaege der Schlussrechnung und
+// Sicherheitseinbehalt werden nicht angemahnt) — gerechnet in lib/zahlbarJetzt.ts
 function offenerRest(r: Rechnung): number {
-  return (r.brutto_summe || 0) - (r.bezahlter_betrag || 0);
+  return r.offen_jetzt ?? zahlbarJetzt(r).offen;
 }
 
 function istUeberfaellig(r: Rechnung): boolean {
@@ -149,7 +160,7 @@ export default function MahnwesenCockpit() {
         let rq = supabase
           .from("rechnungen")
           .select(
-            "id,rechnungsnummer,titel,kontakt_id,firma_id,zahlungsstatus,faelligkeitsdatum,brutto_summe,bezahlter_betrag,waehrung,mahnstufe,letzte_mahnung_am,standort_id"
+            "id,rechnungsnummer,titel,kontakt_id,firma_id,zahlungsstatus,faelligkeitsdatum,waehrung,mahnstufe,letzte_mahnung_am,standort_id,rechnungsart,netto_summe,brutto_summe,bezahlter_betrag,einbehalt_prozent,einbehalt_basis,reverse_charge,kleinunternehmer"
           );
         if (sid) rq = rq.or(standortOrFilter(sid));
         const { data: rData, error: rErr } = await rq
@@ -157,6 +168,22 @@ export default function MahnwesenCockpit() {
 
         if (rErr) throw rErr;
         const liste = (rData || []) as Rechnung[];
+
+        // HW-6: abgesetzte Abschlaege der Schlussrechnungen — ohne sie waere
+        // der offene Betrag zu hoch, deshalb Fehler statt stillem Rueckfall.
+        const schlussIds = liste.filter((r) => brauchtAbschlaege(r)).map((r) => r.id);
+        const abMap: Record<string, ZahlbarAbschlag[]> = {};
+        if (schlussIds.length) {
+          const { data: abData, error: abErr } = await supabase
+            .from("rechnung_abschlaege")
+            .select("schlussrechnung_id, netto, steuer")
+            .in("schlussrechnung_id", schlussIds);
+          if (abErr) throw new Error("Abgesetzte Abschläge der Schlussrechnungen nicht ladbar: " + abErr.message);
+          (abData || []).forEach((a: any) => {
+            (abMap[a.schlussrechnung_id] ||= []).push({ netto: a.netto, steuer: a.steuer });
+          });
+        }
+        liste.forEach((r) => { r.offen_jetzt = zahlbarJetzt(r, abMap[r.id] || []).offen; });
 
         // Kontakt-Namen defensiv auflösen
         const kIds = Array.from(new Set(liste.map((r) => r.kontakt_id).filter(Boolean))) as string[];

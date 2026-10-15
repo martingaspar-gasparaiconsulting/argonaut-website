@@ -15,6 +15,7 @@ import {
   PAUSCHALE_B2B,
 } from "@/lib/verzugszins";
 import { zahlText, centRunden } from '@/lib/zahlen';
+import { zahlbarJetzt, brauchtAbschlaege, type ZahlbarAbschlag } from '@/lib/zahlbarJetzt';
 import { abrechnungPruefen, istMitarbeiterKennung, MAHNUNG_NUR_CHEF } from '@/lib/nurGeschaeftsleitung';
 
 // ============================================================
@@ -144,6 +145,10 @@ export default function MahnungErstellen() {
 
   const [loading, setLoading] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
+  // HW-6: abgesetzte Abschlaege einer Schlussrechnung. null = nicht ladbar ->
+  // KEINE Mahnung, sonst waere der geforderte Betrag zu hoch.
+  const [abschlaege, setAbschlaege] = useState<ZahlbarAbschlag[] | null>([]);
+  const ABSCHLAEGE_FEHLEN = "Die abgesetzten Abschlagszahlungen dieser Schlussrechnung konnten nicht geladen werden. Ohne sie wäre der Mahnbetrag zu hoch – bitte die Seite neu laden.";
   const [nichtGefunden, setNichtGefunden] = useState(false);
 
   const [rechnung, setRechnung] = useState<any>(null);
@@ -202,6 +207,16 @@ export default function MahnungErstellen() {
       return;
     }
     setRechnung(r);
+    if (brauchtAbschlaege(r)) {
+      const { data: ab, error: abErr } = await supabase
+        .from("rechnung_abschlaege")
+        .select("netto, steuer")
+        .eq("schlussrechnung_id", id);
+      if (abErr) { setAbschlaege(null); setFehler(ABSCHLAEGE_FEHLEN); }
+      else setAbschlaege((ab || []) as ZahlbarAbschlag[]);
+    } else {
+      setAbschlaege([]);
+    }
     // Vorschlag: nächste Stufe (0->1, 1->2, 2->3, 3->4, 4->4)
     setStufe(Math.min((r.mahnstufe || 0) + 1, 4));
 
@@ -263,14 +278,13 @@ export default function MahnungErstellen() {
   const empfaengerName = useMemo(() => {
     if (kontakt) return kontaktName(kontakt);
     if (firma) return firmaName(firma);
-    return rechnung?.titel || "—";
+    // HW-6: der Empfaenger der Rechnung, nicht ihr Titel
+    return (rechnung as { empfaenger_name?: string | null } | null)?.empfaenger_name?.trim() || rechnung?.titel || "—";
   }, [kontakt, firma, rechnung]);
 
-  const offenerRest = useMemo(() => {
-    const brutto = Number(rechnung?.brutto_summe) || 0;
-    const bezahlt = Number(rechnung?.bezahlter_betrag) || 0;
-    return centRunden(brutto - bezahlt); // Paket 191
-  }, [rechnung]);
+  // HW-6: jetzt faellig = Brutto − Abschlaege − Einbehalt − bezahlt (lib/zahlbarJetzt.ts)
+  const zahlbar = useMemo(() => (rechnung ? zahlbarJetzt(rechnung, abschlaege ?? []) : null), [rechnung, abschlaege]);
+  const offenerRest = useMemo(() => centRunden(zahlbar?.offen ?? 0), [zahlbar]);
 
   const tageUeberfaellig = useMemo(() => {
     const t = tageBisFaellig(rechnung?.faelligkeitsdatum);
@@ -335,6 +349,7 @@ export default function MahnungErstellen() {
   // ---------- KI: Mahntext entwerfen ----------
   async function entwerfen() {
     if (kiBusy) return;
+    if (abschlaege === null) { setFehler(ABSCHLAEGE_FEHLEN); return; }
     setKiBusy(true);
     setFehler(null);
     setErfolg(null);
@@ -385,6 +400,7 @@ export default function MahnungErstellen() {
   }
 
   async function pdfHolen(): Promise<Blob> {
+    if (abschlaege === null) throw new Error(ABSCHLAEGE_FEHLEN);
     const p = firmenprofil || {};
     const anschrift = [
       p.firma_strasse,
@@ -472,6 +488,7 @@ export default function MahnungErstellen() {
   // ---------- Als gesendet markieren (+ Historie-Nachweis) ----------
   async function alsGesendet() {
     if (sendBusy) return;
+    if (abschlaege === null) { setFehler(ABSCHLAEGE_FEHLEN); return; }
     setSendBusy(true);
     setFehler(null);
     setErfolg(null);
@@ -638,6 +655,12 @@ export default function MahnungErstellen() {
         <Karte titel="Vorgang">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
             <Feld label="Offener Betrag" wert={geld(offenerRest, rechnung?.waehrung || "EUR")} farbe={C.gold} />
+            {zahlbar && zahlbar.abgesetzt !== 0 && (
+              <Feld label="Abschläge schon berechnet" wert={"− " + geld(zahlbar.abgesetzt, rechnung?.waehrung || "EUR")} farbe="#fff" />
+            )}
+            {zahlbar && zahlbar.einbehalt > 0 && (
+              <Feld label="Einbehalt (später fällig)" wert={geld(zahlbar.einbehalt, rechnung?.waehrung || "EUR")} farbe="#fff" />
+            )}
             <Feld label="Fällig seit" wert={datumDe(rechnung?.faelligkeitsdatum)} farbe="#fff" />
             <Feld
               label="Überfällig"

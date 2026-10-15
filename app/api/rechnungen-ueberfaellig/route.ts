@@ -1,6 +1,7 @@
 import { cronGuard } from '@/lib/cronGuard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { zahlbarJetzt, brauchtAbschlaege } from '@/lib/zahlbarJetzt';
 
 // ============================================================
 // ARGONAUT OS · P47 · Auslöser 1 — Rechnung überfällig → Glocke
@@ -57,7 +58,7 @@ async function lauf(req: NextRequest) {
   // Überfällig = offen ODER teilbezahlt UND Fälligkeit < heute
   const { data: rechnungen, error } = await supabase
     .from('rechnungen')
-    .select('id, owner_user_id, rechnungsnummer, brutto_summe, bezahlter_betrag, faelligkeitsdatum, zahlungsstatus')
+    .select('id, owner_user_id, rechnungsnummer, faelligkeitsdatum, zahlungsstatus, rechnungsart, netto_summe, brutto_summe, bezahlter_betrag, einbehalt_prozent, einbehalt_basis, reverse_charge, kleinunternehmer')
     .in('zahlungsstatus', ['offen', 'teilbezahlt'])
     .not('faelligkeitsdatum', 'is', null)
     .lt('faelligkeitsdatum', heute);
@@ -66,16 +67,30 @@ async function lauf(req: NextRequest) {
     return NextResponse.json({ ok: false, fehler: error.message }, { status: 500 });
   }
 
+  // HW-6: abgesetzte Abschlaege der Schlussrechnungen laden (sonst waere
+  // der gemeldete Betrag zu hoch). Fehler -> Schlussrechnungen ueberspringen.
+  const liste = (rechnungen ?? []) as any[];
+  const schlussIds = liste.filter((r) => brauchtAbschlaege(r)).map((r) => r.id);
+  const abMap: Record<string, { netto: unknown; steuer: unknown }[]> = {};
+  let abschlaegeOk = true;
+  if (schlussIds.length) {
+    const { data: abData, error: abErr } = await supabase
+      .from('rechnung_abschlaege')
+      .select('schlussrechnung_id, netto, steuer')
+      .in('schlussrechnung_id', schlussIds);
+    if (abErr) abschlaegeOk = false;
+    for (const a of (abData ?? []) as any[]) (abMap[a.schlussrechnung_id] ||= []).push({ netto: a.netto, steuer: a.steuer });
+  }
+
   const gefunden = rechnungen?.length ?? 0;
   let erstellt = 0;
   let uebersprungen = 0;
 
-  for (const r of rechnungen ?? []) {
+  for (const r of liste) {
     if (!r.owner_user_id) { uebersprungen++; continue; }
+    if (brauchtAbschlaege(r) && !abschlaegeOk) { uebersprungen++; continue; }
 
-    const brutto = Number(r.brutto_summe) || 0;
-    const bezahlt = Number(r.bezahlter_betrag) || 0;
-    const offen = Math.round((brutto - bezahlt) * 100) / 100;
+    const offen = zahlbarJetzt(r, abMap[r.id] || []).offen;
     if (offen <= 0) { uebersprungen++; continue; } // nichts mehr offen -> keine Meldung
 
     // Tage überfällig (lokal)

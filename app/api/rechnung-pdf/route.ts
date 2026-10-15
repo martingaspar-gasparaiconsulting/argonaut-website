@@ -14,6 +14,7 @@ import { baueSchlussrechnung, type AbschlagPosten } from '@/lib/abschlagsrechnun
 import { dokumentTitel, stornoBezugText, stornoZahlungText } from '@/lib/stornoRechnung';
 // Paket 268: § 25a / steuerfreie EU-Lieferung / Ausfuhr und vorab Verrechnetes (Anzahlung, Inzahlungnahme)
 import { sonderfallLesen, spaltenText, gruppenLabel, pflichtHinweis, zahlNachVorab } from '@/lib/steuerSonderfall';
+import { rechneEinbehalt } from '@/lib/sicherheitseinbehalt';
 
 export const runtime = 'nodejs';
 
@@ -267,8 +268,12 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
       ${sr.einbehalt > 0 ? `<div class="zeile brutto"><span>Jetzt zahlbar</span><span>${geld(sr.restBrutto - sr.einbehalt, waehrung)}</span></div>` : ''}`;
   } else if (Number(rechnung?.einbehalt_prozent) > 0) {
     // Auch eine normale oder Abschlagsrechnung kann einen Einbehalt tragen.
-    const basisBetrag = rechnung?.einbehalt_basis === 'netto' ? s.netto : (reverseCharge ? s.netto : s.brutto);
-    const einbehalt = Math.round(basisBetrag * (Number(rechnung.einbehalt_prozent) || 0)) / 100;
+    // HW-6: derselbe Rechenweg wie Schlussrechnung und Mahnung (lib/sicherheitseinbehalt.ts)
+    const einbehalt = rechneEinbehalt(
+      reverseCharge ? s.netto : s.brutto,
+      { prozent: rechnung?.einbehalt_prozent, basis: rechnung?.einbehalt_basis === 'netto' ? 'netto' : 'brutto' },
+      s.netto,
+    ).einbehalt;
     zusatzHtml = `
       <div class="zeile"><span class="label">abzüglich Sicherheitseinbehalt (${satzText(Number(rechnung.einbehalt_prozent))} %)</span><span>− ${geld(einbehalt, waehrung)}</span></div>
       <div class="zeile brutto"><span>Jetzt zahlbar</span><span>${geld((reverseCharge ? s.netto : s.brutto) - einbehalt, waehrung)}</span></div>`;
