@@ -19,6 +19,7 @@ import { steuerGruppen, rundungWieGespeichert, type SteuerPosten, type Rundung }
 import { leseZahlOder, centRunden } from './zahlen';
 // Paket 268: § 25a / steuerfreie EU-Lieferung / Ausfuhr — Kategorie und Befreiungsgrund je 0-%-Position
 import { sonderfallLesen, xmlKategorie } from './steuerSonderfall';
+import { nullGrundLesen, nullGrundXml, nullGrundVollstaendig } from './nullGrund';
 
 // ─── Typen (bewusst tolerant — Daten kommen aus verschiedenen Quellen) ───
 
@@ -261,6 +262,9 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   // E (VATEX-EU-F, § 25a), K (VATEX-EU-IC) oder G (VATEX-EU-G), alle anderen S.
   const sonderfall = (!klein && !reverseCharge) ? sonderfallLesen(rechnung?.steuer_sonderfall) : null;
   const sonderKat = sonderfall ? xmlKategorie(sonderfall) : null;
+  // HW-17: Grund fuer 0 % ohne § 19 / § 13b / Sonderfall -> Z (PV-Nullsatz) oder E (steuerfrei)
+  const nullGrund = (!klein && !reverseCharge && !sonderfall) ? nullGrundLesen(rechnung?.null_grund) : null;
+  const nullKat = nullGrund ? nullGrundXml(nullGrund, rechnung?.null_grund_text) : null;
   // Bei der EU-Lieferung steht das Land des Käufers in seiner USt-IdNr. (EL = Griechenland).
   if (sonderfall === 'eu_ig' && buyer.adresse.land === 'DE') {
     const pre = String(buyer.ust_idnr || '').replace(/\s/g, '').slice(0, 2).toUpperCase();
@@ -302,6 +306,10 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
   if (istXR && !leitweg_id) warnungen.push('Leitweg-ID fehlt (bei XRechnung an Behörden Pflicht)');
   if (sonderfall === 'eu_ig' && !buyer.ust_idnr) warnungen.push('Steuerfreie EU-Lieferung: USt-IdNr. des Käufers fehlt');
   if ((sonderfall === 'eu_ig' || sonderfall === 'ausfuhr') && !seller.ust_idnr) warnungen.push('Steuerfreie Lieferung: Ihre USt-IdNr. fehlt');
+  if (!ohneSteuer && !sonderfall && s.gruppen.some((g) => g.satz === 0)) {
+    if (!nullGrund) warnungen.push('Positionen mit 0 % ohne Grund: Bitte auf der Rechnung den Grund wählen (Nullsteuersatz PV oder steuerfrei nach …). Ohne Grund ist die E-Rechnung ungültig (BR-S-05).');
+    else if (!nullGrundVollstaendig(nullGrund, rechnung?.null_grund_text)) warnungen.push('Steuerfrei: Die Vorschrift fehlt (z. B. „§ 4 Nr. 11 UStG").');
+  }
 
   const ph = (wert: string, fallback: string) => wert ? x(wert) : x(fallback);
 
@@ -336,7 +344,8 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
     const einzel = leseZahlOder(p?.einzelpreis, 0);
     const netto = zeilenNetto(p, rundung);
     const satz = ohneSteuer ? 0 : leseZahlOder(p?.mwst_satz, 0);
-    const cat = sonderKat ? (satz === 0 ? sonderKat.kategorie : 'S') : taxCat;
+    const cat = sonderKat ? (satz === 0 ? sonderKat.kategorie : 'S')
+      : (nullKat && satz === 0) ? nullKat.kategorie : taxCat;
     // Einheit: ZUGFeRD nutzt UN/ECE-Codes. "C62" = Stück (Default), "HUR" = Stunde.
     const einheitCode = mapEinheit(p?.einheit);
     return `
@@ -379,7 +388,15 @@ export function baueZugferdXml(eingabe: ZugferdEingabe): ZugferdErgebnis {
         <ram:CategoryCode>${taxCat}</ram:CategoryCode>
         <ram:RateApplicablePercent>0</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>`
-    : s.gruppen.map((g) => (sonderKat && g.satz === 0) ? `
+    : s.gruppen.map((g) => (nullKat && g.satz === 0) ? `
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>${nullKat.grund ? `
+        <ram:ExemptionReason>${x(nullKat.grund)}</ram:ExemptionReason>` : ''}
+        <ram:BasisAmount>${n2(g.netto)}</ram:BasisAmount>
+        <ram:CategoryCode>${nullKat.kategorie}</ram:CategoryCode>
+        <ram:RateApplicablePercent>0</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>` : (sonderKat && g.satz === 0) ? `
       <ram:ApplicableTradeTax>
         <ram:CalculatedAmount>0.00</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>

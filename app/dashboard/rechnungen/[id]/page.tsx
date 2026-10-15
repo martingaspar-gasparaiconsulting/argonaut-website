@@ -28,6 +28,7 @@ import { istMitarbeiterKennung, RECHNUNG_NUR_CHEF, ZAHLUNG_NUR_CHEF, STORNO_NUR_
 import { stornoKnoepfe, stornoFrage, stornoFehlerText, grundBereinigen } from '@/lib/stornoRechnung';
 import { sonderfallLesen, sonderfallLabel } from '@/lib/steuerSonderfall';
 import { kopfSummen } from '@/lib/rechnungKopf';
+import { NULL_GRUENDE, nullGrundLesen, nullGrundVollstaendig, brauchtNullGrund, vorschriftText, type NullGrund } from '@/lib/nullGrund';
 import { anschriftZerlegen } from '@/lib/rechnungAnschrift';
 import { ABLAGE_ANLASS_TEXT, FESTGESCHRIEBEN_HINWEIS, istFestgeschrieben, originalPdf, pruefsummeKurz, type AblageZeile } from '@/lib/rechnungAblage';
 
@@ -183,6 +184,9 @@ export default function RechnungDetail() {
   const [waehrung, setWaehrung] = useState("EUR");
   const [notizen, setNotizen] = useState("");
   const [kleinunternehmer, setKleinunternehmer] = useState(false);
+  // HW-17: Grund fuer 0 % (rechnungen.null_grund / null_grund_text, SQL p372)
+  const [nullGrund, setNullGrund] = useState<NullGrund | null>(null);
+  const [nullGrundText, setNullGrundText] = useState("");
   // Zahlungen (Block C) – einzelne Geldeingänge dieser Rechnung
   const [zahlungen, setZahlungen] = useState<Zahlung[]>([]);
   const [zBetrag, setZBetrag] = useState<string>("");
@@ -256,6 +260,8 @@ export default function RechnungDetail() {
     setWaehrung(r.waehrung || "EUR");
     setNotizen(r.notizen || "");
     setKleinunternehmer(!!r.kleinunternehmer);
+    setNullGrund(nullGrundLesen(r.null_grund));
+    setNullGrundText(String(r.null_grund_text ?? ""));
     setZusatzRoh(zusatzAusZeile(r)); // P54 — ohne markDirty, das ist nur Laden
     // Einzel-Zahlungen dieser Rechnung laden (Quelle der Wahrheit für Block C/D)
     const { data: zData } = await supabase
@@ -516,6 +522,10 @@ export default function RechnungDetail() {
           zahlungsziel_tage: isNaN(ziel) ? 14 : ziel,
           waehrung,
           kleinunternehmer,
+          // HW-17: nur mitschicken, wenn gesetzt oder schon gespeichert (laeuft auch ohne SQL p372)
+          ...(nullGrund || rechnung?.null_grund != null
+            ? { null_grund: nullGrund, null_grund_text: nullGrund === "steuerfrei" ? (vorschriftText(nullGrundText) || null) : null }
+            : {}),
           notizen: notizen || null,
           netto_summe: summen.netto,
           mwst_summe: summen.mwst,
@@ -768,6 +778,9 @@ export default function RechnungDetail() {
         storno_bezug: stornoBezug ? { nummer: stornoBezug.nummer, datum: stornoBezug.datum, bezahlt: stornoBezug.bezahlt } : null,
         // Paket 268: § 25a / steuerfrei + vorab Verrechnetes (Anzahlung, Inzahlungnahme) — nur aus der gespeicherten Rechnung
         steuer_sonderfall: rechnung?.steuer_sonderfall ?? null,
+        // HW-17: Grund fuer 0 % aus dem Formular
+        null_grund: nullGrund,
+        null_grund_text: nullGrund === "steuerfrei" ? vorschriftText(nullGrundText) : null,
         vorab_bezahlt: rechnung?.vorab_bezahlt ?? null,
         zahlungsstatus: rechnung?.zahlungsstatus ?? null,
         // P54: Rechnungsart und Zahlungsbedingungen aus dem Formular —
@@ -1426,6 +1439,36 @@ export default function RechnungDetail() {
               Auf der Rechnung wird keine Umsatzsteuer ausgewiesen. Es erscheint der Hinweis:
               „Gemäß §19 UStG wird keine Umsatzsteuer berechnet."
             </p>
+          )}
+          {/* HW-17: Grund fuer Positionen mit 0 % */}
+          {brauchtNullGrund(zeilen.map((z) => z.mwst_satz), { kleinunternehmer, reverseCharge: zusatz.reverseCharge, sonderfall: rechnung?.steuer_sonderfall }) && (
+            <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 10, border: `1px solid ${nullGrundVollstaendig(nullGrund, nullGrundText) ? C.border : C.gold}`, background: C.navy }}>
+              <div style={{ fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 700, marginBottom: 8 }}>Grund für 0 % Umsatzsteuer</div>
+              <select
+                value={nullGrund ?? ""}
+                disabled={gesperrt}
+                onChange={(e) => aendern(setNullGrund, nullGrundLesen(e.target.value))}
+                style={{ ...zellInput, width: "100%", marginBottom: 8 }}
+              >
+                <option value="">— bitte wählen —</option>
+                {NULL_GRUENDE.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+              </select>
+              {nullGrund === "steuerfrei" && (
+                <input
+                  value={nullGrundText}
+                  disabled={gesperrt}
+                  maxLength={120}
+                  placeholder="Vorschrift, z. B. § 4 Nr. 11 UStG"
+                  onChange={(e) => aendern(setNullGrundText, e.target.value)}
+                  style={{ ...zellInput, width: "100%" }}
+                />
+              )}
+              <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.05vw, 17px)', margin: "8px 0 0", lineHeight: 1.5 }}>
+                {nullGrundVollstaendig(nullGrund, nullGrundText)
+                  ? "Der Hinweis erscheint auf der Rechnung und in der E-Rechnung."
+                  : "Ohne Grund steht auf der Rechnung kein Hinweis, warum keine Umsatzsteuer anfällt, und die E-Rechnung ist ungültig. Den passenden Grund klärt im Zweifel Ihre Steuerberatung."}
+              </p>
+            </div>
           )}
           {sonderfallLesen(rechnung?.steuer_sonderfall) && (
             <p style={{ color: C.gold, fontSize: 'clamp(12.5px, 1.13vw, 18px)', margin: "10px 2px 0", lineHeight: 1.5 }}>

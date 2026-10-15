@@ -15,6 +15,7 @@ import { dokumentTitel, stornoBezugText, stornoZahlungText } from '@/lib/stornoR
 // Paket 268: § 25a / steuerfreie EU-Lieferung / Ausfuhr und vorab Verrechnetes (Anzahlung, Inzahlungnahme)
 import { sonderfallLesen, spaltenText, gruppenLabel, pflichtHinweis, zahlNachVorab } from '@/lib/steuerSonderfall';
 import { rechneEinbehalt } from '@/lib/sicherheitseinbehalt';
+import { nullGrundLesen, nullGrundHinweis } from '@/lib/nullGrund';
 
 export const runtime = 'nodejs';
 
@@ -327,6 +328,12 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
     ? `<div class="hinweis"><strong>${esc(pflichtHinweis(sonderfall, aussteller?.ust_idnr, rechnung?.ust_id_kunde))}</strong></div>`
     : '';
 
+  // HW-17: Grund fuer 0 % (nur ohne § 19 / § 13b / Sonderfall und nur, wenn es 0-%-Positionen gibt)
+  const nullGrund = (!klein && !reverseCharge && !sonderfall) ? nullGrundLesen(rechnung?.null_grund) : null;
+  const nullHinweis = (nullGrund && s.gruppen.some((g) => g.satz === 0))
+    ? `<div class="hinweis"><strong>${esc(nullGrundHinweis(nullGrund, rechnung?.null_grund_text))}</strong></div>`
+    : '';
+
   const kleinHinweis = klein
     ? `<div class="hinweis">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</div>`
     : '';
@@ -488,6 +495,7 @@ function baueHtml(rechnung: any, positionen: any[], kontaktName: string, firmaNa
   ${stornoHinweis}
   ${rcHinweis}
   ${sonderHinweis}
+  ${nullHinweis}
   ${abschlagHinweis}
   ${skontoHinweis}
   ${einbehaltHinweis}
