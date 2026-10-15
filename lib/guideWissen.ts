@@ -2818,6 +2818,25 @@ export const WISSEN: Record<string, SeitenWissen> = {
     vorher: [{ text: 'Rohstoff-Chargen', href: '/dashboard/chargen' }, { text: 'Rezepturen (optional)', href: '/dashboard/rezeptur' }],
     landetIn: [{ text: 'Chargen (Quarantäne, Rückverfolgung)', href: '/dashboard/chargen' }],
   },
+  // Paket 364 (A4f): Fachpaket Weinbau — Lesebuch, Partien, Kellerbuch
+  '/dashboard/weinbau': {
+    zweck: 'Lesebuch, Partien und Kellerbuch für Weingüter: jede Lese mit Weinberg, Rebsorte, Menge, Mostgewicht (°Oechsle) und Säure; der Most landet in einer Partie (Tank oder Fass). Im Kellerbuch wird jede Bewegung und Behandlung angehängt – den Bestand rechnet ARGONAUT, unter 0 geht er nie. Verschnitt bucht beide Partien in einem Zug, die Abfüllung legt die Flaschen-Charge mit Rückverfolgung zur Lese an.',
+    wer: 'beide',
+    werText: 'Wer das Modul „Weinbau" mit Schreibrecht hat, erfasst Lesen, legt Partien an und schreibt das Kellerbuch fort (fürs Abfüllen zusätzlich Schreibrecht „Chargen"). Stornieren einer Lese und Löschen leerer Partien nur die Geschäftsleitung.',
+    schritte: [
+      'Reiter „🛢 Partien": „＋ Partie" mit Jahrgang, Bezeichnung (z. B. 2026 Riesling trocken), Rebsorte und Tank/Fass',
+      'Reiter „🍇 Lese": Datum, Jahrgang (bei Eiswein auch das Vorjahr), Weinberg (aus der Schlagkartei wählbar, füllt die Fläche), Rebsorte, Menge in kg, Mostgewicht °Oe und Säure. Mit Partie und Most-Litern wird der Most dort gleich zugebucht – die Nummer vergibt das System',
+      'Partie öffnen → Kellerbuch: Art wählen (Zugang, Abgang, Schwund, Anreicherung, Entsäuerung, Säuerung, Süßung, Schwefelung, Schönung, Filtration, Analyse, Sonstiges), Menge bzw. Mittel und Werte, „Eintragen" – Zeit und Name hält der Server fest',
+      'Vertippt? Das Kellerbuch wird nur fortgeschrieben – einen Gegeneintrag mit Bemerkung erfassen',
+      '„🔀 Verschnitt": Liter aus dieser Partie in eine andere – beide Seiten stehen im Kellerbuch',
+      '„🍾 Abfüllen": Flaschen, Inhalt (z. B. 0,75 l) und Los – die Charge steht danach in Quarantäne und wird unter „Chargen" freigegeben',
+      'Reiter „📊 Jahrgang": kg, Most, Ø °Oechsle und Säure je Rebsorte, kg/ha und hl/ha je Weinberg – den Höchstertrag des Anbaugebiets selbst abgleichen. Darunter der Bestand aller Partien zu einem Stichtag',
+      '„🖨 Kellerbuch drucken" je Partie für den Ordner oder die Weinkontrolle',
+    ],
+    probe: { anlegen: 'Partie „Test-Partie" anlegen, eine Lese mit 100 kg und 70 l Most hineinbuchen, eine Analyse eintragen.', loeschen: 'Als Geschäftsleitung die Lese mit Grund „Test beendet" stornieren (bucht den Most wieder aus, bleibt als Nachweis).' },
+    vorher: [{ text: 'Schlagkartei (Weinberge, optional)', href: '/dashboard/schlagkartei' }, { text: 'Rechte („Weinbau", fürs Abfüllen „Chargen") je Mitarbeiter', href: '/dashboard/rechte' }],
+    landetIn: [{ text: 'Chargen (Quarantäne, Rückverfolgung)', href: '/dashboard/chargen' }],
+  },
   '/dashboard/entsorgung': {
     zweck: 'Container-Dienst und Wiegeschein für Entsorgungsbetriebe: der Containerbestand mit Stand (auf dem Hof, beim Kunden, voll gemeldet, in Reparatur), Aufträge zum Stellen, Tauschen und Abholen je Tag mit Tagesliste für die Fahrer — beim Erledigen setzt ARGONAUT die Container um. Der Wiegeschein nimmt Brutto und Tara von Ihrer Waage auf; Nummer, Uhrzeit jeder Wägung und Netto setzt ARGONAUT, abgeschlossen bleibt der Schein unveränderbar. Die Abfallschlüssel sind Ihre eigene Liste — ARGONAUT liefert keinen amtlichen Katalog mit. Dazu das Abfallregister (nur anhängen, Übernahme aus dem Wiegeschein, Druck und CSV) und das ADR-Beförderungspapier mit 1000-Punkte-Rechnung (Ausstellen erst nach Freigabe).',
     wer: 'beide',

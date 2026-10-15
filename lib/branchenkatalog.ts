@@ -16,6 +16,7 @@ import { bestattungZusatz, BESTATTUNG_MODULE } from './bestattung';
 import { bewachungZusatz, BEWACHUNG_MODULE } from './bewachung';
 import { entsorgungZusatz, ENTSORGUNG_MODULE } from './entsorgung';
 import { herstellungZusatz, HERSTELLUNG_MODULE } from './herstellung';
+import { weinbauZusatz, WEINBAU_MODULE } from './weinbau';
 
 /** Standard-Automatisierung, in jedem Branchen-Paket enthalten. */
 export const STANDARD_AUTOMATION = 'automatisierungen';
@@ -64,10 +65,11 @@ export function kategorieZusatz(kategorie: string): string[] {
  * Paket 353: Bewachungsgewerbe (§ 34a) zusätzlich „bewachung" und „objektzeiten" (Objekte).
  * Paket 355: Entsorgung, Container-Dienst, Recycling, Gefahrgut zusätzlich „entsorgung".
  * Paket 363: Brauerei, Molkerei, Mühle u. a. zusätzlich „herstellung", „rezeptur", „etiketten", „chargen", „lebensmittel".
+ * Paket 364: Weingüter und Winzer zusätzlich „weinbau", „schlagkartei", „chargen", „etiketten", „rezeptur".
  */
 export function brancheModule(kategorie: string, branche: string | null | undefined): string[] {
   const set = kategorieModule(kategorie);
-  return mitHerstellung(mitEntsorgung(mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !set.includes('kfz') ? [...set, 'kfz'] : set, branche), branche), branche), branche);
+  return mitWeinbau(mitHerstellung(mitEntsorgung(mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !set.includes('kfz') ? [...set, 'kfz'] : set, branche), branche), branche), branche), branche);
 }
 
 /** Paket 352 (A4a): Bestattungsunternehmen bekommen die Sterbefall-Akte und den Leistungskatalog (Kostenvoranschlag). Nur additiv. */
@@ -95,10 +97,16 @@ function mitHerstellung(set: string[], branche: string | null | undefined): stri
   return [...set, ...HERSTELLUNG_MODULE.filter((m) => !set.includes(m))];
 }
 
+/** Paket 364 (A4f): Weingüter und Winzer bekommen Lese-/Kellerbuch, Weinberge (Schlagkartei), Chargen, Etiketten, Cuvées. Nur additiv. */
+function mitWeinbau(set: string[], branche: string | null | undefined): string[] {
+  if (!weinbauZusatz(branche)) return set;
+  return [...set, ...WEINBAU_MODULE.filter((m) => !set.includes(m))];
+}
+
 /** Wie kategorieZusatz, mit dem Einzelstück-Zusatz der Branche. */
 export function brancheZusatz(kategorie: string, branche: string | null | undefined): string[] {
   const z = kategorieZusatz(kategorie);
-  return mitHerstellung(mitEntsorgung(mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !z.includes('kfz') ? [...z, 'kfz'] : z, branche), branche), branche), branche);
+  return mitWeinbau(mitHerstellung(mitEntsorgung(mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !z.includes('kfz') ? [...z, 'kfz'] : z, branche), branche), branche), branche), branche);
 }
 
 /** Ist diese Kategorie im Katalog bekannt? */

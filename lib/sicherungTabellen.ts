@@ -148,6 +148,7 @@ export const WEITERE_TABELLEN: string[] = [
   'telefon_einwilligung', 'telefon_sperre',
   // Paket 363 (A4e): Herstellungsprotokolle (Sud, Milch, Mahlgang, Ansatz)
   'herstell_messung', 'herstell_protokoll', 'herstell_rohstoff',
+  'wein_kellerbuch', 'wein_lese', 'wein_partie',
 ];
 
 /** Bewusst NICHT gesichert — Zugangsdaten und Geheimnisse. */

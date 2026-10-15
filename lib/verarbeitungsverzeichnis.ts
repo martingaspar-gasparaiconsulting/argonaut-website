@@ -206,6 +206,19 @@ export const VERFAHREN_KATALOG: VerfahrenVorschlag[] = [
     tom: TOM_STANDARD + ' Messwerte nur anhaengbar, Zeitstempel und Namen vom Server; abgeschlossene Protokolle unveraenderbar (Storno nur mit Grund durch die Geschaeftsleitung).',
   },
   {
+    // Paket 364 (13.10.2026): Lesebuch und Kellerbuch (Fachpaket Weinbau)
+    wenn: 'weinbau',
+    name: 'Lesebuch, Partien und Kellerbuch (Weinbau)',
+    zweck: 'Nachweis von Lese, Kellerbehandlungen, Bestaenden und Abfuellungen; Rueckverfolgbarkeit vom Weinberg bis zur Flasche.',
+    rechtsgrundlage: 'Art. 6 Abs. 1 lit. c DSGVO (weinrechtliche Buchfuehrungs- und Meldepflichten, Rueckverfolgbarkeit nach Art. 18 VO (EG) 178/2002), § 26 Abs. 1 BDSG fuer Beschaeftigtendaten',
+    kategorien_betroffene: 'Beschaeftigte und Familienangehoerige, die Lese oder Kellerarbeiten erfassen',
+    kategorien_daten: 'Name der erfassenden Person mit Zeitpunkt je Lese und Kellerbuch-Eintrag sowie beim Storno; zu Weinbergen, Partien und Analysen keine personenbezogenen Daten',
+    empfaenger: 'Weinkontrolle und Landesbehoerden auf Anforderung, ' + EMPF_BASIS,
+    drittland: KEIN_DRITTLAND,
+    loeschfrist: 'Vorschlag: 5 Jahre nach Ende des Weinwirtschaftsjahres, in dem die letzte Buchung der Partie erfolgte; laenger, solange Wein daraus noch im Verkehr ist. Vom Betrieb anzupassen.',
+    tom: TOM_STANDARD + ' Lesebuch und Kellerbuch nur anhaengbar, Zeitstempel und Namen vom Server; Bestand rechnet die Datenbank; Storno nur mit Grund durch die Geschaeftsleitung.',
+  },
+  {
     // Paket 357 (13.10.2026): Arzneimittel-Bestandsbuch (Fachpaket Tierhaltung)
     wenn: 'tierbestand',
     name: 'Arzneimittel-Bestandsbuch fuer Nutztiere (Tierhaltung)',
