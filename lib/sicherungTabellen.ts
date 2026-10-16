@@ -73,7 +73,7 @@ export const WEITERE_TABELLEN: string[] = [
   'lieferanten_standorte', 'lm_chargen', 'lm_haccp', 'lm_haccp_plan', 'logistik_sendungen',
   'logistik_touren', 'lp_ereignisse', 'maengel', 'mahnung_historie', 'mail_klick',
   'marketing_inhalte', 'marketing_kalender', 'marketing_kampagnen', 'marketing_segment',
-  'marketing_zielgruppen', 'markt_produkt', 'markt_verkauf', 'material_abruf', 'menu_gericht',
+  'marketing_zielgruppen', 'markt_produkt', 'markt_verkauf', 'material_abruf', 'mengen_leistung', 'menu_gericht',
   'mitarbeiter', 'mitarbeiter_qualifikation', 'mitarbeiter_rechte', 'mitarbeiter_standorte',
   'mitglied_checkin', 'mitglieder', 'mitglieder_bank', 'modul_nutzung', 'nachkauf_produkt', 'nachkauf_verkauf',
   'nachweis', 'nachweis_unterschrift', 'newsletter_ab_test', 'newsletter_abonnenten',

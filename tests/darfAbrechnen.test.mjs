@@ -47,9 +47,9 @@ test('Prüfung gegen die Datenbank: nie still erlauben', async () => {
   assert.match(STORNO_NUR_CHEF, /Geschäftsleitung/);
 });
 
-test('Alle 23 Rechnung-aus-Wege: Rechnung, Positionen und Rückschrieb gehören dem Betrieb', () => {
+test('Alle 24 Rechnung-aus-Wege: Rechnung, Positionen und Rückschrieb gehören dem Betrieb', () => {
   const ordner = fs.readdirSync(new URL('../app/api/', import.meta.url)).filter((d) => d.startsWith('rechnung-aus-'));
-  assert.equal(ordner.length, 23); // P268: + rechnung-aus-kfz-verkauf · P292: + rechnung-aus-vermietung · P293: + rechnung-aus-bussgeld · P295: + rechnung-aus-dienstrad · P296: + rechnung-aus-trackday · P378: + rechnung-aus-nachtrag
+  assert.equal(ordner.length, 24); // P396: + rechnung-aus-mengen · P268: + rechnung-aus-kfz-verkauf · P292: + rechnung-aus-vermietung · P293: + rechnung-aus-bussgeld · P295: + rechnung-aus-dienstrad · P296: + rechnung-aus-trackday · P378: + rechnung-aus-nachtrag
   for (const d of ordner) {
     const s = lies(`app/api/${d}/route.ts`);
     assert.ok(!s.includes('owner_user_id: user.id'), d + ': Besitzer darf nie die klickende Person sein');

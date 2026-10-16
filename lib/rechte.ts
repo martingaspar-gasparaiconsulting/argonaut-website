@@ -310,6 +310,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🌲 Baumkataster', href: '/dashboard/forst', modul: 'forst', ebene: 3, gruppe: 'betrieb' },
   { label: '🏛 Objekt-Register', href: '/dashboard/objekte', modul: 'objekte', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Objektzeiten', href: '/dashboard/objektzeiten', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
+  // MO4 (16.10.26): Mengen-Abrechnung — gleiches Modul wie Objektzeiten (Handwerk, Dienstleistung, GaLaBau).
+  { label: '📏 Mengen-Abrechnung', href: '/dashboard/mengen', modul: 'objektzeiten', ebene: 3, gruppe: 'betrieb' },
   // Paket 352 (13.10.26): A4a Fachpaket Bestatter — Sterbefall-Akte, Checkliste, Kostenvoranschlag, Vollmacht, Partner.
   { label: '🕊️ Bestattung', href: '/dashboard/bestattung', modul: 'bestattung', ebene: 3, gruppe: 'betrieb' },
   // Paket 353 (13.10.26): A4b Fachpaket Bewachung Teil 1 — Wachbuch und Kontrollgaenge mit QR-Kontrollpunkten.

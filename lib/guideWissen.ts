@@ -2392,6 +2392,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Wartung', href: '/dashboard/wartung' }],
     vorher: [{ text: 'Für Abschreibung: Anlagen', href: '/dashboard/anlagen' }, { text: 'Für die Fahrzeug-Historie: Fahrzeugakte', href: '/dashboard/fahrzeugakte' }],
   },
+  '/dashboard/mengen': {
+    zweck: 'Leistungen nach Menge erfassen — Stunden, Kilometer, Hektar, Tage, Kubikmeter, Tonnen, Stück oder pauschal — mit Preis je Einheit, Zuschlag und Steuersatz. Am Monatsende werden alle offenen Leistungen eines Kunden mit einem Klick zu einer Sammelrechnung; gleiche Leistungen zum gleichen Preis stehen dort als eine Position mit Zeitraum.',
+    wer: 'beide',
+    werText: 'Mitarbeiter mit dem Modul „Objektzeiten“ erfassen und sehen ihre eigenen Leistungen. Die Sammelrechnung erstellt nur, wer abrechnen darf (Chef oder Haken „darf abrechnen“). Löschen nur der Chef und nur offene Leistungen.',
+    schritte: [
+      'Datum und Kunden wählen (oder einen Namen eintragen)',
+      'Leistung aus dem Leistungskatalog übernehmen oder frei benennen, Menge und Einheit eintragen; bei Stunden auf Wunsch je angefangene 15/30/60 Minuten aufrunden',
+      'Preis je Einheit (netto), Zuschlag in Prozent (z. B. Wochenende) und Umsatzsteuer prüfen, „＋ Erfassen“',
+      'Unter „Offen zur Abrechnung“ beim Kunden „🧾 Sammelrechnung“ — die Rechnung öffnet sich zum Prüfen und Versenden',
+    ],
+    probe: { anlegen: 'Für einen Test-Kunden 2,5 Std Gartenpflege zu 48 € und 12 km Anfahrt zu 0,60 € erfassen, dann die Sammelrechnung erstellen.', loeschen: 'Die Test-Rechnung stornieren; offene Test-Leistungen als Chef mit 🗑 löschen.' },
+    landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Leistungskatalog', href: '/dashboard/leistungskatalog' }],
+  },
   '/dashboard/objektzeiten': {
     zweck: 'Zeiten je Objekt, Baustelle oder Einsatzort erfassen und je Monat auswerten — mit Kosten netto und direkter Rechnung aus den abrechenbaren Zeiten. Das ist nicht die gesetzliche Arbeitszeiterfassung.',
     wer: 'beide',
