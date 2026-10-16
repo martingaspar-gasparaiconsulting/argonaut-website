@@ -164,6 +164,14 @@ export const RECHTS_TEXTE: readonly RechtsTextEintrag[] = Object.freeze([
     gliederung: ['Verbindlichkeit des Voranschlags', 'Auslagen für Dritte', 'Zahlung', 'Änderungen und Zusatzleistungen'],
     platzhalter: [BETRIEB, KUNDE, DATUM, { key: 'verstorben', label: 'Name der verstorbenen Person' }], angebunden: true,
   },
+  // HW-B (16.10.2026): Bedenkenanmeldung nach VOB/B § 4 Abs. 3 — nur das leere Gerüst, Wortlaut vom Betrieb
+  {
+    schluessel: 'bau.bedenken', titel: 'Bedenkenanmeldung (VOB/B § 4 Abs. 3)', bereich: 'Bau und Handwerk',
+    wofuer: 'Schriftliche Anmeldung von Bedenken gegen die vorgesehene Ausführung, gelieferte Stoffe oder Vorleistungen anderer Unternehmer. Ihre Bedenken tragen Sie je Fall ein; der Text hier ist Ihr fester Wortlaut drumherum.',
+    wo: 'Bau & Handwerk → Nachträge & Gewährleistung → „⚠ Bedenkenanmeldung"', empfaenger: 'Ihr Auftraggeber',
+    gliederung: ['Betroffene Leistung', 'Art und Gründe der Bedenken', 'Mögliche Folgen', 'Bitte um Entscheidung bis'],
+    platzhalter: [BETRIEB, KUNDE, DATUM, { key: 'bauvorhaben', label: 'Bauvorhaben / Leistung' }, { key: 'bedenken', label: 'Ihre Bedenken (aus dem Formular)' }, { key: 'frist', label: 'Frist für die Entscheidung' }], angebunden: true,
+  },
   {
     schluessel: 'web.agb', titel: 'AGB auf Ihrer Website', bereich: 'Website und Shop',
     wofuer: 'Ihre Allgemeinen Geschäftsbedingungen. Erscheinen auf Ihrer ARGONAUT-Website im Abschnitt „AGB" und im Seitenfuß — ohne eigenen Text gibt es dort keinen AGB-Abschnitt.',

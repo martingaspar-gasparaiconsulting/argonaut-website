@@ -34,6 +34,8 @@ import {
 } from '@/lib/bauAblaeufe';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
 import { gewaehrleistungsKandidaten } from '@/lib/bauAbnahme';
+import { pruefeBedenken, bedenkenWerte, bedenkenHtml, type BedenkenEingabe } from '@/lib/bedenkenanmeldung';
+import { ladeDokumentText } from '@/lib/rechtsTexteLaden';
 import { satzVorschlag, satzAusEingabe, nachtragZeilen, nachtragAbrechenbar, insLvErlaubt } from '@/lib/nachtragAbrechnen';
 
 const supabase = createBrowserClient(
@@ -107,6 +109,8 @@ export default function BauAblaeufeSeite() {
   const [uid, setUid] = useState<string | null>(null);
   const [istMitarbeiter, setIstMitarbeiter] = useState(false);
   const [firma, setFirma] = useState('');
+  // HW-B: Bedenkenanmeldung (Wortlaut aus „Meine Rechtstexte" → bau.bedenken)
+  const [bForm, setBForm] = useState<(BedenkenEingabe & { lv_id: string }) | null>(null);
   const [tab, setTab] = useState<'nachtraege' | 'gewaehrleistung'>('nachtraege');
   const [nachtraege, setNachtraege] = useState<Nachtrag[]>([]);
   const [lvs, setLvs] = useState<LV[]>([]);
@@ -270,6 +274,20 @@ export default function BauAblaeufeSeite() {
     const { error } = await supabase.from('bau_nachtrag').delete().eq('id', n.id);
     if (error) { setFehler('Löschen fehlgeschlagen.'); return; }
     await laden();
+  }
+
+  /** HW-B: Bedenkenanmeldung drucken — nur mit eigenem Text des Betriebs. */
+  async function bedenkenDrucken() {
+    if (!bForm || !uid) return;
+    const pr = pruefeBedenken(bForm, heute);
+    if (!pr.ok) { setFehler(pr.fehler); return; }
+    const dt = await ladeDokumentText(supabase, uid, 'bau.bedenken', bedenkenWerte(bForm, firma, heute));
+    const h = bedenkenHtml(bForm, firma, heute, dt);
+    if (!h.ok) { setFehler(`${h.hinweis} Die Bedenkenanmeldung entsteht nur mit Ihrem eigenen Text — hinterlegen Sie ihn unter „📜 Meine Rechtstexte" (Bereich Bau und Handwerk).`); return; }
+    const w = window.open('', '_blank');
+    if (!w) { setFehler('Bitte Pop-ups für den Druck erlauben.'); return; }
+    w.document.write(h.html); w.document.close(); w.focus(); setTimeout(() => w.print(), 300);
+    melde('Bedenkenanmeldung geöffnet — bitte nachweisbar zustellen (z. B. per Einschreiben oder gegen Empfangsbestätigung).');
   }
 
   /** HW-15: Gibt es zur rechnung_id des Nachtrags eine nicht stornierte Rechnung? */
@@ -519,11 +537,34 @@ export default function BauAblaeufeSeite() {
 
           <div style={s.leiste}>
             <button style={s.primaer} onClick={neuerNachtrag}>{istMitarbeiter ? '＋ Mehraufwand melden' : '＋ Neuer Nachtrag'}</button>
+            {!istMitarbeiter && <button style={s.klein} onClick={() => setBForm(bForm ? null : { lv_id: '', bauvorhaben: '', kunde: '', bedenken: '', frist: '' })}>⚠ Bedenkenanmeldung</button>}
             <select style={s.inp} value={filter} onChange={(e) => setFilter(e.target.value as 'offen' | 'alle')}>
               <option value="offen">Nur offene und beauftragte</option>
               <option value="alle">Alle</option>
             </select>
           </div>
+          {bForm && (
+            <div style={s.card}>
+              <div style={{ fontWeight: 800 }}>⚠ Bedenkenanmeldung (VOB/B § 4 Abs. 3)</div>
+              <div style={s.dim}>Der Wortlaut kommt aus Ihren eigenen Rechtstexten („📜 Meine Rechtstexte" → Bau und Handwerk). Hier tragen Sie nur den Fall ein.</div>
+              <div style={s.row}>
+                <label style={{ ...s.lab, flex: 1 }}>Leistungsverzeichnis (optional)
+                  <select style={s.inp} value={bForm.lv_id} onChange={(e) => { const lv = lvs.find((l) => l.id === e.target.value); setBForm({ ...bForm, lv_id: e.target.value, bauvorhaben: lv?.titel ?? bForm.bauvorhaben, kunde: lv?.kunde_name ?? bForm.kunde }); }}>
+                    <option value="">— ohne LV —</option>
+                    {lvs.map((l) => <option key={l.id} value={l.id}>{l.titel}{l.kunde_name ? ` · ${l.kunde_name}` : ''}</option>)}
+                  </select>
+                </label>
+                <label style={{ ...s.lab, flex: 1 }}>Bauvorhaben / Leistung<input style={s.inp} value={bForm.bauvorhaben} onChange={(e) => setBForm({ ...bForm, bauvorhaben: e.target.value })} /></label>
+                <label style={{ ...s.lab, flex: 1 }}>Auftraggeber<input style={s.inp} value={bForm.kunde} onChange={(e) => setBForm({ ...bForm, kunde: e.target.value })} /></label>
+              </div>
+              <label style={s.lab}>Bedenken: was, warum, welche Folge<textarea style={{ ...s.inp, minHeight: 90 }} value={bForm.bedenken} onChange={(e) => setBForm({ ...bForm, bedenken: e.target.value })} /></label>
+              <div style={s.row}>
+                <label style={s.lab}>Entscheidung erbeten bis<input type="date" style={s.inp} value={bForm.frist} onChange={(e) => setBForm({ ...bForm, frist: e.target.value })} /></label>
+                <button style={s.primaer} onClick={() => void bedenkenDrucken()}>🖨 Schreiben erstellen</button>
+                <button style={s.klein} onClick={() => setBForm(null)}>Schließen</button>
+              </div>
+            </div>
+          )}
 
           {nListe.length === 0 && !fehler && (
             <Leerzustand icon="📝" titel="Keine offenen Nachträge"
