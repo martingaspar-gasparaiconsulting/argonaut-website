@@ -30,6 +30,7 @@ import { heuteIso, datumDe as datumIsoDe } from '@/lib/nachweisMotor';
 import { NORM_VORLAGEN, protokollLink, leseStartObjekt, etikettHtml, type NormVorlage } from '@/lib/protokollStart';
 import { qrSvg } from '@/lib/fuhrparkGeraete';
 import { VORLAGEN_HW } from '@/lib/protokollVorlagenHW';
+import { pruefeNachtrag, nachtraegeFuer, darfLoeschen, type Nachtrag } from '@/lib/protokollNachtrag';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -80,6 +81,9 @@ export default function FormularSeite() {
   // MO1 Teil 2: Spalten aus SQL p388 vorhanden? (Code läuft auch vorher)
   const [spalten, setSpalten] = useState<{ vorlage: boolean; eintrag: boolean }>({ vorlage: false, eintrag: false });
   const [objekte, setObjekte] = useState<Partial<Record<BezugTyp, Option[]>>>({});
+  // MO1 Teil 3: Nachträge (nach SQL p390; vorher null = Tabelle fehlt)
+  const [nachtraege, setNachtraege] = useState<Nachtrag[] | null>(null);
+  const [nachtragText, setNachtragText] = useState('');
   const [startBezug, setStartBezug] = useState<{ typ: BezugTyp | ''; id: string }>({ typ: '', id: '' });
   const [editor, setEditor] = useState<Editor | null>(null);
   const [offen, setOffen] = useState<Eintrag | null>(null);
@@ -101,6 +105,8 @@ export default function FormularSeite() {
       supabase.from('formular_eintrag').select('bezug_typ, bezug_id, naechste_faellig').limit(1),
     ]);
     setSpalten({ vorlage: !pv.error, eintrag: !pe.error });
+    const nt = await supabase.from('formular_nachtrag').select('id, eintrag_id, text, erstellt_von_name, erstellt_am').order('erstellt_am', { ascending: true }).limit(1000);
+    setNachtraege(nt.error ? null : ((nt.data as Nachtrag[]) ?? []));
   }, []);
 
   const objekteLaden = useCallback(async (typ: BezugTyp) => {
@@ -261,7 +267,9 @@ export default function FormularSeite() {
     if (!offen) return;
     const fehlerListe = pruefeWerte(offen.felder, offen.werte, abschliessen);
     if (fehlerListe.length) { setFehler(fehlerListe.join(' ')); return; }
-    if (abschliessen && !window.confirm('Formular abschließen? Danach kann es nicht mehr geändert werden.')) return;
+    if (abschliessen && !window.confirm(nachtraege !== null
+      ? 'Formular abschließen? Danach kann es niemand mehr ändern oder löschen — Korrekturen nur noch als Nachtrag.'
+      : 'Formular abschließen? Danach kann es nicht mehr geändert werden.')) return;
     setBusy(true); setFehler(null);
     try {
       const e = ergebnis(offen.felder, offen.werte);
@@ -320,10 +328,24 @@ export default function FormularSeite() {
     } finally { setBusy(false); }
   }
 
+  async function nachtragSpeichern() {
+    if (!offen) return;
+    const f = pruefeNachtrag(nachtragText, offen.status);
+    if (f) { setFehler(f); return; }
+    setBusy(true); setFehler(null);
+    try {
+      const zeile: Record<string, unknown> = { eintrag_id: offen.id, text: nachtragText.trim(), erstellt_von_name: meinName || null };
+      if (!istMitarbeiter && uid) zeile.owner_user_id = uid;
+      const { error } = await supabase.from('formular_nachtrag').insert(zeile);
+      if (error) { setFehler('Nachtrag konnte nicht gespeichert werden.'); return; }
+      setNachtragText(''); setOk('Nachtrag angehängt.'); await laden();
+    } finally { setBusy(false); }
+  }
+
   async function loeschen(ei: Eintrag) {
     if (!window.confirm(`„${ei.vorlage_titel}" vom ${datumDe(ei.erstellt_am)} löschen?`)) return;
     const { error } = await supabase.from('formular_eintrag').delete().eq('id', ei.id);
-    if (error) { setFehler('Löschen fehlgeschlagen.'); return; }
+    if (error) { setFehler(/abgeschlossen/i.test(error.message) ? 'Abgeschlossene Formulare können nicht gelöscht werden. Bitte einen Nachtrag anlegen.' : 'Löschen fehlgeschlagen.'); return; }
     setOffen(null); await laden();
   }
 
@@ -380,8 +402,23 @@ export default function FormularSeite() {
           {darfBearbeiten && <button style={{ ...s.klein, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => speichern(false)}>💾 Entwurf speichern</button>}
           {darfBearbeiten && <button style={{ ...s.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={() => speichern(true)}>✔ Abschließen</button>}
           <button style={s.klein} disabled={busy} onClick={() => pdf(offen)}>📄 PDF</button>
-          {!istMitarbeiter && <button style={{ ...s.klein, color: C.danger }} onClick={() => loeschen(offen)}>🗑</button>}
+          {darfLoeschen(offen.status, nachtraege !== null, !istMitarbeiter) && <button style={{ ...s.klein, color: C.danger }} onClick={() => loeschen(offen)}>🗑</button>}
         </div>
+
+        {offen.status === 'abgeschlossen' && nachtraege !== null && (
+          <div style={s.card}>
+            <div style={{ fontWeight: 800 }}>Nachträge</div>
+            <div style={s.dim}>Das abgeschlossene Protokoll bleibt unverändert. Korrekturen und Ergänzungen werden mit Datum und Namen angehängt und lassen sich nicht mehr ändern.</div>
+            {nachtraegeFuer(nachtraege, offen.id).map((n) => (
+              <div key={n.id} style={{ borderLeft: `3px solid ${C.gold}`, paddingLeft: 10 }}>
+                <div style={s.dim}>{new Date(n.erstellt_am).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}{n.erstellt_von_name ? ` · ${n.erstellt_von_name}` : ''}</div>
+                <div style={{ whiteSpace: 'pre-wrap', fontSize: 14.5 }}>{n.text}</div>
+              </div>
+            ))}
+            <label style={s.lab}>Neuer Nachtrag<textarea style={{ ...s.inp, minHeight: 70 }} value={nachtragText} onChange={(e) => setNachtragText(e.target.value)} placeholder="z. B. Messwert Isolationswiderstand richtig: 5,2 MΩ (Tippfehler)" /></label>
+            <div><button style={{ ...s.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={nachtragSpeichern}>＋ Nachtrag anhängen</button></div>
+          </div>
+        )}
       </div>
     );
   }
