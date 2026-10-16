@@ -37,6 +37,9 @@ test('Waechter: Seite gibt frei und SQL sperrt Zeiten', () => {
   const seite = fs.readFileSync(new URL('../app/dashboard/personal/lohnvorbereitung/page.tsx', import.meta.url), 'utf8');
   assert.match(seite, /lohn_monatsabschluss/);
   const sql = fs.readFileSync(new URL('../supabase-sql/p395-lohn-monatsabschluss.sql', import.meta.url), 'utf8');
-  assert.match(sql, /before insert or update or delete on public\.hr_zeiterfassung/);
+  // seit Nachtrag 16.10.: Trigger per Schleife ueber beide Tabellen, nur wenn die Spalten da sind (Aussperr-Schutz)
+  assert.match(sql, /array\['hr_zeiterfassung', 'hr_ausfall'\]/);
+  assert.match(sql, /before insert or update or delete on public\.%I/);
+  assert.match(sql, /column_name in \('owner_user_id', 'mitarbeiter_id', 'datum'\)\) = 3/);
   assert.doesNotMatch(sql, /\bdrop\s+table\b|\btruncate\b/i);
 });

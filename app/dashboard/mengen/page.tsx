@@ -19,6 +19,7 @@ import { heuteIso, datumDe } from '@/lib/nachweisMotor';
 import {
   EINHEITEN, TAKTE, pruefeLeistung, tarifAusKatalog, zeileNetto, offeneJeKunde, effektiverPreis, type Leistung, type Eingabe,
 } from '@/lib/mengenAbrechnung';
+import { leseVorbelegung, bezugFuerSpeichern, anStorniertenRechnungen, type MengenVorbelegung, type RechnungKurz } from '@/lib/mengenWeiter';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -55,11 +56,20 @@ export default function MengenSeite() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [vorbelegung, setVorbelegung] = useState<MengenVorbelegung | null>(null);
+  const [rechnungen, setRechnungen] = useState<RechnungKurz[]>([]);
 
   const laden = useCallback(async () => {
     const { data, error } = await supabase.from('mengen_leistung').select('*').order('datum', { ascending: false }).limit(1000);
     if (error) { setZeilen(null); setFehler(/mengen_leistung/.test(error.message) ? 'Die Mengen-Abrechnung wird gerade eingerichtet (SQL Paket 396 fehlt noch).' : 'Laden fehlgeschlagen.'); return; }
-    setZeilen((data as Zeile[]) ?? []);
+    const rows = (data as Zeile[]) ?? [];
+    setZeilen(rows);
+    // MO4 Teil 3: Status der verknüpften Rechnungen (stornierte geben Leistungen frei)
+    const rIds = [...new Set(rows.map((z) => z.rechnung_id).filter((x): x is string => !!x))];
+    if (rIds.length) {
+      const { data: rs } = await supabase.from('rechnungen').select('id, zahlungsstatus, rechnungsnummer').in('id', rIds.slice(0, 500));
+      setRechnungen((rs as RechnungKurz[]) ?? []);
+    } else setRechnungen([]);
   }, []);
 
   useEffect(() => {
@@ -73,6 +83,9 @@ export default function MengenSeite() {
       ]);
       setKontakte(((k.data as Record<string, unknown>[]) ?? []).map((x) => ({ id: String(x.id), name: kontaktName(x) })).sort((a, b) => a.name.localeCompare(b.name, 'de')));
       setKatalog(((l.data as (Katalog & { aktiv?: boolean })[]) ?? []).filter((x) => x.aktiv !== false));
+      // MO4 Teil 3: Vorbelegung aus dem Auftrag (?bezug=auftrag:<id>&kontakt=… bzw. &kunde=…)
+      const v = leseVorbelegung(typeof window !== 'undefined' ? window.location.search : '');
+      if (v) { setVorbelegung(v); setForm((f) => ({ ...f, kontakt_id: v.kontakt_id, empfaenger_name: v.empfaenger_name })); }
       await laden();
     })();
   }, [laden]);
@@ -94,7 +107,7 @@ export default function MengenSeite() {
     if (p.fehler || !p.zeile) { setFehler(p.fehler); return; }
     setBusy(true); setFehler(null);
     try {
-      const { error } = await supabase.from('mengen_leistung').insert({ ...p.zeile, leistungskatalog_id: form.katalog || null, erfasst_von_name: meinName || null });
+      const { error } = await supabase.from('mengen_leistung').insert({ ...p.zeile, ...bezugFuerSpeichern(vorbelegung), leistungskatalog_id: form.katalog || null, erfasst_von_name: meinName || null });
       if (error) { setFehler('Leistung konnte nicht gespeichert werden.'); return; }
       setOk(`Erfasst: ${p.zeile.menge.toString().replace('.', ',')} ${p.zeile.einheit} ${p.zeile.bezeichnung}.`);
       setForm({ ...LEER(heute), kontakt_id: form.kontakt_id, empfaenger_name: form.empfaenger_name, datum: form.datum });
@@ -122,6 +135,22 @@ export default function MengenSeite() {
     } finally { setBusy(false); }
   }
 
+  const storniert = useMemo(() => anStorniertenRechnungen(zeilen ?? [], rechnungen), [zeilen, rechnungen]);
+  const stornoIds = useMemo(() => new Set(storniert.map((g) => g.rechnung_id)), [storniert]);
+
+  async function wiederFreigeben(rechnungId: string, nummer: string, anzahl: number) {
+    if (darfAbrechnen === false) { setFehler('Freigeben darf nur die Geschäftsleitung oder wer „darf abrechnen“ hat.'); return; }
+    if (!window.confirm(`${anzahl} Leistung(en) der stornierten Rechnung ${nummer || ''} wieder freigeben? Die Rechnung selbst bleibt storniert und unverändert.`)) return;
+    setBusy(true); setFehler(null); setOk(null);
+    try {
+      const r = await fetch('/api/mengen-freigeben', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rechnungId }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setFehler(j.error || 'Freigeben fehlgeschlagen.'); return; }
+      setOk(`${j.freigegeben ?? 0} Leistung(en) sind wieder offen und können neu abgerechnet werden.`);
+      await laden();
+    } finally { setBusy(false); }
+  }
+
   const vorschau = useMemo(() => {
     const p = pruefeLeistung(form, heute);
     return p.zeile ? zeileNetto(p.zeile) : null;
@@ -137,6 +166,12 @@ export default function MengenSeite() {
       {zeilen !== null && (
         <div style={s.card}>
           <div style={{ fontWeight: 800 }}>Leistung erfassen</div>
+          {vorbelegung?.bezug_typ && (
+            <div style={s.dim}>
+              📎 Wird gespeichert für {vorbelegung.bezug_typ === 'auftrag' ? 'Auftrag' : vorbelegung.bezug_typ === 'objekt' ? 'Objekt' : vorbelegung.bezug_typ === 'projekt' ? 'Projekt' : 'Vorgang'}{vorbelegung.bezug_label ? ` „${vorbelegung.bezug_label}“` : ''}
+              {' · '}<button style={{ ...s.klein, padding: '2px 8px', fontSize: 12 }} onClick={() => setVorbelegung(null)}>lösen</button>
+            </div>
+          )}
           <div style={s.row}>
             <label style={s.lab}>Datum<input type="date" style={s.inp} value={form.datum} max={heute} onChange={(e) => setForm({ ...form, datum: e.target.value })} /></label>
             <label style={{ ...s.lab, flex: 2, minWidth: 200 }}>Kunde<select style={s.inp} value={form.kontakt_id} onChange={(e) => setForm({ ...form, kontakt_id: e.target.value })}>
@@ -160,6 +195,23 @@ export default function MengenSeite() {
             <div style={{ ...s.dim, alignSelf: 'center' }}>{vorschau != null ? `= ${euro(vorschau)} netto` : ''}</div>
             <button style={{ ...s.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={speichern}>＋ Erfassen</button>
           </div>
+        </div>
+      )}
+
+      {zeilen !== null && darfAbrechnen && storniert.length > 0 && (
+        <div style={s.card}>
+          <div style={{ fontWeight: 800 }}>Stornierte Sammelrechnungen</div>
+          <div style={s.dim}>Diese Leistungen hängen noch an einer stornierten Rechnung. Nach dem Freigeben sind sie wieder offen und können neu abgerechnet werden.</div>
+          {storniert.map((g) => (
+            <div key={g.rechnung_id} style={s.zeile}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontWeight: 700 }}>Rechnung {g.nummer || '(ohne Nummer)'} · storniert</div>
+                <div style={s.dim}>{g.ids.length} Leistung(en)</div>
+              </div>
+              <a style={s.klein} href={`/dashboard/rechnungen/${g.rechnung_id}`}>🧾 Ansehen</a>
+              <button style={s.klein} disabled={busy} onClick={() => wiederFreigeben(g.rechnung_id, g.nummer, g.ids.length)}>↩ Leistungen wieder freigeben</button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -196,7 +248,7 @@ export default function MengenSeite() {
                 <div style={{ fontWeight: 800 }}>{euro(zeileNetto(z))}</div>
               </div>
               {z.abgerechnet
-                ? (z.rechnung_id ? <a style={s.klein} href={`/dashboard/rechnungen/${z.rechnung_id}`}>🧾 Rechnung</a> : <span style={s.dim}>abgerechnet</span>)
+                ? (z.rechnung_id ? <a style={s.klein} href={`/dashboard/rechnungen/${z.rechnung_id}`}>{stornoIds.has(z.rechnung_id) ? '🧾 Rechnung (storniert)' : '🧾 Rechnung'}</a> : <span style={s.dim}>abgerechnet</span>)
                 : <button style={{ ...s.klein, color: C.danger }} onClick={() => loeschen(z)}>🗑</button>}
             </div>
           ))}

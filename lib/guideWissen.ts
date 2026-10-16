@@ -2401,6 +2401,8 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Leistung aus dem Leistungskatalog übernehmen oder frei benennen, Menge und Einheit eintragen; bei Stunden auf Wunsch je angefangene 15/30/60 Minuten aufrunden',
       'Preis je Einheit (netto), Zuschlag in Prozent (z. B. Wochenende) und Umsatzsteuer prüfen, „＋ Erfassen“',
       'Unter „Offen zur Abrechnung“ beim Kunden „🧾 Sammelrechnung“ — die Rechnung öffnet sich zum Prüfen und Versenden',
+      'Direkt vom Auftrag: dort „📏 Mengen erfassen“ — Kunde und Auftrag sind dann schon eingetragen',
+      'Wurde eine Sammelrechnung storniert: unter „Stornierte Sammelrechnungen“ „↩ Leistungen wieder freigeben“ — die Leistungen sind wieder offen, die stornierte Rechnung bleibt unverändert',
     ],
     probe: { anlegen: 'Für einen Test-Kunden 2,5 Std Gartenpflege zu 48 € und 12 km Anfahrt zu 0,60 € erfassen, dann die Sammelrechnung erstellen.', loeschen: 'Die Test-Rechnung stornieren; offene Test-Leistungen als Chef mit 🗑 löschen.' },
     landetIn: [{ text: 'Rechnungen', href: '/dashboard/rechnungen' }, { text: 'Leistungskatalog', href: '/dashboard/leistungskatalog' }],

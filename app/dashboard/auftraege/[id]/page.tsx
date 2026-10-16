@@ -6,6 +6,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import AuftragGewaehrleistung from "../../_components/AuftragGewaehrleistung";
+import { mengenLink } from "@/lib/mengenWeiter";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
 import PartnerKnopf from "../../netzwerk/PartnerKnopf";
@@ -764,6 +765,20 @@ export default function AuftragDetail() {
                 🏁 Schlussrechnung
               </button>
               </>
+            )}
+            {/* MO4 Teil 3: Mengen (Std, km, m³ …) direkt für diesen Auftrag erfassen */}
+            {auftrag?.id && (
+              <a
+                href={mengenLink({
+                  typ: "auftrag", id: auftrag.id, kontakt_id: kontaktId || null,
+                  kunde: kontaktId ? kontaktName(kontakte.find((k: any) => k.id === kontaktId)) : null,
+                  label: [auftrag.auftragsnummer, titel].filter(Boolean).join(" · "),
+                })}
+                title="Leistungen nach Menge für diesen Auftrag erfassen – später als Sammelrechnung abrechnen"
+                style={{ background: "transparent", color: C.gold, border: `1px solid ${C.gold}55`, borderRadius: 10, padding: "11px 16px", fontSize: 'clamp(13px, 1.13vw, 18px)', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              >
+                📏 Mengen erfassen
+              </a>
             )}
             <button
               onClick={speichernJetzt}
