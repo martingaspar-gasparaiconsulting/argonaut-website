@@ -144,8 +144,8 @@ export const VORFUEHR_INHALT: Record<string, VorfuehrInhalt> = {
     kiFrage: 'Welche Filiale läuft am besten und wo verliere ich Geld?',
     kiAntwort: [
       'Filiale Bahnhof macht 31 % des Umsatzes bei 18 % der Personalkosten — Ihre stärkste.',
-      'Filiale Weststadt hat 14 % Retourenquote, im Schnitt liegen Sie bei 6 %.',
-      'Vorschlag: Bestellmengen Weststadt nachmittags um ein Fünftel senken — das sind rund 900 € im Monat.',
+      'Filiale Weststadt macht den geringsten Umsatz je Personalstunde — vor allem nachmittags.',
+      'Vorschlag: Schichtplan Weststadt für den Nachmittag prüfen und die Filialbestellung daran anpassen.',
     ],
     hoehepunkte: [
       'Rezepturen mit Allergenen und automatischen Etiketten',

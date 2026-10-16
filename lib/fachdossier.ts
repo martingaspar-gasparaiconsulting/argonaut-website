@@ -2909,7 +2909,7 @@ export const FACH_TEXTE: Record<string, FachText> = {
   'softwareentwicklung': {
     zielgruppe: 'Softwarehäuser',
     titel: 'Ihr Softwarehaus. Ein System.',
-    lead: 'Vom Angebot über Sprints bis zur Wartung: Projekte mit Aufgaben, Stunden je Projekt, Abschläge, Kundenportal, Lizenzen, Support-Tickets und Rechnung laufen in einer Software zusammen.',
+    lead: 'Vom Angebot über das Projekt bis zur Wartung: Projekte mit Aufgaben, Stunden je Projekt, Abschläge, Kundenportal, Lizenzen, Support-Tickets und Rechnung laufen in einer Software zusammen.',
     vorteile: ['Projekte mit Aufgaben und Ampel', 'Stunden je Projekt abrechnen', 'Kundenportal mit Freigaben', 'Support-Tickets mit Reaktionsfrist', 'Lizenzen mit Ablauf', 'E-Rechnung nach XRechnung und ZUGFeRD'],
     rolle: 'Sie entwickeln Software. Nicht Excel-Abrechnungen.',
     alltag: [
@@ -9791,7 +9791,7 @@ export const FACH_TEXTE: Record<string, FachText> = {
   'ux-ui-design-studio': {
     zielgruppe: 'UX- und UI-Designstudios',
     titel: 'Ihr Designstudio für Oberflächen. Ein System.',
-    lead: 'Von der Nutzeranalyse bis zum fertigen Design: Angebote, Projekte mit Sprints, Entwürfe mit Versionen und Freigaben, Stunden je Projekt, Unterlagen im Kundenportal und Rechnungen laufen in einer Software zusammen.',
+    lead: 'Von der Nutzeranalyse bis zum fertigen Design: Angebote, Projekte mit Aufgaben, Entwürfe mit Versionen und Freigaben, Stunden je Projekt, Unterlagen im Kundenportal und Rechnungen laufen in einer Software zusammen.',
     vorteile: ['Projekte mit Stunden und Ampel', 'Entwürfe mit Versionen', 'Freigaben durch den Kunden', 'Stunden je Projekt', 'Unterlagen im Kundenportal', 'Abrechnung nach Stunden'],
     rolle: 'Sie gestalten Oberflächen. Nicht Abstimmungsmails.',
     alltag: [
