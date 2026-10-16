@@ -150,6 +150,8 @@ export const WEITERE_TABELLEN: string[] = [
   'lead_qualifizierung', 'vk_bogen', 'vk_uebergabe',
   // Paket VK3 (p409): Termin-Verteilung je Betrieb
   'vk_verteilung',
+  // Paket VK5 (p411): Show-up-Einstellungen je Betrieb (1-Std.-Erinnerung, Rückhol-Folge)
+  'vk_showup',
   // Paket 363 (A4e): Herstellungsprotokolle (Sud, Milch, Mahlgang, Ansatz)
   'herstell_messung', 'herstell_protokoll', 'herstell_rohstoff',
   'wein_kellerbuch', 'wein_lese', 'wein_partie',

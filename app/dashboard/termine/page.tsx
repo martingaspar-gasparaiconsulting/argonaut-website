@@ -17,6 +17,7 @@ import KiAuge from "../_components/KiAuge";
 import { augeTermine } from "@/lib/auge";
 import { zaehleTermine } from "@/lib/augeZaehler";
 import { vorbelegungLesen } from "@/lib/leadWeiter";
+import { showRate, markierbar } from "@/lib/showUp";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -53,6 +54,8 @@ type Termin = {
 // Paket VK3: Mitarbeiter für Anzeige, Filter „Kalender je Person" und Übertragen
 type Ma = { id: string; name: string };
 type Uebertragen = { ma: Ma[]; grund: Record<string, string>; aufUebertragen: (t: Termin, anId: string) => Promise<void> };
+// Paket VK5: erschienen / nicht erschienen (Spalten aus SQL p411 — eigene Abfrage)
+type Erscheinen = { wert: Record<string, boolean | null>; aufMarkieren: (t: Termin, w: boolean | null) => Promise<void> };
 
 const ERINNERUNGEN: { wert: string; label: string }[] = [
   { wert: "", label: "Keine Erinnerung" },
@@ -153,8 +156,29 @@ export default function TermineCockpit() {
         const { data: g, error } = await supabase.from("termine").select("id, verteilt_grund").not("verteilt_grund", "is", null).limit(2000);
         if (!error) setGrunde(Object.fromEntries(((g as { id: string; verteilt_grund: string }[] | null) ?? []).map((x) => [x.id, x.verteilt_grund])));
       } catch { /* Spalte fehlt noch */ }
+      try {
+        const { data: e, error } = await supabase.from("termine").select("id, erschienen").not("erschienen", "is", null).limit(5000);
+        if (!error) {
+          setErschienen(Object.fromEntries(((e as { id: string; erschienen: boolean }[] | null) ?? []).map((x) => [x.id, x.erschienen])));
+          setShowUpDa(true);
+        }
+      } catch { /* Spalte fehlt noch (SQL p411) */ }
     })();
   }, [termine]);
+
+  // Paket VK5: Show-up markieren
+  const [erschienen, setErschienen] = useState<Record<string, boolean | null>>({});
+  const [showUpDa, setShowUpDa] = useState(false);
+  async function markieren(t: Termin, w: boolean | null) {
+    setFehler(null); setOk(null);
+    const res = await fetch("/api/termin-erschienen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ termin_id: t.id, erschienen: w }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { setFehler(d?.error || "Markieren fehlgeschlagen."); return; }
+    setErschienen((alt) => ({ ...alt, [t.id]: w }));
+    setOk(w === true ? (d?.lead ? "Als erschienen markiert — Lead auf „Termin gehalten“ gesetzt." : "Als erschienen markiert.") : w === false ? "Als nicht erschienen markiert." : "Markierung entfernt.");
+  }
+  const erscheinen: Erscheinen = { wert: erschienen, aufMarkieren: markieren };
+  const rate = useMemo(() => showRate(termine.map((t) => ({ ...t, erschienen: erschienen[t.id] ?? null })), new Date(), 90), [termine, erschienen]);
 
   async function uebertragen(t: Termin, anId: string) {
     setFehler(null); setOk(null);
@@ -359,6 +383,10 @@ export default function TermineCockpit() {
         <KpiKarte label="Heute" wert={String(kpi.heute)} hint="Termine heute" farbe={C.cyan} />
         <KpiKarte label="Diese Woche" wert={String(kpi.woche)} hint="in den nächsten 7 Tagen" farbe={C.green} />
         <KpiKarte label="Kommende" wert={String(kpi.kommend)} hint="alle bevorstehenden" farbe={C.gold} />
+        {showUpDa && (
+          <KpiKarte label="Show-Rate (90 Tage)" wert={rate.quote === null ? "—" : `${rate.quote} %`}
+            hint={`${rate.erschienen} erschienen · ${rate.nicht} nicht · ${rate.offen} offen`} farbe={rate.quote !== null && rate.quote < 80 ? C.danger : C.green} />
+        )}
       </div>
 
       {!loading && (
@@ -422,7 +450,7 @@ export default function TermineCockpit() {
           )}
           <TerminListe titel="Kommende Termine" liste={kommend} onDelete={loeschen} leer="Keine bevorstehenden Termine." kunden={kundenNamen} uebertragung={uebertragung} />
           {vergangen.length > 0 && (
-            <TerminListe titel="Vergangen" liste={vergangen} onDelete={loeschen} leer="" gedimmt kunden={kundenNamen} />
+            <TerminListe titel="Vergangen" liste={vergangen} onDelete={loeschen} leer="" gedimmt kunden={kundenNamen} erscheinen={showUpDa ? erscheinen : undefined} />
           )}
         </>
       )}
@@ -579,6 +607,7 @@ function TerminListe({
   gedimmt,
   kunden,
   uebertragung,
+  erscheinen,
 }: {
   titel: string;
   liste: Termin[];
@@ -587,6 +616,7 @@ function TerminListe({
   gedimmt?: boolean;
   kunden: Record<string, string>;
   uebertragung?: Uebertragen;
+  erscheinen?: Erscheinen;
 }) {
   const [offenId, setOffenId] = useState<string | null>(null);
   const [ziel, setZiel] = useState("");
@@ -681,6 +711,26 @@ function TerminListe({
                     ) : (
                       <button onClick={() => { setOffenId(t.id); setZiel(""); }} title="An einen Kollegen übertragen"
                         style={{ background: "transparent", color: C.gold, border: `1px solid ${C.border}`, borderRadius: 8, padding: "2px 9px", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}>⇄ übertragen</button>
+                    )}
+                  </div>
+                ) : null}
+                {/* Paket VK5: erschienen / nicht erschienen */}
+                {erscheinen && markierbar(t, new Date()) ? (
+                  <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", fontSize: "clamp(12px, 1.06vw, 17px)" }}>
+                    {erscheinen.wert[t.id] === true ? <span style={{ color: C.green, fontWeight: 700 }}>✓ erschienen</span>
+                      : erscheinen.wert[t.id] === false ? <span style={{ color: C.danger, fontWeight: 700 }}>✗ nicht erschienen</span>
+                      : <span style={{ color: C.textDim }}>Erschienen?</span>}
+                    {erscheinen.wert[t.id] !== true && (
+                      <button onClick={() => erscheinen.aufMarkieren(t, true)}
+                        style={{ background: "transparent", color: C.green, border: `1px solid ${C.border}`, borderRadius: 8, padding: "2px 9px", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}>✓ erschienen</button>
+                    )}
+                    {erscheinen.wert[t.id] !== false && (
+                      <button onClick={() => erscheinen.aufMarkieren(t, false)}
+                        style={{ background: "transparent", color: C.danger, border: `1px solid ${C.border}`, borderRadius: 8, padding: "2px 9px", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}>✗ nicht erschienen</button>
+                    )}
+                    {erscheinen.wert[t.id] != null && (
+                      <button onClick={() => erscheinen.aufMarkieren(t, null)} title="Markierung entfernen"
+                        style={{ background: "transparent", color: C.textDim, border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}>zurücksetzen</button>
                     )}
                   </div>
                 ) : null}
