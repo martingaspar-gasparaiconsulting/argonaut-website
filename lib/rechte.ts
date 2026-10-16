@@ -387,6 +387,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📄 Personal-Dokumente', href: '/dashboard/personal/dokumente', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   // Paket 302 (10.10.26): J1 Jobticket, Dienstrad, Mobilitaet — Unterpfad von /dashboard/personal, erbt dessen Modul.
   { label: '🚆 Jobticket & Mobilität', href: '/dashboard/personal/mobilitaet', ebene: 2, sensibel: true, gruppe: 'finanzen' },
+  // LK5 (16.10.26): Lohnvorbereitung — Unterpfad von /dashboard/personal, erbt dessen Modul (sensibel).
+  { label: '💶 Lohnvorbereitung', href: '/dashboard/personal/lohnvorbereitung', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '🧾 Rechnungen', href: '/dashboard/rechnungen', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen', kern: true },
   { label: '📥 E-Rechnung einlesen', href: '/dashboard/erechnung-import', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen' },
   { label: '📥 Beleg-Inbox (OCR)', href: '/dashboard/eingangsbelege', modul: 'rechnungen', ebene: 2, sensibel: true, gruppe: 'finanzen', kern: true },

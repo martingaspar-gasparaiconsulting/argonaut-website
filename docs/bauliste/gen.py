@@ -142,7 +142,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · P392 LK2 Gewährleistung am Auftrag erledigt · P390 MO1 Teil 3 wartet auf Martin · SQL p388, p392 gesammelt · nächster: LK5 Lohnvorbereitung</div>
+<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · P393 LK5 Teil 1/2 Lohnvorbereitung (CSV + PDF) erledigt · P390 MO1 Teil 3 wartet auf Martin · SQL p388, p392 gesammelt · nächster: LK5 Teil 2 Freigabe + Sperre</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Neu seit 15.10.2026: gebaut wird nach Branchen – Handwerk zuerst und komplett, dann Plätze 2–19, dann eigener Server, Partner und zum Schluss die Dossiertexte. Was der Anwalt freigeben muss, wird gebaut und bleibt bis dahin gesperrt. Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

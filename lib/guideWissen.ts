@@ -215,6 +215,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Personalakte-Ampel', href: '/dashboard/personal' }],
   },
 
+  '/dashboard/personal/lohnvorbereitung': {
+    zweck: 'Monatsübersicht je Mitarbeiter für das Steuerbüro oder Ihr Lohnprogramm: Ist-Stunden aus der Zeiterfassung, Soll aus den Wochenstunden, Mehrarbeit, Zeiten in den üblichen Zuschlags-Fenstern (Nacht 20–6 Uhr, davon 0–4 Uhr, Sonntag, Feiertag, besondere Feiertage), Urlaubs- und Krankheitstage sowie Reisekosten. Als CSV und PDF. ARGONAUT rechnet keinen Lohn und keine Zuschlagssätze — das regeln Arbeitsvertrag, Tarif und das Lohnprogramm.',
+    wer: 'beide',
+    werText: 'Der Chef und Mitarbeiter mit Recht „Personal“. Die Seite liest nur, sie ändert nichts.',
+    schritte: [
+      'Monat wählen (vorbelegt ist der Vormonat)',
+      'Hinweise prüfen: Schichten ohne „Gehen“ zählen nicht — in der Personalakte nachtragen; ohne Wochenstunden gibt es kein Soll',
+      'Bundesland unter Personal → Einstellungen hinterlegen, sonst gelten nur die bundesweiten Feiertage',
+      '„⬇ CSV fürs Lohnprogramm“ (Semikolon, deutsche Kommazahlen) oder „📄 PDF fürs Steuerbüro“',
+    ],
+    probe: { anlegen: 'Für einen Test-Mitarbeiter eine Schicht am Sonntag stempeln, dann den Monat hier öffnen — die Stunden stehen unter „Sonntag“.', loeschen: 'Die Seite legt nichts an; die Test-Schicht in der Personalakte korrigieren.' },
+    landetIn: [{ text: 'Personal', href: '/dashboard/personal' }, { text: 'Zeiterfassung', href: '/dashboard/zeiterfassung' }],
+  },
   '/dashboard/personal/mobilitaet': {
     zweck: 'Mobilitäts-Leistungen je Mitarbeiter an einem Ort: Jobticket bzw. Deutschlandticket-Zuschuss, Dienstrad (Rate des Betriebs, Eigenanteil per Gehaltsumwandlung), Ladestrom-Vereinbarung, Fahrtkosten-Zuschuss — mit Betrag, Laufzeit, Nachweis und Hinweis für die Lohnabrechnung. Fristen werden gelb und rot, Kosten je Monat stehen in einer Übersicht, die Liste für das Steuerbüro gibt es als CSV. ARGONAUT rechnet keine Steuern aus: Steuerfrei, pauschal oder steuerpflichtig lässt sich nur mit dem Datum eintragen, an dem der Steuerberater das bestätigt hat.',
     wer: 'beide',
