@@ -3206,6 +3206,22 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Pläne & Mängel-Pins', href: '/dashboard/bautagebuch/plaene' }],
     vorher: [{ text: 'Baustelle als Projekt angelegt', href: '/dashboard/projekte' }],
   },
+  '/dashboard/bauzeitenplan': {
+    zweck: 'Bauzeitenplan je Projekt: Gewerke mit Dauer in Arbeitstagen und Abhängigkeiten („fängt an, wenn … fertig ist“) einplanen. ARGONAUT rechnet Start, Ende und Bauende ohne Wochenenden und Feiertage und zeigt den kritischen Weg — verschiebt sich dort ein Vorgang, verschiebt sich das Bauende.',
+    wer: 'beide',
+    werText: 'Planen, ändern und löschen macht der Chef. Mitarbeiter mit dem Modul Projekte sehen den Plan und tragen den Fortschritt in Prozent ein.',
+    schritte: [
+      'Projekt wählen und den „Baubeginn“ prüfen (kommt aus dem Startdatum des Projekts)',
+      'Vorgang einplanen: Name (z. B. Rohbau), Gewerk, Firma, „Dauer (Arbeitstage)“; bei Trocknungs- oder Wartezeiten „Wartezeit davor“ eintragen (z. B. 5 Tage nach dem Estrich)',
+      'Unter „Fängt an, wenn fertig ist“ die Vorgänger anhaken — ein Kreis (A wartet auf B, B auf A) wird abgewiesen',
+      'Optional „Frühester Start“, wenn ein Gewerk nicht vorher kann (z. B. Gerüst erst ab einem Termin)',
+      'Im Plan zeigen die Balken die Wochen, 🔴 den kritischen Weg, die blaue Linie heute; den Fortschritt in % eintragen — die Ampel zeigt „hinter Plan“ oder „überfällig“',
+      '„🖨 Drucken“ für die Baubesprechung oder als PDF für den Bauherrn',
+    ],
+    probe: { anlegen: 'Im Test-Projekt Rohbau (10 AT), Estrich (2 AT, nach Rohbau) und Fliesen (3 AT, nach Estrich, 5 Tage Wartezeit) einplanen und das Bauende prüfen.', loeschen: 'Vorgänge mit 🗑 löschen (erst Fliesen, dann Estrich, dann Rohbau — Vorgänger lassen sich erst löschen, wenn niemand mehr auf sie wartet).' },
+    landetIn: [{ text: 'Projekte', href: '/dashboard/projekte' }],
+    vorher: [{ text: 'Projekt anlegen (mit Startdatum)', href: '/dashboard/projekte' }],
+  },
   '/dashboard/bau-lv/ablaeufe': {
     zweck: 'Nachträge vom entdeckten Mehraufwand bis zur Abrechnung führen (Entdeckt, Angekündigt, Angeboten, Beauftragt/Abgelehnt, Abgerechnet) und nach der Abnahme Gewährleistungsfristen, Sicherheiten und Mängelrügen im Blick behalten — mit Musterschreiben.',
     wer: 'beide',

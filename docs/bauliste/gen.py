@@ -142,7 +142,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · P398 MO4 Teil 4 Monatslauf erledigt · MO4 komplett · nächster: HW-2 Bauzeitenplan</div>
+<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · P399 HW-2 Teil 1 Bauzeitenplan (Plan, kritischer Weg, Balken) erledigt · SQL p399 gesammelt · nächster: HW-2 Teil 2 Vorlagen</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Neu seit 15.10.2026: gebaut wird nach Branchen – Handwerk zuerst und komplett, dann Plätze 2–19, dann eigener Server, Partner und zum Schluss die Dossiertexte. Was der Anwalt freigeben muss, wird gebaut und bleibt bis dahin gesperrt. Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

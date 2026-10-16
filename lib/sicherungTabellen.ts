@@ -34,7 +34,7 @@ export const WEITERE_TABELLEN: string[] = [
   'aufmass_positionen', 'aufmasse', 'auftrag_positionen', 'ausgaben', 'ausschreibung',
   'ausschreibung_profil', 'automation_log', 'automation_regeln', 'autoresponder_lauf',
   'autoresponder_schritt', 'autoresponder_sequenz', 'autoresponder_versand', 'bau_abnahmen',
-  'bau_gewaehrleistung', 'bau_lv', 'bau_lv_positionen', 'bau_maengelruege', 'bau_nachtrag',
+  'bau_gewaehrleistung', 'bau_lv', 'bau_lv_positionen', 'bau_maengelruege', 'bau_nachtrag', 'bau_zeitplan',
   'bau_plan', 'bau_plan_pin', 'baustellen_fotos', 'bautagebuch', 'bde_buchung', 'bde_maschine',
   'bde_stoerung', 'belege', 'belegung_einheit', 'belegung_vorgang', 'benachrichtigungen',
   'bestellpositionen', 'bestellung', 'bestellung_position', 'bestellungen', 'betriebs_standort',

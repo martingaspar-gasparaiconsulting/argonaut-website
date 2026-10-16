@@ -301,6 +301,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Bau & LV', href: '/dashboard/bau-lv', modul: 'bau-lv', ebene: 3, gruppe: 'betrieb' },
   { label: '📒 Bautagebuch', href: '/dashboard/bautagebuch', modul: 'bautagebuch', ebene: 3, gruppe: 'betrieb' },
+  // HW-2 (16.10.26): Bauzeitenplan je Projekt — haengt am Modul Projekte
+  { label: '📅 Bauzeitenplan', href: '/dashboard/bauzeitenplan', modul: 'projekte', ebene: 3, gruppe: 'betrieb' },
   // Paket PI (24.09.26): Nachtraege & Gewaehrleistung — Unterpfad von /dashboard/bau-lv,
   // erbt dessen Freigabe (Mitarbeiter mit Bau & LV kommen ueber die Kachel dort hinein).
   { label: '🧷 Nachträge & Gewährleistung', href: '/dashboard/bau-lv/ablaeufe', ebene: 3, gruppe: 'betrieb' },

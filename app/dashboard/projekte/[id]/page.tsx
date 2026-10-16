@@ -766,6 +766,8 @@ export default function ProjektDetailPage() {
               ] as [string, number, string][]).map(([t, n, href]) => (
                 <a key={t} href={href} style={{ border: '1px solid rgba(143,163,190,0.25)', borderRadius: 999, padding: '6px 12px', fontSize: 13, color: 'inherit', textDecoration: 'none' }}>{t}: <b>{n}</b></a>
               ))}
+              {/* HW-2: Bauzeitenplan dieses Projekts */}
+              <a href={`/dashboard/bauzeitenplan?projekt=${encodeURIComponent(projektId)}`} style={{ border: '1px solid rgba(201,168,76,0.55)', borderRadius: 999, padding: '6px 12px', fontSize: 13, color: '#C9A84C', textDecoration: 'none', fontWeight: 700 }}>📅 Bauzeitenplan</a>
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 18 }}>
