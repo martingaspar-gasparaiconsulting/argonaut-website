@@ -22,6 +22,11 @@ import {
   fortschritt, wertText, messAmpel, grenzeText, type Feld, type FeldTyp, type Werte,
 } from '@/lib/formularBaukasten';
 import { formularPdf } from '@/lib/formularPdf';
+import {
+  BEZUG_TYPEN, bezugTyp, bezugOptionen, bezugPatch, istBezugTyp, istUuid, leseIntervall, intervallText,
+  naechsteFaellig, fristenUebersicht, fristenZahlen, type BezugTyp, type FristZeile,
+} from '@/lib/protokollBezug';
+import { heuteIso, datumDe as datumIsoDe } from '@/lib/nachweisMotor';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -35,15 +40,18 @@ const C = {
 const BUCKET = 'formulare';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type Vorlage = { id: string; titel: string; kategorie: string; beschreibung: string | null; felder: Feld[]; version: number; aktiv: boolean };
+type Vorlage = { id: string; titel: string; kategorie: string; beschreibung: string | null; felder: Feld[]; version: number; aktiv: boolean; intervall_monate?: number | null };
 type Eintrag = {
   id: string; vorlage_id: string | null; vorlage_titel: string; vorlage_version: number; felder: Feld[]; werte: Werte;
   projekt_id: string | null; bezug: string | null; status: string; ergebnis: string | null; erstellt_von: string | null;
   erstellt_von_name: string | null; erstellt_am: string; abgeschlossen_am: string | null;
+  // MO1 Teil 2 (nach SQL p388)
+  bezug_typ?: string | null; bezug_id?: string | null; naechste_faellig?: string | null;
 };
 type Projekt = { id: string; name: string | null };
 type EdFeld = Feld & { optionenText?: string; minText?: string; maxText?: string };
-type Editor = { id: string | null; titel: string; kategorie: string; beschreibung: string; felder: EdFeld[] };
+type Editor = { id: string | null; titel: string; kategorie: string; beschreibung: string; felder: EdFeld[]; intervallText: string };
+type Option = { id: string; name: string };
 // MO1: Grenzen im Editor als Text (deutsche Schreibweise), beim Speichern liest pruefeVorlage
 function grenzeFeld(n: number | undefined): string { return n === undefined || n === null ? '' : String(n).replace('.', ','); }
 
@@ -65,7 +73,11 @@ export default function FormularSeite() {
   const [vorlagen, setVorlagen] = useState<Vorlage[]>([]);
   const [eintraege, setEintraege] = useState<Eintrag[]>([]);
   const [projekte, setProjekte] = useState<Projekt[]>([]);
-  const [ansicht, setAnsicht] = useState<'liste' | 'vorlagen'>('liste');
+  const [ansicht, setAnsicht] = useState<'liste' | 'fristen' | 'vorlagen'>('liste');
+  // MO1 Teil 2: Spalten aus SQL p388 vorhanden? (Code läuft auch vorher)
+  const [spalten, setSpalten] = useState<{ vorlage: boolean; eintrag: boolean }>({ vorlage: false, eintrag: false });
+  const [objekte, setObjekte] = useState<Partial<Record<BezugTyp, Option[]>>>({});
+  const [startBezug, setStartBezug] = useState<{ typ: BezugTyp | ''; id: string }>({ typ: '', id: '' });
   const [editor, setEditor] = useState<Editor | null>(null);
   const [offen, setOffen] = useState<Eintrag | null>(null);
   const [fotoUrls, setFotoUrls] = useState<Record<string, string>>({});
@@ -81,7 +93,32 @@ export default function FormularSeite() {
     if (v.error) { setFehler(/formular_vorlage/.test(v.error.message) ? 'Die Formulare sind noch nicht eingerichtet (SQL von Paket PL fehlt).' : 'Laden fehlgeschlagen.'); return; }
     setVorlagen((v.data as Vorlage[]) ?? []);
     setEintraege((e.data as Eintrag[]) ?? []);
+    const [pv, pe] = await Promise.all([
+      supabase.from('formular_vorlage').select('intervall_monate').limit(1),
+      supabase.from('formular_eintrag').select('bezug_typ, bezug_id, naechste_faellig').limit(1),
+    ]);
+    setSpalten({ vorlage: !pv.error, eintrag: !pe.error });
   }, []);
+
+  const objekteLaden = useCallback(async (typ: BezugTyp) => {
+    if (objekte[typ]) return;
+    const b = bezugTyp(typ); if (!b) return;
+    const { data, error } = await supabase.from(b.tabelle).select('*').limit(500);
+    setObjekte((a) => ({ ...a, [typ]: error ? [] : bezugOptionen(typ, (data as unknown[]) ?? []) }));
+  }, [objekte]);
+
+  // Namen der Objekte, an denen Formulare hängen (für Liste und Fristen)
+  useEffect(() => {
+    const typen = new Set<BezugTyp>();
+    for (const e of eintraege) if (istBezugTyp(e.bezug_typ)) typen.add(e.bezug_typ);
+    typen.forEach((t) => { void objekteLaden(t); });
+  }, [eintraege, objekteLaden]);
+
+  function objektName(typ: unknown, id: unknown): string | null {
+    if (!istBezugTyp(typ) || !istUuid(id)) return null;
+    const o = objekte[typ]?.find((x) => x.id === id);
+    return `${bezugTyp(typ)?.icon ?? ''} ${o?.name ?? bezugTyp(typ)?.label ?? ''}`.trim();
+  }
 
   useEffect(() => {
     (async () => {
@@ -126,10 +163,11 @@ export default function FormularSeite() {
     setEditor({
       id: null, titel: start?.titel ?? '', kategorie: start?.kategorie ?? 'checkliste', beschreibung: start?.beschreibung ?? '',
       felder: (start?.felder ?? [{ id: 'f1', typ: 'text' as FeldTyp, label: '' }]).map((f) => ({ ...f, optionenText: (f.optionen ?? []).join(', '), minText: grenzeFeld(f.min), maxText: grenzeFeld(f.max) })),
+      intervallText: '',
     });
   }
   function vorlageBearbeiten(v: Vorlage) {
-    setEditor({ id: v.id, titel: v.titel, kategorie: v.kategorie, beschreibung: v.beschreibung ?? '', felder: v.felder.map((f) => ({ ...f, optionenText: (f.optionen ?? []).join(', '), minText: grenzeFeld(f.min), maxText: grenzeFeld(f.max) })) });
+    setEditor({ id: v.id, titel: v.titel, kategorie: v.kategorie, beschreibung: v.beschreibung ?? '', felder: v.felder.map((f) => ({ ...f, optionenText: (f.optionen ?? []).join(', '), minText: grenzeFeld(f.min), maxText: grenzeFeld(f.max) })), intervallText: v.intervall_monate ? String(v.intervall_monate) : '' });
   }
   function feldAendern(i: number, patch: Partial<EdFeld>) {
     if (!editor) return;
@@ -145,10 +183,12 @@ export default function FormularSeite() {
     if (!editor || !uid) return;
     const r = pruefeVorlage(editor.titel, editor.felder.map((f) => ({ ...f, optionen: f.optionenText !== undefined ? leseOptionen(f.optionenText) : f.optionen,
       min: f.minText !== undefined ? f.minText : f.min, max: f.maxText !== undefined ? f.maxText : f.max })));
-    if (r.fehler.length) { setFehler(r.fehler.join(' ')); return; }
+    const iv = leseIntervall(editor.intervallText);
+    if (r.fehler.length || (spalten.vorlage && iv.fehler)) { setFehler([...r.fehler, ...(spalten.vorlage && iv.fehler ? [iv.fehler] : [])].join(' ')); return; }
     setBusy(true); setFehler(null);
     try {
-      const zeile = { titel: editor.titel.trim().slice(0, 200), kategorie: editor.kategorie, beschreibung: editor.beschreibung.trim() || null, felder: r.felder, aktualisiert_am: new Date().toISOString() };
+      const zeile: Record<string, unknown> = { titel: editor.titel.trim().slice(0, 200), kategorie: editor.kategorie, beschreibung: editor.beschreibung.trim() || null, felder: r.felder, aktualisiert_am: new Date().toISOString() };
+      if (spalten.vorlage) zeile.intervall_monate = iv.wert;
       if (editor.id) {
         const alt = vorlagen.find((v) => v.id === editor.id);
         const { error } = await supabase.from('formular_vorlage').update({ ...zeile, version: (alt?.version ?? 1) + 1 }).eq('id', editor.id);
@@ -166,14 +206,17 @@ export default function FormularSeite() {
   }
 
   // --- Ausfüllen -----------------------------------------------------------
-  async function starten(v: Vorlage) {
+  async function starten(v: Vorlage, bezug?: { typ: unknown; id: unknown; text?: string | null }) {
     if (!uid) return;
     setBusy(true); setFehler(null);
     try {
+      const b = bezug ?? startBezug;
       const zeile: Record<string, unknown> = {
         vorlage_id: v.id, vorlage_titel: v.titel, vorlage_version: v.version, felder: v.felder, werte: {},
         erstellt_von: uid, erstellt_von_name: meinName || null,
+        ...bezugPatch(spalten.eintrag, b.typ, b.id),
       };
+      if (bezug?.text) zeile.bezug = bezug.text;
       if (!istMitarbeiter) zeile.owner_user_id = uid;
       const { data, error } = await supabase.from('formular_eintrag').insert(zeile).select('*').single();
       if (error || !data) { setFehler('Formular konnte nicht angelegt werden.'); return; }
@@ -199,8 +242,14 @@ export default function FormularSeite() {
       const patch: Record<string, unknown> = {
         werte: offen.werte, bezug: offen.bezug?.trim() || null, projekt_id: offen.projekt_id || null,
         ergebnis: e.gesamt, aktualisiert_am: new Date().toISOString(),
+        ...bezugPatch(spalten.eintrag, offen.bezug_typ, offen.bezug_id),
       };
-      if (abschliessen) { patch.status = 'abgeschlossen'; patch.abgeschlossen_am = new Date().toISOString(); }
+      if (abschliessen) {
+        const jetzt = new Date();
+        patch.status = 'abgeschlossen'; patch.abgeschlossen_am = jetzt.toISOString();
+        // MO1 Teil 2: nächste Fälligkeit = Abschlusstag + Intervall der Vorlage
+        if (spalten.eintrag) patch.naechste_faellig = naechsteFaellig(jetzt, vorlagen.find((v) => v.id === offen.vorlage_id)?.intervall_monate ?? null);
+      }
       const { data, error } = await supabase.from('formular_eintrag').update(patch).eq('id', offen.id).select('*').single();
       if (error || !data) { setFehler('Speichern fehlgeschlagen.'); return; }
       setOffen(data as Eintrag); setOk(abschliessen ? 'Formular abgeschlossen.' : 'Entwurf gespeichert.'); await laden();
@@ -238,7 +287,7 @@ export default function FormularSeite() {
         }
       }
       formularPdf({
-        titel: ei.vorlage_titel, bezug: [ei.bezug, projekte.find((p) => p.id === ei.projekt_id)?.name].filter(Boolean).join(' · ') || null,
+        titel: ei.vorlage_titel, bezug: [objektName(ei.bezug_typ, ei.bezug_id), ei.bezug, projekte.find((p) => p.id === ei.projekt_id)?.name].filter(Boolean).join(' · ') || null,
         firma, erstellt_von: ei.erstellt_von_name, datum: ei.abgeschlossen_am ?? ei.erstellt_am, status: ei.status,
         felder: ei.felder, werte: ei.werte, fotos,
       });
@@ -253,6 +302,8 @@ export default function FormularSeite() {
   }
 
   const aktive = useMemo(() => vorlagen.filter((v) => v.aktiv), [vorlagen]);
+  const fristen = useMemo<FristZeile[]>(() => fristenUebersicht(eintraege, vorlagen, heuteIso(new Date())), [eintraege, vorlagen]);
+  const fz = useMemo(() => fristenZahlen(fristen), [fristen]);
 
   // --- Anzeige: offenes Formular ------------------------------------------
   if (offen) {
@@ -279,6 +330,18 @@ export default function FormularSeite() {
               <option value="">—</option>{projekte.map((p) => <option key={p.id} value={p.id}>{p.name || 'Projekt ohne Name'}</option>)}
             </select></label>
           </div>
+          {spalten.eintrag && <div style={s.row}>
+            <label style={{ ...s.lab, flex: 1 }}>Hängt an<select style={s.inp} disabled={!darfBearbeiten} value={offen.bezug_typ ?? ''} onChange={(e) => {
+              const t = e.target.value; setOffen({ ...offen, bezug_typ: t || null, bezug_id: null });
+              if (istBezugTyp(t)) void objekteLaden(t);
+            }}>
+              <option value="">— kein Objekt —</option>{BEZUG_TYPEN.map((b) => <option key={b.key} value={b.key}>{b.icon} {b.label}</option>)}
+            </select></label>
+            {istBezugTyp(offen.bezug_typ) && <label style={{ ...s.lab, flex: 2 }}>{bezugTyp(offen.bezug_typ)?.label}<select style={s.inp} disabled={!darfBearbeiten} value={offen.bezug_id ?? ''} onChange={(e) => setOffen({ ...offen, bezug_id: e.target.value || null })}>
+              <option value="">— bitte wählen —</option>{(objekte[offen.bezug_typ] ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select></label>}
+          </div>}
+          {offen.naechste_faellig && <div style={s.dim}>⏰ Nächste Prüfung fällig am {datumIsoDe(offen.naechste_faellig)}</div>}
         </div>
 
         <div style={s.card}>
@@ -311,6 +374,11 @@ export default function FormularSeite() {
             </select></label>
           </div>
           <label style={s.lab}>Beschreibung<input style={s.inp} value={editor.beschreibung} onChange={(e) => setEditor({ ...editor, beschreibung: e.target.value })} /></label>
+          {spalten.vorlage && <label style={s.lab}>Wiederholen alle … Monate (leer = nur bei Anlass)
+            <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input style={{ ...s.inp, width: 110 }} inputMode="numeric" value={editor.intervallText} placeholder="z. B. 12" onChange={(e) => setEditor({ ...editor, intervallText: e.target.value })} />
+              <span style={s.dim}>{leseIntervall(editor.intervallText).fehler ?? intervallText(leseIntervall(editor.intervallText).wert)} · die Frist zählt ab dem Abschluss des Protokolls</span>
+            </span></label>}
         </div>
         <div style={s.card}>
           <div style={{ fontWeight: 800 }}>Felder</div>
@@ -354,6 +422,7 @@ export default function FormularSeite() {
 
       <div style={s.tabs}>
         <button style={{ ...s.tab, ...(ansicht === 'liste' ? s.tabAn : {}) }} onClick={() => setAnsicht('liste')}>Ausfüllen</button>
+        <button style={{ ...s.tab, ...(ansicht === 'fristen' ? s.tabAn : {}) }} onClick={() => setAnsicht('fristen')}>⏰ Fristen{fz.ueberfaellig + fz.bald ? ` (${fz.ueberfaellig + fz.bald})` : ''}</button>
         {!istMitarbeiter && <button style={{ ...s.tab, ...(ansicht === 'vorlagen' ? s.tabAn : {}) }} onClick={() => setAnsicht('vorlagen')}>Vorlagen verwalten</button>}
       </div>
 
@@ -361,6 +430,17 @@ export default function FormularSeite() {
         <>
           <div style={s.card}>
             <div style={{ fontWeight: 800 }}>Neues Formular</div>
+            {spalten.eintrag && <div style={s.row}>
+              <label style={{ ...s.lab, flex: 1 }}>Hängt an (optional)<select style={s.inp} value={startBezug.typ} onChange={(e) => {
+                const t = e.target.value; setStartBezug({ typ: istBezugTyp(t) ? t : '', id: '' });
+                if (istBezugTyp(t)) void objekteLaden(t);
+              }}>
+                <option value="">— kein Objekt —</option>{BEZUG_TYPEN.map((b) => <option key={b.key} value={b.key}>{b.icon} {b.label}</option>)}
+              </select></label>
+              {startBezug.typ && <label style={{ ...s.lab, flex: 2 }}>{bezugTyp(startBezug.typ)?.label}<select style={s.inp} value={startBezug.id} onChange={(e) => setStartBezug({ ...startBezug, id: e.target.value })}>
+                <option value="">— bitte wählen —</option>{(objekte[startBezug.typ] ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select></label>}
+            </div>}
             <div style={s.leiste}>
               {aktive.map((v) => <button key={v.id} style={s.klein} disabled={busy} onClick={() => starten(v)}>＋ {v.titel}</button>)}
               {!aktive.length && <div style={s.dim}>{istMitarbeiter ? 'Noch keine Vorlagen — die legt die Geschäftsleitung an.' : 'Noch keine Vorlagen. Unter „Vorlagen verwalten" eine Startvorlage übernehmen.'}</div>}
@@ -372,7 +452,7 @@ export default function FormularSeite() {
               return (
                 <button key={ei.id} style={s.zeile} onClick={() => setOffen(ei)}>
                   <div style={{ flex: 1, textAlign: 'left' }}>
-                    <div style={{ fontWeight: 700 }}>{ei.vorlage_titel}{ei.bezug ? ` · ${ei.bezug}` : ''}</div>
+                    <div style={{ fontWeight: 700 }}>{ei.vorlage_titel}{objektName(ei.bezug_typ, ei.bezug_id) ? ` · ${objektName(ei.bezug_typ, ei.bezug_id)}` : ''}{ei.bezug ? ` · ${ei.bezug}` : ''}</div>
                     <div style={s.dim}>{datumDe(ei.erstellt_am)}{ei.erstellt_von_name ? ` · ${ei.erstellt_von_name}` : ''}{ei.status === 'entwurf' ? ` · ${fs.gefuellt}/${fs.gesamt} ausgefüllt` : ''}</div>
                   </div>
                   {ei.ergebnis && <span style={{ ...s.badge, color: ei.ergebnis === 'io' ? C.green : ei.ergebnis === 'nio' ? C.danger : C.warn }}>{ei.ergebnis === 'io' ? 'i. O.' : ei.ergebnis === 'nio' ? 'n. i. O.' : 'offen'}</span>}
@@ -381,6 +461,39 @@ export default function FormularSeite() {
               );
             })}
             {!eintraege.length && !fehler && <div style={s.dim}>Noch keine ausgefüllten Formulare.</div>}
+          </div>
+        </>
+      )}
+
+      {ansicht === 'fristen' && (
+        <>
+          <div style={s.card}>
+            <div style={{ fontWeight: 800 }}>Wiederkehrende Prüfungen</div>
+            <div style={s.dim}>
+              Je Vorlage mit Intervall und Objekt der letzte Abschluss und die nächste Fälligkeit. Gelb = in den nächsten 30 Tagen, Rot = überfällig.
+              {!spalten.vorlage ? ' Das Intervall je Vorlage wird nach der Einrichtung (SQL Paket 388) freigeschaltet.' : ''}
+            </div>
+            <div style={s.leiste}>
+              <span style={{ ...s.badge, color: C.danger }}>{fz.ueberfaellig} überfällig</span>
+              <span style={{ ...s.badge, color: C.warn }}>{fz.bald} bald fällig</span>
+              <span style={{ ...s.badge, color: C.green }}>{fz.ok} in Ordnung</span>
+            </div>
+          </div>
+          <div style={s.liste}>
+            {fristen.map((z) => {
+              const v = vorlagen.find((x) => x.id === z.vorlage_id);
+              const farbe = z.status === 'ok' ? C.green : z.status === 'bald' ? C.warn : z.status === 'anlass' ? C.textDim : C.danger;
+              return (
+                <div key={z.schluessel} style={{ ...s.zeile, cursor: 'default', borderLeft: `4px solid ${farbe}` }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700 }}>{z.vorlage_titel}{objektName(z.bezug_typ, z.bezug_id) ? ` · ${objektName(z.bezug_typ, z.bezug_id)}` : ''}{z.bezug ? ` · ${z.bezug}` : ''}</div>
+                    <div style={s.dim}>zuletzt {datumIsoDe(z.letzte_am)} · {intervallText(v?.intervall_monate)} · <span style={{ color: farbe }}>{z.text}</span></div>
+                  </div>
+                  {v?.aktiv && <button style={s.klein} disabled={busy} onClick={() => starten(v, { typ: z.bezug_typ, id: z.bezug_id, text: z.bezug })}>▶ Jetzt prüfen</button>}
+                </div>
+              );
+            })}
+            {!fristen.length && <div style={s.dim}>Noch keine wiederkehrenden Prüfungen. Geben Sie einer Vorlage ein Intervall (z. B. 12 Monate) und schließen Sie ein Protokoll ab — dann erscheint hier die nächste Fälligkeit.</div>}
           </div>
         </>
       )}
@@ -399,7 +512,7 @@ export default function FormularSeite() {
               <div key={v.id} style={{ ...s.zeile, cursor: 'default' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700 }}>{v.titel} <span style={s.dim}>· Version {v.version}</span></div>
-                  <div style={s.dim}>{KATEGORIEN.find((k) => k.key === v.kategorie)?.label ?? v.kategorie} · {v.felder.length} Felder{v.aktiv ? '' : ' · ausgeblendet'}</div>
+                  <div style={s.dim}>{KATEGORIEN.find((k) => k.key === v.kategorie)?.label ?? v.kategorie} · {v.felder.length} Felder{v.intervall_monate ? ` · ${intervallText(v.intervall_monate)}` : ''}{v.aktiv ? '' : ' · ausgeblendet'}</div>
                 </div>
                 <button style={s.klein} onClick={() => vorlageBearbeiten(v)}>✏️ Bearbeiten</button>
                 <button style={s.klein} onClick={() => vorlageAktiv(v)}>{v.aktiv ? 'Ausblenden' : 'Einblenden'}</button>
