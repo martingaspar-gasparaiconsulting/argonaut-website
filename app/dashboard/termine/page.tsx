@@ -17,7 +17,8 @@ import KiAuge from "../_components/KiAuge";
 import { augeTermine } from "@/lib/auge";
 import { zaehleTermine } from "@/lib/augeZaehler";
 import { vorbelegungLesen } from "@/lib/leadWeiter";
-import { showRate, markierbar, einstellungLesen, rueckholTageBereinigen, type ShowEinstellung } from "@/lib/showUp";
+import { showRate, markierbar, einstellungLesen, rueckholTageBereinigen, whatsappErinnerungText, type ShowEinstellung } from "@/lib/showUp";
+import { waMeLink } from "@/lib/whatsappBestaetigung";
 import { leseZahl } from "@/lib/zahlen";
 
 const supabase = createBrowserClient(
@@ -107,7 +108,7 @@ export default function TermineCockpit() {
   const [wer, setWer] = useState("");
   // Kunde aus dem CRM: haengt den Termin fest an den Kontakt.
   const [kontaktId, setKontaktId] = useState("");
-  const [kontakte, setKontakte] = useState<{ id: string; anzeigename: string | null; email: string | null }[]>([]);
+  const [kontakte, setKontakte] = useState<{ id: string; anzeigename: string | null; email: string | null; telefon?: string | null; mobil?: string | null }[]>([]);
   const [ende, setEnde] = useState("");
   const [ort, setOrt] = useState("");
   const [erinnerung, setErinnerung] = useState("");
@@ -191,6 +192,7 @@ export default function TermineCockpit() {
   }
   const uebertragung: Uebertragen = { ma: mitarbeiter, grund: grunde, aufUebertragen: uebertragen };
 
+  const [nummern, setNummern] = useState<Record<string, string>>({});
   const kundenNamen = useMemo(() => {
     const m: Record<string, string> = {};
     for (const k of kontakte) m[k.id] = k.anzeigename || k.email || "Kunde im CRM";
@@ -226,6 +228,11 @@ export default function TermineCockpit() {
           .limit(500);
         setKontakte((k as { id: string; anzeigename: string | null; email: string | null }[]) ?? []);
       } catch { /* Auswahl ist optional */ }
+      // Paket VK5: Telefonnummern fuer die WhatsApp-Vorlage — eigene Abfrage, damit die Auswahl nie leer bleibt
+      try {
+        const { data: n, error } = await supabase.from("kontakte").select("id, telefon, mobil").limit(5000);
+        if (!error) setNummern(Object.fromEntries(((n as { id: string; telefon: string | null; mobil: string | null }[] | null) ?? []).map((x) => [x.id, x.mobil || x.telefon || ""])));
+      } catch { /* ohne Nummer: WhatsApp fragt nach dem Empfaenger */ }
     })();
   }, [laden]);
 
@@ -451,7 +458,7 @@ export default function TermineCockpit() {
               </select>
             </div>
           )}
-          <TerminListe titel="Kommende Termine" liste={kommend} onDelete={loeschen} leer="Keine bevorstehenden Termine." kunden={kundenNamen} uebertragung={uebertragung} />
+          <TerminListe titel="Kommende Termine" liste={kommend} onDelete={loeschen} leer="Keine bevorstehenden Termine." kunden={kundenNamen} uebertragung={uebertragung} nummern={nummern} />
           {vergangen.length > 0 && (
             <TerminListe titel="Vergangen" liste={vergangen} onDelete={loeschen} leer="" gedimmt kunden={kundenNamen} erscheinen={showUpDa ? erscheinen : undefined} />
           )}
@@ -611,6 +618,7 @@ function TerminListe({
   kunden,
   uebertragung,
   erscheinen,
+  nummern,
 }: {
   titel: string;
   liste: Termin[];
@@ -620,6 +628,7 @@ function TerminListe({
   kunden: Record<string, string>;
   uebertragung?: Uebertragen;
   erscheinen?: Erscheinen;
+  nummern?: Record<string, string>;
 }) {
   const [offenId, setOffenId] = useState<string | null>(null);
   const [ziel, setZiel] = useState("");
@@ -717,6 +726,17 @@ function TerminListe({
                     )}
                   </div>
                 ) : null}
+                {/* Paket VK5: WhatsApp-Vorlage fuer die Erinnerung (verschickt der Betrieb selbst) */}
+                {nummern ? (() => {
+                  const text = whatsappErinnerungText(t.titel, t.beginn_am);
+                  const href = waMeLink(t.kontakt_id ? nummern[t.kontakt_id] : "", text) || `https://wa.me/?text=${encodeURIComponent(text)}`;
+                  return (
+                    <a href={href} target="_blank" rel="noopener noreferrer" title="Erinnerung per WhatsApp schicken (öffnet WhatsApp mit fertigem Text)"
+                      style={{ display: "inline-block", marginTop: 6, marginRight: 8, padding: "2px 9px", borderRadius: 8, border: `1px solid ${C.border}`, color: C.green, textDecoration: "none", fontSize: "clamp(12px, 1.06vw, 17px)" }}>
+                      💬 WhatsApp-Erinnerung
+                    </a>
+                  );
+                })() : null}
                 {/* Paket VK5: erschienen / nicht erschienen */}
                 {erscheinen && markierbar(t, new Date()) ? (
                   <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", fontSize: "clamp(12px, 1.06vw, 17px)" }}>

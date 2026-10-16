@@ -164,3 +164,14 @@ test('Teil 2: Einstellung — nur Chef speichert, eine Zeile je Betrieb', () => 
   assert.match(p, /disabled=\{!chef\}/);
   assert.match(p, /rpc\("mein_chef_id"\)/);
 });
+
+test('WhatsApp-Vorlage: gesiezt, Berliner Zeit, ohne Titel sinnvoll', async () => {
+  const { whatsappErinnerungText } = await import('../out/showUp.js');
+  const t = whatsappErinnerungText('Beratung Bad', '2026-10-17T08:00:00Z');
+  assert.match(t, /„Beratung Bad“/);
+  assert.match(t, /17\.10\.2026 um 10:00 Uhr/);
+  assert.match(t, /geben Sie uns/);
+  assert.match(whatsappErinnerungText('', '2026-12-01T08:00:00Z'), /an Ihren Termin am .* um 09:00 Uhr/);
+  assert.doesNotMatch(whatsappErinnerungText('', '2026-12-01T08:00:00Z'), /„/);
+  assert.doesNotMatch(whatsappErinnerungText(null, 'quatsch'), /Invalid|NaN/);
+});

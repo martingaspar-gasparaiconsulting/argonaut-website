@@ -179,3 +179,17 @@ export function rueckholText(stufe: number, link: string | null, letzte = false)
     absaetze: ['Ihr verpasster Termin ist noch nicht nachgeholt. Falls Sie weiterhin Interesse haben, melden Sie sich gern.', buchen, ...schluss],
   };
 }
+
+/**
+ * WhatsApp-Vorlage fuer die Erinnerung (wird vom Betrieb selbst aus seinem WhatsApp verschickt —
+ * ARGONAUT schickt nichts automatisch). Gesiezt, Zeit in Berliner Zeit.
+ */
+export function whatsappErinnerungText(titel: string | null | undefined, beginnIso: string | null | undefined): string {
+  const d = new Date(String(beginnIso ?? ''));
+  const name = String(titel ?? '').trim();
+  const was = name ? `Ihren Termin „${name}“` : 'Ihren Termin';
+  if (Number.isNaN(d.getTime())) return `Guten Tag, eine kurze Erinnerung an ${was}. Falls etwas dazwischenkommt, geben Sie uns bitte kurz Bescheid.`;
+  const tag = d.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Berlin' });
+  const uhr = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+  return `Guten Tag, eine kurze Erinnerung an ${was} am ${tag} um ${uhr} Uhr. Falls etwas dazwischenkommt, geben Sie uns bitte kurz Bescheid.`;
+}
