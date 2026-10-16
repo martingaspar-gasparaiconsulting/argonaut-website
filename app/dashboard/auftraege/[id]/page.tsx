@@ -5,6 +5,7 @@ import { erfasserText } from '@/lib/erfasser';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import AuftragGewaehrleistung from "../../_components/AuftragGewaehrleistung";
 import VerknuepfungsLeiste from "../../_components/VerknuepfungsLeiste";
 import AblaufKnoepfe from "../../_components/AblaufKnoepfe";
 import PartnerKnopf from "../../netzwerk/PartnerKnopf";
@@ -1257,6 +1258,15 @@ export default function AuftragDetail() {
           Summen rechnen live aus den Positionen. Mit „💾 Speichern" werden sie festgeschrieben.
         </p>
       </Karte>
+
+      {/* LK2: Gewährleistung direkt am Auftrag (nur Geschäftsleitung, Karte blendet sich sonst aus) */}
+      {auftrag?.id && (
+        <AuftragGewaehrleistung
+          auftrag={{ id: auftrag.id, titel, auftragsnummer: auftrag.auftragsnummer, projekt_id: projektId || null, kunde: kontaktId ? kontaktName(kontakte.find((k: any) => k.id === kontaktId)) : null }}
+          kontaktId={kontaktId || null}
+          vorschlagAbnahme={lieferdatum || null}
+        />
+      )}
 
       {/* Notizen */}
       <div style={{ marginTop: 20 }}>

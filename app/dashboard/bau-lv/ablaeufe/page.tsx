@@ -34,6 +34,7 @@ import {
 } from '@/lib/bauAblaeufe';
 import { leseZahl, zahlFeld } from '@/lib/zahlen';
 import { gewaehrleistungsKandidaten } from '@/lib/bauAbnahme';
+import { begehungStatus, begehungTerminUrl } from '@/lib/gewaehrleistungAuftrag';
 import { pruefeBedenken, bedenkenWerte, bedenkenHtml, type BedenkenEingabe } from '@/lib/bedenkenanmeldung';
 import { ladeDokumentText } from '@/lib/rechtsTexteLaden';
 import { satzVorschlag, satzAusEingabe, nachtragZeilen, nachtragAbrechenbar, insLvErlaubt } from '@/lib/nachtragAbrechnen';
@@ -683,8 +684,11 @@ export default function BauAblaeufeSeite() {
                         </div>
                       </div>
                       <Hinweise liste={pruefeGewaehrleistung(g, heute)} />
+                      {/* LK2: Begehung 3 Monate vor Fristende */}
+                      {(() => { const b = begehungStatus(g, heute); return b.status === 'jetzt' || b.status === 'verpasst' ? <div style={{ ...s.dim, color: b.status === 'jetzt' ? C.warn : C.danger }}>🔎 {b.text}</div> : null; })()}
                       <div style={s.knoepfe}>
                         <button style={s.klein} onClick={() => gwBearbeiten(g)}>✏️ Bearbeiten</button>
+                        {['jetzt', 'spaeter'].includes(begehungStatus(g, heute).status) && <a style={{ ...s.klein, textDecoration: 'none' }} href={begehungTerminUrl(g, begehungStatus(g, heute).ende)}>📅 Begehung als Termin</a>}
                         <button style={s.klein} onClick={() => neueRuege(g)}>＋ Mängelrüge</button>
                         {sicher.datum && !g.sicherheit_zurueck_am && <button style={s.klein} onClick={() => musterFuerGw(g, 'sicherheit_zurueck')}>✉️ Sicherheit zurückfordern</button>}
                         {sicher.datum && !g.sicherheit_zurueck_am && <button style={{ ...s.klein, color: C.green }} onClick={() => sicherheitZurueck(g)}>✔ Sicherheit zurück</button>}
