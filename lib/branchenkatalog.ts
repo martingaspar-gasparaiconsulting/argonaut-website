@@ -37,13 +37,28 @@ export const KATEGORIE_MODULE: Record<string, string[]> = {
   'Marketing, Medien & Kreativ': ['agentur-kreativ', 'projekte', 'projekt-abrechnung', 'marketing', 'leads', 'freigaben'],
   'Recht, Steuern & Finanzen': ['kanzlei', 'vertraege', 'datev', 'fristen'],
   'Bildung & Wissenschaft': ['bildung', 'raeume', 'online-buchung', 'buchungen', 'gutscheine', 'veranstaltungen', 'mitglieder'],
-  'Gesundheit & Wellness': ['wellness', 'online-buchung', 'buchungen', 'bildung', 'hilfsmittel', 'gutscheine', 'erinnerungen'],
-  'Sport, Beauty & Lifestyle': ['wellness', 'online-buchung', 'buchungen', 'mitglieder', 'gutscheine', 'erinnerungen', 'kasse'],
-  'Tiere': ['tier', 'online-buchung', 'buchungen', 'bildung', 'tierbestand', 'erinnerungen', 'mitglieder'],
+  'Gesundheit & Wellness': ['wellness', 'online-buchung', 'buchungen', 'bildung', 'hilfsmittel', 'gutscheine', 'erinnerungen', 'kasse', 'mitglieder'],
+  'Sport, Beauty & Lifestyle': ['wellness', 'online-buchung', 'buchungen', 'mitglieder', 'gutscheine', 'erinnerungen', 'kasse', 'bildung'],
+  'Tiere': ['tier', 'online-buchung', 'buchungen', 'bildung', 'tierbestand', 'erinnerungen', 'mitglieder', 'belegung'],
   'Landwirtschaft, Garten & Forst': ['landwirtschaft', 'erp', 'verleih', 'belegung', 'schlagkartei', 'ernte', 'tierbestand', 'ertraege', 'holz', 'forst'],
   'Dienstleistungen': ['einsaetze', 'objektzeiten', 'wartung', 'wiederkehr', 'schichtplan', 'tour', 'service'],
   'Kultur, Soziales & Öffentliches': ['verein', 'mitglieder', 'online-buchung', 'bildung', 'belegung', 'spenden', 'veranstaltungen', 'foerdermittel', 'projekte'],
 };
+// MO0a (16.10.2026): Gesundheit + Kasse/Mitglieder (Praxis-Shop, Reha-/Kursmitglieder), Sport/Beauty + Kurse
+// („bildung"), Tiere + Belegung (Pensionen/Boxen). Schichtplan steckt schon im KERN (lib/pakete) — jede Branche hat ihn.
+
+/**
+ * MO0a: Grün-Handwerk (Garten- und Landschaftsbau, Baumpflege) arbeitet wie ein Handwerksbetrieb:
+ * Aufmaß, Kalkulation, Leistungskatalog, Pflegeverträge (Wartung), Touren, Objekte.
+ */
+export const GRUEN_HANDWERK_MODULE = ['aufmass', 'kalkulator', 'leistungskatalog', 'wartung', 'tour', 'objektzeiten'];
+export function gruenHandwerkZusatz(branche: string | null | undefined): boolean {
+  return /landschaftsbau|galabau|garten-?\s*(und|&)\s*landschafts|baumpflege|arborist/i.test(String(branche ?? ''));
+}
+function mitGruenHandwerk(set: string[], branche: string | null | undefined): string[] {
+  if (!gruenHandwerkZusatz(branche)) return set;
+  return [...set, ...GRUEN_HANDWERK_MODULE.filter((m) => !set.includes(m))];
+}
 
 /** Vollständiges Modul-Set einer Kategorie = Kern + Kategorie-Zusatz + Standard-Automation (dedupliziert). */
 export function kategorieModule(kategorie: string): string[] {
@@ -65,11 +80,12 @@ export function kategorieZusatz(kategorie: string): string[] {
  * Paket 353: Bewachungsgewerbe (§ 34a) zusätzlich „bewachung" und „objektzeiten" (Objekte).
  * Paket 355: Entsorgung, Container-Dienst, Recycling, Gefahrgut zusätzlich „entsorgung".
  * Paket 363: Brauerei, Molkerei, Mühle u. a. zusätzlich „herstellung", „rezeptur", „etiketten", „chargen", „lebensmittel".
+ * MO0a: Garten- und Landschaftsbau, Baumpflege zusätzlich Aufmaß, Kalkulator, Leistungskatalog, Wartung, Touren, Objekte.
  * Paket 364: Weingüter und Winzer zusätzlich „weinbau", „schlagkartei", „chargen", „etiketten", „rezeptur".
  */
 export function brancheModule(kategorie: string, branche: string | null | undefined): string[] {
   const set = kategorieModule(kategorie);
-  return mitWeinbau(mitHerstellung(mitEntsorgung(mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !set.includes('kfz') ? [...set, 'kfz'] : set, branche), branche), branche), branche), branche);
+  return mitGruenHandwerk(mitWeinbau(mitHerstellung(mitEntsorgung(mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !set.includes('kfz') ? [...set, 'kfz'] : set, branche), branche), branche), branche), branche), branche);
 }
 
 /** Paket 352 (A4a): Bestattungsunternehmen bekommen die Sterbefall-Akte und den Leistungskatalog (Kostenvoranschlag). Nur additiv. */
@@ -106,7 +122,7 @@ function mitWeinbau(set: string[], branche: string | null | undefined): string[]
 /** Wie kategorieZusatz, mit dem Einzelstück-Zusatz der Branche. */
 export function brancheZusatz(kategorie: string, branche: string | null | undefined): string[] {
   const z = kategorieZusatz(kategorie);
-  return mitWeinbau(mitHerstellung(mitEntsorgung(mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !z.includes('kfz') ? [...z, 'kfz'] : z, branche), branche), branche), branche), branche);
+  return mitGruenHandwerk(mitWeinbau(mitHerstellung(mitEntsorgung(mitBewachung(mitBestattung(einzelstueckHandelZusatz(kategorie, branche) && !z.includes('kfz') ? [...z, 'kfz'] : z, branche), branche), branche), branche), branche), branche);
 }
 
 /** Ist diese Kategorie im Katalog bekannt? */
