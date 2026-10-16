@@ -142,7 +142,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · P386 MO0c Mindestlohn als Empfehlung + Gesundheitsangaben geschützt erledigt · SQL p384, p386 gesammelt · nächster: MO1</div>
+<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · P387 MO1 Teil 1/4 Messwert-Feld erledigt · SQL p384, p386 gesammelt · nächster: MO1 Teil 2 Bezug + Frist</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Neu seit 15.10.2026: gebaut wird nach Branchen – Handwerk zuerst und komplett, dann Plätze 2–19, dann eigener Server, Partner und zum Schluss die Dossiertexte. Was der Anwalt freigeben muss, wird gebaut und bleibt bis dahin gesperrt. Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

@@ -19,7 +19,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { verkleinereBild } from '@/lib/bildKlein';
 import {
   FELD_TYPEN, KATEGORIEN, STARTVORLAGEN, feldTyp, neueFeldId, leseOptionen, pruefeVorlage, pruefeWerte, ergebnis,
-  fortschritt, wertText, type Feld, type FeldTyp, type Werte,
+  fortschritt, wertText, messAmpel, grenzeText, type Feld, type FeldTyp, type Werte,
 } from '@/lib/formularBaukasten';
 import { formularPdf } from '@/lib/formularPdf';
 
@@ -42,7 +42,10 @@ type Eintrag = {
   erstellt_von_name: string | null; erstellt_am: string; abgeschlossen_am: string | null;
 };
 type Projekt = { id: string; name: string | null };
-type Editor = { id: string | null; titel: string; kategorie: string; beschreibung: string; felder: (Feld & { optionenText?: string })[] };
+type EdFeld = Feld & { optionenText?: string; minText?: string; maxText?: string };
+type Editor = { id: string | null; titel: string; kategorie: string; beschreibung: string; felder: EdFeld[] };
+// MO1: Grenzen im Editor als Text (deutsche Schreibweise), beim Speichern liest pruefeVorlage
+function grenzeFeld(n: number | undefined): string { return n === undefined || n === null ? '' : String(n).replace('.', ','); }
 
 function datumDe(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -122,13 +125,13 @@ export default function FormularSeite() {
   function vorlageNeu(start?: (typeof STARTVORLAGEN)[number]) {
     setEditor({
       id: null, titel: start?.titel ?? '', kategorie: start?.kategorie ?? 'checkliste', beschreibung: start?.beschreibung ?? '',
-      felder: (start?.felder ?? [{ id: 'f1', typ: 'text' as FeldTyp, label: '' }]).map((f) => ({ ...f, optionenText: (f.optionen ?? []).join(', ') })),
+      felder: (start?.felder ?? [{ id: 'f1', typ: 'text' as FeldTyp, label: '' }]).map((f) => ({ ...f, optionenText: (f.optionen ?? []).join(', '), minText: grenzeFeld(f.min), maxText: grenzeFeld(f.max) })),
     });
   }
   function vorlageBearbeiten(v: Vorlage) {
-    setEditor({ id: v.id, titel: v.titel, kategorie: v.kategorie, beschreibung: v.beschreibung ?? '', felder: v.felder.map((f) => ({ ...f, optionenText: (f.optionen ?? []).join(', ') })) });
+    setEditor({ id: v.id, titel: v.titel, kategorie: v.kategorie, beschreibung: v.beschreibung ?? '', felder: v.felder.map((f) => ({ ...f, optionenText: (f.optionen ?? []).join(', '), minText: grenzeFeld(f.min), maxText: grenzeFeld(f.max) })) });
   }
-  function feldAendern(i: number, patch: Partial<Feld & { optionenText?: string }>) {
+  function feldAendern(i: number, patch: Partial<EdFeld>) {
     if (!editor) return;
     setEditor({ ...editor, felder: editor.felder.map((f, k) => (k === i ? { ...f, ...patch } : f)) });
   }
@@ -140,7 +143,8 @@ export default function FormularSeite() {
   }
   async function vorlageSpeichern() {
     if (!editor || !uid) return;
-    const r = pruefeVorlage(editor.titel, editor.felder.map((f) => ({ ...f, optionen: f.optionenText !== undefined ? leseOptionen(f.optionenText) : f.optionen })));
+    const r = pruefeVorlage(editor.titel, editor.felder.map((f) => ({ ...f, optionen: f.optionenText !== undefined ? leseOptionen(f.optionenText) : f.optionen,
+      min: f.minText !== undefined ? f.minText : f.min, max: f.maxText !== undefined ? f.maxText : f.max })));
     if (r.fehler.length) { setFehler(r.fehler.join(' ')); return; }
     setBusy(true); setFehler(null);
     try {
@@ -321,6 +325,11 @@ export default function FormularSeite() {
               </select>
               <input style={{ ...s.inp, flex: 1, minWidth: 180 }} value={f.label} placeholder={f.typ === 'hinweis' ? 'Hinweistext' : 'Beschriftung'} onChange={(e) => feldAendern(i, { label: e.target.value })} />
               {(f.typ === 'auswahl' || f.typ === 'mehrfach') && <input style={{ ...s.inp, flex: 1, minWidth: 160 }} value={f.optionenText ?? ''} placeholder="Möglichkeiten, mit Komma getrennt" onChange={(e) => feldAendern(i, { optionenText: e.target.value })} />}
+              {f.typ === 'messwert' && <>
+                <input style={{ ...s.inp, width: 80 }} value={f.einheit ?? ''} placeholder="Einheit" onChange={(e) => feldAendern(i, { einheit: e.target.value })} />
+                <input style={{ ...s.inp, width: 80 }} inputMode="decimal" value={f.minText ?? ''} placeholder="min" onChange={(e) => feldAendern(i, { minText: e.target.value })} />
+                <input style={{ ...s.inp, width: 80 }} inputMode="decimal" value={f.maxText ?? ''} placeholder="max" onChange={(e) => feldAendern(i, { maxText: e.target.value })} />
+              </>}
               {feldTyp(f.typ)?.eingabe && <label style={s.check}><input type="checkbox" checked={!!f.pflicht} onChange={(e) => feldAendern(i, { pflicht: e.target.checked })} /> Pflicht</label>}
               <button style={{ ...s.mini, color: C.danger }} onClick={() => setEditor({ ...editor, felder: editor.felder.filter((_, k) => k !== i) })}>✕</button>
             </div>
@@ -426,6 +435,17 @@ function FeldEingabe({ feld, wert, aktiv, fotoUrls, onWert, onFoto }: {
     case 'text': return <label style={s.lab}>{label}<input style={s.inp} value={String(wert ?? '')} onChange={(e) => onWert(e.target.value)} /></label>;
     case 'textlang': return <label style={s.lab}>{label}<textarea style={{ ...s.inp, minHeight: 70 }} value={String(wert ?? '')} onChange={(e) => onWert(e.target.value)} /></label>;
     case 'zahl': return <label style={s.lab}>{label}<input style={s.inp} inputMode="decimal" value={String(wert ?? '')} onChange={(e) => onWert(e.target.value)} /></label>;
+    case 'messwert': {
+      const a = messAmpel(feld, wert);
+      const g = grenzeText(feld);
+      const farbe = a === 'ok' ? C.green : a === 'mangel' ? C.danger : C.textDim;
+      return <label style={s.lab}>{label}{g && <span style={{ ...s.dim, fontSize: 12.5 }}> · Grenze {g}</span>}
+        <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input style={{ ...s.inp, flex: 1, borderColor: a === 'mangel' ? C.danger : a === 'ok' ? C.green : C.border }} inputMode="decimal" value={String(wert ?? '')} onChange={(e) => onWert(e.target.value)} />
+          {feld.einheit && <span>{feld.einheit}</span>}
+          {(a === 'ok' || a === 'mangel') && <span style={{ color: farbe, fontWeight: 800 }}>{a === 'ok' ? '● i. O.' : '● n. i. O.'}</span>}
+        </span></label>;
+    }
     case 'datum': return <label style={s.lab}>{label}<input type="date" style={s.inp} value={String(wert ?? '')} onChange={(e) => onWert(e.target.value)} /></label>;
     case 'auswahl': return <label style={s.lab}>{label}<select style={s.inp} value={String(wert ?? '')} onChange={(e) => onWert(e.target.value)}><option value="">—</option>{(feld.optionen ?? []).map((o) => <option key={o} value={o}>{o}</option>)}</select></label>;
     case 'mehrfach': {

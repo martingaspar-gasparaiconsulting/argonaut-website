@@ -8,7 +8,7 @@
 // ============================================================================
 
 import { jsPDF } from 'jspdf';
-import { ergebnis, feldTyp, wertText, pdfDateiname, type Feld, type Werte } from '@/lib/formularBaukasten';
+import { ergebnis, feldTyp, wertText, pdfDateiname, messAmpel, pdfText, type Feld, type Werte } from '@/lib/formularBaukasten';
 
 const NAVY = '#0A1628', GOLD = '#C9A84C', GREEN = '#3B8C63', RED = '#C0392B', GREY = '#5A6B82';
 
@@ -103,14 +103,16 @@ export function formularPdf(d: FormularPdfDaten): void {
       continue;
     }
 
-    const wert = wertText(f, v);
-    const labelZ = doc.splitTextToSize(f.label, 70);
+    const wert = pdfText(wertText(f, v));
+    const labelZ = doc.splitTextToSize(pdfText(f.label), 70);
     const wertZ = doc.splitTextToSize(wert, R - L - 75);
     const h = Math.max(labelZ.length, wertZ.length) * 5 + 2;
     platz(h);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(GREY); doc.text(labelZ, L, y);
-    const farbe = f.typ === 'pruefpunkt' ? (v === 'io' ? GREEN : v === 'nio' ? RED : GREY) : NAVY;
-    doc.setFont('helvetica', f.typ === 'pruefpunkt' ? 'bold' : 'normal'); doc.setFontSize(10.5); doc.setTextColor(farbe);
+    const mess = f.typ === 'messwert' ? messAmpel(f, v) : null;
+    const farbe = f.typ === 'pruefpunkt' ? (v === 'io' ? GREEN : v === 'nio' ? RED : GREY)
+      : mess === 'ok' ? GREEN : mess === 'mangel' ? RED : NAVY;
+    doc.setFont('helvetica', f.typ === 'pruefpunkt' || mess === 'ok' || mess === 'mangel' ? 'bold' : 'normal'); doc.setFontSize(10.5); doc.setTextColor(farbe);
     doc.text(wertZ, L + 75, y);
     y += h;
     doc.setDrawColor('#F0F0F0'); doc.setLineWidth(0.2); doc.line(L, y - 2, R, y - 2);

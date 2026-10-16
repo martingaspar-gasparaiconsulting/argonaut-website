@@ -13,7 +13,7 @@ test('Feld-IDs und Optionen', () => {
   assert.equal(neueFeldId(['f3']), 'f2');
   assert.equal(neueFeldId(['f2', 'f3']), 'f4');
   assert.deepEqual(leseOptionen('ja, nein; ja\nvielleicht,, '), ['ja', 'nein', 'vielleicht']);
-  assert.equal(FELD_TYPEN.length, 12);
+  assert.equal(FELD_TYPEN.length, 13);
 });
 
 test('Vorlage pruefen: Titel, Beschriftung, Optionen, doppelte IDs, nur Anzeige-Felder', () => {

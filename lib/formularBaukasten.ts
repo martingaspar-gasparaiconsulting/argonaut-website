@@ -22,7 +22,9 @@
 import { leseZahlOder } from './zahlen';
 export type FeldTyp =
   | 'ueberschrift' | 'text' | 'textlang' | 'zahl' | 'datum' | 'auswahl' | 'mehrfach'
-  | 'ja_nein' | 'pruefpunkt' | 'foto' | 'unterschrift' | 'hinweis';
+  | 'ja_nein' | 'pruefpunkt' | 'foto' | 'unterschrift' | 'hinweis'
+  // MO1 Teil 1 (P387, 16.10.2026): Zahl mit Einheit und Grenzen -> Ampel, zaehlt ins Ergebnis
+  | 'messwert';
 
 export const FELD_TYPEN: { key: FeldTyp; label: string; eingabe: boolean }[] = [
   { key: 'ueberschrift', label: 'Zwischenüberschrift', eingabe: false },
@@ -35,6 +37,7 @@ export const FELD_TYPEN: { key: FeldTyp; label: string; eingabe: boolean }[] = [
   { key: 'mehrfach', label: 'Auswahl (mehrere)', eingabe: true },
   { key: 'ja_nein', label: 'Ja / Nein', eingabe: true },
   { key: 'pruefpunkt', label: 'Prüfpunkt (i. O. / n. i. O. / entfällt)', eingabe: true },
+  { key: 'messwert', label: 'Messwert (mit Einheit und Grenzen)', eingabe: true },
   { key: 'foto', label: 'Foto', eingabe: true },
   { key: 'unterschrift', label: 'Unterschrift', eingabe: true },
 ];
@@ -53,7 +56,47 @@ export type Feld = {
   pflicht?: boolean;
   optionen?: string[];
   hilfe?: string;
+  /** nur messwert: Einheit (z. B. „°C", „MΩ", „bar") */
+  einheit?: string;
+  /** nur messwert: untere Grenze (Wert muss ≥ sein) */
+  min?: number;
+  /** nur messwert: obere Grenze (Wert muss ≤ sein) */
+  max?: number;
 };
+
+export type MessAmpel = 'ok' | 'mangel' | 'leer' | 'ohne_grenze';
+
+function zahlOderNull(v: unknown): number | null {
+  if (v === null || v === undefined || (typeof v === 'string' && v.trim() === '')) return null;
+  const n = typeof v === 'number' ? v : leseZahlOder(String(v).trim(), NaN);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Ampel eines Messwerts gegen die Grenzen des Feldes. */
+export function messAmpel(feld: Feld, wert: unknown): MessAmpel {
+  const w = zahlOderNull(wert);
+  if (w === null) return 'leer';
+  const lo = zahlOderNull(feld.min);
+  const hi = zahlOderNull(feld.max);
+  if (lo === null && hi === null) return 'ohne_grenze';
+  if (lo !== null && w < lo) return 'mangel';
+  if (hi !== null && w > hi) return 'mangel';
+  return 'ok';
+}
+
+function zahlDeutsch(n: number): string {
+  return String(Math.round(n * 1000) / 1000).replace('.', ',');
+}
+
+/** Grenze als Text: „2 – 7 °C", „≤ 0,3 Ω", „≥ 1 MΩ", leer ohne Grenze. */
+export function grenzeText(feld: Feld): string {
+  const e = feld.einheit ? ` ${feld.einheit}` : '';
+  const lo = zahlOderNull(feld.min), hi = zahlOderNull(feld.max);
+  if (lo !== null && hi !== null) return `${zahlDeutsch(lo)} – ${zahlDeutsch(hi)}${e}`;
+  if (hi !== null) return `≤ ${zahlDeutsch(hi)}${e}`;
+  if (lo !== null) return `≥ ${zahlDeutsch(lo)}${e}`;
+  return '';
+}
 
 export const KATEGORIEN: { key: string; label: string }[] = [
   { key: 'abnahme', label: 'Abnahme' },
@@ -113,6 +156,17 @@ export function pruefeVorlage(titel: unknown, felder: unknown): { felder: Feld[]
       if (opt.length < 2) fehler.push(`Feld „${label || i + 1}": mindestens zwei Auswahlmöglichkeiten.`);
       feld.optionen = opt;
     }
+    if (typ === 'messwert') {
+      const einheit = String(r.einheit ?? '').trim().slice(0, 20);
+      if (einheit) feld.einheit = einheit;
+      const lo = zahlOderNull(r.min), hi = zahlOderNull(r.max);
+      const loKaputt = r.min != null && String(r.min).trim() !== '' && lo === null;
+      const hiKaputt = r.max != null && String(r.max).trim() !== '' && hi === null;
+      if (loKaputt || hiKaputt) fehler.push(`Feld „${label || i + 1}": Grenze ist keine gültige Zahl.`);
+      if (lo !== null && hi !== null && lo > hi) fehler.push(`Feld „${label || i + 1}": untere Grenze liegt über der oberen.`);
+      if (lo !== null) feld.min = lo;
+      if (hi !== null) feld.max = hi;
+    }
     const hilfe = String(r.hilfe ?? '').trim().slice(0, 300);
     if (hilfe) feld.hilfe = hilfe;
     aus.push(feld);
@@ -143,7 +197,8 @@ export function pruefeWerte(felder: Feld[], werte: Werte, fuerAbschluss: boolean
       continue;
     }
     switch (feld.typ) {
-      case 'zahl': {
+      case 'zahl':
+      case 'messwert': {
         const t = String(v).trim();
         const n = leseZahlOder(t, NaN);
         if (!Number.isFinite(n)) f.push(`„${feld.label}": keine gültige Zahl.`);
@@ -179,10 +234,18 @@ export function pruefeWerte(felder: Feld[], werte: Werte, fuerAbschluss: boolean
 
 export type Ergebnis = { pruefpunkte: number; io: number; nio: number; entfaellt: number; offen: number; gesamt: 'io' | 'nio' | 'offen' | null };
 
-/** Gesamtergebnis ueber alle Pruefpunkte. Ohne Pruefpunkte: gesamt = null. */
+/** Gesamtergebnis ueber alle Pruefpunkte und Messwerte mit Grenze. Ohne beides: gesamt = null. */
 export function ergebnis(felder: Feld[], werte: Werte): Ergebnis {
   const e: Ergebnis = { pruefpunkte: 0, io: 0, nio: 0, entfaellt: 0, offen: 0, gesamt: null };
   for (const f of felder) {
+    if (f.typ === 'messwert') {
+      // Messwert mit Grenze zaehlt wie ein Pruefpunkt: innerhalb = i. O., ausserhalb = n. i. O.
+      const a = messAmpel(f, werte[f.id]);
+      if (a === 'ohne_grenze') continue;
+      e.pruefpunkte++;
+      if (a === 'ok') e.io++; else if (a === 'mangel') e.nio++; else e.offen++;
+      continue;
+    }
     if (f.typ !== 'pruefpunkt') continue;
     e.pruefpunkte++;
     const v = werte[f.id];
@@ -205,8 +268,20 @@ export function wertText(feld: Feld, v: unknown): string {
     case 'pruefpunkt': return v === 'io' ? 'i. O.' : v === 'nio' ? 'n. i. O.' : v === 'entfaellt' ? 'entfällt' : String(v);
     case 'foto': return Array.isArray(v) ? `${v.length} Foto${v.length === 1 ? '' : 's'}` : '—';
     case 'unterschrift': return 'unterschrieben';
+    case 'messwert': {
+      const n = zahlOderNull(v);
+      if (n === null) return String(v);
+      const g = grenzeText(feld);
+      const a = messAmpel(feld, v);
+      return `${zahlDeutsch(n)}${feld.einheit ? ' ' + feld.einheit : ''}${g ? ` (Grenze ${g}) · ${a === 'ok' ? 'i. O.' : 'n. i. O.'}` : ''}`;
+    }
     default: return String(v);
   }
+}
+
+/** Fuer jsPDF (Helvetica/WinAnsi): ≤ ≥ Ω kann die Schrift nicht — lesbar ersetzen. */
+export function pdfText(t: string): string {
+  return String(t).replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/[ΩΩ]/g, 'Ohm');
 }
 
 /** Fortschritt: ausgefuellte Eingabefelder / alle Eingabefelder. */
