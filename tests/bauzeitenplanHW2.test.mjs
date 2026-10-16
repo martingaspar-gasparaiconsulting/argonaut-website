@@ -95,3 +95,23 @@ test('Vorlagen: jede ist rechenbar, ohne Kreis, Vorgänger kommen zuerst', () =>
   }
   assert.equal(vorlageReihenfolge({ id: 'k', name: 'K', schritte: [{ key: 'a', titel: 'A', gewerk: '', dauer: 1, nach: ['b'] }, { key: 'b', titel: 'B', gewerk: '', dauer: 1, nach: ['a'] }] }), null);
 });
+
+import { termineJeFirma } from '../out/bauzeitenplan.js';
+
+test('Termine je Firma: gruppiert, sortiert, gesiezt, fertige Vorgänge weg, Rückfall Gewerk', () => {
+  const v = [
+    { id: 'r', titel: 'Rohbau', dauer_tage: 10, firma: 'Bau Maier' },
+    { id: 'e', titel: 'Estrich', dauer_tage: 2, vorgaenger: ['r'], gewerk: 'Estrichleger' },
+    { id: 'z', titel: 'Zweiter Einsatz', dauer_tage: 1, vorgaenger: ['e'], firma: 'Bau Maier' },
+    { id: 'x', titel: 'Erledigt', dauer_tage: 1, firma: 'Alt GmbH', fortschritt: 100 },
+  ];
+  const plan = planBerechnen(v, '2026-10-19', keine);
+  const t = termineJeFirma(v, plan, 'Haus Müller', 'Schreinerei Beispiel');
+  assert.deepEqual(t.map((x) => x.firma), ['Bau Maier', 'Estrichleger']);
+  assert.equal(t[0].zeilen.length, 2);
+  assert.match(t[0].text, /Rohbau: 19\.10\.2026 bis 30\.10\.2026/);
+  assert.match(t[0].text, /Bitte geben Sie uns/);
+  assert.doesNotMatch(t[0].text, /\bdu\b|\bdein/i);
+  assert.ok(!t.some((x) => x.firma === 'Alt GmbH'));
+  assert.deepEqual(termineJeFirma(v, { zeilen: new Map(), ende: null, fehler: 'x' }, '', ''), []);
+});

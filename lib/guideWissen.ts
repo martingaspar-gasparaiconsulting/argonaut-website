@@ -3218,6 +3218,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Optional „Frühester Start“, wenn ein Gewerk nicht vorher kann (z. B. Gerüst erst ab einem Termin)',
       'Im Plan zeigen die Balken die Wochen, 🔴 den kritischen Weg, die blaue Linie heute; den Fortschritt in % eintragen — die Ampel zeigt „hinter Plan“ oder „überfällig“',
       '„🖨 Drucken“ für die Baubesprechung oder als PDF für den Bauherrn',
+      'Unter „✉️ Termine an die Firmen“ je Firma den fertigen Termintext kopieren oder als E-Mail öffnen — nach jeder Planänderung neu verschicken',
     ],
     probe: { anlegen: 'Im Test-Projekt Rohbau (10 AT), Estrich (2 AT, nach Rohbau) und Fliesen (3 AT, nach Estrich, 5 Tage Wartezeit) einplanen und das Bauende prüfen.', loeschen: 'Vorgänge mit 🗑 löschen (erst Fliesen, dann Estrich, dann Rohbau — Vorgänger lassen sich erst löschen, wenn niemand mehr auf sie wartet).' },
     landetIn: [{ text: 'Projekte', href: '/dashboard/projekte' }],

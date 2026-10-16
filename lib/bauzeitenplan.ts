@@ -241,3 +241,36 @@ export function vorlageReihenfolge(v: PlanVorlage): VorlageSchritt[] | null {
   }
   return out;
 }
+
+// ============================================================================
+// HW-2 Teil 3 — Termine je Firma (für Subunternehmer und eigene Kolonnen)
+// ============================================================================
+
+function de(iso: string): string { const [j, m, t] = iso.split('-'); return `${t}.${m}.${j}`; }
+
+export type FirmenTermine = { firma: string; zeilen: { titel: string; start: string; ende: string; kritisch: boolean }[]; text: string };
+
+/**
+ * Je Firma (ohne Firma: je Gewerk, sonst „Eigene Leute") die geplanten Termine,
+ * zeitlich sortiert, mit fertigem Mitteilungstext (gesiezt, ohne Preise).
+ */
+export function termineJeFirma(vorgaenge: Vorgang[], plan: Plan, projektName: string, absender: string): FirmenTermine[] {
+  if (plan.fehler) return [];
+  const m = new Map<string, FirmenTermine['zeilen']>();
+  for (const v of vorgaenge ?? []) {
+    const p = plan.zeilen.get(v.id);
+    if (!p) continue;
+    if ((Number(v.fortschritt) || 0) >= 100) continue;
+    const firma = String(v.firma ?? '').trim() || String(v.gewerk ?? '').trim() || 'Eigene Leute';
+    const l = m.get(firma) ?? [];
+    l.push({ titel: v.titel, start: p.start, ende: p.ende, kritisch: p.kritisch });
+    m.set(firma, l);
+  }
+  const proj = String(projektName ?? '').trim() || 'Bauvorhaben';
+  return [...m.entries()].map(([firma, zeilen]) => {
+    zeilen.sort((a, b) => a.start.localeCompare(b.start));
+    const liste = zeilen.map((z) => `- ${z.titel}: ${de(z.start)}${z.start !== z.ende ? ` bis ${de(z.ende)}` : ''}${z.kritisch ? ' (Termin ist fest eingeplant — bitte unbedingt halten)' : ''}`).join('\n');
+    const text = `Guten Tag,\n\nfür das Bauvorhaben „${proj}" sind Sie wie folgt eingeplant:\n\n${liste}\n\nBitte geben Sie uns kurz Bescheid, wenn ein Termin nicht passt.\n\nMit freundlichen Grüßen\n${String(absender ?? '').trim()}`.trim();
+    return { firma, zeilen, text };
+  }).sort((a, b) => a.zeilen[0].start.localeCompare(b.zeilen[0].start));
+}

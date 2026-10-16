@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'r
 import { createBrowserClient } from '@supabase/ssr';
 import { feiertagsSet } from '@/lib/feiertage';
 import { heuteIso, datumDe } from '@/lib/nachweisMotor';
-import { planBerechnen, pruefeVorgang, bildetKreis, stand, STAND_TEXT, istIso, PLAN_VORLAGEN, vorlageReihenfolge, type Vorgang, type Eingabe } from '@/lib/bauzeitenplan';
+import { planBerechnen, pruefeVorgang, bildetKreis, stand, STAND_TEXT, istIso, PLAN_VORLAGEN, vorlageReihenfolge, termineJeFirma, type Vorgang, type Eingabe } from '@/lib/bauzeitenplan';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -57,6 +57,8 @@ export default function BauzeitenplanSeite() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [vorlageId, setVorlageId] = useState('');
+  const [firmaName, setFirmaName] = useState('');
+  const [offeneFirma, setOffeneFirma] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -64,10 +66,12 @@ export default function BauzeitenplanSeite() {
       setIstChef(!chef);
       const { data: u } = await supabase.auth.getUser();
       const betrieb = (chef as string | null) || u?.user?.id || '';
-      const [p, e] = await Promise.all([
+      const [p, e, pr] = await Promise.all([
         supabase.from('projekte').select('id, name, start_datum').order('created_at', { ascending: false }).limit(500),
         supabase.from('hr_einstellungen').select('bundesland').eq('owner_user_id', betrieb).maybeSingle(),
+        supabase.from('profiles').select('firma_name').eq('id', betrieb).maybeSingle(),
       ]);
+      setFirmaName(String((pr.data as { firma_name?: string | null } | null)?.firma_name ?? '').trim());
       const liste = ((p.data as Projekt[]) ?? []);
       setProjekte(liste);
       setBundesland(((e.data as { bundesland?: string | null } | null)?.bundesland) ?? null);
@@ -174,6 +178,12 @@ export default function BauzeitenplanSeite() {
   const pxTag = Math.max(6, Math.min(28, Math.floor(760 / (wochen * 7))));
   const titelVon = (id: string) => zeilen?.find((x) => x.id === id)?.titel ?? '?';
   const projektName = projekte.find((p) => p.id === projektId)?.name ?? '';
+  const firmenTermine = useMemo(() => termineJeFirma(zeilen ?? [], plan, projektName, firmaName), [zeilen, plan, projektName, firmaName]);
+
+  async function kopieren(text: string, firma: string) {
+    try { await navigator.clipboard.writeText(text); setOk(`Termine für ${firma} kopiert.`); }
+    catch { setFehler('Kopieren ging nicht — bitte den Text markieren und kopieren.'); }
+  }
 
   return (
     <div style={s.page}>
@@ -290,6 +300,25 @@ export default function BauzeitenplanSeite() {
           <div style={s.dim}>AT = Arbeitstage · 🔴 kritischer Weg · blaue Linie = heute · Balkenfüllung = Fortschritt</div>
         </div>
       )}
+
+      {zeilen !== null && projektId && istChef && firmenTermine.length > 0 && (
+        <div style={s.card} className="kein-druck">
+          <div style={{ fontWeight: 800 }}>✉️ Termine an die Firmen</div>
+          <div style={s.dim}>Je Firma die offenen Termine als fertiger Text — kopieren oder als E-Mail öffnen. Nach jeder Planänderung neu verschicken. Preise stehen nie darin.</div>
+          {firmenTermine.map((f) => (
+            <div key={f.firma} style={s.zeile}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontWeight: 700 }}>{f.firma}</div>
+                <div style={s.dim}>{f.zeilen.length} Termin(e) · ab {datumDe(f.zeilen[0].start)}</div>
+              </div>
+              <button style={s.klein} onClick={() => setOffeneFirma(offeneFirma === f.firma ? null : f.firma)}>{offeneFirma === f.firma ? 'Text zu' : 'Text ansehen'}</button>
+              <button style={s.klein} onClick={() => kopieren(f.text, f.firma)}>📋 Kopieren</button>
+              <a style={s.klein} href={`mailto:?subject=${encodeURIComponent(`Termine Bauvorhaben ${projektName || ''}`.trim())}&body=${encodeURIComponent(f.text)}`}>✉️ E-Mail</a>
+              {offeneFirma === f.firma && <pre style={{ width: '100%', whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 13.5, background: C.navy, border: `1px solid ${C.border}`, borderRadius: 9, padding: 10, margin: 0 }}>{f.text}</pre>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -304,6 +333,7 @@ const s: Record<string, CSSProperties> = {
   inp: { background: C.navy, color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '9px 11px', fontSize: 15, fontFamily: 'inherit', minWidth: 0 },
   dim: { color: C.textDim, fontSize: 13 },
   check: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: C.text },
+  zeile: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', borderTop: `1px solid ${C.border}`, paddingTop: 10 },
   klein: { background: 'transparent', color: C.text, border: `1px solid ${C.border}`, borderRadius: 9, padding: '8px 12px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none' },
   primaer: { background: C.gold, color: C.navy, border: 'none', borderRadius: 9, padding: '10px 16px', fontSize: 14.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' },
   ok: { color: C.green, background: 'rgba(76,175,125,0.1)', border: '1px solid rgba(76,175,125,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 14 },
