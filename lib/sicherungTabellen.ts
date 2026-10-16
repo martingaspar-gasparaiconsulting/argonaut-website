@@ -70,7 +70,7 @@ export const WEITERE_TABELLEN: string[] = [
   'kontakt_tag_zuordnung', 'kontakt_tags', 'korrespondenz', 'kunden_mandate', 'lager_bewegung',
   'lager_umlagerung', 'lagerbewegungen', 'landingpages', 'leistungskatalog',
   'leistungskatalog_standorte', 'leitungsrolle_eigen', 'lieferant', 'lieferanten',
-  'lieferanten_standorte', 'lm_chargen', 'lm_haccp', 'lm_haccp_plan', 'logistik_sendungen',
+  'lieferanten_standorte', 'lm_chargen', 'lm_haccp', 'lm_haccp_plan', 'logistik_sendungen', 'lohn_monatsabschluss',
   'logistik_touren', 'lp_ereignisse', 'maengel', 'mahnung_historie', 'mail_klick',
   'marketing_inhalte', 'marketing_kalender', 'marketing_kampagnen', 'marketing_segment',
   'marketing_zielgruppen', 'markt_produkt', 'markt_verkauf', 'material_abruf', 'menu_gericht',
