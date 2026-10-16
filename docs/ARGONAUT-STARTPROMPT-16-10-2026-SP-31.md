@@ -12,7 +12,7 @@ Vorgaenger: SP-30. Baulog: Memory /areas/argonaut-bauliste-1016.md (Abschnitt �
 - P411/P412/P413 VK5 Show-up LIVE: erschienen/nicht erschienen + Show-Rate (Termine-Seite), Cron /api/cron/termin-showup alle 15 Min (1-Std.-Erinnerung, Rueckhol-Folge, je Betrieb in vk_showup, Voreinstellung AUS), WhatsApp-Erinnerung als Vorlage. Anwalt R69.
 - P414 VK6 Teil 1 LIVE: Gespraechsergebnis am Lead (GespraechBox, /api/gespraech-ergebnis, lib/gespraechErgebnis.ts), Lead-Stufe zieht nach (nie zurueck).
 - P415 VK6 Teil 2: Uebergabe aus Abschluss (Angebot-Link, Auftrag, Projekt, Kundenportal + Willkommens-Mail ueber /api/gespraech-weiter), Karte „Gespraechsergebnisse (90 Tage)" auf /dashboard/leads/team. Freie Setter: kein Geld, kein „Abgeschlossen".
-- SQL OFFEN: p411 (Kontrolle 1|2|5) und p414 (Kontrolle 1|4|1) — an Martin geliefert am 16.10. abends. Erst nach „SQL durch" gilt VK5/VK6 als scharf.
+- SQL p411 (1|2|5) und p414 (1|4|1) LIVE seit 16.10. 19:02. Kein SQL offen.
 - Bauliste: VK5 live (248 von 598). VK6 nach P415 als live markieren (rows.py, gen.py, Artifact neu veroeffentlichen).
 
 ## Naechster: Platz 1b weiter
