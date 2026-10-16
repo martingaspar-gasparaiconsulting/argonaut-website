@@ -142,7 +142,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · P388 MO1 Teil 2/4 Bezug + Frist erledigt · SQL p388 gesammelt · nächster: MO1 Teil 3 Sperre nach Abschluss</div>
+<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · P389 MO1 Teil 4/4 QR am Objekt + Norm-Vorlagen erledigt · MO1 Teil 3 (Sperre nach Abschluss) gebaut, wartet auf Martin · SQL p388 gesammelt · nächster: MO1v-HW Vorlagen Handwerk</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Neu seit 15.10.2026: gebaut wird nach Branchen – Handwerk zuerst und komplett, dann Plätze 2–19, dann eigener Server, Partner und zum Schluss die Dossiertexte. Was der Anwalt freigeben muss, wird gebaut und bleibt bis dahin gesperrt. Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

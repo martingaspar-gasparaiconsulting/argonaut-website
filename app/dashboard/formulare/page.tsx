@@ -27,6 +27,8 @@ import {
   naechsteFaellig, fristenUebersicht, fristenZahlen, type BezugTyp, type FristZeile,
 } from '@/lib/protokollBezug';
 import { heuteIso, datumDe as datumIsoDe } from '@/lib/nachweisMotor';
+import { NORM_VORLAGEN, protokollLink, leseStartObjekt, etikettHtml, type NormVorlage } from '@/lib/protokollStart';
+import { qrSvg } from '@/lib/fuhrparkGeraete';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -143,6 +145,29 @@ export default function FormularSeite() {
     })();
   }, [laden]);
 
+  // MO1 Teil 4: QR am Objekt -> /dashboard/formulare?objekt=<typ>:<id>
+  const [startHinweis, setStartHinweis] = useState(false);
+  useEffect(() => {
+    const st = leseStartObjekt(typeof window !== 'undefined' ? window.location.search : '');
+    if (!st) return;
+    setStartBezug({ typ: st.typ, id: st.id });
+    setAnsicht('liste');
+    setStartHinweis(true);
+    void objekteLaden(st.typ);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function qrDrucken(typ: unknown, id: unknown) {
+    const link = protokollLink(window.location.origin, typ, id);
+    if (!link) { setFehler('Für dieses Objekt lässt sich kein QR-Code erzeugen.'); return; }
+    const w = window.open('', '_blank');
+    if (!w) { setFehler('Das Fenster für den QR-Code wurde blockiert. Bitte Pop-ups für diese Seite erlauben.'); return; }
+    w.document.write(etikettHtml(objektName(typ, id) ?? 'Objekt', qrSvg(link).svg));
+    w.document.close();
+    w.focus();
+    setTimeout(() => { try { w.print(); } catch { /* Nutzer druckt selbst */ } }, 300);
+  }
+
   // Fotos des offenen Formulars nachladen
   useEffect(() => {
     if (!offen) return;
@@ -159,11 +184,11 @@ export default function FormularSeite() {
   }, [offen, fotoUrls]);
 
   // --- Vorlagen ------------------------------------------------------------
-  function vorlageNeu(start?: (typeof STARTVORLAGEN)[number]) {
+  function vorlageNeu(start?: (typeof STARTVORLAGEN)[number] | NormVorlage) {
     setEditor({
       id: null, titel: start?.titel ?? '', kategorie: start?.kategorie ?? 'checkliste', beschreibung: start?.beschreibung ?? '',
       felder: (start?.felder ?? [{ id: 'f1', typ: 'text' as FeldTyp, label: '' }]).map((f) => ({ ...f, optionenText: (f.optionen ?? []).join(', '), minText: grenzeFeld(f.min), maxText: grenzeFeld(f.max) })),
-      intervallText: '',
+      intervallText: start && 'intervall_monate' in start ? String(start.intervall_monate) : '',
     });
   }
   function vorlageBearbeiten(v: Vorlage) {
@@ -342,6 +367,7 @@ export default function FormularSeite() {
             </select></label>}
           </div>}
           {offen.naechste_faellig && <div style={s.dim}>⏰ Nächste Prüfung fällig am {datumIsoDe(offen.naechste_faellig)}</div>}
+          {istBezugTyp(offen.bezug_typ) && istUuid(offen.bezug_id) && <div><button style={s.klein} onClick={() => qrDrucken(offen.bezug_typ, offen.bezug_id)}>🔳 QR-Aufkleber fürs Objekt</button></div>}
         </div>
 
         <div style={s.card}>
@@ -430,6 +456,7 @@ export default function FormularSeite() {
         <>
           <div style={s.card}>
             <div style={{ fontWeight: 800 }}>Neues Formular</div>
+            {startHinweis && startBezug.typ && <div style={s.ok}>🔳 QR-Code erkannt: Protokoll für {objektName(startBezug.typ, startBezug.id) ?? 'dieses Objekt'} — Vorlage unten wählen.</div>}
             {spalten.eintrag && <div style={s.row}>
               <label style={{ ...s.lab, flex: 1 }}>Hängt an (optional)<select style={s.inp} value={startBezug.typ} onChange={(e) => {
                 const t = e.target.value; setStartBezug({ typ: istBezugTyp(t) ? t : '', id: '' });
@@ -440,6 +467,7 @@ export default function FormularSeite() {
               {startBezug.typ && <label style={{ ...s.lab, flex: 2 }}>{bezugTyp(startBezug.typ)?.label}<select style={s.inp} value={startBezug.id} onChange={(e) => setStartBezug({ ...startBezug, id: e.target.value })}>
                 <option value="">— bitte wählen —</option>{(objekte[startBezug.typ] ?? []).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select></label>}
+              {startBezug.typ && istUuid(startBezug.id) && <button style={s.klein} onClick={() => qrDrucken(startBezug.typ, startBezug.id)}>🔳 QR-Aufkleber</button>}
             </div>}
             <div style={s.leiste}>
               {aktive.map((v) => <button key={v.id} style={s.klein} disabled={busy} onClick={() => starten(v)}>＋ {v.titel}</button>)}
@@ -490,6 +518,7 @@ export default function FormularSeite() {
                     <div style={s.dim}>zuletzt {datumIsoDe(z.letzte_am)} · {intervallText(v?.intervall_monate)} · <span style={{ color: farbe }}>{z.text}</span></div>
                   </div>
                   {v?.aktiv && <button style={s.klein} disabled={busy} onClick={() => starten(v, { typ: z.bezug_typ, id: z.bezug_id, text: z.bezug })}>▶ Jetzt prüfen</button>}
+                  {z.bezug_typ && z.bezug_id && <button style={s.klein} onClick={() => qrDrucken(z.bezug_typ, z.bezug_id)}>🔳 QR</button>}
                 </div>
               );
             })}
@@ -505,6 +534,13 @@ export default function FormularSeite() {
             <div style={s.leiste}>
               {STARTVORLAGEN.map((sv) => <button key={sv.titel} style={s.klein} title={sv.beschreibung} onClick={() => vorlageNeu(sv)}>＋ {sv.titel}</button>)}
               <button style={s.primaer} onClick={() => vorlageNeu()}>＋ Leere Vorlage</button>
+            </div>
+          </div>
+          <div style={s.card}>
+            <div style={{ fontWeight: 800 }}>Wiederkehrende Prüfungen nach Norm</div>
+            <div style={s.dim}>Prüfpunkte, Grenzwerte und Frist als Startwerte — vor dem Speichern für Ihren Betrieb prüfen und anpassen.</div>
+            <div style={s.leiste}>
+              {NORM_VORLAGEN.map((nv) => <button key={nv.key} style={s.klein} title={nv.beschreibung} onClick={() => vorlageNeu(nv)}>＋ {nv.titel}</button>)}
             </div>
           </div>
           <div style={s.liste}>
@@ -532,7 +568,7 @@ function FeldEingabe({ feld, wert, aktiv, fotoUrls, onWert, onFoto }: {
   feld: Feld; wert: unknown; aktiv: boolean; fotoUrls: Record<string, string>;
   onWert: (w: unknown) => void; onFoto: (e: ChangeEvent<HTMLInputElement>) => void;
 }) {
-  const label = <div style={{ fontSize: 13.5, fontWeight: 700 }}>{feld.label}{feld.pflicht ? <span style={{ color: C.danger }}> *</span> : null}</div>;
+  const label = <div style={{ fontSize: 13.5, fontWeight: 700 }}>{feld.label}{feld.pflicht ? <span style={{ color: C.danger }}> *</span> : null}{feld.hilfe ? <span style={{ ...s.dim, fontWeight: 400, fontSize: 12 }}> · {feld.hilfe}</span> : null}</div>;
   if (feld.typ === 'ueberschrift') return <div style={{ fontWeight: 800, fontSize: 16, marginTop: 10, borderBottom: `1px solid ${C.border}`, paddingBottom: 4 }}>{feld.label}</div>;
   if (feld.typ === 'hinweis') return <div style={{ ...s.dim, fontStyle: 'italic' }}>ℹ️ {feld.label}</div>;
   if (!aktiv) {
