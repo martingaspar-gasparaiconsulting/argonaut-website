@@ -16,10 +16,11 @@ import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { useDarfAbrechnen } from '../_components/useDarfAbrechnen';
 import { heuteIso, datumDe } from '@/lib/nachweisMotor';
+import { centRunden } from '@/lib/zahlen';
 import {
   EINHEITEN, TAKTE, pruefeLeistung, tarifAusKatalog, zeileNetto, offeneJeKunde, effektiverPreis, type Leistung, type Eingabe,
 } from '@/lib/mengenAbrechnung';
-import { leseVorbelegung, bezugFuerSpeichern, anStorniertenRechnungen, type MengenVorbelegung, type RechnungKurz } from '@/lib/mengenWeiter';
+import { leseVorbelegung, bezugFuerSpeichern, anStorniertenRechnungen, vormonat, istMonat, offeneImMonat, laufText, type MengenVorbelegung, type RechnungKurz, type LaufErgebnis } from '@/lib/mengenWeiter';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -58,6 +59,12 @@ export default function MengenSeite() {
   const [busy, setBusy] = useState(false);
   const [vorbelegung, setVorbelegung] = useState<MengenVorbelegung | null>(null);
   const [rechnungen, setRechnungen] = useState<RechnungKurz[]>([]);
+  // MO4 Teil 4: Monatslauf
+  const [laufOffen, setLaufOffen] = useState(false);
+  const [laufMonat, setLaufMonat] = useState(vormonat(heuteIso(new Date())));
+  const [laufBisEnde, setLaufBisEnde] = useState(true);
+  const [laufAbwahl, setLaufAbwahl] = useState<Set<string>>(new Set());
+  const [laufErg, setLaufErg] = useState<LaufErgebnis[] | null>(null);
 
   const laden = useCallback(async () => {
     const { data, error } = await supabase.from('mengen_leistung').select('*').order('datum', { ascending: false }).limit(1000);
@@ -151,6 +158,34 @@ export default function MengenSeite() {
     } finally { setBusy(false); }
   }
 
+  const laufGruppen = useMemo(() => (istMonat(laufMonat) ? offeneJeKunde(offeneImMonat(zeilen ?? [], laufMonat, laufBisEnde)) : []), [zeilen, laufMonat, laufBisEnde]);
+  const laufGewaehlt = laufGruppen.filter((g) => !laufAbwahl.has(g.schluessel));
+
+  async function monatslauf() {
+    if (darfAbrechnen === false) { setFehler('Abrechnen darf nur die Geschäftsleitung oder wer „darf abrechnen“ hat.'); return; }
+    if (!laufGewaehlt.length) return;
+    if (!window.confirm(`Jetzt ${laufGewaehlt.length} Sammelrechnung(en) erstellen — je Kunde eine? Die Rechnungen werden NICHT automatisch versendet.`)) return;
+    setBusy(true); setFehler(null); setOk(null);
+    const erg: LaufErgebnis[] = [];
+    try {
+      // nacheinander, damit Nummern sauber vergeben werden und ein Fehler die anderen nicht mitreißt
+      for (const g of laufGewaehlt) {
+        const name = kunde(g);
+        try {
+          const r = await fetch('/api/rechnung-aus-mengen', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: g.ids }) });
+          const j = await r.json().catch(() => ({}));
+          erg.push(r.ok && j.rechnungId ? { schluessel: g.schluessel, name, ok: true, rechnungId: j.rechnungId } : { schluessel: g.schluessel, name, ok: false, fehler: j.error || 'Fehler' });
+        } catch {
+          erg.push({ schluessel: g.schluessel, name, ok: false, fehler: 'Verbindung unterbrochen' });
+        }
+        setLaufErg([...erg]);
+      }
+      setOk(laufText(erg));
+      setLaufAbwahl(new Set());
+      await laden();
+    } finally { setBusy(false); }
+  }
+
   const vorschau = useMemo(() => {
     const p = pruefeLeistung(form, heute);
     return p.zeile ? zeileNetto(p.zeile) : null;
@@ -212,6 +247,47 @@ export default function MengenSeite() {
               <button style={s.klein} disabled={busy} onClick={() => wiederFreigeben(g.rechnung_id, g.nummer, g.ids.length)}>↩ Leistungen wieder freigeben</button>
             </div>
           ))}
+        </div>
+      )}
+
+      {zeilen !== null && darfAbrechnen && offen.length > 0 && (
+        <div style={s.card}>
+          <div style={s.row}>
+            <div style={{ fontWeight: 800, flex: 1 }}>📅 Monatslauf: alle Kunden auf einmal abrechnen</div>
+            <button style={s.klein} onClick={() => { setLaufOffen(!laufOffen); setLaufErg(null); }}>{laufOffen ? 'Schließen' : 'Öffnen'}</button>
+          </div>
+          {laufOffen && (<>
+            <div style={s.row}>
+              <label style={s.lab}>Monat<input type="month" style={s.inp} value={laufMonat} onChange={(e) => { setLaufMonat(e.target.value); setLaufErg(null); }} /></label>
+              <label style={s.check}><input type="checkbox" checked={laufBisEnde} onChange={(e) => setLaufBisEnde(e.target.checked)} /> auch ältere offene Leistungen mitnehmen</label>
+            </div>
+            <div style={s.dim}>Vorschau: je Kunde eine Sammelrechnung. Haken entfernen, wer diesmal nicht abgerechnet werden soll. Die Rechnungen werden nur erstellt, nicht versendet.</div>
+            {laufGruppen.map((g) => {
+              const e = laufErg?.find((x) => x.schluessel === g.schluessel);
+              return (
+                <div key={g.schluessel} style={s.zeile}>
+                  <label style={{ ...s.check, flex: 1, minWidth: 200 }}>
+                    <input type="checkbox" disabled={busy} checked={!laufAbwahl.has(g.schluessel)} onChange={(ev) => { const n = new Set(laufAbwahl); if (ev.target.checked) n.delete(g.schluessel); else n.add(g.schluessel); setLaufAbwahl(n); }} />
+                    <span><b>{kunde(g)}</b> <span style={s.dim}>· {g.anzahl} Leistung(en) · {datumDe(g.von)}{g.von !== g.bis ? ` – ${datumDe(g.bis)}` : ''}</span></span>
+                  </label>
+                  <div style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{euro(g.netto)} netto</div>
+                </div>
+              );
+            })}
+            {laufErg?.filter((e) => !laufGruppen.some((g) => g.schluessel === e.schluessel)).map((e) => (
+              <div key={e.schluessel} style={s.zeile}>
+                <div style={{ flex: 1 }}>{e.ok ? '✅' : '⚠️'} {e.name}{e.fehler ? ` — ${e.fehler}` : ''}</div>
+                {e.rechnungId && <a style={s.klein} href={`/dashboard/rechnungen/${e.rechnungId}`}>🧾 Öffnen</a>}
+              </div>
+            ))}
+            {!laufGruppen.length && <div style={s.dim}>Keine offenen Leistungen in diesem Zeitraum.</div>}
+            {laufGruppen.length > 0 && (
+              <div style={s.row}>
+                <div style={{ flex: 1, fontWeight: 700 }}>{laufGewaehlt.length} Kunde(n) · {euro(laufGewaehlt.reduce((a, g) => centRunden(a + g.netto), 0))} netto</div>
+                <button style={{ ...s.primaer, opacity: busy || !laufGewaehlt.length ? 0.6 : 1 }} disabled={busy || !laufGewaehlt.length} onClick={monatslauf}>🧾 {laufGewaehlt.length} Rechnung(en) erstellen</button>
+              </div>
+            )}
+          </>)}
         </div>
       )}
 

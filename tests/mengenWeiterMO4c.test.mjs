@@ -54,3 +54,41 @@ test('Wächter: Freigabe-Route prüft Recht, Betrieb und Storno', () => {
   assert.match(src, /freigabePruefen\(/);
   assert.match(src, /\.eq\("owner_user_id", betrieb\)/);
 });
+
+// MO4 Teil 4 — Monatslauf
+import { vormonat, istMonat, offeneImMonat, laufText } from '../out/mengenWeiter.js';
+
+test('Monatslauf: Vormonat auch über den Jahreswechsel', () => {
+  assert.equal(vormonat('2026-10-16'), '2026-09');
+  assert.equal(vormonat('2027-01-03'), '2026-12');
+  assert.equal(vormonat('quatsch'), '');
+  assert.ok(istMonat('2026-12'));
+  assert.ok(!istMonat('2026-13'));
+});
+
+test('Monatslauf: nur offene Leistungen des Monats (oder bis Monatsende)', () => {
+  const rows = [
+    { id: 'a', datum: '2026-09-02', abgerechnet: false, rechnung_id: null },
+    { id: 'b', datum: '2026-09-30', abgerechnet: true, rechnung_id: 'r' },
+    { id: 'c', datum: '2026-08-15', abgerechnet: false, rechnung_id: null },
+    { id: 'd', datum: '2026-10-01', abgerechnet: false, rechnung_id: null },
+  ];
+  assert.deepEqual(offeneImMonat(rows, '2026-09').map((r) => r.id), ['a']);
+  assert.deepEqual(offeneImMonat(rows, '2026-09', true).map((r) => r.id), ['a', 'c']);
+  assert.deepEqual(offeneImMonat(rows, '2026-9'), []);
+});
+
+test('Monatslauf: Ergebnis ehrlich zählen', () => {
+  assert.match(laufText([{ schluessel: 'a', name: 'A', ok: true }, { schluessel: 'b', name: 'B', ok: false }]), /1 von 2.*1 nicht/);
+  assert.match(laufText([{ schluessel: 'a', name: 'A', ok: true }]), /1 Rechnung erstellt/);
+});
+
+test('Freischaltung: Landwirtschaft, Logistik, Recht/Steuern haben das Modul der Mengen-Abrechnung', () => {
+  const src = fs.readFileSync(new URL('../lib/branchenkatalog.ts', import.meta.url), 'utf8');
+  for (const kat of ['Landwirtschaft, Garten & Forst', 'Logistik & Transport', 'Recht, Steuern & Finanzen']) {
+    const zeile = src.split('\n').find((z) => z.includes(`'${kat}': [`));
+    assert.ok(zeile && zeile.includes("'objektzeiten'"), kat);
+  }
+  const nav = fs.readFileSync(new URL('../lib/rechte.ts', import.meta.url), 'utf8');
+  assert.match(nav, /href: '\/dashboard\/mengen', modul: 'objektzeiten'/);
+});

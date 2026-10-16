@@ -96,3 +96,42 @@ export function freigabePruefen(r: { owner_user_id?: string | null; zahlungsstat
   if (r.zahlungsstatus !== 'storniert') return 'Leistungen werden nur bei einer stornierten Rechnung wieder frei. Bitte die Rechnung zuerst stornieren.';
   return null;
 }
+
+// ============================================================================
+// MO4 Teil 4 — Monatslauf: alle offenen Leistungen eines Monats je Kunde
+// ============================================================================
+
+/** Vormonat als JJJJ-MM (Monatslauf schlägt standardmäßig den abgelaufenen Monat vor). */
+export function vormonat(heuteIso: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(String(heuteIso ?? ''));
+  if (!m) return '';
+  let j = Number(m[1]), mo = Number(m[2]) - 1;
+  if (mo < 1) { mo = 12; j -= 1; }
+  return `${j}-${String(mo).padStart(2, '0')}`;
+}
+
+export function istMonat(v: unknown): v is string {
+  return typeof v === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(v);
+}
+
+/** Nur offene Leistungen (nicht abgerechnet, ohne Rechnung) mit Datum im Monat — oder bis Monatsende, wenn „bisEnde". */
+export function offeneImMonat<T extends { id?: string; datum: string; abgerechnet?: boolean | null; rechnung_id?: string | null }>(rows: T[], monat: string, bisEnde = false): T[] {
+  if (!istMonat(monat)) return [];
+  return (rows ?? []).filter((r) => {
+    if (!r?.id || r.abgerechnet || r.rechnung_id) return false;
+    const m = String(r.datum ?? '').slice(0, 7);
+    return bisEnde ? m <= monat : m === monat;
+  });
+}
+
+export type LaufErgebnis = { schluessel: string; name: string; ok: boolean; rechnungId?: string; fehler?: string };
+
+/** Zusammenfassung nach dem Lauf — ehrlich: wie viele geklappt, wie viele nicht. */
+export function laufText(erg: LaufErgebnis[]): string {
+  const gut = erg.filter((e) => e.ok).length;
+  const schlecht = erg.length - gut;
+  if (!erg.length) return 'Keine Rechnungen erstellt.';
+  return schlecht
+    ? `${gut} von ${erg.length} Rechnungen erstellt — ${schlecht} nicht (siehe Liste).`
+    : `${gut} ${gut === 1 ? 'Rechnung' : 'Rechnungen'} erstellt. Bitte prüfen und versenden.`;
+}

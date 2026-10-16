@@ -30,20 +30,22 @@ export const KATEGORIE_MODULE: Record<string, string[]> = {
   'Fahrzeuge & Mobilität': ['kfz', 'fahrzeugakte', 'werkstatt', 'leistungskatalog', 'erp', 'verleih', 'gutachten', 'reservierung', 'erinnerungen', 'einkauf'],
   'Gastronomie, Hotellerie & Tourismus': ['gastro', 'kasse', 'erp', 'lager-scanner', 'schichtplan', 'rezeptur', 'etiketten', 'housekeeping', 'belegung', 'reservierung', 'gutscheine', 'erinnerungen', 'einkauf'],
   'Lebensmittel & Nahversorgung': ['lebensmittel', 'erp', 'lager-scanner', 'kasse', 'rezeptur', 'etiketten', 'reservierung', 'einkauf', 'tour'],
-  'Logistik & Transport': ['logistik', 'erp', 'fahrzeugakte', 'schichtplan', 'pruefprotokolle', 'tour', 'einsaetze'],
+  'Logistik & Transport': ['logistik', 'erp', 'fahrzeugakte', 'schichtplan', 'pruefprotokolle', 'tour', 'einsaetze', 'objektzeiten'],
   'IT & Technologie': ['it-msp', 'itassets', 'vertraege', 'service', 'projekte', 'projekt-abrechnung', 'wiederkehr'],
   'Energie & Umwelt': ['energie', 'ertraege', 'wartung', 'service', 'projekte', 'aufmass', 'pruefprotokolle', 'tour', 'foerdermittel'],
   'Immobilien & Verwaltung': ['immobilien', 'vertraege', 'mitglieder', 'verleih', 'pruefprotokolle', 'belegung', 'gutachten', 'expose', 'betriebskosten', 'wartung'],
   'Marketing, Medien & Kreativ': ['agentur-kreativ', 'projekte', 'projekt-abrechnung', 'marketing', 'leads', 'freigaben'],
-  'Recht, Steuern & Finanzen': ['kanzlei', 'vertraege', 'datev', 'fristen'],
+  'Recht, Steuern & Finanzen': ['kanzlei', 'vertraege', 'datev', 'fristen', 'objektzeiten'],
   'Bildung & Wissenschaft': ['bildung', 'raeume', 'online-buchung', 'buchungen', 'gutscheine', 'veranstaltungen', 'mitglieder'],
   'Gesundheit & Wellness': ['wellness', 'online-buchung', 'buchungen', 'bildung', 'hilfsmittel', 'gutscheine', 'erinnerungen', 'kasse', 'mitglieder'],
   'Sport, Beauty & Lifestyle': ['wellness', 'online-buchung', 'buchungen', 'mitglieder', 'gutscheine', 'erinnerungen', 'kasse', 'bildung'],
   'Tiere': ['tier', 'online-buchung', 'buchungen', 'bildung', 'tierbestand', 'erinnerungen', 'mitglieder', 'belegung'],
-  'Landwirtschaft, Garten & Forst': ['landwirtschaft', 'erp', 'verleih', 'belegung', 'schlagkartei', 'ernte', 'tierbestand', 'ertraege', 'holz', 'forst'],
+  'Landwirtschaft, Garten & Forst': ['landwirtschaft', 'erp', 'verleih', 'belegung', 'schlagkartei', 'ernte', 'tierbestand', 'ertraege', 'holz', 'forst', 'objektzeiten'],
   'Dienstleistungen': ['einsaetze', 'objektzeiten', 'wartung', 'wiederkehr', 'schichtplan', 'tour', 'service'],
   'Kultur, Soziales & Öffentliches': ['verein', 'mitglieder', 'online-buchung', 'bildung', 'belegung', 'spenden', 'veranstaltungen', 'foerdermittel', 'projekte'],
 };
+// MO4 Teil 4 (16.10.2026): Landwirtschaft (Lohnarbeit je Hektar/Stunde), Logistik (Standgeld, Lagergeld, km), Recht/Steuern
+// (Zeithonorar) bekommen „objektzeiten" — das Modul trägt Objekte UND die Mengen-Abrechnung (/dashboard/mengen).
 // MO0a (16.10.2026): Gesundheit + Kasse/Mitglieder (Praxis-Shop, Reha-/Kursmitglieder), Sport/Beauty + Kurse
 // („bildung"), Tiere + Belegung (Pensionen/Boxen). Schichtplan steckt schon im KERN (lib/pakete) — jede Branche hat ihn.
 

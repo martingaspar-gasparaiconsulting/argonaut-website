@@ -2401,6 +2401,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Leistung aus dem Leistungskatalog übernehmen oder frei benennen, Menge und Einheit eintragen; bei Stunden auf Wunsch je angefangene 15/30/60 Minuten aufrunden',
       'Preis je Einheit (netto), Zuschlag in Prozent (z. B. Wochenende) und Umsatzsteuer prüfen, „＋ Erfassen“',
       'Unter „Offen zur Abrechnung“ beim Kunden „🧾 Sammelrechnung“ — die Rechnung öffnet sich zum Prüfen und Versenden',
+      'Monatsende: „📅 Monatslauf“ öffnen, Monat wählen, Kunden abhaken, die diesmal nicht dran sind, dann „🧾 Rechnung(en) erstellen“ — je Kunde eine Sammelrechnung, nichts wird automatisch versendet',
       'Direkt vom Auftrag: dort „📏 Mengen erfassen“ — Kunde und Auftrag sind dann schon eingetragen',
       'Wurde eine Sammelrechnung storniert: unter „Stornierte Sammelrechnungen“ „↩ Leistungen wieder freigeben“ — die Leistungen sind wieder offen, die stornierte Rechnung bleibt unverändert',
     ],
