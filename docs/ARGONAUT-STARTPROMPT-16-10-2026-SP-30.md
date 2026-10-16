@@ -13,7 +13,7 @@ Vorgaenger: SP-29. Baulog: Memory /areas/argonaut-bauliste-1016.md (Abschnitt �
 - P406/P407 C1 Einwilligungs-Fenster + Besucher-Messung mit Cookie (Start-Schalter cookieMessung, R68; je Betrieb web_ci.cookie_messung; Auswertung „Wiederkehrende Besucher" in der Website-Analyse).
 - P408 VK2 Qualifizierung + Uebergabe Setter → Closer (Boegen, Passt/Passt nicht, Spickzettel, Glocke).
 - P409/P410 VK3 Termin-Verteilung (reihum/freie Zeit/Regeln, Online-Buchung teilt zu, Vorschlag, Uebertragen, Kalender je Person).
-- SQL p406, p407, p408, p409 an Martin geliefert (p406 vor p407). Wenn Martin nichts Gegenteiliges meldet: live.
+- SQL p406 (1|1|1), p407 (1|created_at — web_ereignisse hat created_at), p408 (3|8|3), p409 (1|2|1) LIVE seit 16.10. 17:20. Kein SQL offen.
 - Bauliste Artifact Version 219: 247 von 598 Pushes.
 
 ## Handwerk Platz 1a offen
