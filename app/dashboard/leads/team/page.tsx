@@ -16,6 +16,8 @@ import Leerzustand from '../../_components/Leerzustand';
 import { C, s } from '../../bestattung/bestattungUi';
 import { nichtsGeschrieben } from '@/lib/speichernPruefen';
 import { gruendeZaehlen, passtQuote } from '@/lib/qualifizierung';
+import { auswerten, jeCloser, type GespraechZeile } from '@/lib/gespraechErgebnis';
+import { euro } from '@/lib/geld';
 import {
   FUNKTIONEN, teamAufbauen, uebersicht, funktionWerte, funktionName,
   type Person, type MitarbeiterRoh, type FunktionRoh, type LeadKurz,
@@ -43,6 +45,8 @@ export default function VerkaufsteamPage() {
   // Paket VK2: Qualifizierung und Übergaben der letzten 90 Tage
   const [qualis, setQualis] = useState<{ ergebnis: string; grund: string | null }[] | null>(null);
   const [uebergaben, setUebergaben] = useState<{ an_user_id: string }[]>([]);
+  // Paket VK6: Gesprächsergebnisse der letzten 90 Tage
+  const [gespraeche, setGespraeche] = useState<GespraechZeile[] | null>(null);
 
   const lade = useCallback(async () => {
     const { data: u } = await supabase.auth.getUser();
@@ -72,6 +76,8 @@ export default function VerkaufsteamPage() {
     ]);
     setQualis(q.error ? null : ((q.data as { ergebnis: string; grund: string | null }[]) ?? []));
     setUebergaben(ue.error ? [] : ((ue.data as { an_user_id: string }[]) ?? []));
+    const gs = await supabase.from('vk_gespraech').select('ergebnis, closer_user_id, vereinbart_cent, anzahlung_cent, einwand, angeboten').gte('gespraech_am', seit).limit(5000);
+    setGespraeche(gs.error ? null : ((gs.data as GespraechZeile[]) ?? []));
     setLaden(false);
   }, []);
   useEffect(() => { void lade(); }, [lade]);
@@ -194,6 +200,47 @@ export default function VerkaufsteamPage() {
                     {jeCloser.size === 0 ? <span style={s.klein}>Noch keine Übergabe.</span> : [...jeCloser.entries()].sort((a, b) => b[1] - a[1]).map(([id, n]) => (
                       <div key={id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 8px', fontSize: 14, borderBottom: `1px solid ${C.border}` }}>
                         <span>{team.find((p) => p.user_id === id)?.name ?? 'Ehemalig'}</span><b>{n}</b>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Paket VK6: Gesprächsergebnisse (90 Tage) — Geld nicht für freie Mitarbeiter */}
+        {gespraeche && (() => {
+          const a = auswerten(gespraeche);
+          const jc = jeCloser(gespraeche);
+          const maxE = Math.max(1, ...a.einwaende.map((e) => e.anzahl));
+          return (
+            <div style={{ ...s.box, marginTop: 18 }}>
+              <b>💬 Gesprächsergebnisse (90 Tage)</b>
+              <div style={s.kacheln}>
+                <div style={s.kachel}><div style={s.dim}>Gespräche</div><b style={s.zahl}>{a.gespraeche}</b><span style={s.klein}>nicht erschienen: {a.nichtErschienen}</span></div>
+                <div style={s.kachel}><div style={s.dim}>Abschlüsse</div><b style={{ ...s.zahl, color: C.ok }}>{a.abgeschlossen}</b><span style={s.klein}>Quote {a.quote === null ? '–' : `${a.quote} %`}</span></div>
+                {!frei && <div style={s.kachel}><div style={s.dim}>Vereinbart</div><b style={s.zahl}>{euro(a.vereinbartCent / 100)}</b><span style={s.klein}>angezahlt {euro(a.anzahlungCent / 100)}</span></div>}
+              </div>
+              {gespraeche.length === 0 ? (
+                <p style={s.klein}>Noch kein Gesprächsergebnis erfasst. Am Lead unter „💬 Gesprächsergebnis" nach jedem Verkaufsgespräch eintragen.</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginTop: 8 }}>
+                  <div>
+                    <div style={s.h3}>Häufigste Einwände</div>
+                    {a.einwaende.length === 0 ? <span style={s.klein}>Noch kein Einwand erfasst.</span> : a.einwaende.map((e) => (
+                      <div key={e.key} style={{ position: 'relative', margin: '4px 0' }}>
+                        <div style={{ position: 'absolute', inset: 0, width: `${(e.anzahl / maxE) * 100}%`, background: C.gold, opacity: 0.18, borderRadius: 6 }} />
+                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', padding: '5px 8px', fontSize: 14 }}><span>{e.label}</span><b>{e.anzahl}</b></div>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div style={s.h3}>Je Closer</div>
+                    {jc.map(({ closer, auswertung: w }) => (
+                      <div key={closer} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '5px 8px', fontSize: 14, borderBottom: `1px solid ${C.border}` }}>
+                        <span>{team.find((p) => p.user_id === closer)?.name ?? 'Ehemalig'}</span>
+                        <span>{w.abgeschlossen}/{w.gespraeche} · {w.quote === null ? '–' : `${w.quote} %`}{!frei ? ` · ${euro(w.vereinbartCent / 100)}` : ''}</span>
                       </div>
                     ))}
                   </div>

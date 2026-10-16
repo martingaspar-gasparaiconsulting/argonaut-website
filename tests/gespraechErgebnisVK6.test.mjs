@@ -114,3 +114,59 @@ test('Route und Datenbank: Anmeldung zuerst, nur Nutzer-Client, Waechter hart', 
   assert.match(sql, /for delete to authenticated using \(auth\.uid\(\) = owner_user_id\)/);
   assert.match(lies('lib/gespraechErgebnis.ts'), /from '\.\/zahlen'/, 'Geld nur ueber lib/zahlen');
 });
+
+test('Teil 2: Uebergabe nur aus Abschluss, jedes Ziel nur einmal', async () => {
+  const { uebergabePruefen, istUebergabeZiel } = await import('../out/gespraechErgebnis.js');
+  assert.match(uebergabePruefen({ ergebnis: 'offen' }, 'auftrag'), /abgeschlossenes/);
+  assert.equal(uebergabePruefen({ ergebnis: 'abgeschlossen' }, 'auftrag'), null);
+  assert.match(uebergabePruefen({ ergebnis: 'abgeschlossen', auftrag_id: 'x' }, 'auftrag'), /schon angelegt/);
+  assert.equal(uebergabePruefen({ ergebnis: 'abgeschlossen', auftrag_id: 'x' }, 'projekt'), null);
+  assert.match(uebergabePruefen({ ergebnis: 'abgeschlossen', projekt_id: 'x' }, 'projekt'), /schon angelegt/);
+  assert.match(uebergabePruefen({ ergebnis: 'abgeschlossen', portal_mail_am: '2026-10-16' }, 'portal'), /schon verschickt/);
+  assert.ok(istUebergabeZiel('portal') && !istUebergabeZiel('rechnung'));
+});
+
+test('Teil 2: Titel, Notiz und Willkommens-Text', async () => {
+  const { umsetzungTitel, uebergabeNotiz, willkommensText } = await import('../out/gespraechErgebnis.js');
+  assert.equal(umsetzungTitel('Auftrag', 'Familie Huber', 'Badsanierung'), 'Auftrag Familie Huber – Badsanierung');
+  assert.equal(umsetzungTitel('Projekt', '', ''), 'Projekt aus Verkaufsgespräch');
+  assert.equal(umsetzungTitel('Auftrag', 'x'.repeat(300), '').length <= 160, true);
+  const n = uebergabeNotiz({ gespraech_am: '2026-10-16T22:30:00Z', vereinbart_cent: 1250050, anzahlung_cent: 250000 });
+  assert.equal(n, 'Verkaufsgespräch vom 17.10.2026 · vereinbart 12.500,50 € · angezahlt 2.500,00 €', 'Berliner Tag (00:30 am 17.)');
+  assert.equal(uebergabeNotiz({}), '');
+  const w = willkommensText('Müller Bad GmbH', true);
+  assert.equal(w.betreff, 'Willkommen bei Müller Bad GmbH');
+  const alles = w.absaetze.join(' ');
+  assert.match(alles, /Ihre/);
+  assert.doesNotMatch(alles, /\b(du|dein|dich|dir)\b/i);
+  assert.match(alles, /nicht weiter/, 'Hinweis: Link nicht weitergeben');
+});
+
+test('Teil 2: Auswertung je Closer sortiert nach Abschluessen', async () => {
+  const { jeCloser } = await import('../out/gespraechErgebnis.js');
+  const r = jeCloser([
+    { ergebnis: 'verloren', einwand: 'preis', closer_user_id: 'a' },
+    { ergebnis: 'abgeschlossen', vereinbart_cent: 100, closer_user_id: 'b' },
+    { ergebnis: 'abgeschlossen', vereinbart_cent: 200, closer_user_id: 'b' },
+    { ergebnis: 'offen', closer_user_id: null },
+  ]);
+  assert.deepEqual(r.map((x) => x.closer), ['b', 'a', 'ohne']);
+  assert.equal(r[0].auswertung.vereinbartCent, 300);
+  assert.equal(r[0].auswertung.quote, 100);
+});
+
+test('Teil 2: Route — Anmeldung zuerst, Rechte-Probe vor dem Anlegen, Mail erst nach Markierung, Dienst-Rolle nur fuers Branding', () => {
+  const r = lies('app/api/gespraech-weiter/route.ts');
+  assert.ok(r.indexOf('nurAngemeldet()') < r.indexOf('createClient()'));
+  assert.ok(r.indexOf('uebergabePruefen(g, ziel)') < r.indexOf(".from('auftraege')"));
+  assert.ok(r.indexOf('const { data: darf }') < r.indexOf(".from('auftraege')"));
+  const markiert = r.indexOf(".is('portal_mail_am', null)");
+  assert.ok(markiert > 0 && markiert < r.indexOf('sendeMail({'), 'erst markieren, dann senden');
+  assert.equal((r.match(/createAdminClient\(\)/g) || []).length, 1);
+  assert.match(r, /absenderBranding\(createAdminClient\(\), g\.owner_user_id\)/);
+  assert.match(r, /portal_mail_am: null/, 'bei Mailfehler zuruecknehmen');
+  assert.doesNotMatch(r, /auftrag_positionen|rechnungen/, 'keine Preise/Rechnungen anlegen');
+  const box = lies('app/dashboard/leads/[id]/GespraechBox.tsx');
+  assert.match(box, /window\.confirm\(/);
+  assert.match(box, /!ohneGeld \|\| e\.key !== 'abgeschlossen'/);
+});

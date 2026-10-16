@@ -43,7 +43,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         {/* Paket VK2: Qualifizierungsbogen, Übergabe an den Closer, „Passt nicht" mit Grund */}
         <QualiBox leadId={lead.id} team={stand.bereit ? stand.team : []} ich={stand.ich} nachfassAktiv={lead.nachfass_status === 'aktiv'} />
         {/* Paket VK6: Gesprächsergebnis nach dem Verkaufsgespräch (Ergebnis, vereinbart, Anzahlung, Einwand) */}
-        <GespraechBox leadId={lead.id} kontaktId={lead.kontakt_id ?? null} email={lead.email ?? null} />
+        <GespraechBox leadId={lead.id} kontaktId={lead.kontakt_id ?? null} email={lead.email ?? null} ohneGeld={stand.frei}
+          lead={{ id: lead.id, name: lead.name, email: lead.email, telefon: lead.telefon, dienstleistung: lead.dienstleistung, menge: lead.menge, einheit: lead.einheit, nachricht: lead.nachricht }} />
         {/* key: nach „Passt nicht" (Stufe → verloren) neu aufbauen, damit die Stufen-Anzeige stimmt */}
         <LeadDetailClient key={String(lead.stufe ?? '')} lead={lead} ohneAngebot={stand.frei} />
       </main>

@@ -8,7 +8,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
-import { ERGEBNISSE, EINWAENDE, ergebnisLabel, einwandLabel, type Ergebnis } from '@/lib/gespraechErgebnis'
+import { ERGEBNISSE, EINWAENDE, ergebnisLabel, einwandLabel, uebergabeNotiz, type Ergebnis, type UebergabeZiel } from '@/lib/gespraechErgebnis'
+import { angebotAusLeadUrl, type LeadKurz } from '@/lib/leadWeiter'
 import { euro } from '@/lib/geld'
 
 const supabase = createBrowserClient(
@@ -37,7 +38,7 @@ function zeit(t: string | null): string {
   try { return new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(t)) } catch { return t }
 }
 
-export default function GespraechBox({ leadId, kontaktId, email }: { leadId: string; kontaktId: string | null; email: string | null }) {
+export default function GespraechBox({ leadId, kontaktId, email, lead, ohneGeld = false }: { leadId: string; kontaktId: string | null; email: string | null; lead: LeadKurz; ohneGeld?: boolean }) {
   const router = useRouter()
   const [liste, setListe] = useState<Gespraech[]>([])
   const [bereit, setBereit] = useState<boolean | null>(null)
@@ -56,6 +57,30 @@ export default function GespraechBox({ leadId, kontaktId, email }: { leadId: str
   const [busy, setBusy] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
+  const [weiterBusy, setWeiterBusy] = useState<string | null>(null)
+  const [weiterLink, setWeiterLink] = useState<{ id: string; text: string; href: string } | null>(null)
+
+  // Paket VK6 Teil 2: aus einem abgeschlossenen Gespräch per Klick in die Umsetzung
+  async function weiter(g: Gespraech, ziel: UebergabeZiel) {
+    if (ziel === 'portal' && !window.confirm('Kundenportal-Zugang anlegen (bzw. vorhandenen nutzen) und dem Kunden die Willkommens-Mail mit dem Link schicken?')) return
+    setWeiterBusy(g.id + ziel); setFehler(null); setOk(null); setWeiterLink(null)
+    try {
+      const res = await fetch('/api/gespraech-weiter', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ gespraech_id: g.id, ziel }) })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) { setFehler(d?.error || 'Übergabe fehlgeschlagen.'); return }
+      const text = ziel === 'auftrag' ? 'Auftrag angelegt' : ziel === 'projekt' ? 'Projekt angelegt' : 'Willkommens-Mail verschickt'
+      setWeiterLink({ id: g.id, text, href: d?.link || '#' })
+      await laden()
+    } finally {
+      setWeiterBusy(null)
+    }
+  }
+  function angebotLink(g: Gespraech): string {
+    const u = new URL(angebotAusLeadUrl({ ...lead, kontakt_id: kontaktId }), 'https://x.invalid')
+    const zusatz = uebergabeNotiz(g)
+    if (zusatz) u.searchParams.set('notiz', [u.searchParams.get('notiz') || '', zusatz].filter(Boolean).join(' · ').slice(0, 800))
+    return u.pathname + u.search
+  }
 
   const laden = useCallback(async () => {
     const { data, error } = await supabase.from('vk_gespraech')
@@ -135,11 +160,12 @@ export default function GespraechBox({ leadId, kontaktId, email }: { leadId: str
       {offen && (
         <div style={{ display: 'grid', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {ERGEBNISSE.map((e) => (
+            {ERGEBNISSE.filter((e) => !ohneGeld || e.key !== 'abgeschlossen').map((e) => (
               <button key={e.key} onClick={() => setErgebnis(e.key)}
                 style={{ ...knopf(FARBE[e.farbe], ergebnis === e.key), padding: '8px 12px' }}>{e.label}</button>
             ))}
           </div>
+          {ohneGeld && <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px' }}>Einen Abschluss mit Betrag trägt der Closer ein.</div>}
           {termine.length > 0 && (
             <label style={label}>Zu welchem Termin?
               <select style={feld} value={terminId} onChange={(e) => setTerminId(e.target.value)}>
@@ -153,14 +179,14 @@ export default function GespraechBox({ leadId, kontaktId, email }: { leadId: str
               <label style={{ ...label, display: 'flex', gap: '10px', alignItems: 'center', color: '#FFFFFF' }}>
                 <input type="checkbox" checked={angeboten} onChange={(e) => setAngeboten(e.target.checked)} /> Angebot gemacht bzw. Preis genannt
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+              {!ohneGeld && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 <label style={label}>Vereinbart (€){ergebnis === 'abgeschlossen' ? ' *' : ''}
                   <input style={feld} inputMode="decimal" value={vereinbart} onChange={(e) => setVereinbart(e.target.value)} placeholder="z. B. 12.500" />
                 </label>
                 <label style={label}>Davon angezahlt (€)
                   <input style={feld} inputMode="decimal" value={anzahlung} onChange={(e) => setAnzahlung(e.target.value)} placeholder="z. B. 2.500" />
                 </label>
-              </div>
+              </div>}
               <label style={label}>Haupteinwand{ergebnis === 'verloren' ? ' *' : ''}
                 <select style={feld} value={einwand} onChange={(e) => setEinwand(e.target.value)}>
                   <option value="">— kein Einwand —</option>
@@ -204,12 +230,29 @@ export default function GespraechBox({ leadId, kontaktId, email }: { leadId: str
             return (
               <div key={g.id} style={{ borderLeft: `3px solid ${farbe}`, padding: '6px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', fontSize: '14px', display: 'grid', gap: '3px' }}>
                 <div><b style={{ color: farbe }}>{ergebnisLabel(g.ergebnis)}</b> <span style={{ color: 'rgba(255,255,255,0.55)' }}>· {zeit(g.gespraech_am)}{g.angeboten ? ' · angeboten' : ''}</span></div>
-                {(g.vereinbart_cent || g.anzahlung_cent) ? (
+                {!ohneGeld && (g.vereinbart_cent || g.anzahlung_cent) ? (
                   <div>Vereinbart {euro((g.vereinbart_cent ?? 0) / 100)}{g.anzahlung_cent ? ` · angezahlt ${euro(g.anzahlung_cent / 100)}` : ''}</div>
                 ) : null}
                 {g.einwand ? <div style={{ color: 'rgba(255,255,255,0.75)' }}>Einwand: {einwandLabel(g.einwand)}{g.einwand_text ? ` – ${g.einwand_text}` : ''}</div> : null}
                 {g.naechster_schritt || g.folgetermin_am ? <div style={{ color: 'rgba(255,255,255,0.75)' }}>Nächster Schritt: {g.naechster_schritt || '—'}{g.folgetermin_am ? ` · ${zeit(g.folgetermin_am)}` : ''}</div> : null}
                 {g.notiz ? <div style={{ color: 'rgba(255,255,255,0.6)', whiteSpace: 'pre-wrap' }}>{g.notiz}</div> : null}
+                {/* Paket VK6 Teil 2: Übergabe an die Umsetzung */}
+                {g.ergebnis !== 'nicht_erschienen' && !ohneGeld && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                    {!g.auftrag_id && <a href={angebotLink(g)} style={{ ...knopf('#00e5ff'), padding: '5px 10px', fontSize: '13px', textDecoration: 'none' }}>📄 Angebot anlegen</a>}
+                    {g.ergebnis === 'abgeschlossen' && (g.auftrag_id
+                      ? <a href={`/dashboard/auftraege/${g.auftrag_id}`} style={{ ...knopf('#4CAF7D'), padding: '5px 10px', fontSize: '13px', textDecoration: 'none' }}>✓ Zum Auftrag</a>
+                      : <button disabled={weiterBusy !== null} onClick={() => void weiter(g, 'auftrag')} style={{ ...knopf('#C9A84C'), padding: '5px 10px', fontSize: '13px' }}>📦 Auftrag anlegen</button>)}
+                    {g.ergebnis === 'abgeschlossen' && (g.projekt_id
+                      ? <a href={`/dashboard/projekte/${g.projekt_id}`} style={{ ...knopf('#4CAF7D'), padding: '5px 10px', fontSize: '13px', textDecoration: 'none' }}>✓ Zum Projekt</a>
+                      : <button disabled={weiterBusy !== null} onClick={() => void weiter(g, 'projekt')} style={{ ...knopf('#C9A84C'), padding: '5px 10px', fontSize: '13px' }}>📁 Projekt anlegen</button>)}
+                    {g.ergebnis === 'abgeschlossen' && (g.portal_mail_am
+                      ? <span style={{ color: '#4CAF7D', fontSize: '13px', alignSelf: 'center' }}>✉ Willkommens-Mail am {zeit(g.portal_mail_am)}</span>
+                      : <button disabled={weiterBusy !== null} onClick={() => void weiter(g, 'portal')} style={{ ...knopf('#C9A84C'), padding: '5px 10px', fontSize: '13px' }}>🔑 Kundenportal + Willkommens-Mail</button>)}
+                    {weiterBusy?.startsWith(g.id) && <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', alignSelf: 'center' }}>läuft…</span>}
+                  </div>
+                )}
+                {weiterLink?.id === g.id && <div style={{ color: '#4CAF7D', fontSize: '13px' }}>✅ {weiterLink.text} — <a href={weiterLink.href} style={{ color: '#C9A84C' }}>öffnen</a></div>}
               </div>
             )
           })}

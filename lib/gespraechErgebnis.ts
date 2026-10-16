@@ -204,3 +204,77 @@ export function ergebnisLabel(k: string): string {
 export function einwandLabel(k: string | null | undefined): string {
   return k ? (EINWAENDE.find((e) => e.key === k)?.label ?? k) : '';
 }
+
+// ── Teil 2: Uebergabe an die Umsetzung + Auswertung je Closer ─────────────────
+
+export const UEBERGABE_ZIELE = ['auftrag', 'projekt', 'portal'] as const;
+export type UebergabeZiel = (typeof UEBERGABE_ZIELE)[number];
+export function istUebergabeZiel(x: unknown): x is UebergabeZiel {
+  return (UEBERGABE_ZIELE as readonly string[]).includes(String(x));
+}
+
+/** Nur ein abgeschlossenes Gespraech geht in die Umsetzung — und jedes Ziel nur einmal. */
+export function uebergabePruefen(
+  g: { ergebnis: string; auftrag_id?: string | null; projekt_id?: string | null; portal_mail_am?: string | null },
+  ziel: UebergabeZiel,
+): string | null {
+  if (g.ergebnis !== 'abgeschlossen') return 'Nur ein abgeschlossenes Gespräch geht in die Umsetzung.';
+  if (ziel === 'auftrag' && g.auftrag_id) return 'Der Auftrag ist schon angelegt.';
+  if (ziel === 'projekt' && g.projekt_id) return 'Das Projekt ist schon angelegt.';
+  if (ziel === 'portal' && g.portal_mail_am) return 'Die Willkommens-Mail ist schon verschickt.';
+  return null;
+}
+
+function kurz(v: unknown, max: number): string {
+  return String(v ?? '').replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, max);
+}
+
+/** Titel fuer Auftrag/Projekt aus Lead-Angaben — nie leer. */
+export function umsetzungTitel(art: 'Auftrag' | 'Projekt', name: unknown, leistung: unknown): string {
+  const n = kurz(name, 80);
+  const l = kurz(leistung, 80);
+  if (n && l) return `${art} ${n} – ${l}`.slice(0, 160);
+  return `${art} ${n || l || 'aus Verkaufsgespräch'}`.slice(0, 160);
+}
+
+/** Notiz-Zeile fuer Angebot/Projekt: vereinbart und angezahlt in deutscher Schreibweise. */
+export function uebergabeNotiz(g: { vereinbart_cent?: number | null; anzahlung_cent?: number | null; gespraech_am?: string | null }): string {
+  const fmt = (c: number) => (c / 100).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  const teile: string[] = [];
+  if (g.gespraech_am) {
+    const d = new Date(g.gespraech_am);
+    if (!Number.isNaN(d.getTime())) teile.push(`Verkaufsgespräch vom ${d.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })}`);
+  }
+  if (g.vereinbart_cent) teile.push(`vereinbart ${fmt(g.vereinbart_cent)}`);
+  if (g.anzahlung_cent) teile.push(`angezahlt ${fmt(g.anzahlung_cent)}`);
+  return teile.join(' · ');
+}
+
+/** Willkommens-Mail ans Kundenportal (gesiezt, ohne Werbung). */
+export function willkommensText(firma: string, mitPortal: boolean): { betreff: string; absaetze: string[] } {
+  const f = kurz(firma, 120) || 'uns';
+  return {
+    betreff: `Willkommen bei ${f}`,
+    absaetze: [
+      'vielen Dank für Ihr Vertrauen — wir freuen uns auf die Zusammenarbeit.',
+      mitPortal
+        ? 'Über Ihren persönlichen Zugang sehen Sie jederzeit Ihre Termine, Rechnungen und — sobald es losgeht — den Fortschritt Ihres Auftrags.'
+        : 'Wir melden uns in Kürze mit den nächsten Schritten.',
+      'Bitte geben Sie den Link nicht weiter; er führt ohne Passwort zu Ihren Unterlagen. Bei Fragen antworten Sie einfach auf diese E-Mail.',
+    ],
+  };
+}
+
+/** Auswertung je Closer (fuer die Verkaufsteam-Seite und VK7). */
+export function jeCloser(zeilen: GespraechZeile[]): { closer: string; auswertung: GespraechAuswertung }[] {
+  const gruppen = new Map<string, GespraechZeile[]>();
+  for (const z of zeilen) {
+    const k = z.closer_user_id || 'ohne';
+    const l = gruppen.get(k) ?? [];
+    l.push(z);
+    gruppen.set(k, l);
+  }
+  return [...gruppen.entries()]
+    .map(([closer, l]) => ({ closer, auswertung: auswerten(l) }))
+    .sort((a, b) => b.auswertung.abgeschlossen - a.auswertung.abgeschlossen || b.auswertung.gespraeche - a.auswertung.gespraeche);
+}
