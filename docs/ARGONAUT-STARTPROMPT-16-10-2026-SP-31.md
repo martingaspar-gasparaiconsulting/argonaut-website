@@ -16,7 +16,7 @@ Vorgaenger: SP-30. Baulog: Memory /areas/argonaut-bauliste-1016.md (Abschnitt â€
 - Bauliste: VK5 live (248 von 598). VK6 nach P415 als live markieren (rows.py, gen.py, Artifact neu veroeffentlichen).
 
 ## Naechster: Platz 1b weiter
-1. Bauliste VK6 auf live setzen, Testtag-/Kontrollgang-Eintrag VK6 nachtragen (Testtag-4: GespraechBox, Uebergabe-Knoepfe, Team-Karte).
+1. (erledigt: Bauliste VK6 live = 249/598, Testtag-4 VK6 eingetragen)
 2. VK7 Kennzahlen-Board und Rangliste (2 Pushes): Show-Rate aus termine.erschienen, Abschluss/vereinbart aus vk_gespraech (lib/gespraechErgebnis auswerten/jeCloser), Anrufe aus vk_anruf, Zeit bis 1. Anruf (P361), Quelle/UTM fest am Lead, Stillstand-Warnung Deals.
 3. VK8 Ziele/Prognose/Tagesabschluss, VK9 Leitfaeden + Einwand-Bibliothek (Einwaende aus vk_gespraech zaehlen), VK10, VK13, AK1, LK3 â€¦
 4. WEB-HW gemeinsam, D1 wartet auf Hetzner.
