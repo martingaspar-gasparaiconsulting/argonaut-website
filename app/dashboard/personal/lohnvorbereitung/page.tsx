@@ -20,6 +20,7 @@ import {
 } from '@/lib/lohnvorbereitung';
 import { AUSFALL_GRUENDE, pruefeAusfall, istSchlechtwetterzeit, type Ausfall } from '@/lib/ausfallstunden';
 import { heuteIso } from '@/lib/nachweisMotor';
+import { aktiverAbschluss, stornos, freigabePruefen, pruefeStornoGrund, werteStand, type Abschluss } from '@/lib/lohnAbschluss';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -56,6 +57,9 @@ export default function Lohnvorbereitung() {
   const [ausfall, setAusfall] = useState<Ausfall[] | null>(null);
   const [aForm, setAForm] = useState<{ mitarbeiter_id: string; datum: string; stunden: string; grund: string } | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  // LK5 Teil 2: Freigabe + Sperre (SQL p395; vorher null = Tabelle fehlt, Spalte ausgeblendet)
+  const [abschluesse, setAbschluesse] = useState<Abschluss[] | null>(null);
+  const [meinName, setMeinName] = useState('');
   const [fehler, setFehler] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,6 +67,8 @@ export default function Lohnvorbereitung() {
       const { data: u } = await supabase.auth.getUser();
       const uid = u?.user?.id;
       if (!uid) { setFehler('Nicht angemeldet.'); return; }
+      const meta = (u?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      setMeinName(String(meta.full_name ?? meta.name ?? '').trim() || String(u?.user?.email ?? '').split('@')[0]);
       let chef: string | null = null;
       try { const r = await supabase.rpc('mein_chef_id'); chef = (r.data as string | null) ?? null; } catch { /* Chef */ }
       const betrieb = chef || uid;
@@ -84,6 +90,8 @@ export default function Lohnvorbereitung() {
     const g = monatsGrenzen(monat); if (!g) return;
     setLaedt(true); setFehler(null);
     try {
+      const ab = await supabase.from('lohn_monatsabschluss').select('id, mitarbeiter_id, monat, freigegeben_am, freigegeben_name, storniert_am, storno_grund').eq('monat', monat);
+      setAbschluesse(ab.error ? null : ((ab.data as Abschluss[]) ?? []));
       const au = await supabase.from('hr_ausfall').select('mitarbeiter_id, datum, stunden, grund').gte('datum', g.von).lte('datum', g.bis).limit(5000);
       setAusfall(au.error ? null : ((au.data as Ausfall[]) ?? []));
       const [z, a, r] = await Promise.all([
@@ -118,6 +126,26 @@ export default function Lohnvorbereitung() {
     const { error } = await supabase.from('hr_ausfall').insert({ mitarbeiter_id: aForm.mitarbeiter_id, datum: aForm.datum, stunden: p.stunden, grund: aForm.grund });
     if (error) { setFehler('Ausfallstunden konnten nicht gespeichert werden.'); return; }
     setAForm(null); setOk('Ausfallstunden gespeichert.'); await laden();
+  }
+
+  async function freigeben(r: MonatsZeile) {
+    const p = freigabePruefen(r, monat, heuteIso(new Date()));
+    if (!p.erlaubt) { setFehler(p.fehler); return; }
+    if (!window.confirm(p.warnung ?? `${r.name} für ${monatText(monat)} freigeben? Danach sind die Zeiten und Ausfallstunden dieses Monats gesperrt — Änderungen nur nach Aufheben mit Grund.`)) return;
+    setFehler(null);
+    const { error } = await supabase.from('lohn_monatsabschluss').insert({ mitarbeiter_id: r.mitarbeiter_id, monat, werte: werteStand(r), freigegeben_name: meinName || null });
+    if (error) { setFehler(/duplicate|unique/i.test(error.message) ? 'Dieser Monat ist für den Mitarbeiter schon freigegeben.' : 'Freigabe fehlgeschlagen (nur die Geschäftsleitung darf freigeben).'); return; }
+    setOk(`${r.name}: ${monatText(monat)} freigegeben und gesperrt.`); await laden();
+  }
+
+  async function aufheben(a: Abschluss, name: string) {
+    const grund = window.prompt(`Freigabe für ${name} aufheben — Grund (mindestens 10 Zeichen, bleibt sichtbar):`) ?? '';
+    const f = pruefeStornoGrund(grund);
+    if (f) { setFehler(f); return; }
+    setFehler(null);
+    const { error } = await supabase.from('lohn_monatsabschluss').update({ storniert_am: new Date().toISOString(), storno_grund: grund.trim() }).eq('id', a.id);
+    if (error) { setFehler('Aufheben fehlgeschlagen.'); return; }
+    setOk(`${name}: Freigabe aufgehoben — Zeiten wieder änderbar.`); await laden();
   }
 
   function csvLaden() {
@@ -205,7 +233,7 @@ export default function Lohnvorbereitung() {
       <div style={s.tabelleRahmen}>
         <table style={s.tabelle}>
           <thead><tr>
-            {['Mitarbeiter', 'Ist', 'Soll', 'Mehrarbeit', 'Nacht 20–6', 'davon 0–4', 'Sonntag', 'Feiertag', 'Feiertag hoch', 'Urlaub', 'Krank', 'Spesen', ...(ausfall !== null ? ['Schlechtwetter', 'Arbeitsmangel'] : [])].map((k) => <th key={k} style={s.th}>{k}</th>)}
+            {['Mitarbeiter', 'Ist', 'Soll', 'Mehrarbeit', 'Nacht 20–6', 'davon 0–4', 'Sonntag', 'Feiertag', 'Feiertag hoch', 'Urlaub', 'Krank', 'Spesen', ...(ausfall !== null ? ['Schlechtwetter', 'Arbeitsmangel'] : []), ...(abschluesse !== null ? ['Freigabe'] : [])].map((k) => <th key={k} style={s.th}>{k}</th>)}
           </tr></thead>
           <tbody>
             {zeilen.map((r) => (
@@ -224,9 +252,19 @@ export default function Lohnvorbereitung() {
                 <td style={s.tdZ}>{r.spesen ? r.spesen.toFixed(2).replace('.', ',') + ' €' : '—'}</td>
                 {ausfall !== null && <td style={s.tdZ}>{stunden(r.ausfall.schlechtwetter)}</td>}
                 {ausfall !== null && <td style={s.tdZ}>{stunden(r.ausfall.arbeitsmangel)}</td>}
+                {abschluesse !== null && (() => {
+                  const a = aktiverAbschluss(abschluesse, r.mitarbeiter_id, monat);
+                  const st = stornos(abschluesse, r.mitarbeiter_id, monat);
+                  return <td style={s.td}>
+                    {a
+                      ? <div style={{ whiteSpace: 'nowrap' }}><span style={{ color: C.green, fontWeight: 700 }}>🔒 freigegeben</span><div style={{ color: C.textDim, fontSize: 12 }}>{new Date(a.freigegeben_am).toLocaleDateString('de-DE')}{a.freigegeben_name ? ` · ${a.freigegeben_name}` : ''}</div><button style={{ ...s.klein, padding: '4px 8px', fontSize: 12, marginTop: 4 }} onClick={() => aufheben(a, r.name)}>Aufheben…</button></div>
+                      : <button style={{ ...s.klein, padding: '6px 10px', fontSize: 13 }} onClick={() => freigeben(r)}>✔ Freigeben</button>}
+                    {st.map((x) => <div key={x.id} style={{ color: C.warn, fontSize: 11.5, marginTop: 4 }}>aufgehoben {new Date(String(x.storniert_am)).toLocaleDateString('de-DE')}: {x.storno_grund}</div>)}
+                  </td>;
+                })()}
               </tr>
             ))}
-            {!zeilen.length && !laedt && <tr><td style={s.td} colSpan={14}>Keine Mitarbeiter angelegt.</td></tr>}
+            {!zeilen.length && !laedt && <tr><td style={s.td} colSpan={15}>Keine Mitarbeiter angelegt.</td></tr>}
           </tbody>
         </table>
       </div>
