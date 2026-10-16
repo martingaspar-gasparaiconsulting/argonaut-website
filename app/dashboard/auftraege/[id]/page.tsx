@@ -1,5 +1,6 @@
 "use client";
 
+import { projektFeld } from "@/lib/projektKlammer";
 import { erfasserText } from '@/lib/erfasser';
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -132,6 +133,10 @@ export default function AuftragDetail() {
   const [lieferdatum, setLieferdatum] = useState<string>("");
   const [waehrung, setWaehrung] = useState("EUR");
   const [kontaktId, setKontaktId] = useState<string>("");
+  // HW-16: Projekt als Klammer (SQL p383 auftraege.projekt_id)
+  const [projektId, setProjektId] = useState<string>("");
+  const [projektSpalte, setProjektSpalte] = useState(false);
+  const [projekte, setProjekte] = useState<{ id: string; name: string | null }[]>([]);
   const [firmaId, setFirmaId] = useState<string>("");
   const [notizen, setNotizen] = useState("");
 
@@ -187,6 +192,10 @@ export default function AuftragDetail() {
     setLieferdatum(a.lieferdatum || "");
     setWaehrung(a.waehrung || "EUR");
     setKontaktId(a.kontakt_id || "");
+    setProjektSpalte(Object.prototype.hasOwnProperty.call(a, "projekt_id"));
+    setProjektId(a.projekt_id || "");
+    supabase.from("projekte").select("id, name").eq("archiviert", false).order("name", { ascending: true })
+      .then(({ data }) => setProjekte((data as { id: string; name: string | null }[]) ?? []));
     setFirmaId(a.firma_id || "");
     setNotizen(a.notizen || "");
 
@@ -328,6 +337,7 @@ export default function AuftragDetail() {
         waehrung,
         kontakt_id: kontaktId || null,
         firma_id: firmaId || null,
+        ...projektFeld(projektId, projektSpalte),
         notizen: notizen || null,
         netto_summe: summen.netto,
         mwst_summe: summen.mwst,
@@ -980,6 +990,15 @@ export default function AuftragDetail() {
               <option key={f.id} value={f.id} style={{ background: C.navy2 }}>{firmaName(f)}</option>
             ))}
           </select>
+          {projektSpalte && (<>
+            <label style={labelStyle}>Projekt</label>
+            <select value={projektId} onChange={(e) => aendern(setProjektId, e.target.value)} style={inputStyle}>
+              <option value="" style={{ background: C.navy2 }}>— kein Projekt —</option>
+              {projekte.map((p) => (
+                <option key={p.id} value={p.id} style={{ background: C.navy2 }}>{p.name || "Projekt"}</option>
+              ))}
+            </select>
+          </>)}
           <p style={{ color: C.textDim, fontSize: 'clamp(12px, 1.06vw, 17px)', marginTop: 14, lineHeight: 1.5 }}>
             Kontakt & Firma stammen aus Ihrem CRM. Nicht gefunden? Legen Sie sie zuerst im Vertrieb/CRM an.
           </p>

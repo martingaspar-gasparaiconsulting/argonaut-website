@@ -67,7 +67,7 @@ export default function BauLvPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const [neuLv, setNeuLv] = useState({ titel: '', kunde: '' });
+  const [neuLv, setNeuLv] = useState({ titel: '', kunde: '', projekt: '' });
   const [pos, setPos] = useState({ ...LEER_POS });
   const [felder, setFelder] = useState<EigenesFeld[]>([]);
   const [nmExtra, setNmExtra] = useState<Record<string, string>>({});
@@ -117,11 +117,11 @@ export default function BauLvPage() {
     if (!uid || !neuLv.titel.trim()) { setFehler('Bitte einen Titel angeben.'); return; }
     setBusy(true); setFehler(null); setOk(null);
     try {
-      const { data, error } = await supabase.from('bau_lv').insert({ owner_user_id: besitzer ?? uid, titel: neuLv.titel.trim(), kunde_name: neuLv.kunde.trim() || null })
+      const { data, error } = await supabase.from('bau_lv').insert({ owner_user_id: besitzer ?? uid, titel: neuLv.titel.trim(), kunde_name: neuLv.kunde.trim() || null, projekt_id: neuLv.projekt || null /* HW-16 */ })
         .select('id, titel, kunde_name, status, netto_summe, rechnung_id, projekt_id').single();
       if (error || !data) { setFehler('LV konnte nicht angelegt werden.'); return; }
       try { await speichereWerte(MODUL, (data as { id: string }).id, besitzer ?? uid, nmExtra); } catch { /* eigene Felder optional */ }
-      setLvs((l) => [data as LV, ...l]); setNeuLv({ titel: '', kunde: '' }); setNmExtra({});
+      setLvs((l) => [data as LV, ...l]); setNeuLv({ titel: '', kunde: '', projekt: '' }); setNmExtra({});
       setWerteMap((w) => ({ ...w, [(data as { id: string }).id]: { ...nmExtra } }));
       setAktivLv(data as LV); setPositionen([]);
     } finally { setBusy(false); }
@@ -255,6 +255,10 @@ export default function BauLvPage() {
             <div style={styles.row}>
               <input style={styles.inp} value={neuLv.titel} onChange={(e) => setNeuLv({ ...neuLv, titel: e.target.value })} placeholder="Titel (z. B. Rohbau Haus Müller)" />
               <input style={styles.inp} value={neuLv.kunde} onChange={(e) => setNeuLv({ ...neuLv, kunde: e.target.value })} placeholder="Kunde" />
+              <select style={styles.inp} value={neuLv.projekt} onChange={(e) => setNeuLv({ ...neuLv, projekt: e.target.value })}>
+                <option value="">— ohne Projekt —</option>
+                {projekte.map((p) => <option key={p.id} value={p.id}>{p.name || 'Projekt'}</option>)}
+              </select>
               <NurVoll><EigeneFelderInputs felder={felder} werte={nmExtra} setWert={(fid, w) => setNmExtra((s) => ({ ...s, [fid]: w }))} inpStyle={styles.inp} labStyle={styles.lab} /></NurVoll>
               <button style={{ ...styles.primaer, opacity: busy ? 0.6 : 1 }} disabled={busy} onClick={lvAnlegen}>＋ Anlegen</button>
             </div>

@@ -21,6 +21,7 @@
 //   (7) RECHNUNG AUS AUFMASS. Ein Klick, Doppel-Schutz über aufmasse.rechnung_id.
 // ============================================================
 
+import { projektFeld, projektZuName, hatProjektSpalte, type ProjektKurz } from '@/lib/projektKlammer';
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
@@ -106,6 +107,8 @@ export default function AufmassPage() {
 
   const [modalAuf, setModalAuf] = useState(false);
   const [form, setForm] = useState<Form>(LEER);
+  // HW-16: Projekte für die Zuordnung (Freitext bleibt, Verknüpfung nur bei eindeutigem Namen)
+  const [projekte, setProjekte] = useState<ProjektKurz[]>([]);
   const [speichert, setSpeichert] = useState(false);
   const [gespeichertHinweis, setGespeichertHinweis] = useState(false);
   const [positionen, setPositionen] = useState<PositionRow[]>([]);
@@ -144,6 +147,8 @@ export default function AufmassPage() {
     try {
       // Filial-Zuschnitt (fail-open): aktiver Standort zeigt seine + Standort-lose Aufmaße.
       const sid = konkreterStandort(leseStandortCookie());
+      supabase.from('projekte').select('id, name').eq('archiviert', false).order('name', { ascending: true })
+        .then(({ data }) => setProjekte((data as ProjektKurz[]) ?? []));
       let aq = supabase.from('aufmasse').select('*').eq('archiviert', false);
       if (sid) aq = aq.or(standortOrFilter(sid));
       const [aRes, kRes, ktRes] = await Promise.all([
@@ -213,6 +218,8 @@ export default function AufmassPage() {
           const kid = kontaktZuName(form.kunde_name, kontakte);
           return kid || aktAufmass?.kontakt_id != null ? { kontakt_id: kid } : {};
         })(),
+        // HW-16: Projekt-Verknüpfung, nur wenn SQL p383 da ist
+        ...projektFeld(projektZuName(form.projekt, projekte), hatProjektSpalte(aufmasse)),
       };
       if (istNeu) {
         const { data, error } = await supabase.from('aufmasse').insert({ ...payload, standort_id: konkreterStandort(leseStandortCookie()) }).select('id').single();
@@ -579,7 +586,9 @@ export default function AufmassPage() {
                 )}
               </Feld>
               <Feld label="Projekt / Objekt">
-                <input style={styles.input} value={form.projekt} onChange={(e) => setF('projekt', e.target.value)} />
+                <input style={styles.input} value={form.projekt} onChange={(e) => setF('projekt', e.target.value)} list="aufmass-projekte" />
+                <datalist id="aufmass-projekte">{projekte.map((p) => <option key={p.id} value={p.name ?? ''} />)}</datalist>
+                {projektZuName(form.projekt, projekte) && hatProjektSpalte(aufmasse) && <div style={{ fontSize: 12, color: '#4CAF7D', marginTop: 4 }}>✓ mit Projekt verknüpft</div>}
               </Feld>
               <Feld label="Ort / Adresse">
                 <input style={styles.input} value={form.ort} onChange={(e) => setF('ort', e.target.value)} />

@@ -18,6 +18,7 @@
 // Pfad: app/dashboard/dispo/page.tsx
 // ============================================================
 
+import { einsatzAusAuftrag, type AuftragKurz } from '@/lib/projektKlammer';
 import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import KiAuge from '../_components/KiAuge';
@@ -124,6 +125,7 @@ type Form = {
   kundeName: string; kundeEmail: string; kundeTelefon: string;
   rechnungId: string | null;
   anforderungen: string[];
+  auftragId: string; // HW-16: Einsatz gehoert zu einem Auftrag (Projekt kommt per DB-Trigger p383 mit)
 };
 
 const WT_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
@@ -155,6 +157,7 @@ export default function DispoPage() {
 
   const [modalAuf, setModalAuf] = useState(false);
   const [form, setForm] = useState<Form | null>(null);
+  const [auftraege, setAuftraege] = useState<AuftragKurz[]>([]);
   const [rechnungBusy, setRechnungBusy] = useState(false);
   const [rechnungErgebnis, setRechnungErgebnis] = useState<'neu' | 'bereits' | null>(null);
   // Paket PO: Befaehigungen (fail-open: ohne PO-SQL bleibt alles wie bisher)
@@ -198,6 +201,9 @@ export default function DispoPage() {
           .order('nachname', { ascending: true }),
         eiq.order('beginn_am', { ascending: true }).limit(1000),
       ]);
+      // HW-16: Auftraege fuer die Zuordnung (Titel wird vorbelegt)
+      supabase.from('auftraege').select('id, titel, auftragsnummer').order('created_at', { ascending: false }).limit(300)
+        .then(({ data }) => setAuftraege((data as AuftragKurz[]) ?? []));
       if (maRes.error) throw maRes.error;
       if (eiRes.error) throw eiRes.error;
       setMonteure((maRes.data as MitarbeiterRow[]) ?? []);
@@ -280,6 +286,7 @@ export default function DispoPage() {
       kundeName: '', kundeEmail: '', kundeTelefon: '',
       rechnungId: null,
       anforderungen: [],
+      auftragId: '',
     });
     setErfolg(null); setRechnungErgebnis(null); setModalAuf(true);
   }
@@ -293,6 +300,7 @@ export default function DispoPage() {
       kundeName: e.kunde_name ?? '', kundeEmail: e.kunde_email ?? '', kundeTelefon: e.kunde_telefon ?? '',
       rechnungId: e.rechnung_id ?? null,
       anforderungen: anfMap[e.id] ?? [],
+      auftragId: e.auftrag_id ?? '',
     });
     setErfolg(null); setRechnungErgebnis(null); setModalAuf(true);
   }
@@ -321,6 +329,7 @@ export default function DispoPage() {
         kunde_email: form.kundeEmail.trim() || null,
         kunde_telefon: form.kundeTelefon.trim() || null,
         ...(poAktiv ? { anforderungen: saubereAnforderungen(form.anforderungen) } : {}),
+        auftrag_id: form.auftragId || null,
       };
       if (form.id) {
         const { error } = await supabase.from('einsaetze').update(daten).eq('id', form.id);
@@ -752,6 +761,12 @@ export default function DispoPage() {
               <Feld label="Von"><input type="time" style={styles.input} value={form.von} onChange={(e) => setF('von', e.target.value)} /></Feld>
               <Feld label="Bis"><input type="time" style={styles.input} value={form.bis} onChange={(e) => setF('bis', e.target.value)} /></Feld>
               <Feld label="Einsatzort" voll><input style={styles.input} value={form.einsatzort} onChange={(e) => setF('einsatzort', e.target.value)} placeholder="Adresse / Objekt vor Ort" /></Feld>
+              <Feld label="Auftrag">
+                <select style={styles.input} value={form.auftragId} onChange={(e) => { const v = einsatzAusAuftrag(auftraege.find((a) => a.id === e.target.value), { titel: form.titel, kunde_name: form.kundeName }); setForm((f) => (f ? { ...f, auftragId: v.auftrag_id, titel: v.titel, kundeName: v.kunde_name } : f)); }}>
+                  <option value="">— ohne Auftrag —</option>
+                  {auftraege.map((a) => <option key={a.id} value={a.id}>{[(a as AuftragKurz & { auftragsnummer?: string | null }).auftragsnummer, a.titel || 'Auftrag'].filter(Boolean).join(' · ')}</option>)}
+                </select>
+              </Feld>
               <Feld label="Kunde"><input style={styles.input} value={form.kundeName} onChange={(e) => setF('kundeName', e.target.value)} /></Feld>
               <Feld label="Telefon"><input style={styles.input} value={form.kundeTelefon} onChange={(e) => setF('kundeTelefon', e.target.value)} /></Feld>
               <Feld label="E-Mail" voll><input style={styles.input} value={form.kundeEmail} onChange={(e) => setF('kundeEmail', e.target.value)} /></Feld>

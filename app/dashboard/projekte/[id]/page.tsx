@@ -1,5 +1,6 @@
 'use client';
 
+import { vorgaengeZaehlen, type Vorgaenge } from '@/lib/projektKlammer';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
@@ -104,6 +105,7 @@ export default function ProjektDetailPage() {
   const [teams, setTeams] = useState<any[]>([]);
   const [mitarbeiterListe, setMitarbeiterListe] = useState<any[]>([]);
   const [reiter, setReiter] = useState('uebersicht');
+  const [vorgaenge, setVorgaenge] = useState<Vorgaenge | null>(null);
 
   // Beteiligten-Verwaltung
   const [beteiligteModal, setBeteiligteModal] = useState(false);
@@ -164,6 +166,17 @@ export default function ProjektDetailPage() {
       ]);
       if (!projRes.data) { setFehler('Projekt nicht gefunden.'); setLaden(false); return; }
       setProjekt(projRes.data);
+      // HW-16: Vorgaenge des Projekts (Tabellen ohne projekt_id vor SQL p383 zaehlen 0)
+      {
+        const z = async (tabelle: string, spalten: string) => {
+          try { const r = await supabase.from(tabelle).select(spalten).eq('projekt_id', projektId).limit(500); return r.error ? null : (r.data as unknown[]); } catch { return null; }
+        };
+        const [au, ei, af, lv, ab, tb, mg] = await Promise.all([
+          z('auftraege', 'id'), z('einsaetze', 'id'), z('aufmasse', 'id'), z('bau_lv', 'id'),
+          z('bau_abnahmen', 'id'), z('bautagebuch', 'id'), z('maengel', 'id, status'),
+        ]);
+        setVorgaenge(vorgaengeZaehlen({ auftraege: au, einsaetze: ei, aufmasse: af, lvs: lv, abnahmen: ab, tagebuch: tb, maengel: mg as { status?: string | null }[] | null }));
+      }
       setAufgaben(aufgRes.data || []);
       setBeteiligte(betRes.data || []);
       setTeams(teamRes.data || []);
@@ -740,6 +753,21 @@ export default function ProjektDetailPage() {
       {/* Reiter-Inhalt */}
       {reiter === 'uebersicht' && (
         <div>
+          {vorgaenge && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+              {([
+                ['📦 Aufträge', vorgaenge.auftraege, '/dashboard/auftraege'],
+                ['🚐 Einsätze', vorgaenge.einsaetze, '/dashboard/dispo'],
+                ['📏 Aufmaße', vorgaenge.aufmasse, '/dashboard/aufmass'],
+                ['📐 Leistungsverzeichnisse', vorgaenge.lvs, '/dashboard/bau-lv'],
+                ['✅ Abnahmen', vorgaenge.abnahmen, '/dashboard/bau-lv'],
+                ['📒 Bautagebuch', vorgaenge.tagebuch, '/dashboard/bautagebuch'],
+                ['⚠ offene Mängel', vorgaenge.maengelOffen, '/dashboard/bautagebuch'],
+              ] as [string, number, string][]).map(([t, n, href]) => (
+                <a key={t} href={href} style={{ border: '1px solid rgba(143,163,190,0.25)', borderRadius: 999, padding: '6px 12px', fontSize: 13, color: 'inherit', textDecoration: 'none' }}>{t}: <b>{n}</b></a>
+              ))}
+            </div>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 18 }}>
             <StatKachel label="Aufgaben gesamt" wert={String(gesamt)} farbe={BRAND.cyan} />
             <StatKachel label="Offen" wert={String(offen)} farbe={BRAND.warn} />
