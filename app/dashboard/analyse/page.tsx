@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
+import { MINDEST_BESUCHER, type Wiedererkennung } from '@/lib/wiedererkennung';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -59,6 +60,9 @@ export default function AnalysePage() {
   const [laender, setLaender] = useState<Zeile[]>([]);
   const [herkunft, setHerkunft] = useState<Zeile[]>([]);
   const [zeitreihe, setZeitreihe] = useState<ZeitPunkt[]>([]);
+  // Paket C1 Teil 2: Besucher mit Einwilligung (Cookie) — nur Summen.
+  const [wieder, setWieder] = useState<Wiedererkennung | null>(null);
+  const [messungAn, setMessungAn] = useState(false);
 
   const [kiLaden, setKiLaden] = useState(false);
   const [kiBewertung, setKiBewertung] = useState<string | null>(null);
@@ -81,6 +85,8 @@ export default function AnalysePage() {
     setLaender(((d.laender as Array<{ land: string; anzahl: number }>) || []).map((r) => ({ label: r.land, wert: r.anzahl })));
     setHerkunft(((d.herkunft as Array<{ referrer: string; anzahl: number }>) || []).map((r) => ({ label: r.referrer, wert: r.anzahl })));
     setZeitreihe(((d.zeitreihe as ZeitPunkt[]) || []).map((r) => ({ tag: r.tag, aufrufe: r.aufrufe, besucher: r.besucher })));
+    setWieder((d.wiedererkennung as Wiedererkennung | null) ?? null);
+    setMessungAn(d.messungAn === true);
   }, []);
 
   const frageKiAuge = useCallback(async (s: string, t: number) => {
@@ -224,6 +230,43 @@ export default function AnalysePage() {
 
       <Karte titel="Zeitverlauf (Aufrufe pro Tag)"><Verlauf punkte={zeitreihe} /></Karte>
 
+      {/* Paket C1 Teil 2: Wiederkehrende Besucher — nur, wer im Einwilligungs-Fenster zugestimmt hat */}
+      {seite !== 'argonaut-os' && (
+        <div style={{ marginTop: 18, background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 16, padding: '16px 18px' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>🍪 Wiederkehrende Besucher (nur mit Einwilligung)</div>
+          {!wieder ? (
+            <div style={{ color: C.textDim, fontSize: 13.5, marginTop: 8, lineHeight: 1.5 }}>
+              {messungAn
+                ? 'Noch keine Besucher mit Einwilligung in diesem Zeitraum. Sobald Besucher im Fenster „Annehmen“ wählen, sehen Sie hier, wer wiederkommt und über welche Anzeige der erste Besuch kam.'
+                : <>Ohne Einwilligung zählt Ihre Seite jeden Tag neu – wer wiederkommt, ist nicht sichtbar. <a href="/dashboard/webseiten/besucher-messung" style={{ color: C.gold }}>Besucher-Messung mit Einwilligung</a> ansehen.</>}
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, marginTop: 12 }}>
+                <Kachel label="Mit Einwilligung" wert={fmtZahl(wieder.besucher)} akzent={C.cyan} />
+                <Kachel label="Kamen wieder" wert={wieder.besucher >= MINDEST_BESUCHER ? `${fmtZahl(wieder.wiederkehrend)} (${wieder.quote} %)` : '–'} akzent={C.green} />
+                <Kachel label="Ø Besuchstage" wert={wieder.besucher >= MINDEST_BESUCHER ? String(wieder.besuchstageSchnitt).replace('.', ',') : '–'} akzent={C.gold} />
+              </div>
+              {wieder.besucher < MINDEST_BESUCHER ? (
+                <div style={{ color: C.textDim, fontSize: 13, marginTop: 10 }}>Ab {MINDEST_BESUCHER} Besuchern mit Einwilligung zeigen wir die Aufteilung – vorher ist sie nicht aussagekräftig.</div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 14, marginTop: 14 }}>
+                  <Liste titel="Erster Besuch kam über …" akzent={C.cyan}
+                    hinweis="Besucher je Kanal des ersten Besuchs · davon an einem späteren Tag wiedergekommen"
+                    zeilen={wieder.erstKanal.map((k) => ({ label: k.label, wert: k.besucher, zusatz: `${k.wiedergekommen} wieder (${k.quote} %)${k.tageBisRueckkehr != null ? `, nach Ø ${String(k.tageBisRueckkehr).replace('.', ',')} Tagen` : ''}` }))} />
+                  {wieder.erstKampagne.length > 0 && (
+                    <Liste titel="Kampagne des ersten Besuchs (UTM)" akzent={C.warn}
+                      zeilen={wieder.erstKampagne.map((k) => ({ label: k.label, wert: k.besucher, zusatz: `${k.wiedergekommen} wieder (${k.quote} %)` }))} />
+                  )}
+                  <Liste titel="Wege über mehrere Tage" akzent={C.gold} hinweis="Kanal je Besuchstag, z. B. erst Anzeige, später direkt"
+                    zeilen={wieder.wege.map((w) => ({ label: w.weg, wert: w.anzahl }))} />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 18, marginTop: 18 }}>
         <Liste titel="Kanäle — woher kam der Besucher" zeilen={kanaele} akzent={C.cyan} hinweis="direkt · organische Suche · bezahlt (Anzeige) · Social · Verweis-Link · E-Mail" />
         <Liste titel="Top-Seiten" zeilen={topSeiten} akzent={C.gold} />
@@ -238,6 +281,7 @@ export default function AnalysePage() {
 
       <p style={{ marginTop: 26, color: C.textDim, fontSize: 12.5, lineHeight: 1.6 }}>
         Anonyme Messung ohne Cookies — es wird keine IP gespeichert. „Besucher" zählt eindeutige Besucher je Tag.
+        Nur der Bereich „Wiederkehrende Besucher" nutzt ein Cookie – und nur bei Besuchern, die im Einwilligungs-Fenster zugestimmt haben.
         Zugriff serverseitig geprüft: jeder sieht nur seine eigenen Seiten.
       </p>
     </div>

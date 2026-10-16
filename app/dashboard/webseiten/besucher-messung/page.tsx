@@ -137,6 +137,7 @@ export default function BesucherMessungSeite() {
             : <button style={{ ...s.primaer, opacity: frei && !sqlFehlt ? 1 : 0.45, cursor: frei && !sqlFehlt ? 'pointer' : 'not-allowed' }} disabled={!frei || sqlFehlt || laeuft} onClick={() => umschalten(true)}>Fenster einschalten</button>}
         </div>
         <div style={s.hint}>Wer ablehnt, wird weiter wie bisher anonym ohne Cookie gezählt. Das Cookie läuft nach 12 Monaten ab, danach fragt das Fenster neu.</div>
+        <div style={s.hint}>Die Auswertung (wer wiederkommt, über welche Anzeige der erste Besuch kam) steht in der <a href="/dashboard/analyse" style={{ color: C.gold }}>Website-Analyse</a>.</div>
       </div>
 
       <div style={s.card}>

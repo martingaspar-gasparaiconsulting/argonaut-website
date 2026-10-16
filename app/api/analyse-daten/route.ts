@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdmin } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { startFreiServer } from '@/lib/freigabeServer';
+import { auswerten, type BesuchTag, type Wiedererkennung } from '@/lib/wiedererkennung';
 
 // ============================================================
 // ARGONAUT OS · Website-Analyse · app/api/analyse-daten/route.ts
@@ -79,7 +81,28 @@ export async function POST(req: Request) {
       rpc('web_nach_land'), rpc('web_nach_referrer'), rpc('web_zeitreihe'),
     ]);
 
+    // Paket C1 Teil 2: Besucher MIT Einwilligung (Cookie-Kennung) — nur Summen, je Seite.
+    // Ohne Freischaltung oder ohne SQL p407 bleibt der Block leer; die übrige Analyse läuft unverändert.
+    let wiedererkennung: Wiedererkennung | null = null;
+    let messungAn = false;
+    if (seite !== 'argonaut-os') {
+      try {
+        const frei = await startFreiServer('cookieMessung');
+        const { data: ciZeile } = await db.from('web_ci').select('cookie_messung').eq('owner_user_id', user.id).maybeSingle();
+        messungAn = frei && (ciZeile as { cookie_messung?: boolean | null } | null)?.cookie_messung === true;
+        const zeilen: BesuchTag[] = [];
+        for (let von = 0; von < 20000; von += 1000) {
+          const { data: teil, error } = await db.rpc('web_wiedererkennung', p).range(von, von + 999);
+          if (error || !Array.isArray(teil)) break;
+          zeilen.push(...(teil as BesuchTag[]));
+          if (teil.length < 1000) break;
+        }
+        if (zeilen.length > 0) wiedererkennung = auswerten(zeilen);
+      } catch { /* Auswertung darf die Analyse nie stören */ }
+    }
+
     return NextResponse.json({
+      wiedererkennung, messungAn,
       ueber: ((ov.data as unknown[]) || [])[0] || { aufrufe: 0, besucher: 0, klicks: 0 },
       erw: ((ex.data as unknown[]) || [])[0] || null,
       topSeiten: ts.data || [], kanaele: kn.data || [], kampagnen: kp.data || [], klicks: kl.data || [],
