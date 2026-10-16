@@ -79,14 +79,22 @@ begin
   return case when tg_op = 'DELETE' then old else new end;
 end $$;
 
-drop trigger if exists p395_zeit_gesperrt on public.hr_zeiterfassung;
-create trigger p395_zeit_gesperrt before insert or update or delete on public.hr_zeiterfassung
-  for each row execute function public.p395_zeile_gesperrt();
-do $$ begin
-  if to_regclass('public.hr_ausfall') is not null then
-    execute 'drop trigger if exists p395_ausfall_gesperrt on public.hr_ausfall';
-    execute 'create trigger p395_ausfall_gesperrt before insert or update or delete on public.hr_ausfall for each row execute function public.p395_zeile_gesperrt()';
-  end if;
+-- Schutz gegen Aussperren: Trigger nur, wenn die Tabelle die drei Spalten wirklich hat
+-- (sonst wuerde jedes Stempeln mit Fehler abbrechen). Fehlt etwas, zeigt die Kontrolle weniger als 3.
+do $$
+declare t text;
+begin
+  foreach t in array array['hr_zeiterfassung', 'hr_ausfall'] loop
+    if to_regclass('public.' || t) is not null
+       and (select count(*) from information_schema.columns
+             where table_schema = 'public' and table_name = t
+               and column_name in ('owner_user_id', 'mitarbeiter_id', 'datum')) = 3 then
+      execute format('drop trigger if exists %I on public.%I',
+                     case t when 'hr_zeiterfassung' then 'p395_zeit_gesperrt' else 'p395_ausfall_gesperrt' end, t);
+      execute format('create trigger %I before insert or update or delete on public.%I for each row execute function public.p395_zeile_gesperrt()',
+                     case t when 'hr_zeiterfassung' then 'p395_zeit_gesperrt' else 'p395_ausfall_gesperrt' end, t);
+    end if;
+  end loop;
 end $$;
 
 alter table public.lohn_monatsabschluss enable row level security;
