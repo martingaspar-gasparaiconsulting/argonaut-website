@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase-server';
+import { einsatzAusTermin } from '@/lib/wartungTermin';
 
 // ============================================================
 // ARGONAUT OS · MODUL · P43 — TERMIN → EINSATZ
@@ -85,25 +86,9 @@ export async function POST(req: NextRequest) {
     }
 
     // 3) Einsatz anlegen (Feld-Mapping) — owner_user_id aus der Session!
-    const neuerEinsatz: any = {
-      owner_user_id: ownerId,
-      standort_id: termin.standort_id || null,
-      termin_id: termin.id,
-      titel: termin.titel || termin.terminart || 'Einsatz',
-      beschreibung: termin.beschreibung || termin.notiz || null,
-      beginn_am: termin.beginn_am || null,
-      ende_am: termin.ende_am || null,
-      einsatzort: termin.ort || null,
-      kontakt_id: termin.kontakt_id || null,
-      firma_id: termin.firma_id || null,
-      mitarbeiter_id: termin.mitarbeiter_id || null,
-      kunde_name: termin.kunde_name || null,
-      kunde_email: termin.kunde_email || null,
-      kunde_telefon: termin.kunde_telefon || null,
-      auftrag_id: termin.auftrag_id || null,
-      status: 'geplant',
-      quelle: 'termin',
-    };
+    // LK7 (16.10.2026): Feldbelegung liegt jetzt in lib/wartungTermin.ts —
+    // dieselbe nutzt die Kunden-Bestaetigung eines Wartungstermins.
+    const neuerEinsatz = einsatzAusTermin(termin, ownerId, 'termin');
 
     const { data: einsatz, error: eErr } = await supabase
       .from('einsaetze')

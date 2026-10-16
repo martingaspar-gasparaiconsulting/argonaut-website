@@ -80,7 +80,7 @@ export function addiereMonate(basis: Date, monate: number): Date {
  *
  * @returns Date der nächsten Fälligkeit, oder null wenn kein Startdatum da ist.
  */
-export function berechneNaechsteFaelligkeit(v: WartungBasis): Date | null {
+export function berechneNaechsteFaelligkeit(v: WartungBasis, heuteBasis: Date = new Date()): Date | null {
   const start =
     parseDatum(v.letzte_wartung_am ?? null) ??
     parseDatum(v.beginn_am ?? null);
@@ -91,7 +91,8 @@ export function berechneNaechsteFaelligkeit(v: WartungBasis): Date | null {
     v.intervall_monate && v.intervall_monate > 0 ? v.intervall_monate : 12;
 
   let faellig = addiereMonate(aufMitternachtLokal(start), intervall);
-  const heute = aufMitternachtLokal(new Date());
+  // LK7 (16.10.2026): „heute" von außen setzbar — nur für Tests; Standard bleibt jetzt.
+  const heute = aufMitternachtLokal(heuteBasis);
 
   // Vorrollen, bis die Fälligkeit nicht mehr in der Vergangenheit liegt.
   // Sicherheitslimit gegen Endlosschleifen (max. 1000 Schritte).

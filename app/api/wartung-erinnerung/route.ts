@@ -8,12 +8,26 @@
 // - erinnerung_gesendet_am verhindert Doppel-Versand; beim nächsten „Gewartet"
 //   wird es in der Wartungsseite wieder auf null gesetzt (neuer Zyklus).
 // Aufruf: 1x täglich per n8n-Cron, POST mit Header x-cron-secret.
+//
+// PAKET 384 · LK7 (16.10.2026): Wartung legt Termine selbst an.
+// Ist beim Vertrag „Termin automatisch vorschlagen" an (termin_auto, Standard
+// an), legt der Lauf EINEN Terminvorschlag an (lib/wartungTermin.ts) und
+// schickt dem Kunden — wenn am Kontakt eine E-Mail hinterlegt ist — einen
+// Link zum Bestätigen oder Ändern (/wartungstermin/<token>).
+// Doppelschutz: offener Termin mit derselben wartungsvertrag_id.
+// Läuft auch VOR dem SQL p384: fehlen die Spalten, bleibt alles wie bisher
+// (nur die Mail an den Betrieb).
 // ============================================================
 
 import { cronGuard } from '@/lib/cronGuard';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendeMail, mailLayout } from '@/lib/mail';
+import { randomBytes } from 'crypto';
+import { sendeMail, mailLayout, kundenMailLayout, absenderBranding } from '@/lib/mail';
+import {
+  autoTerminAn, terminVorschlag, hatOffenenTermin, bestaetigungsUrl,
+  kundenMailInhalt, terminText, type TerminKurz,
+} from '@/lib/wartungTermin';
 
 export const runtime = 'nodejs';
 
@@ -45,7 +59,14 @@ type WartungZeile = {
   id: string; owner_user_id: string; titel: string | null; kunde_name: string | null;
   intervall_monate: number | null; naechste_faelligkeit_am: string | null;
   erinnerung_tage_vorher: number | null;
+  // ab SQL p384 bzw. schon vorhanden — select('*'), damit der Lauf vor dem SQL nicht bricht
+  termin_auto?: boolean | null; kontakt_id?: string | null; standort_id?: string | null;
+  vertragsnummer?: string | null;
 };
+
+function basisUrl(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://argonaut-os.com').trim().replace(/\/+$/, '');
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -70,7 +91,7 @@ async function lauf(req: NextRequest) {
   // 3) Kandidaten: aktiv, nicht archiviert, mit Fälligkeit, noch nicht erinnert
   const { data, error } = await supabase
     .from('wartungsvertraege')
-    .select('id, owner_user_id, titel, kunde_name, intervall_monate, naechste_faelligkeit_am, erinnerung_tage_vorher')
+    .select('*')
     .eq('status', 'aktiv')
     .eq('archiviert', false)
     .is('erinnerung_gesendet_am', null)
@@ -98,9 +119,69 @@ async function lauf(req: NextRequest) {
   }
 
   let gesendet = 0;
+  let vorschlaege = 0;
+  let kundenMails = 0;
   const fehlerListe: string[] = [];
 
+  // LK7: Gibt es die Spalten schon (SQL p384)? Sonst kein Terminvorschlag.
+  const { error: spaltenFehler } = await supabase
+    .from('termine').select('wartungsvertrag_id, bestaetigung_token, kunde_bestaetigt_am').limit(1);
+  const autoMoeglich = !spaltenFehler;
+
+  /** Legt höchstens EINEN Vorschlag an; liefert die Zeile für die Betriebs-Mail. */
+  async function vorschlagAnlegen(w: WartungZeile): Promise<string> {
+    if (!autoMoeglich || !autoTerminAn(w)) return '';
+    const { data: vorhandene, error: vErr } = await supabase
+      .from('termine').select('beginn_am, status, wartungsvertrag_id')
+      .eq('owner_user_id', w.owner_user_id).eq('wartungsvertrag_id', w.id);
+    if (vErr) { fehlerListe.push(`${w.id}: Termine nicht lesbar`); return ''; }
+    if (hatOffenenTermin((vorhandene ?? []) as TerminKurz[], w.id, new Date())) {
+      return '<p>Für diese Wartung besteht bereits ein offener Terminvorschlag.</p>';
+    }
+    let kundeEmail: string | null = null;
+    if (w.kontakt_id) {
+      const { data: k } = await supabase.from('kontakte').select('email')
+        .eq('id', w.kontakt_id).eq('owner_user_id', w.owner_user_id).maybeSingle();
+      const m = String((k as { email?: string | null } | null)?.email || '').trim();
+      kundeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m) ? m : null;
+    }
+    const token = randomBytes(24).toString('base64url');
+    const zeile = terminVorschlag(
+      { id: w.id, owner_user_id: w.owner_user_id, titel: w.titel, kunde_name: w.kunde_name,
+        kontakt_id: w.kontakt_id ?? null, standort_id: w.standort_id ?? null, vertragsnummer: w.vertragsnummer ?? null },
+      w.naechste_faelligkeit_am, heuteIso, token, kundeEmail,
+    );
+    if (!zeile) return '';
+    const { error: iErr } = await supabase.from('termine').insert(zeile);
+    if (iErr) { fehlerListe.push(`${w.id}: Terminvorschlag nicht angelegt`); return ''; }
+    vorschlaege++;
+    const { datum, zeit } = terminText(String(zeile.beginn_am), String(zeile.ende_am));
+    let kundeZeile = 'Am Kunden ist keine E-Mail hinterlegt — bitte stimmen Sie den Termin selbst ab.';
+    if (kundeEmail) {
+      try {
+        const brand = await absenderBranding(supabase, w.owner_user_id);
+        const inhalt = kundenMailInhalt({
+          kundeName: w.kunde_name, betrieb: brand.firma, vertragTitel: w.titel,
+          beginnIso: String(zeile.beginn_am), endeIso: String(zeile.ende_am),
+          link: bestaetigungsUrl(basisUrl(), token), akzent: brand.akzent,
+        });
+        const r = await sendeMail({
+          an: kundeEmail, betreff: `Terminvorschlag Wartung am ${datum}`,
+          html: kundenMailLayout(brand.firma, brand.akzent, 'Terminvorschlag Wartung', inhalt),
+          absenderName: brand.firma, antwortAn: brand.email, betriebId: brand.betriebId,
+        });
+        if (r.ok) { kundenMails++; kundeZeile = 'Der Kunde wurde per E-Mail um Bestätigung gebeten.'; }
+        else kundeZeile = 'Die E-Mail an den Kunden ist fehlgeschlagen — bitte stimmen Sie den Termin selbst ab.';
+      } catch {
+        kundeZeile = 'Die E-Mail an den Kunden ist fehlgeschlagen — bitte stimmen Sie den Termin selbst ab.';
+      }
+    }
+    return `<p>📅 Terminvorschlag angelegt: <b>${escapeHtml(datum)}, ${escapeHtml(zeit)}</b>. ${escapeHtml(kundeZeile)}
+      Sie finden ihn unter <b>Termine</b>; bestätigt der Kunde, entsteht automatisch ein Einsatz.</p>`;
+  }
+
   for (const w of faellig) {
+    const vorschlagZeile = await vorschlagAnlegen(w);
     const an = await ownerMail(w.owner_user_id);
     if (!an) { fehlerListe.push(`${w.id}: keine Betriebs-E-Mail`); continue; }
 
@@ -118,6 +199,7 @@ async function lauf(req: NextRequest) {
         <div style="color:#1a2332;">Fällig am: ${datumHuebsch(w.naechste_faelligkeit_am)}</div>
         ${w.intervall_monate ? `<div style="color:#1a2332;">Intervall: alle ${w.intervall_monate} Monate</div>` : ''}
       </div>
+      ${vorschlagZeile}
       <p>Nach erledigter Wartung im ARGONAUT-Dashboard unter <b>Wartung</b> das Prüfprotokoll erfassen —
          die nächste Fälligkeit wird dann automatisch fortgeschrieben.</p>`;
 
@@ -133,7 +215,7 @@ async function lauf(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, heute: heuteIso, gefunden: faellig.length, gesendet, fehler: fehlerListe });
+  return NextResponse.json({ ok: true, heute: heuteIso, gefunden: faellig.length, gesendet, vorschlaege, kundenMails, fehler: fehlerListe });
 }
 
 export async function GET(req: NextRequest) { return lauf(req); }

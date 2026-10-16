@@ -69,6 +69,8 @@ type WartungRow = WartungBasis & {
   kontakt_id: string | null;
   notiz: string | null;
   archiviert: boolean;
+  // LK7 (P384): erst nach SQL p384 vorhanden
+  termin_auto?: boolean | null;
 };
 
 // Leeres Formular (für "Neu anlegen")
@@ -86,12 +88,14 @@ type FormState = {
   betrag_netto: string;
   beschreibung: string;
   notiz: string;
+  termin_auto: boolean;
 };
 
 const LEER: FormState = {
   id: null, titel: '', kunde_name: '', kontakt_id: '', vertragsnummer: '', status: 'aktiv',
   beginn_am: '', intervall_monate: '12', letzte_wartung_am: '',
   erinnerung_tage_vorher: '14', betrag_netto: '', beschreibung: '', notiz: '',
+  termin_auto: true,
 };
 
 const STATUS_OPTIONEN = [
@@ -218,6 +222,15 @@ export default function WartungPage() {
     })();
   }, []);
 
+  // LK7 (P384): gibt es die Spalte termin_auto schon? (vor SQL p384: nein → Schalter aus)
+  const [autoSpalte, setAutoSpalte] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const { error } = await supabase.from('wartungsvertraege').select('termin_auto').limit(1);
+      setAutoSpalte(!error);
+    })();
+  }, []);
+
   const laden_ = useCallback(async () => {
     if (!uid) return;
     setLaden(true); setFehler(null);
@@ -263,6 +276,7 @@ export default function WartungPage() {
       betrag_netto: r.betrag_netto != null ? zahlFeld(r.betrag_netto) : '',
       beschreibung: r.beschreibung ?? '',
       notiz: r.notiz ?? '',
+      termin_auto: r.termin_auto !== false,
     });
     setModalAuf(true);
   }
@@ -334,6 +348,8 @@ export default function WartungPage() {
         betrag_netto: betrag != null && Number.isFinite(betrag) ? betrag : null,
         beschreibung: form.beschreibung.trim() || null,
         notiz: form.notiz.trim() || null,
+        // LK7: nur mitschicken, wenn es die Spalte gibt (SQL p384) — sonst scheitert das Speichern
+        ...(autoSpalte ? { termin_auto: form.termin_auto } : {}),
         aktualisiert_am: new Date().toISOString(),
       };
 
@@ -665,6 +681,14 @@ export default function WartungPage() {
               <Feld label="Betrag netto (€)">
                 <input style={styles.input} value={form.betrag_netto} onChange={(e) => setF('betrag_netto', e.target.value)} placeholder="z. B. 1200" />
               </Feld>
+              {autoSpalte && (
+                <Feld label="📅 Termin automatisch vorschlagen" voll>
+                  <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.45, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.termin_auto} onChange={(e) => setF('termin_auto', e.target.checked)} style={{ marginTop: 3 }} />
+                    <span>Bei Fälligkeit legt ARGONAUT einen Terminvorschlag an (Werktag, 9–10 Uhr). Ist am Kontakt eine E-Mail hinterlegt, bekommt der Kunde einen Link zum Bestätigen oder Ändern — bestätigt er, entsteht der Einsatz automatisch.</span>
+                  </label>
+                </Feld>
+              )}
               <Feld label="Beschreibung" voll>
                 <textarea style={{ ...styles.input, minHeight: 60, resize: 'vertical' }} value={form.beschreibung} onChange={(e) => setF('beschreibung', e.target.value)} />
               </Feld>

@@ -91,6 +91,8 @@ export const OFFENE_TUEREN: OffeneTuer[] = [
   { pfad: 'autoresponder/abmelden', grund: 'Autoresponder abmelden (Pflicht-Link)', schutz: 'token', geprueft: true },
   { pfad: 'newsletter/abmelden', grund: 'Newsletter abmelden (Pflicht-Link)', schutz: 'token', geprueft: true },
   // --- Kundenportal: der Kunde des Betriebs sieht/antwortet auf SEINEN Vorgang ---
+  // Paket 384 (16.10.26): Wartungstermin per Link bestaetigen oder anderen Termin wuenschen — Token aus dem Cron, nur Anzeige-Felder, Deckel je Absender.
+  { pfad: 'oeffentlich/wartung-termin', grund: 'Wartungstermin per Link bestätigen oder anderen Termin wünschen (Kunde des Betriebs) -> Einsatz bzw. Hinweis an den Betrieb', schutz: 'token', geprueft: true },
   { pfad: 'oeffentlich/angebot', grund: 'Angebot per Link ansehen/annehmen (Kunde des Betriebs)', schutz: 'token', geprueft: false,
     offen: 'Auch ein Angebot im Status „entwurf" ist per Link annehmbar (Zusage-Link wird schon im Entwurf kopiert). Kern-Geld — GEMEINSAM entscheiden.' },
   { pfad: 'oeffentlich/portal', grund: 'Kundenportal-Link', schutz: 'token', geprueft: false,

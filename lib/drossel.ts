@@ -122,6 +122,11 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 5, fensterSek: TAG },
   ],
+  // Paket 384: Wartungstermin bestaetigen/aendern — je Absender und je Link.
+  'oeffentlich/wartung-termin': [
+    { art: 'ip', max: 20, fensterSek: STUNDE },
+    { art: 'ziel', max: 10, fensterSek: TAG },
+  ],
   'oeffentlich/widerruf': [
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 5, fensterSek: TAG },
