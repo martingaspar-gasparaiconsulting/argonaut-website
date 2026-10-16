@@ -18,6 +18,8 @@ import {
   monatsZeile, monatsGrenzen, csvExport, stunden, arbeitstage, ERKLAERUNG,
   type Mitarbeiter, type Sitzung, type Abwesenheit, type Spesen, type MonatsZeile,
 } from '@/lib/lohnvorbereitung';
+import { AUSFALL_GRUENDE, pruefeAusfall, istSchlechtwetterzeit, type Ausfall } from '@/lib/ausfallstunden';
+import { heuteIso } from '@/lib/nachweisMotor';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -50,6 +52,10 @@ export default function Lohnvorbereitung() {
   const [bundesland, setBundesland] = useState<string | null>(null);
   const [firma, setFirma] = useState('');
   const [laedt, setLaedt] = useState(true);
+  // HW-4: Ausfallstunden (SQL p394; vorher null = Tabelle fehlt, Bereich ausgeblendet)
+  const [ausfall, setAusfall] = useState<Ausfall[] | null>(null);
+  const [aForm, setAForm] = useState<{ mitarbeiter_id: string; datum: string; stunden: string; grund: string } | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
 
   useEffect(() => {
@@ -78,6 +84,8 @@ export default function Lohnvorbereitung() {
     const g = monatsGrenzen(monat); if (!g) return;
     setLaedt(true); setFehler(null);
     try {
+      const au = await supabase.from('hr_ausfall').select('mitarbeiter_id, datum, stunden, grund').gte('datum', g.von).lte('datum', g.bis).limit(5000);
+      setAusfall(au.error ? null : ((au.data as Ausfall[]) ?? []));
       const [z, a, r] = await Promise.all([
         supabase.from('hr_zeiterfassung').select('mitarbeiter_id, datum, kommen_um, gehen_um, pause_minuten').gte('datum', g.von).lte('datum', g.bis).limit(20000),
         supabase.from('hr_abwesenheiten').select('mitarbeiter_id, typ, von, bis, status').lte('von', g.bis).gte('bis', g.von).limit(5000),
@@ -97,9 +105,20 @@ export default function Lohnvorbereitung() {
     return g ? feiertagsSet(g.von, g.bis, bundesland) : new Set<string>();
   }, [monat, bundesland]);
   const zeilen: MonatsZeile[] = useMemo(
-    () => mitarbeiter.map((m) => monatsZeile(m, sitzungen, abw, spesen, monat, feiertage)),
-    [mitarbeiter, sitzungen, abw, spesen, monat, feiertage],
+    () => mitarbeiter.map((m) => monatsZeile(m, sitzungen, abw, spesen, monat, feiertage, ausfall ?? [])),
+    [mitarbeiter, sitzungen, abw, spesen, monat, feiertage, ausfall],
   );
+
+  async function ausfallSpeichern() {
+    if (!aForm) return;
+    const p = pruefeAusfall(aForm, heuteIso(new Date()));
+    if (p.fehler || p.stunden == null) { setFehler(p.fehler); return; }
+    if (p.hinweis && !window.confirm(`${p.hinweis}\n\nTrotzdem speichern?`)) return;
+    setFehler(null);
+    const { error } = await supabase.from('hr_ausfall').insert({ mitarbeiter_id: aForm.mitarbeiter_id, datum: aForm.datum, stunden: p.stunden, grund: aForm.grund });
+    if (error) { setFehler('Ausfallstunden konnten nicht gespeichert werden.'); return; }
+    setAForm(null); setOk('Ausfallstunden gespeichert.'); await laden();
+  }
 
   function csvLaden() {
     const blob = new Blob([csvExport(zeilen, monat)], { type: 'text/csv;charset=utf-8' });
@@ -120,20 +139,21 @@ export default function Lohnvorbereitung() {
     y += 5;
     for (const l of doc.splitTextToSize(pdfSicher(ERKLAERUNG), 270)) { doc.text(l, 12, y); y += 4; }
     y += 2;
-    const kopf = ['Name', 'Pers.-Nr.', 'Ist', 'Soll', 'Mehr', 'Nacht', '0-4', 'Sonntag', 'Feiertag', 'FT hoch', 'Urlaub', 'Krank', 'Spesen €'];
-    const x = [12, 62, 84, 100, 116, 132, 148, 162, 180, 198, 214, 230, 246];
+    const kopf = ['Name', 'Pers.-Nr.', 'Ist', 'Soll', 'Mehr', 'Nacht', '0-4', 'Sonntag', 'Feiertag', 'FT hoch', 'Urlaub', 'Krank', 'Spesen €', 'SW-Ausf.', 'AM-Ausf.'];
+    const x = [12, 56, 76, 91, 106, 121, 136, 149, 165, 181, 196, 210, 223, 245, 265];
     doc.setFont('helvetica', 'bold'); kopf.forEach((k, i) => doc.text(k, x[i], y)); doc.setFont('helvetica', 'normal');
     y += 2; doc.line(12, y, 285, y); y += 4;
     for (const r of zeilen) {
       if (y > 190) { doc.addPage(); y = 14; }
       const werte = [pdfSicher(r.name).slice(0, 30), r.personalnummer, stunden(r.fenster.gesamt), stunden(r.sollMin), stunden(r.mehrMin), stunden(r.fenster.nacht), stunden(r.fenster.nachtTief),
-        stunden(r.fenster.sonntag), stunden(r.fenster.feiertag), stunden(r.fenster.feiertagHoch), String(r.urlaubTage), String(r.krankTage), r.spesen.toFixed(2).replace('.', ',')];
+        stunden(r.fenster.sonntag), stunden(r.fenster.feiertag), stunden(r.fenster.feiertagHoch), String(r.urlaubTage), String(r.krankTage), r.spesen.toFixed(2).replace('.', ','),
+        stunden(r.ausfall.schlechtwetter), stunden(r.ausfall.arbeitsmangel)];
       werte.forEach((w, i) => doc.text(w, x[i], y));
       y += 4.5;
       if (r.hinweise.length) { doc.setFontSize(7.5); doc.text(pdfSicher(`Hinweis: ${r.hinweise.join(' | ')}`).slice(0, 220), 16, y); doc.setFontSize(9); y += 4; }
     }
     y += 4; doc.setFontSize(8);
-    doc.text('Alle Zeiten in Stunden (Dezimal). Urlaub/Krankheit in Arbeitstagen. Spesen = Reisekosten mit Abreise im Monat, Zuordnung über den Namen.', 12, Math.min(y, 200));
+    doc.text('Alle Zeiten in Stunden (Dezimal). Urlaub/Krankheit in Arbeitstagen. Spesen = Reisekosten mit Abreise im Monat, Zuordnung über den Namen. SW/AM-Ausf. = Ausfallstunden Schlechtwetter/Arbeitsmangel.', 12, Math.min(y, 200));
     doc.save(`Lohnvorbereitung_${monat}.pdf`);
   }
 
@@ -157,12 +177,35 @@ export default function Lohnvorbereitung() {
       </div>
 
       {fehler && <div style={s.err}>{fehler}</div>}
+      {ok && <div style={{ ...s.warn, color: C.green, borderColor: 'rgba(76,175,125,0.3)', background: 'rgba(76,175,125,0.1)' }}>{ok}</div>}
+
+      {ausfall !== null && (
+        <div style={s.card}>
+          <div style={{ fontWeight: 800 }}>🌧 Ausfallstunden (Schlechtwetter / Arbeitsmangel)</div>
+          <div style={s.dim}>Für Saison-Kurzarbeitergeld bzw. Kurzarbeit: Stunden, die wegen Witterung oder Arbeitsmangel ausgefallen sind. Schlechtwetterzeit 01.12.–31.03. ARGONAUT rechnet kein Kurzarbeitergeld aus — die Liste geht ans Lohnbüro.</div>
+          {!aForm && <div><button style={s.klein} onClick={() => setAForm({ mitarbeiter_id: mitarbeiter[0]?.id ?? '', datum: heuteIso(new Date()), stunden: '', grund: istSchlechtwetterzeit(heuteIso(new Date())) ? 'schlechtwetter' : 'arbeitsmangel' })}>＋ Ausfallstunden eintragen</button></div>}
+          {aForm && (
+            <div style={s.row}>
+              <label style={s.lab}>Mitarbeiter<select style={s.inp} value={aForm.mitarbeiter_id} onChange={(e) => setAForm({ ...aForm, mitarbeiter_id: e.target.value })}>
+                {mitarbeiter.map((m) => <option key={m.id} value={m.id}>{[m.vorname, m.nachname].filter(Boolean).join(' ')}</option>)}
+              </select></label>
+              <label style={s.lab}>Tag<input type="date" style={s.inp} value={aForm.datum} onChange={(e) => setAForm({ ...aForm, datum: e.target.value })} /></label>
+              <label style={s.lab}>Stunden<input style={{ ...s.inp, width: 90 }} inputMode="decimal" value={aForm.stunden} placeholder="z. B. 8" onChange={(e) => setAForm({ ...aForm, stunden: e.target.value })} /></label>
+              <label style={s.lab}>Grund<select style={s.inp} value={aForm.grund} onChange={(e) => setAForm({ ...aForm, grund: e.target.value })}>
+                {AUSFALL_GRUENDE.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+              </select></label>
+              <button style={s.primaer} onClick={ausfallSpeichern}>Speichern</button>
+              <button style={s.klein} onClick={() => setAForm(null)}>Abbrechen</button>
+            </div>
+          )}
+        </div>
+      )}
       {!fehler && mitHinweis > 0 && <div style={s.warn}>{mitHinweis} Mitarbeiter mit Hinweisen — bitte vor der Weitergabe prüfen (offene Schichten in der Personalakte nachtragen).</div>}
 
       <div style={s.tabelleRahmen}>
         <table style={s.tabelle}>
           <thead><tr>
-            {['Mitarbeiter', 'Ist', 'Soll', 'Mehrarbeit', 'Nacht 20–6', 'davon 0–4', 'Sonntag', 'Feiertag', 'Feiertag hoch', 'Urlaub', 'Krank', 'Spesen'].map((k) => <th key={k} style={s.th}>{k}</th>)}
+            {['Mitarbeiter', 'Ist', 'Soll', 'Mehrarbeit', 'Nacht 20–6', 'davon 0–4', 'Sonntag', 'Feiertag', 'Feiertag hoch', 'Urlaub', 'Krank', 'Spesen', ...(ausfall !== null ? ['Schlechtwetter', 'Arbeitsmangel'] : [])].map((k) => <th key={k} style={s.th}>{k}</th>)}
           </tr></thead>
           <tbody>
             {zeilen.map((r) => (
@@ -179,9 +222,11 @@ export default function Lohnvorbereitung() {
                 <td style={s.tdZ}>{r.urlaubTage}</td>
                 <td style={s.tdZ}>{r.krankTage}</td>
                 <td style={s.tdZ}>{r.spesen ? r.spesen.toFixed(2).replace('.', ',') + ' €' : '—'}</td>
+                {ausfall !== null && <td style={s.tdZ}>{stunden(r.ausfall.schlechtwetter)}</td>}
+                {ausfall !== null && <td style={s.tdZ}>{stunden(r.ausfall.arbeitsmangel)}</td>}
               </tr>
             ))}
-            {!zeilen.length && !laedt && <tr><td style={s.td} colSpan={12}>Keine Mitarbeiter angelegt.</td></tr>}
+            {!zeilen.length && !laedt && <tr><td style={s.td} colSpan={14}>Keine Mitarbeiter angelegt.</td></tr>}
           </tbody>
         </table>
       </div>

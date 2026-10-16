@@ -24,6 +24,7 @@
 // ============================================================================
 
 import { leseZahl, rundeStellen, centRunden } from './zahlen';
+import { ausfallImMonat, type Ausfall } from './ausfallstunden';
 
 export type Sitzung = { mitarbeiter_id: string; datum: string; kommen_um: string; gehen_um: string | null; pause_minuten?: number | null };
 export type Abwesenheit = { mitarbeiter_id: string; typ: string; von: string; bis: string; status?: string | null };
@@ -131,6 +132,8 @@ export type MonatsZeile = {
   mitarbeiter_id: string; name: string; personalnummer: string;
   fenster: Fenster; sollMin: number | null; mehrMin: number | null;
   urlaubTage: number; krankTage: number; spesen: number; hinweise: string[];
+  /** HW-4: Ausfallstunden in Minuten */
+  ausfall: { schlechtwetter: number; arbeitsmangel: number };
 };
 
 export function anzeigeName(m: Mitarbeiter): string {
@@ -146,6 +149,7 @@ function zahl(x: unknown): number | null { return leseZahl(x); }
  */
 export function monatsZeile(
   m: Mitarbeiter, sitzungen: Sitzung[], abw: Abwesenheit[], spesen: Spesen[], monat: string, feiertage: Set<string>,
+  ausfallRows: Ausfall[] = [],
 ): MonatsZeile {
   const g = monatsGrenzen(monat);
   const fenster = leer();
@@ -175,6 +179,7 @@ export function monatsZeile(
   return {
     mitarbeiter_id: m.id, name, personalnummer: String(m.personalnummer ?? '').trim(),
     fenster, sollMin, mehrMin, urlaubTage: a.urlaub, krankTage: a.krank, spesen: spesenSumme, hinweise,
+    ausfall: g ? ausfallImMonat(ausfallRows, m.id, g.von, g.bis) : { schlechtwetter: 0, arbeitsmangel: 0 },
   };
 }
 
@@ -194,7 +199,7 @@ function zelle(x: string): string {
   return /[;"\n\r]/.test(sicher) ? `"${sicher.replace(/"/g, '""')}"` : sicher;
 }
 
-export const CSV_KOPF = ['Personalnummer', 'Name', 'Monat', 'Ist Std', 'Soll Std', 'Mehrarbeit Std', 'Nacht 20-6 Std', 'davon 0-4 Std', 'Sonntag Std', 'Feiertag Std', 'Feiertag 24.12./25.12./26.12./1.5. Std', 'Urlaubstage', 'Krankheitstage', 'Spesen EUR', 'Hinweise'];
+export const CSV_KOPF = ['Personalnummer', 'Name', 'Monat', 'Ist Std', 'Soll Std', 'Mehrarbeit Std', 'Nacht 20-6 Std', 'davon 0-4 Std', 'Sonntag Std', 'Feiertag Std', 'Feiertag 24.12./25.12./26.12./1.5. Std', 'Urlaubstage', 'Krankheitstage', 'Spesen EUR', 'Ausfall Schlechtwetter Std', 'Ausfall Arbeitsmangel Std', 'Hinweise'];
 
 /** Semikolon-CSV (deutsche Kommazahlen, UTF-8 mit BOM) für Lohnprogramm / Steuerbüro. */
 export function csvExport(zeilen: MonatsZeile[], monat: string): string {
@@ -203,7 +208,8 @@ export function csvExport(zeilen: MonatsZeile[], monat: string): string {
     z.push([
       r.personalnummer, r.name, monat, stunden(r.fenster.gesamt), stunden(r.sollMin), stunden(r.mehrMin),
       stunden(r.fenster.nacht), stunden(r.fenster.nachtTief), stunden(r.fenster.sonntag), stunden(r.fenster.feiertag), stunden(r.fenster.feiertagHoch),
-      String(r.urlaubTage), String(r.krankTage), r.spesen.toFixed(2).replace('.', ','), r.hinweise.join(' | '),
+      String(r.urlaubTage), String(r.krankTage), r.spesen.toFixed(2).replace('.', ','),
+      stunden(r.ausfall.schlechtwetter), stunden(r.ausfall.arbeitsmangel), r.hinweise.join(' | '),
     ].map(zelle).join(';'));
   }
   return '﻿' + z.join('\r\n') + '\r\n';

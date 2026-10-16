@@ -57,7 +57,7 @@ export const WEITERE_TABELLEN: string[] = [
   'gutachten_position', 'gutschein', 'gutschein_einloesung', 'hilfsmittel_position',
   'hilfsmittel_versorgung', 'hk_zimmer', 'holz_auftraege', 'holz_auftrag_positionen',
   'holz_mengenrabatt', 'holz_preise', 'holz_sortiment', 'hotel_belegungen', 'hotel_zimmer',
-  'hr_abwesenheiten', 'hr_benachrichtigungen', 'hr_checklisten', 'hr_checklisten_abschluss',
+  'hr_abwesenheiten', 'hr_ausfall', 'hr_benachrichtigungen', 'hr_checklisten', 'hr_checklisten_abschluss',
   'hr_checklisten_vorlagen', 'hr_dokumente', 'hr_einstellungen', 'hr_schicht_bestaetigung',
   'hr_schicht_tausch', 'hr_schicht_vorlagen', 'hr_schichten', 'hr_schulungen',
   'hr_zeit_korrekturen', 'hr_zeiterfassung', 'immo_einheiten', 'immo_kaution',
