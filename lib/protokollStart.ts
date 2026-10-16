@@ -50,7 +50,7 @@ export function etikettHtml(titel: string, qrSvg: string): string {
 // Norm-Startvorlagen
 // ---------------------------------------------------------------------------
 
-export type NormVorlage = { key: string; titel: string; kategorie: string; beschreibung: string; intervall_monate: number; felder: Feld[] };
+export type NormVorlage = { key: string; titel: string; kategorie: string; beschreibung: string; intervall_monate: number | null; felder: Feld[] };
 
 export function normZuVorlage(n: PruefNorm): NormVorlage {
   const felder: Feld[] = [];

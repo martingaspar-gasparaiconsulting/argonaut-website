@@ -240,8 +240,9 @@ export function ergebnis(felder: Feld[], werte: Werte): Ergebnis {
   for (const f of felder) {
     if (f.typ === 'messwert') {
       // Messwert mit Grenze zaehlt wie ein Pruefpunkt: innerhalb = i. O., ausserhalb = n. i. O.
+      // MO1v-HW: ohne Grenze zaehlt der Messwert nie mit — auch nicht leer (vorher „offen")
+      if (zahlOderNull(f.min) === null && zahlOderNull(f.max) === null) continue;
       const a = messAmpel(f, werte[f.id]);
-      if (a === 'ohne_grenze') continue;
       e.pruefpunkte++;
       if (a === 'ok') e.io++; else if (a === 'mangel') e.nio++; else e.offen++;
       continue;

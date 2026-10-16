@@ -29,6 +29,7 @@ import {
 import { heuteIso, datumDe as datumIsoDe } from '@/lib/nachweisMotor';
 import { NORM_VORLAGEN, protokollLink, leseStartObjekt, etikettHtml, type NormVorlage } from '@/lib/protokollStart';
 import { qrSvg } from '@/lib/fuhrparkGeraete';
+import { VORLAGEN_HW } from '@/lib/protokollVorlagenHW';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -188,7 +189,7 @@ export default function FormularSeite() {
     setEditor({
       id: null, titel: start?.titel ?? '', kategorie: start?.kategorie ?? 'checkliste', beschreibung: start?.beschreibung ?? '',
       felder: (start?.felder ?? [{ id: 'f1', typ: 'text' as FeldTyp, label: '' }]).map((f) => ({ ...f, optionenText: (f.optionen ?? []).join(', '), minText: grenzeFeld(f.min), maxText: grenzeFeld(f.max) })),
-      intervallText: start && 'intervall_monate' in start ? String(start.intervall_monate) : '',
+      intervallText: start && 'intervall_monate' in start && start.intervall_monate ? String(start.intervall_monate) : '',
     });
   }
   function vorlageBearbeiten(v: Vorlage) {
@@ -534,6 +535,13 @@ export default function FormularSeite() {
             <div style={s.leiste}>
               {STARTVORLAGEN.map((sv) => <button key={sv.titel} style={s.klein} title={sv.beschreibung} onClick={() => vorlageNeu(sv)}>＋ {sv.titel}</button>)}
               <button style={s.primaer} onClick={() => vorlageNeu()}>＋ Leere Vorlage</button>
+            </div>
+          </div>
+          <div style={s.card}>
+            <div style={{ fontWeight: 800 }}>Protokolle Handwerk &amp; Energie</div>
+            <div style={s.dim}>Gerüst, Heizung, Lüftung, Trinkwasser, Kältemittel, Baustelle, Heizlast, PV, Kanal-TV, Prüfmittel — Fachwerte sind Startwerte, bitte vor dem Speichern prüfen.</div>
+            <div style={s.leiste}>
+              {VORLAGEN_HW.map((hv) => <button key={hv.key} style={s.klein} title={hv.beschreibung} onClick={() => vorlageNeu(hv)}>＋ {hv.titel}</button>)}
             </div>
           </div>
           <div style={s.card}>
