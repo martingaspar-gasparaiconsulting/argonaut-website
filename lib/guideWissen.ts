@@ -3206,6 +3206,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Pläne & Mängel-Pins', href: '/dashboard/bautagebuch/plaene' }],
     vorher: [{ text: 'Baustelle als Projekt angelegt', href: '/dashboard/projekte' }],
   },
+  '/dashboard/metallzuschlag': {
+    zweck: 'Metallzuschlag (Kupfer oder Aluminium) für Kabel und Leitungen nach der Tagesnotiz ausrechnen: (Notiz + 1 % Bezugskosten − Basis) × Metallzahl ÷ 100 = € je km, für mehrere Kabel auf einmal mit Summe.',
+    wer: 'beide',
+    werText: 'Wer das Modul Kalkulator hat. Der Rechner speichert nichts. Die Übernahme als Position in Angebot oder Rechnung wird erst nach der rechtlichen Prüfung freigeschaltet.',
+    schritte: [
+      'Metall wählen, die Tagesnotiz (z. B. DEL-Notiz) in €/100 kg mit Datum eintragen — ARGONAUT schätzt keine Preise',
+      'Die Basis prüfen, die im Kabelpreis schon steckt (bei Kupfer meist 150 €/100 kg)',
+      'Je Kabel die Bezeichnung (bekannte Leitungen füllen die Kupferzahl vor), die Metallzahl in kg/km laut Datenblatt und die Länge in Metern eintragen',
+      'Zuschlag je Kabel und gesamt ablesen; „📋 Positionstexte kopieren“ liefert nachvollziehbare Texte mit Notiz, Datum, Basis und Menge',
+    ],
+    probe: { anlegen: 'Notiz 900, Basis 150, NYM-J 3×1,5 mit 100 m eintragen — Ergebnis 32,79 €.', loeschen: 'Nichts zu löschen — der Rechner speichert nichts.' },
+    landetIn: [{ text: 'Angebote (nach Freigabe)', href: '/dashboard/angebote' }],
+  },
   '/dashboard/bauzeitenplan': {
     zweck: 'Bauzeitenplan je Projekt: Gewerke mit Dauer in Arbeitstagen und Abhängigkeiten („fängt an, wenn … fertig ist“) einplanen. ARGONAUT rechnet Start, Ende und Bauende ohne Wochenenden und Feiertage und zeigt den kritischen Weg — verschiebt sich dort ein Vorgang, verschiebt sich das Bauende.',
     wer: 'beide',
