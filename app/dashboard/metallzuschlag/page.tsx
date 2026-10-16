@@ -11,7 +11,8 @@
 // Pfad: app/dashboard/metallzuschlag/page.tsx
 // ============================================================
 
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
 import { heuteIso } from '@/lib/nachweisMotor';
 import { useFreigabeStand } from '@/lib/useFreigabeStand';
 import { startFrei, startSperrGrund } from '@/lib/startSperre';
@@ -23,6 +24,11 @@ const C = {
   text: '#E8EDF4', textDim: '#8FA3BE', border: 'rgba(143,163,190,0.18)', warn: '#E0A24C', danger: '#E06666',
 };
 const euro = (n: number) => `${zahlText(n, 2)} €`;
+const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+);
+type Entwurf = { id: string; titel: string | null; kunde_name: string | null; angebotsnummer: string | null };
 const LEERE_ZEILE: KabelZeile = { kabel: '', metallzahl: '', meter: '' };
 
 export default function MetallzuschlagSeite() {
@@ -37,6 +43,31 @@ export default function MetallzuschlagSeite() {
   const [gutschrift, setGutschrift] = useState(false);
   const [zeilen, setZeilen] = useState<KabelZeile[]>([{ ...LEERE_ZEILE }]);
   const [kopiert, setKopiert] = useState<string | null>(null);
+  const [entwuerfe, setEntwuerfe] = useState<Entwurf[]>([]);
+  const [zielAngebot, setZielAngebot] = useState('');
+  const [satz, setSatz] = useState('19');
+  const [busy, setBusy] = useState(false);
+  const [meldung, setMeldung] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!frei) return;
+    void (async () => {
+      const { data } = await supabase.from('angebote').select('id, titel, kunde_name, angebotsnummer').eq('status', 'entwurf').order('erstellt_am', { ascending: false }).limit(200);
+      setEntwuerfe((data as Entwurf[]) ?? []);
+    })();
+  }, [frei]);
+
+  async function uebernehmen() {
+    if (!frei || !zielAngebot) return;
+    const ziel = entwuerfe.find((a) => a.id === zielAngebot);
+    if (!window.confirm(`Metallzuschlag (${euro(ergebnis.summe)} netto) als Position(en) an „${ziel?.titel || 'Angebot'}“ anhängen?`)) return;
+    setBusy(true); setMeldung(null);
+    try {
+      const r = await fetch('/api/angebot-metallzuschlag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ angebotId: zielAngebot, metall, notiz, notizDatum, basis, bezugskosten, gutschrift, zeilen, mwst_satz: satz }) });
+      const j = await r.json().catch(() => ({}));
+      setMeldung(r.ok ? { ok: true, text: `${j.positionen} Position(en) übernommen — neue Angebotssumme ${euro(Number(j.brutto) || 0)} brutto.` } : { ok: false, text: j.error || 'Übernahme fehlgeschlagen.' });
+    } finally { setBusy(false); }
+  }
 
   const datum = notizDatumPruefen(notizDatum, heute);
   const ergebnis = useMemo(() => sammelRechnung(zeilen, { notiz, basis, bezugskosten, gutschrift }), [zeilen, notiz, basis, bezugskosten, gutschrift]);
@@ -119,8 +150,17 @@ export default function MetallzuschlagSeite() {
         <div style={{ ...s.row, borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
           <div style={{ flex: 1, fontWeight: 800 }}>Metallzuschlag gesamt (netto): <span style={{ color: C.gold }}>{euro(ergebnis.summe)}</span></div>
           <button style={s.klein} disabled={!texte().length} onClick={kopieren}>📋 Positionstexte kopieren (intern)</button>
-          <button style={{ ...s.primaer, opacity: frei ? 1 : 0.45, cursor: frei ? 'pointer' : 'not-allowed' }} disabled title={frei ? 'Kommt im nächsten Schritt' : String(startSperrGrund('metallzuschlag', freigabe))}>🧾 In Angebot übernehmen</button>
         </div>
+        <div style={s.row}>
+          {frei && (<>
+            <label style={{ ...s.lab, flex: 1, minWidth: 220 }}>Angebot (Entwurf)<select style={s.inp} value={zielAngebot} onChange={(e) => setZielAngebot(e.target.value)}>
+              <option value="">— Angebot wählen —</option>{entwuerfe.map((a) => <option key={a.id} value={a.id}>{[a.angebotsnummer, a.titel, a.kunde_name].filter(Boolean).join(' · ') || 'Angebot'}</option>)}
+            </select></label>
+            <label style={s.lab}>USt %<select style={s.inp} value={satz} onChange={(e) => setSatz(e.target.value)}><option value="19">19</option><option value="7">7</option><option value="0">0</option></select></label>
+          </>)}
+          <button style={{ ...s.primaer, opacity: frei && zielAngebot && !busy ? 1 : 0.45, cursor: frei && zielAngebot ? 'pointer' : 'not-allowed' }} disabled={!frei || !zielAngebot || busy || ergebnis.summe === 0} title={frei ? '' : String(startSperrGrund('metallzuschlag', freigabe))} onClick={uebernehmen}>🧾 In Angebot übernehmen</button>
+        </div>
+        {meldung && <div style={meldung.ok ? { ...s.dim, color: C.green } : s.err}>{meldung.text}</div>}
         {kopiert && <div style={s.dim}>{kopiert}</div>}
         <div style={s.dim}>Die Metallzahlen der Liste sind Startwerte — bitte immer mit dem Datenblatt bzw. der Preisliste des Großhändlers abgleichen.</div>
       </div>

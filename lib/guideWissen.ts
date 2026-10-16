@@ -3215,6 +3215,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
       'Die Basis prüfen, die im Kabelpreis schon steckt (bei Kupfer meist 150 €/100 kg)',
       'Je Kabel die Bezeichnung (bekannte Leitungen füllen die Kupferzahl vor), die Metallzahl in kg/km laut Datenblatt und die Länge in Metern eintragen',
       'Zuschlag je Kabel und gesamt ablesen; „📋 Positionstexte kopieren“ liefert nachvollziehbare Texte mit Notiz, Datum, Basis und Menge',
+      'Nach der Freigabe: Angebot im Entwurf und Steuersatz wählen, „🧾 In Angebot übernehmen“ — je Kabel eine Position, die Summe des Angebots wird neu gerechnet; über „Rechnung aus Angebot“ kommt der Zuschlag auch in die Rechnung',
     ],
     probe: { anlegen: 'Notiz 900, Basis 150, NYM-J 3×1,5 mit 100 m eintragen — Ergebnis 32,79 €.', loeschen: 'Nichts zu löschen — der Rechner speichert nichts.' },
     landetIn: [{ text: 'Angebote (nach Freigabe)', href: '/dashboard/angebote' }],

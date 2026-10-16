@@ -60,3 +60,29 @@ test('Sperre: Übernahme in Angebot/Rechnung aus bis Anwalt (R66), in Zentrale u
   assert.match(fs.readFileSync(new URL('../lib/freigabeZentrale.ts', import.meta.url), 'utf8'), /metallzuschlag: \{ titel: [^}]*anwalt: 'R66' \}/);
   assert.match(fs.readFileSync(new URL('../docs/ARGONAUT-SPERR-GEDAECHTNIS.md', import.meta.url), 'utf8'), /SCHALTER startSperre\.metallzuschlag = aus/);
 });
+
+import { angebotsPosten } from '../out/metallzuschlag.js';
+
+test('Angebotsposten: Server rechnet selbst, 0-€-Zeilen fallen weg, Fehler stoppt alles', () => {
+  const ok = angebotsPosten({ notiz: '900', notizDatum: '2026-10-15', basis: '150', zeilen: [
+    { kabel: 'NYM-J 3×1,5', metallzahl: '43,2', meter: '100', gesamt: 999999 },
+    { kabel: '', metallzahl: '', meter: '' },
+  ] }, '2026-10-16', 19);
+  assert.equal(ok.fehler, null);
+  assert.equal(ok.posten.length, 1);
+  assert.equal(ok.posten[0].einzelpreis, 32.79, 'Betrag vom Server, nie vom Browser');
+  assert.equal(ok.posten[0].einheit, 'Psch');
+  assert.equal(ok.posten[0].mwst_satz, 19);
+  assert.match(angebotsPosten({ notiz: '900', notizDatum: '', basis: '150', zeilen: [] }, '2026-10-16', 19).fehler, /Datum/);
+  assert.match(angebotsPosten({ notiz: '900', notizDatum: '2026-10-15', basis: '150', zeilen: [{ kabel: 'X', metallzahl: '', meter: '5' }] }, '2026-10-16', 19).fehler, /X: .*Metallzahl/);
+  assert.match(angebotsPosten({ notiz: '100', notizDatum: '2026-10-15', basis: '150', zeilen: [{ kabel: 'X', metallzahl: '43', meter: '5' }] }, '2026-10-16', 19).fehler, /Kein Zuschlag/);
+});
+
+test('Wächter: Route sperrt am Server, nur Entwürfe des eigenen Betriebs, Summen aus allen Positionen', () => {
+  const src = fs.readFileSync(new URL('../app/api/angebot-metallzuschlag/route.ts', import.meta.url), 'utf8');
+  assert.match(src, /startFreiServer\("metallzuschlag"\)/);
+  assert.match(src, /\.eq\("owner_user_id", betrieb\)/);
+  assert.match(src, /status !== "entwurf"/);
+  assert.match(src, /angebotsSummen\(\[\.\.\.bestehende, \.\.\.posten\]\)/);
+  assert.doesNotMatch(src, /body\??\.(gesamt|einzelpreis|betrag)/, 'Beträge nie aus dem Browser');
+});

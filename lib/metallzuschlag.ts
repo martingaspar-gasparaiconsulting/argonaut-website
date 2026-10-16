@@ -93,3 +93,40 @@ export const KUPFERZAHLEN: { kabel: string; kgKm: number }[] = [
   { kabel: 'NYM-J 5×10', kgKm: 480 },
   { kabel: 'NYY-J 5×16', kgKm: 768 },
 ];
+
+// ============================================================================
+// HW-1 Teil 2 — Positionen für das Angebot (Server rechnet IMMER selbst neu)
+// ============================================================================
+
+export type AngebotsEingabe = {
+  metall?: unknown; notiz?: unknown; notizDatum?: unknown; basis?: unknown;
+  bezugskosten?: unknown; gutschrift?: unknown; zeilen?: unknown; mwst_satz?: unknown;
+};
+export type AngebotsPosten = { bezeichnung: string; menge: number; einheit: string; einzelpreis: number; mwst_satz: number; gesamt_netto: number };
+
+/**
+ * Aus der Eingabe des Rechners die Angebotspositionen bauen — je Kabel eine
+ * Pauschal-Position mit nachvollziehbarem Text. Beträge rechnet diese Funktion
+ * selbst (nie vom Browser übernehmen). Zeilen mit 0 € fallen weg.
+ */
+export function angebotsPosten(e: AngebotsEingabe, heute: string, satz: number): { posten: AngebotsPosten[]; fehler: string | null } {
+  const metall: Metall = e.metall === 'aluminium' ? 'aluminium' : 'kupfer';
+  const d = notizDatumPruefen(e.notizDatum, heute);
+  if (d.fehler) return { posten: [], fehler: d.fehler };
+  const roh = Array.isArray(e.zeilen) ? (e.zeilen as KabelZeile[]).slice(0, 100) : [];
+  const gemeinsam = { notiz: e.notiz, basis: e.basis, bezugskosten: e.bezugskosten !== false, gutschrift: e.gutschrift === true };
+  const posten: AngebotsPosten[] = [];
+  for (const z of roh) {
+    if (!String(z?.kabel ?? '').trim() && !String(z?.meter ?? '').trim()) continue;
+    const r = metallzuschlag({ ...gemeinsam, metallzahl: z.metallzahl, meter: z.meter });
+    if (r.fehler || !r.ergebnis) return { posten: [], fehler: `${String(z.kabel ?? '').trim() || 'Kabel'}: ${r.fehler}` };
+    if (r.ergebnis.gesamt === 0) continue;
+    const text = positionsText({
+      metall, kabel: String(z.kabel ?? ''), notiz: leseZahl(e.notiz) ?? 0, notizDatum: String(e.notizDatum),
+      basis: leseZahl(e.basis) ?? 0, metallzahl: leseZahl(z.metallzahl) ?? 0, meter: leseZahl(z.meter) ?? 0, bezugskosten: gemeinsam.bezugskosten,
+    });
+    posten.push({ bezeichnung: text, menge: 1, einheit: 'Psch', einzelpreis: r.ergebnis.gesamt, mwst_satz: satz, gesamt_netto: r.ergebnis.gesamt });
+  }
+  if (!posten.length) return { posten: [], fehler: 'Kein Zuschlag zu übernehmen (alle Zeilen 0 € oder leer).' };
+  return { posten, fehler: null };
+}
