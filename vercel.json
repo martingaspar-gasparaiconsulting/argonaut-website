@@ -92,6 +92,10 @@
     {
       "path": "/api/cron/lead-erstanruf",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/termin-showup",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

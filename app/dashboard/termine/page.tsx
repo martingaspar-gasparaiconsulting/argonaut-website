@@ -17,7 +17,8 @@ import KiAuge from "../_components/KiAuge";
 import { augeTermine } from "@/lib/auge";
 import { zaehleTermine } from "@/lib/augeZaehler";
 import { vorbelegungLesen } from "@/lib/leadWeiter";
-import { showRate, markierbar } from "@/lib/showUp";
+import { showRate, markierbar, einstellungLesen, rueckholTageBereinigen, type ShowEinstellung } from "@/lib/showUp";
+import { leseZahl } from "@/lib/zahlen";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -426,6 +427,8 @@ export default function TermineCockpit() {
         </div>
       )}
 
+      {showUpDa && <ShowUpEinstellung />}
+
       {loading ? (
         <div style={{ padding: 40, textAlign: "center", color: C.textDim }}>ARGONAUT lädt die Termine…</div>
       ) : termine.length === 0 ? (
@@ -752,6 +755,96 @@ function TerminListe({
               </button>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Paket VK5 Teil 2: Erinnerung 1 Std. vorher + Rückhol-Folge nach „nicht erschienen" (je Betrieb, Voreinstellung AUS)
+function ShowUpEinstellung() {
+  const [offen, setOffen] = useState(false);
+  const [e, setE] = useState<ShowEinstellung>(einstellungLesen(null));
+  const [tageText, setTageText] = useState("1, 4");
+  const [chef, setChef] = useState(false);
+  const [geladen, setGeladen] = useState(false);
+  const [meldung, setMeldung] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!offen || geladen) return;
+    (async () => {
+      try {
+        const { data: c } = await supabase.rpc("mein_chef_id");
+        setChef(!c);
+        const { data, error } = await supabase.from("vk_showup").select("erinnerung_1h, rueckhol_an, rueckhol_tage").limit(1).maybeSingle();
+        if (!error) {
+          const w = einstellungLesen(data as Record<string, unknown> | null);
+          setE(w);
+          setTageText(w.rueckhol_tage.join(", "));
+        }
+      } catch { /* Voreinstellung bleibt */ }
+      setGeladen(true);
+    })();
+  }, [offen, geladen]);
+
+  async function sichern() {
+    setBusy(true); setMeldung(null);
+    try {
+      const tage = rueckholTageBereinigen(tageText.split(/[,;\s]+/).map((x) => leseZahl(x)).filter((x): x is number => x !== null));
+      if (!tage.length) { setMeldung("Bitte mindestens einen Tag zwischen 1 und 30 angeben."); return; }
+      const { data: u } = await supabase.auth.getUser();
+      const id = u?.user?.id;
+      if (!id) { setMeldung("Nicht angemeldet."); return; }
+      const { error } = await supabase.from("vk_showup").upsert(
+        { owner_user_id: id, erinnerung_1h: e.erinnerung_1h, rueckhol_an: e.rueckhol_an, rueckhol_tage: tage, aktualisiert_am: new Date().toISOString() },
+        { onConflict: "owner_user_id" });
+      if (error) throw error;
+      setTageText(tage.join(", "));
+      setMeldung("Gespeichert.");
+    } catch (x: unknown) {
+      setMeldung("Speichern fehlgeschlagen: " + (x instanceof Error ? x.message : "Fehler"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const box: React.CSSProperties = { background: C.navy2, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 18px", marginBottom: 22 };
+  return (
+    <div style={box}>
+      <button onClick={() => setOffen(!offen)}
+        style={{ background: "transparent", border: "none", color: "#fff", fontWeight: 700, fontSize: "clamp(14px, 1.25vw, 20px)", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
+        📣 Erinnerung &amp; Rückholung {offen ? "▴" : "▾"}
+      </button>
+      {offen && (
+        <div style={{ marginTop: 12, color: C.textDim, fontSize: "clamp(13px, 1.13vw, 18px)", lineHeight: 1.5 }}>
+          <p style={{ margin: "0 0 10px" }}>
+            Die Bestätigung nach der Online-Buchung und die Erinnerung am Vortag laufen immer. Zusätzlich lässt sich hier einschalten:
+          </p>
+          <label style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "8px 0", color: "#fff" }}>
+            <input type="checkbox" disabled={!chef} checked={e.erinnerung_1h} onChange={(x) => setE({ ...e, erinnerung_1h: x.target.checked })} />
+            <span>Erinnerung <b>1 Stunde vorher</b> per E-Mail an den Kunden</span>
+          </label>
+          <label style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "8px 0", color: "#fff" }}>
+            <input type="checkbox" disabled={!chef} checked={e.rueckhol_an} onChange={(x) => setE({ ...e, rueckhol_an: x.target.checked })} />
+            <span><b>Rückhol-Folge</b>: Wer als „nicht erschienen" markiert ist, bekommt eine freundliche Mail mit Link zur Online-Buchung (nur 9–18 Uhr, Schluss sobald neu gebucht)</span>
+          </label>
+          <label style={{ display: "block", margin: "10px 0 4px" }}>Rückhol-Mails an Tag … nach dem verpassten Termin (bis zu 3, je 1–30)</label>
+          <input value={tageText} disabled={!chef} onChange={(x) => setTageText(x.target.value)} placeholder="1, 4" style={{ ...inputStyle, maxWidth: 200 }} />
+          {chef ? (
+            <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <button onClick={sichern} disabled={busy}
+                style={{ background: C.gold, color: C.navy, border: "none", borderRadius: 10, padding: "9px 16px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                {busy ? "Speichert…" : "Speichern"}
+              </button>
+              {meldung && <span style={{ color: meldung === "Gespeichert." ? C.green : C.danger }}>{meldung}</span>}
+            </div>
+          ) : (
+            <p style={{ marginTop: 10 }}>Nur die Geschäftsleitung ändert diese Einstellung.</p>
+          )}
+          <p style={{ margin: "10px 0 0", fontSize: "clamp(12px, 1.06vw, 17px)" }}>
+            Ohne freigeschaltete Online-Buchung enthält die Rückhol-Mail keinen Link, sondern bittet um eine Antwort per E-Mail.
+          </p>
         </div>
       )}
     </div>

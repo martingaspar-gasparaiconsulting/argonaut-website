@@ -129,3 +129,38 @@ test('Markier-Route: Anmeldung zuerst, nur Nutzer-Client, Lead nur von termin_ge
   assert.match(r, /\.eq\('stufe', 'termin_gebucht'\)/);
   assert.match(r, /geaendert\.length === 0/);
 });
+
+test('Teil 2: Rueckhol-Mails nur 9-18 Uhr Berlin (auch bei Winterzeit)', async () => {
+  const { rueckholZeit, berlinStunde } = await import('../out/showUp.js');
+  assert.equal(berlinStunde(new Date('2026-10-16T07:00:00Z')), 9);
+  assert.equal(rueckholZeit(new Date('2026-10-16T06:59:00Z')), false, '8:59');
+  assert.equal(rueckholZeit(new Date('2026-10-16T07:00:00Z')), true, '9:00');
+  assert.equal(rueckholZeit(new Date('2026-10-16T15:59:00Z')), true, '17:59');
+  assert.equal(rueckholZeit(new Date('2026-10-16T16:00:00Z')), false, '18:00');
+  assert.equal(rueckholZeit(new Date('2026-12-01T08:00:00Z')), true, '9:00 Winterzeit');
+  assert.equal(rueckholZeit(new Date('2026-12-01T07:30:00Z')), false, '8:30 Winterzeit');
+});
+
+test('Teil 2: Cron — Schloss zuerst, alles auf den Betrieb gefiltert, Belegung vor dem Versand, Zeitplan 15 Min', () => {
+  const r = lies('app/api/cron/termin-showup/route.ts');
+  const start = r.indexOf('async function lauf');
+  assert.ok(r.indexOf('cronGuard(req)', start) < r.indexOf("from('vk_showup')", start));
+  // jede Aenderung an termine ist auf den Betrieb gefiltert
+  const updates = r.split(/\.from\('termine'\)\s*\.update\(/).slice(1);
+  assert.equal(updates.length, 5);
+  for (const u of updates) assert.match(u.slice(0, u.indexOf(';')), /\.eq\('owner_user_id', t\.owner_user_id\)/);
+  // Belegung (bedingtes Update) steht VOR sendeMail
+  assert.ok(r.indexOf(".is('erinnerung_1h_am', null).select('id')") < r.indexOf('sendeMail({', r.indexOf('── 1) Erinnerung')));
+  assert.ok(r.indexOf(".eq('rueckhol_stufe', stufe).select('id')") < r.indexOf('sendeMail({', r.indexOf('── 2) Rueckhol')));
+  assert.match(r, /rueckholZeit\(jetzt\)/);
+  assert.match(r, /replace\(\/\[%_\\\\\]\/g/, 'Platzhalter in der Mail-Adresse entschaerft');
+  const v = JSON.parse(lies('vercel.json'));
+  assert.ok(v.crons.some((c) => c.path === '/api/cron/termin-showup' && c.schedule === '*/15 * * * *'));
+});
+
+test('Teil 2: Einstellung — nur Chef speichert, eine Zeile je Betrieb', () => {
+  const p = lies('app/dashboard/termine/page.tsx');
+  assert.match(p, /onConflict: "owner_user_id"/);
+  assert.match(p, /disabled=\{!chef\}/);
+  assert.match(p, /rpc\("mein_chef_id"\)/);
+});

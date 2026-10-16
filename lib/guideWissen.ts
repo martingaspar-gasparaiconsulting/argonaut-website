@@ -360,7 +360,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     zweck: 'Ihr Terminkalender. Einfach-Ansicht: Wer, Wann, Titel. Voll-Ansicht: Ende, Ort, Erinnerung, Ressource, Notiz. Ein Termin kann an einem Kunden aus dem CRM hängen.',
     wer: 'beide',
     werText: 'Wer das Modul freigeschaltet hat, legt Termine an.',
-    schritte: ['„Neuer Termin": Titel, Beginn, optional Kunde', 'Mit Kunde verknüpft erscheint er in dessen Akte', 'Aus einem Termin kann ein Einsatz im Dispo-Board werden'],
+    schritte: ['„Neuer Termin": Titel, Beginn, optional Kunde', 'Mit Kunde verknüpft erscheint er in dessen Akte', 'Aus einem Termin kann ein Einsatz im Dispo-Board werden', 'Nach dem Termin unter „Vergangen" „✓ erschienen" oder „✗ nicht erschienen" anklicken — daraus entsteht die Show-Rate', '„📣 Erinnerung & Rückholung" (Chef): Erinnerung 1 Stunde vorher und Rückhol-Mails nach „nicht erschienen" einschalten'],
     probe: { anlegen: 'Termin „Test" morgen anlegen.', loeschen: 'Löschen-Knopf an der Terminkarte.' },
     landetIn: [{ text: 'Kunden-Akte', href: '/dashboard/kunde-akte' }, { text: 'Dispo-Board', href: '/dashboard/dispo' }],
   },

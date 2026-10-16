@@ -144,6 +144,17 @@ export function rueckholFaellig(t: ShowTermin, e: ShowEinstellung, jetzt: Date, 
   return true;
 }
 
+/** Stunde 0–23 in Europe/Berlin. */
+export function berlinStunde(d: Date): number {
+  return Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: '2-digit', hourCycle: 'h23' }).format(d));
+}
+
+/** Rueckhol-Mails nur zu ueblichen Geschaeftszeiten (9–18 Uhr Berlin), nie nachts. */
+export function rueckholZeit(jetzt: Date): boolean {
+  const h = berlinStunde(jetzt);
+  return h >= 9 && h < 18;
+}
+
 /** Buchungslink des Betriebs (nur wenn die Online-Buchung freigeschaltet ist). */
 export function buchungsLink(basis: string, slug: string | null | undefined, aktiv: boolean | null | undefined): string | null {
   const s = String(slug ?? '').trim();
