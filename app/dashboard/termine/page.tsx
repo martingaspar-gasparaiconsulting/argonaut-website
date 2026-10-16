@@ -46,7 +46,13 @@ type Termin = {
   erinnerung_min: number | null;
   ressource: string | null;
   kontakt_id: string | null;
+  // Paket VK3: zuständige Person (mitarbeiter.id)
+  mitarbeiter_id: string | null;
 };
+
+// Paket VK3: Mitarbeiter für Anzeige, Filter „Kalender je Person" und Übertragen
+type Ma = { id: string; name: string };
+type Uebertragen = { ma: Ma[]; grund: Record<string, string>; aufUebertragen: (t: Termin, anId: string) => Promise<void> };
 
 const ERINNERUNGEN: { wert: string; label: string }[] = [
   { wert: "", label: "Keine Erinnerung" },
@@ -112,7 +118,7 @@ export default function TermineCockpit() {
       let q = supabase
         .from("termine")
         .select(
-          "id, titel, beginn_am, ende_am, ort, status, kunde_email, notiz, erinnerung_min, ressource, kontakt_id"
+          "id, titel, beginn_am, ende_am, ort, status, kunde_email, notiz, erinnerung_min, ressource, kontakt_id, mitarbeiter_id"
         );
       if (sid) q = q.or(standortOrFilter(sid));
       const { data, error } = await q.order("beginn_am", { ascending: true });
@@ -129,6 +135,37 @@ export default function TermineCockpit() {
   // Kunden-Namen fuer die Terminkarten. Bewusst aus der ohnehin geladenen
   // CRM-Liste aufgeloest und NICHT als Join in der Termin-Abfrage: ein
   // Problem am Kontakt wuerde sonst die komplette Terminliste leer machen.
+  // Paket VK3: Mitarbeiter-Namen, Grund der Zuteilung (Spalte aus SQL p409 — eigene Abfrage,
+  // damit die Terminliste ohne die Spalte nie leer bleibt) und Filter je Person.
+  const [mitarbeiter, setMitarbeiter] = useState<Ma[]>([]);
+  const [grunde, setGrunde] = useState<Record<string, string>>({});
+  const [werFilter, setWerFilter] = useState("");
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: m } = await supabase.from("mitarbeiter").select("id, vorname, nachname, status").limit(2000);
+        setMitarbeiter(((m as { id: string; vorname: string | null; nachname: string | null; status: string | null }[] | null) ?? [])
+          .filter((x) => !["ausgeschieden", "inaktiv", "gekuendigt", "gekündigt"].includes(String(x.status ?? "").toLowerCase()))
+          .map((x) => ({ id: x.id, name: [x.vorname, x.nachname].filter(Boolean).join(" ") || "Mitarbeiter" }))
+          .sort((a, b) => a.name.localeCompare(b.name, "de")));
+      } catch { /* Anzeige ist Zugabe */ }
+      try {
+        const { data: g, error } = await supabase.from("termine").select("id, verteilt_grund").not("verteilt_grund", "is", null).limit(2000);
+        if (!error) setGrunde(Object.fromEntries(((g as { id: string; verteilt_grund: string }[] | null) ?? []).map((x) => [x.id, x.verteilt_grund])));
+      } catch { /* Spalte fehlt noch */ }
+    })();
+  }, [termine]);
+
+  async function uebertragen(t: Termin, anId: string) {
+    setFehler(null); setOk(null);
+    const res = await fetch("/api/termin-uebertragen", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ termin_id: t.id, an_mitarbeiter_id: anId }) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { setFehler(d?.error || "Übertragen fehlgeschlagen."); return; }
+    setOk(`Termin an ${d?.name || "Kollegen"} übertragen.`);
+    await laden();
+  }
+  const uebertragung: Uebertragen = { ma: mitarbeiter, grund: grunde, aufUebertragen: uebertragen };
+
   const kundenNamen = useMemo(() => {
     const m: Record<string, string> = {};
     for (const k of kontakte) m[k.id] = k.anzeigename || k.email || "Kunde im CRM";
@@ -238,13 +275,14 @@ export default function TermineCockpit() {
     const kommend: Termin[] = [];
     const vergangen: Termin[] = [];
     for (const t of termine) {
+      if (werFilter === "ohne" ? !!t.mitarbeiter_id : werFilter && t.mitarbeiter_id !== werFilter) continue;
       const ts = t.beginn_am ? new Date(t.beginn_am).getTime() : 0;
       if (ts >= now) kommend.push(t);
       else vergangen.push(t);
     }
     vergangen.reverse(); // jüngste vergangene zuerst
     return { kommend, vergangen };
-  }, [termine]);
+  }, [termine, werFilter]);
 
   const kpi = useMemo(() => {
     const now = new Date();
@@ -371,7 +409,18 @@ export default function TermineCockpit() {
         />
       ) : (
         <>
-          <TerminListe titel="Kommende Termine" liste={kommend} onDelete={loeschen} leer="Keine bevorstehenden Termine." kunden={kundenNamen} />
+          {mitarbeiter.length > 0 && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
+              <span style={{ color: C.textDim, fontSize: 14 }}>Kalender von</span>
+              <select value={werFilter} onChange={(e) => setWerFilter(e.target.value)}
+                style={{ background: C.navy2, color: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, padding: "7px 10px", fontFamily: "inherit", fontSize: 14 }}>
+                <option value="">allen</option>
+                <option value="ohne">— ohne Zuständigen —</option>
+                {mitarbeiter.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+          )}
+          <TerminListe titel="Kommende Termine" liste={kommend} onDelete={loeschen} leer="Keine bevorstehenden Termine." kunden={kundenNamen} uebertragung={uebertragung} />
           {vergangen.length > 0 && (
             <TerminListe titel="Vergangen" liste={vergangen} onDelete={loeschen} leer="" gedimmt kunden={kundenNamen} />
           )}
@@ -529,6 +578,7 @@ function TerminListe({
   leer,
   gedimmt,
   kunden,
+  uebertragung,
 }: {
   titel: string;
   liste: Termin[];
@@ -536,7 +586,11 @@ function TerminListe({
   leer: string;
   gedimmt?: boolean;
   kunden: Record<string, string>;
+  uebertragung?: Uebertragen;
 }) {
+  const [offenId, setOffenId] = useState<string | null>(null);
+  const [ziel, setZiel] = useState("");
+  const maName = (id: string | null) => (id ? uebertragung?.ma.find((m) => m.id === id)?.name ?? null : null);
   return (
     <div style={{ marginBottom: 22, opacity: gedimmt ? 0.7 : 1 }}>
       <div
@@ -608,6 +662,27 @@ function TerminListe({
                   >
                     👤 {kunden[t.kontakt_id] || "Kunde im CRM"}
                   </a>
+                ) : null}
+                {/* Paket VK3: zuständige Person, Grund der Zuteilung, Übertragen */}
+                {uebertragung && (maName(t.mitarbeiter_id) || uebertragung.ma.length > 0) ? (
+                  <div style={{ marginTop: 6, fontSize: "clamp(12px, 1.06vw, 17px)", color: C.textDim, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <span>🧑‍💼 {maName(t.mitarbeiter_id) ?? "ohne Zuständigen"}{uebertragung.grund[t.id] ? ` · ${uebertragung.grund[t.id]}` : ""}</span>
+                    {offenId === t.id ? (
+                      <>
+                        <select value={ziel} onChange={(e) => setZiel(e.target.value)}
+                          style={{ background: C.navy, color: "#fff", border: `1px solid ${C.border}`, borderRadius: 8, padding: "4px 8px", fontFamily: "inherit" }}>
+                          <option value="">— an wen? —</option>
+                          {uebertragung.ma.filter((m) => m.id !== t.mitarbeiter_id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                        </select>
+                        <button disabled={!ziel} onClick={async () => { await uebertragung.aufUebertragen(t, ziel); setOffenId(null); setZiel(""); }}
+                          style={{ background: C.gold, color: C.navy, border: "none", borderRadius: 8, padding: "4px 10px", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>übertragen</button>
+                        <button onClick={() => { setOffenId(null); setZiel(""); }} style={{ background: "transparent", color: C.textDim, border: "none", cursor: "pointer" }}>abbrechen</button>
+                      </>
+                    ) : (
+                      <button onClick={() => { setOffenId(t.id); setZiel(""); }} title="An einen Kollegen übertragen"
+                        style={{ background: "transparent", color: C.gold, border: `1px solid ${C.border}`, borderRadius: 8, padding: "2px 9px", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" }}>⇄ übertragen</button>
+                    )}
+                  </div>
                 ) : null}
               </div>
               <button

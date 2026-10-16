@@ -108,3 +108,22 @@ test('SQL p409 additiv', () => {
   assert.match(s, /add column if not exists verteilt_grund text/);
   assert.doesNotMatch(s, /\bdrop table\b|\btruncate\b|\bdelete from\b/i);
 });
+
+test('Teil 2 Uebertragen: Login zuerst, Aendern nur mit Nutzer-Rechten, Ziel muss frei sein, Glocke danach', () => {
+  const r = lies('app/api/termin-uebertragen/route.ts');
+  const i = r.indexOf('const absage = await nurAngemeldet();');
+  assert.ok(i > 0 && i < r.indexOf('await req.json()'));
+  assert.match(r, /await sb\.from\('termine'\)\.update\(\{ mitarbeiter_id: anId \}\)/, 'Aendern ueber die Anmeldung (RLS)');
+  assert.doesNotMatch(r, /db\.from\('termine'\)\.update/, 'nie mit der Dienst-Rolle aendern');
+  for (const q of r.match(/db\.from\('(mitarbeiter|termine|hr_abwesenheiten)'\)[^;]*/g)) assert.match(q, /\.eq\('owner_user_id', termin\.owner_user_id\)/, q.slice(0, 50));
+  assert.ok(r.indexOf('if (!istFrei(') < r.indexOf(".update({ mitarbeiter_id: anId })"));
+  assert.ok(r.indexOf(".update({ mitarbeiter_id: anId })") < r.indexOf('await glockeNeuerTermin('));
+});
+
+test('Teil 2 Termine-Seite: Grund in eigener Abfrage (Liste bleibt ohne SQL voll), Filter je Person', () => {
+  const p = lies('app/dashboard/termine/page.tsx');
+  assert.match(p, /kontakt_id, mitarbeiter_id"/);
+  assert.doesNotMatch(p.slice(p.indexOf('.from("termine")'), p.indexOf('.from("termine")') + 300), /verteilt_grund/, 'Hauptabfrage ohne neue Spalte');
+  assert.match(p, /select\("id, verteilt_grund"\)/);
+  assert.match(p, /werFilter === "ohne" \? !!t\.mitarbeiter_id : werFilter && t\.mitarbeiter_id !== werFilter/);
+});
