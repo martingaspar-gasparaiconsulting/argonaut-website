@@ -7,6 +7,8 @@
 // Pfad: app/dashboard/wellness/page.tsx
 // ============================================================
 
+import { gesundheitsBezug, GESCHUETZT_TEXT, HINWEIS_FELD_TEXT } from '@/lib/gesundheitsHinweis';
+import { nichtsGeschrieben } from '@/lib/speichernPruefen';
 import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { NurVoll } from '../_components/Ansicht';
@@ -69,15 +71,53 @@ export default function WellnessPage() {
   async function kundeAnlegen() {
     if (!uid || !nk.name.trim()) { setFehler('Bitte einen Namen angeben.'); return; }
     setFehler(null); setOk(null);
+    // MO0c (P386): Gesundheitsangaben nie ins offene Feld — verschluesselt in die Gesundheitsangaben.
+    const hinweisText = nk.hinweise.trim();
+    const bezug = gesundheitsBezug(hinweisText);
     const { data, error } = await supabase.from('wellness_kunden').insert({
       owner_user_id: besitzer ?? uid, name: nk.name.trim(), telefon: nk.telefon.trim() || null, email: nk.email.trim() || null,
-      geburtsdatum: nk.geburtsdatum || null, hinweise: nk.hinweise.trim() || null,
+      geburtsdatum: nk.geburtsdatum || null, hinweise: bezug ? null : (hinweisText || null),
     }).select('id, name, telefon, email, hinweise').single();
     if (error || !data) { setFehler('Kunde konnte nicht gespeichert werden.'); return; }
-    setNk({ name: '', telefon: '', email: '', geburtsdatum: '', hinweise: '' }); setOk('Kunde gespeichert.'); await ladeKunden();
+    let meldung = 'Kunde gespeichert.';
+    if (bezug) {
+      const g = await geschuetztSpeichern((data as Kunde).id, bezug, hinweisText);
+      meldung = g ? 'Kunde gespeichert — die Gesundheitsangabe liegt verschlüsselt unter „🔒 Gesundheitsangaben".' : 'Kunde gespeichert.';
+      if (!g) setFehler('Die Gesundheitsangabe wurde NICHT gespeichert (geschützte Ablage nicht erreichbar oder kein Recht). Bitte unter „🔒 Gesundheitsangaben" eintragen.');
+    }
+    setNk({ name: '', telefon: '', email: '', geburtsdatum: '', hinweise: '' }); setOk(meldung); await ladeKunden();
     setAktiv(data as Kunde); setBeh([]);
   }
   async function kundeOeffnen(k: Kunde) { setAktiv(k); await ladeBeh(k.id); }
+
+  // MO0c: verschluesselt ablegen (Server, /api/gesundheit-notiz) — true nur bei Erfolg
+  async function geschuetztSpeichern(kundeId: string, art: string, text: string): Promise<boolean> {
+    try {
+      const r = await fetch('/api/gesundheit-notiz', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kunde_id: kundeId, art, text }) });
+      const j = await r.json().catch(() => ({}));
+      return r.ok && j?.ok === true;
+    } catch { return false; }
+  }
+
+  // MO0c: bestehenden Klartext-Hinweis mit Gesundheitsbezug verschieben (erst sichern, dann leeren)
+  async function hinweisVerschieben(k: Kunde) {
+    const art = gesundheitsBezug(k.hinweise);
+    if (!art || !k.hinweise) return;
+    if (!window.confirm('Den Hinweis verschlüsselt unter „🔒 Gesundheitsangaben" ablegen und aus dem offenen Feld entfernen?')) return;
+    setFehler(null); setOk(null);
+    if (!(await geschuetztSpeichern(k.id, art, k.hinweise))) {
+      setFehler('Verschieben nicht möglich (geschützte Ablage nicht erreichbar oder kein Recht) — der Hinweis bleibt unverändert.');
+      return;
+    }
+    const { data, error } = await supabase.from('wellness_kunden').update({ hinweise: null }).eq('id', k.id).select('id');
+    if (error || nichtsGeschrieben(data)) {
+      setFehler('Die Angabe liegt jetzt verschlüsselt vor, das offene Feld konnte aber nicht geleert werden — bitte den Inhaber bitten.');
+      return;
+    }
+    setOk('Verschoben — die Angabe liegt verschlüsselt unter „🔒 Gesundheitsangaben".');
+    setAktiv({ ...k, hinweise: null });
+    await ladeKunden();
+  }
   async function behAnlegen() {
     if (!uid || !aktiv || !nb.behandlung.trim()) { setFehler('Bitte eine Behandlung angeben.'); return; }
     setFehler(null);
@@ -133,7 +173,8 @@ export default function WellnessPage() {
           <input style={{ ...styles.inp, width: 130 }} value={nk.telefon} onChange={(e) => setNk({ ...nk, telefon: e.target.value })} placeholder="Telefon" />
           <input style={{ ...styles.inp, width: 160 }} value={nk.email} onChange={(e) => setNk({ ...nk, email: e.target.value })} placeholder="E-Mail" />
           <NurVoll><label style={styles.lab}>Geburtstag<input type="date" style={styles.inp} value={nk.geburtsdatum} onChange={(e) => setNk({ ...nk, geburtsdatum: e.target.value })} /></label></NurVoll>
-          <NurVoll><input style={{ ...styles.inp, flex: 1 }} value={nk.hinweise} onChange={(e) => setNk({ ...nk, hinweise: e.target.value })} placeholder="Hinweise (Wünsche, Vorlieben — keine Gesundheitsangaben)" /></NurVoll>
+          <NurVoll><input style={{ ...styles.inp, flex: 1 }} value={nk.hinweise} onChange={(e) => setNk({ ...nk, hinweise: e.target.value })} placeholder={HINWEIS_FELD_TEXT} /></NurVoll>
+          {gesundheitsBezug(nk.hinweise) && <div style={{ ...styles.hinweis, width: '100%' }}>🔒 {GESCHUETZT_TEXT}</div>}
           <button style={styles.primaer} onClick={kundeAnlegen}>＋ Kunde</button>
         </div>
       </div>
@@ -157,6 +198,12 @@ export default function WellnessPage() {
                   {darfAbrechnen !== false && <button style={styles.rechnungBtn} onClick={rechnungErstellen}>→ Rechnung aus offenen Behandlungen</button>}
                 </div>
                 {aktiv.hinweise && <div style={styles.hinweis}>⚠️ {aktiv.hinweise}</div>}
+                {aktiv.hinweise && gesundheitsBezug(aktiv.hinweise) && (
+                  <div style={{ ...styles.hinweis, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span>🔒 Dieser Hinweis enthält vermutlich eine Gesundheitsangabe und steht unverschlüsselt im offenen Feld.</span>
+                    <button style={{ ...styles.praxisLink, background: 'transparent', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => hinweisVerschieben(aktiv)}>In geschützte Angaben verschieben</button>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <a href={`/dashboard/wellness/praxis?tab=gesundheit&kunde=${aktiv.id}`} style={styles.praxisLink}>🔒 Gesundheitsangaben (geschützt)</a>
                   <a href={`/dashboard/wellness/praxis?tab=einwilligung&kunde=${aktiv.id}`} style={styles.praxisLink}>✍ Einwilligungen</a>

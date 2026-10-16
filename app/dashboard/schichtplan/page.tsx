@@ -9,7 +9,9 @@ import type { EigenesFeld } from '@/lib/eigeneFelder';
 import KiAuge from '../_components/KiAuge';
 import { augeSchichtplan } from '@/lib/auge';
 import { zaehleSchichtplan } from '@/lib/augeZaehler';
-import { zahlText } from '@/lib/zahlen';
+import { zahlText, zahlAusFeld, zahlFeld } from '@/lib/zahlen';
+import { nichtsGeschrieben, NICHT_GESPEICHERT } from '@/lib/speichernPruefen';
+import { mindestlohnAm, minijobGrenzeAm, minijobLohn, maxMinijobStunden, minijobStatus, pruefeStundenlohn, lohnWarnung, empfehlungText, vorlagenAm } from '@/lib/mindestlohn';
 
 const MODUL = 'hr_schicht_vorlagen';
 
@@ -42,10 +44,10 @@ const FARB_PRESETS = [
 const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
-// Minijob-Rahmen 2026: 603 €/Monat bei Mindestlohn 13,90 €/h -> max. ~43,4 h/Monat
-const MINIJOB_EUR = 603;
-const MINDESTLOHN = 13.90;
-const MINIJOB_STD_MONAT = MINIJOB_EUR / MINDESTLOHN; // ≈ 43,38 h
+// MO0c (P386, 16.10.2026): Minijob-Grenze und Mindestlohn kommen je Monat aus
+// lib/mindestlohn.ts (vorher fest 603 € / 13,90 € — ab 2027 falsch). Erlaubte
+// Stunden = Grenze ÷ Stundenlohn des Minijobbers (mitarbeiter.minijob_stundenlohn,
+// SQL p386; leer = gesetzlicher Mindestlohn).
 
 // --- Datums-Helfer (alles lokal, niemals toISOString fuer date) ---
 function montagDerWoche(d: Date): Date {
@@ -271,7 +273,10 @@ export default function SchichtplanPage() {
   const [tauschAntraege, setTauschAntraege] = useState<any[]>([]);
 
   // Minijob-Stunden-Warnung (geplante Monatsstunden je Minijobber)
-  const [minijobWarnung, setMinijobWarnung] = useState<Record<string, { std: number; monat: string; status: 'ok' | 'knapp' | 'ueber' }>>({});
+  const [minijobWarnung, setMinijobWarnung] = useState<Record<string, { std: number; monat: string; status: 'ok' | 'knapp' | 'ueber'; max: number; lohn: number; grenze: number; hinweis: string | null }>>({});
+  // MO0c: Stundenlohn je Minijobber pflegen (nur wenn die Spalte da ist — SQL p386)
+  const [lohnEingabe, setLohnEingabe] = useState<Record<string, string>>({});
+  const [lohnMeldung, setLohnMeldung] = useState<string | null>(null);
 
   // Schichtplan-Bestaetigungen je Mitarbeiter (angezeigte Woche)
   const [bestaetigungen, setBestaetigungen] = useState<Record<string, { status: string; kommentar: string | null }>>({});
@@ -375,7 +380,8 @@ export default function SchichtplanPage() {
         .eq('owner_user_id', uid)
         .gte('datum', ymd(mStart)).lte('datum', ymd(mEnd));
 
-      const warn: Record<string, { std: number; monat: string; status: 'ok' | 'knapp' | 'ueber' }> = {};
+      const warn: Record<string, { std: number; monat: string; status: 'ok' | 'knapp' | 'ueber'; max: number; lohn: number; grenze: number; hinweis: string | null }> = {};
+      const monatsKey = `${mStart.getFullYear()}-${String(mStart.getMonth() + 1).padStart(2, '0')}`;
       maListe
         .filter((m: any) => (m.arbeitszeit_modell || '') === 'minijob')
         .forEach((m: any) => {
@@ -386,11 +392,19 @@ export default function SchichtplanPage() {
               const key = String(s.datum).slice(0, 7); // YYYY-MM
               proMonat[key] = (proMonat[key] || 0) + dauerStunden(s.beginn_um, s.ende_um, s.pause_minuten || 0);
             });
-          let bestKey = ''; let bestStd = 0;
-          Object.entries(proMonat).forEach(([k, v]) => { if (v > bestStd) { bestStd = v; bestKey = k; } });
-          const status: 'ok' | 'knapp' | 'ueber' =
-            bestStd > MINIJOB_STD_MONAT ? 'ueber' : (bestStd >= MINIJOB_STD_MONAT * 0.9 ? 'knapp' : 'ok');
-          warn[m.id] = { std: bestStd, monat: bestKey, status };
+          // Je Monat eigene Grenze (Mindestlohn kann zum Jahreswechsel steigen) —
+          // gezeigt wird der Monat, der am naechsten an seiner Grenze liegt.
+          let bestKey = monatsKey; let bestStd = 0; let bestQuote = -1;
+          Object.entries(proMonat).forEach(([k, v]) => {
+            const mx = maxMinijobStunden(m.minijob_stundenlohn, k) || 1;
+            if (v / mx > bestQuote) { bestQuote = v / mx; bestStd = v; bestKey = k; }
+          });
+          const max = maxMinijobStunden(m.minijob_stundenlohn, bestKey) || 0;
+          const lohn = minijobLohn(m.minijob_stundenlohn, bestKey);
+          warn[m.id] = {
+            std: bestStd, monat: bestKey, status: minijobStatus(bestStd, max), max,
+            lohn: lohn?.euro || 0, grenze: minijobGrenzeAm(bestKey) || 0, hinweis: lohn?.hinweis ?? null,
+          };
         });
       setMinijobWarnung(warn);
 
@@ -884,6 +898,23 @@ export default function SchichtplanPage() {
   // --- Rollen-Guard: Cockpit erst rendern, wenn Rolle = Chef ---------------
   // Waehrend der Pruefung und beim Mitarbeiter-Redirect wird NUR ein schlanker
   // Lade-Screen gezeigt. So blitzt das Chef-Cockpit beim Mitarbeiter nie auf.
+  // MO0c: Stundenlohn eines Minijobbers speichern (leer = gesetzlicher Mindestlohn)
+  async function lohnSpeichern(maId: string) {
+    setLohnMeldung(null);
+    const roh = (lohnEingabe[maId] ?? '').trim();
+    const mk = `${wochenStart.getFullYear()}-${String(wochenStart.getMonth() + 1).padStart(2, '0')}`;
+    const euro = roh === '' ? null : zahlAusFeld(roh);
+    if (roh !== '' && (euro == null || !Number.isFinite(euro))) { setLohnMeldung('Bitte einen Stundenlohn in Euro eintragen.'); return; }
+    const f = pruefeStundenlohn(euro);
+    if (f) { setLohnMeldung(f); return; }
+    const warnung = lohnWarnung(euro, mk);
+    const { data, error } = await supabase.from('mitarbeiter').update({ minijob_stundenlohn: euro }).eq('id', maId).select('id');
+    if (error || nichtsGeschrieben(data)) { setLohnMeldung(error ? 'Speichern fehlgeschlagen: ' + error.message : NICHT_GESPEICHERT); return; }
+    setLohnMeldung('✓ Stundenlohn gespeichert — die Minijob-Grenze wird neu gerechnet.' + (warnung ? ' ' + warnung : ''));
+    setLohnEingabe((x) => { const n = { ...x }; delete n[maId]; return n; });
+    await ladeDaten();
+  }
+
   if (rolle !== 'chef') {
     return (
       <div style={{
@@ -1133,9 +1164,9 @@ export default function SchichtplanPage() {
                         return (
                           <div
                             style={{ fontSize: 'clamp(11px, 0.94vw, 15px)', color: farbe, fontWeight: w?.status === 'ok' ? 500 : 700, marginTop: 2 }}
-                            title={`Minijob-Grenze 2026: max. ~${zahlText(MINIJOB_STD_MONAT, 1)} h/Monat (${MINIJOB_EUR} € ÷ ${zahlText(MINDESTLOHN, 2).replace('.', ',')} €). Geplant ${monatLabel(w?.monat || '')}: ${zahlText(std, 1)} h.`}
+                            title={`Minijob-Grenze ${monatLabel(w?.monat || '')}: ${w?.grenze ?? '—'} € ÷ ${zahlText(w?.lohn || 0, 2)} € Stundenlohn = max. ~${zahlText(w?.max || 0, 1)} h. Geplant: ${zahlText(std, 1)} h.${w?.hinweis ? ' ' + w.hinweis : ''}`}
                           >
-                            {icon}Minijob · {zahlText(std, 1)}/{zahlText(MINIJOB_STD_MONAT, 0)} h
+                            {icon}Minijob · {zahlText(std, 1)}/{zahlText(w?.max || 0, 0)} h
                             {w?.status === 'ueber' ? ' — Grenze überschritten!' : w?.status === 'knapp' ? ' — fast am Limit' : ''}
                           </div>
                         );
@@ -1275,8 +1306,43 @@ export default function SchichtplanPage() {
 
       {!laden && mitarbeiter.some((m) => (m.arbeitszeit_modell || '') === 'minijob') && (
         <div style={{ marginTop: 10, fontSize: 'clamp(12px, 1.06vw, 17px)', color: BRAND.textDim }}>
-          Minijob-Grenze 2026: max. ~{zahlText(MINIJOB_STD_MONAT, 1)} h/Monat ({MINIJOB_EUR} € ÷ {zahlText(MINDESTLOHN, 2).replace('.', ',')} € Mindestlohn).
-          Angezeigt werden die geplanten Schichtstunden im jeweiligen Kalendermonat.
+          {(() => {
+            const mk = `${wochenStart.getFullYear()}-${String(wochenStart.getMonth() + 1).padStart(2, '0')}`;
+            const ml = mindestlohnAm(mk);
+            return <>Minijob-Grenze {monatLabel(mk)}: {minijobGrenzeAm(mk)} € je Monat (aus dem Mindestlohn {zahlText(ml?.euro || 0, 2)} €).
+              Erlaubte Stunden = Grenze ÷ Stundenlohn des Minijobbers. Angezeigt werden die geplanten Schichtstunden im jeweiligen Kalendermonat.
+              <div style={{ marginTop: 4 }}>{empfehlungText(mk)}</div></>;
+          })()}
+          {mitarbeiter.some((m) => 'minijob_stundenlohn' in m) && (
+            <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+              <div style={{ fontWeight: 700, color: '#E8EDF4' }}>Stundenlohn der Minijobber (leer = Mindestlohn-Empfehlung, jederzeit änderbar)</div>
+              {(() => {
+                const mk = `${wochenStart.getFullYear()}-${String(wochenStart.getMonth() + 1).padStart(2, '0')}`;
+                const vorlagen = vorlagenAm(mk);
+                return mitarbeiter.filter((m) => (m.arbeitszeit_modell || '') === 'minijob').map((m) => {
+                  const wert = lohnEingabe[m.id] ?? (m.minijob_stundenlohn != null ? zahlFeld(Number(m.minijob_stundenlohn)) : '');
+                  return (
+                    <div key={m.id} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ minWidth: 160 }}>{maName(m)}</span>
+                      <input value={wert} inputMode="decimal" placeholder={zahlText(mindestlohnAm(mk)?.euro || 0, 2)}
+                        onChange={(e) => setLohnEingabe((x) => ({ ...x, [m.id]: e.target.value }))}
+                        style={{ width: 90, padding: '6px 8px', borderRadius: 8, border: `1px solid ${BRAND.border}`, background: 'transparent', color: '#E8EDF4' }} />
+                      <span>€/h</span>
+                      {vorlagen.length > 0 && (
+                        <select defaultValue="" onChange={(e) => { const v = vorlagen.find((x) => x.key === e.target.value); if (v) setLohnEingabe((x) => ({ ...x, [m.id]: zahlFeld(v.euro) })); e.currentTarget.value = ''; }}
+                          style={{ padding: '6px 8px', borderRadius: 8, border: `1px solid ${BRAND.border}`, background: BRAND.navy, color: '#E8EDF4' }}>
+                          <option value="">Branchen-Mindestlohn übernehmen …</option>
+                          {vorlagen.map((v) => <option key={v.key} value={v.key}>{v.label}: {zahlText(v.euro, 2)} € (bis {v.bis.split('-').reverse().join('.')})</option>)}
+                        </select>
+                      )}
+                      <button onClick={() => lohnSpeichern(m.id)} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: BRAND.gold, color: BRAND.navy, fontWeight: 700, cursor: 'pointer' }}>Speichern</button>
+                    </div>
+                  );
+                });
+              })()}
+              {lohnMeldung && <div style={{ color: lohnMeldung.startsWith('✓') ? BRAND.green : BRAND.danger }}>{lohnMeldung}</div>}
+            </div>
+          )}
         </div>
       )}
 
