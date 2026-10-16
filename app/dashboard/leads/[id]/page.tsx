@@ -4,6 +4,7 @@ import LeadDetailClient, { type LeadDetail } from './LeadDetailClient'
 import AblaufKnoepfe from '../../_components/AblaufKnoepfe'
 import ZustaendigBox from './ZustaendigBox'
 import QualiBox from './QualiBox'
+import GespraechBox from './GespraechBox'
 import AnrufVerlauf from '../../_components/AnrufVerlauf'
 import { ladeVerkaufsteam, ladeZustaendige } from '@/lib/verkaufsteamLaden'
 
@@ -41,6 +42,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <AnrufVerlauf leadId={lead.id} telefon={lead.telefon} angelegt={lead.created_at} />
         {/* Paket VK2: Qualifizierungsbogen, Übergabe an den Closer, „Passt nicht" mit Grund */}
         <QualiBox leadId={lead.id} team={stand.bereit ? stand.team : []} ich={stand.ich} nachfassAktiv={lead.nachfass_status === 'aktiv'} />
+        {/* Paket VK6: Gesprächsergebnis nach dem Verkaufsgespräch (Ergebnis, vereinbart, Anzahlung, Einwand) */}
+        <GespraechBox leadId={lead.id} kontaktId={lead.kontakt_id ?? null} email={lead.email ?? null} />
         {/* key: nach „Passt nicht" (Stufe → verloren) neu aufbauen, damit die Stufen-Anzeige stimmt */}
         <LeadDetailClient key={String(lead.stufe ?? '')} lead={lead} ohneAngebot={stand.frei} />
       </main>
