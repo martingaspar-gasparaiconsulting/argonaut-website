@@ -419,6 +419,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
   },
 
   // --- Vertrieb (Teil A2b) -------------------------------------------------
+  '/dashboard/leads/verteilung': {
+    zweck: 'Termin-Verteilung auf die Closer: reihum, nach freier Zeit oder aus. Online gebuchte Verkaufsgespräche (markierte Terminarten) gehen automatisch an einen Closer, der zur Zeit frei ist und eine Glocke bekommt. Regeln aus der Qualifizierung (z. B. hohes Budget an erfahrene Closer) nutzt „⚡ Vorschlag“ bei der Übergabe am Lead.',
+    wer: 'beide',
+    werText: 'Das Team sieht die Einstellungen und wer als Nächstes dran ist. Ändern darf nur die Geschäftsleitung.',
+    schritte: [
+      'Oben prüfen: Stehen alle Closer da? Wer „ohne Personal-Eintrag“ steht, bekommt keine Termine — dann unter Personal anlegen und verknüpfen',
+      '„1 · Modus“ wählen: Reihum oder Nach freier Zeit (Aus = keine automatische Zuteilung)',
+      '„2 · Terminarten“ ankreuzen, die Verkaufsgespräche sind (nur diese werden bei Online-Buchungen verteilt)',
+      'Unter „3 · Regeln“ Frage, Antwort und Closer wählen, „+ Regel“, dann „Verteilung speichern“',
+    ],
+    landetIn: [{ text: 'Termine (Closer am Termin, Grund der Zuteilung)', href: '/dashboard/termine' }, { text: 'Lead (⚡ Vorschlag bei der Übergabe)', href: '/dashboard/leads' }],
+    vorher: [{ text: 'Verkaufsteam mit Closern', href: '/dashboard/leads/team' }, { text: 'Qualifizierungsbögen (für Regeln)', href: '/dashboard/leads/boegen' }],
+  },
   '/dashboard/leads/boegen': {
     zweck: 'Qualifizierungsbögen je Angebot: welche Fragen der Setter im ersten Gespräch klärt. Vier Standardfragen (Bedarf, Budget, Entscheider, Zeitpunkt) sind vorbelegt, eigene Fragen kommen dazu. Am Lead entscheidet der Setter dann „Passt" (Übergabe an einen Closer mit Glocke und Spickzettel) oder „Passt nicht" mit Grund.',
     wer: 'chef',

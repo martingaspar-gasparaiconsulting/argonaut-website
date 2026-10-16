@@ -27,6 +27,7 @@ import { berechneSlots, type VerfuegbarkeitRow, type TerminRow, type Abwesenheit
 import { sendeMail, kundenMailLayout, absenderBranding } from '@/lib/mail';
 import { kontaktIdPerEmail } from '@/lib/kontaktZuordnung';
 import { drossel, drosselIp, drosselText } from '@/lib/drossel';
+import { closerFuerOnlineTermin, glockeNeuerTermin } from '@/lib/terminVerteilungServer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -194,11 +195,16 @@ export async function POST(req: NextRequest) {
     // ein gültiger Beginn mit ende_am=2099 den ganzen Kalender blockieren.
     const endeSlot = passt.ende;
 
+    // Paket VK3: Verkaufsgespräch ohne gewählten Mitarbeiter → freien Closer zuteilen
+    // (reihum / nach freier Zeit, lib/terminVerteilungServer.ts). Jeder Fehler = wie bisher ohne Zuteilung.
+    const zuteilung = mitarbeiterId ? null : await closerFuerOnlineTermin(db, betrieb.ownerId, art.id, beginnD, endeSlot);
+    const maFuerTermin = mitarbeiterId ?? zuteilung?.mitarbeiter_id ?? null;
+
     const notiz = [notizIn, telefon ? `Tel.: ${telefon}` : ''].filter(Boolean).join('\n') || null;
     // Filial-Stempel: Standort des gebuchten Mitarbeiters (falls gewählt), sonst null = fail-open.
     let standortId: string | null = null;
-    if (mitarbeiterId) {
-      const { data: maRow } = await db.from('mitarbeiter').select('standort_id').eq('id', mitarbeiterId).maybeSingle();
+    if (maFuerTermin) {
+      const { data: maRow } = await db.from('mitarbeiter').select('standort_id').eq('id', maFuerTermin).maybeSingle();
       standortId = ((maRow as { standort_id?: string | null } | null)?.standort_id) ?? null;
     }
     // Termin am Kunden festmachen, wenn es ihn im CRM schon gibt. Die Suche
@@ -215,14 +221,27 @@ export async function POST(req: NextRequest) {
       kontaktId = kontaktIdPerEmail((kontakte ?? []) as Array<{ id?: unknown; email?: unknown }>, kundeMail);
     } catch { /* Zuordnung ist Komfort, keine Bedingung fuer die Buchung */ }
 
-    const { error: insErr } = await db.from('termine').insert({
+    const terminZeile = {
       owner_user_id: betrieb.ownerId, standort_id: standortId, termin_art_id: art.id,
       beginn_am: beginnD.toISOString(), ende_am: endeSlot.toISOString(),
       titel: `${art.name || 'Termin'} (online gebucht)`,
       kunde_name: kundeName, kunde_email: kundeMail, notiz, kontakt_id: kontaktId,
       mitarbeiter_id: mitarbeiterId, status: 'geplant', quelle: 'online',
-    });
+    };
+    let { error: insErr } = zuteilung
+      ? await db.from('termine').insert({ ...terminZeile, mitarbeiter_id: zuteilung.mitarbeiter_id, verteilt_grund: zuteilung.grund })
+      : await db.from('termine').insert(terminZeile);
+    // Zuteilung gescheitert (z. B. Doppelbuchungsschutz beim Closer) → wie bisher ohne Closer buchen.
+    let zugeteilt = !!zuteilung && !insErr;
+    if (insErr && zuteilung) {
+      ({ error: insErr } = await db.from('termine').insert({ ...terminZeile, standort_id: null }));
+      zugeteilt = false;
+    }
     if (insErr) throw insErr;
+    if (zugeteilt && zuteilung) {
+      await glockeNeuerTermin(db, zuteilung.user_id, `Neuer Termin: ${kundeName}`,
+        `${art.name || 'Termin'} am ${beginnD.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' })} um ${beginnD.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })} Uhr · ${zuteilung.grund}`);
+    }
 
     // Bestätigungs-Mail an den Kunden — im Branding DES BETRIEBS
     // (bricht die Buchung bei Mailproblem nicht ab).

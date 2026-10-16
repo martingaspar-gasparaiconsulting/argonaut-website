@@ -166,7 +166,10 @@ export default function VerkaufsteamPage() {
             <div style={{ ...s.box, marginTop: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 <b>🎯 Qualifizierung (90 Tage)</b>
-                {istChef && <Link href="/dashboard/leads/boegen" style={{ color: C.gold, fontSize: 13.5 }}>📋 Qualifizierungsbögen verwalten</Link>}
+                <span style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                  {istChef && <Link href="/dashboard/leads/boegen" style={{ color: C.gold, fontSize: 13.5 }}>📋 Qualifizierungsbögen verwalten</Link>}
+                  <Link href="/dashboard/leads/verteilung" style={{ color: C.gold, fontSize: 13.5 }}>🔀 Termin-Verteilung</Link>
+                </span>
               </div>
               <div style={s.kacheln}>
                 <div style={s.kachel}><div style={s.dim}>Passt</div><b style={{ ...s.zahl, color: C.ok }}>{qq.passt}</b></div>

@@ -16,6 +16,7 @@ import { auswahl, personName, type Person } from '@/lib/verkaufsteam'
 import { feldwerteFuerStufe } from '@/lib/leadStufen'
 import { stoppWerte } from '@/lib/leadNachfass'
 import { nichtsGeschrieben } from '@/lib/speichernPruefen'
+import { istModus, waehleCloser, belegung, letzteZuteilung, regelnBereinigen, type Closer, type Termin } from '@/lib/terminVerteilung'
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -117,6 +118,33 @@ export default function QualiBox({ leadId, team, ich, nachfassAktiv }: { leadId:
     } finally { setBusy(false) }
   }
 
+  // Paket VK3: Closer nach den Verteil-Regeln vorschlagen (reihum / nach freier Zeit / Regeln aus den Antworten).
+  async function vorschlag() {
+    setMeldung(null)
+    const jetzt = new Date()
+    const bis = new Date(jetzt.getTime() + 14 * 86400000)
+    const [v, m, t, u] = await Promise.all([
+      supabase.from('vk_verteilung').select('modus, regeln').maybeSingle(),
+      supabase.from('mitarbeiter').select('id, auth_user_id').limit(2000),
+      supabase.from('termine').select('mitarbeiter_id, beginn_am, ende_am, status').gte('ende_am', jetzt.toISOString()).lte('beginn_am', bis.toISOString()).limit(5000),
+      supabase.from('vk_uebergabe').select('an_user_id, erstellt_am').gte('erstellt_am', new Date(jetzt.getTime() - 90 * 86400000).toISOString()).limit(5000),
+    ])
+    const cfg = (v.data as { modus?: string; regeln?: unknown } | null) ?? null
+    const modus = cfg && istModus(cfg.modus) && cfg.modus !== 'aus' ? cfg.modus : 'reihum'
+    const maId = new Map(((m.data as { id: string; auth_user_id: string | null }[] | null) ?? []).filter((x) => x.auth_user_id).map((x) => [x.auth_user_id as string, x.id]))
+    const pool = team.filter((p) => p.aktiv && p.funktion === 'closer')
+    const liste: Closer[] = (pool.length ? pool : closerListe).map((p) => ({ user_id: p.user_id, name: p.name, mitarbeiter_id: maId.get(p.user_id) ?? null }))
+    const w = waehleCloser({
+      modus, closer: liste,
+      zuletzt: letzteZuteilung(((u.data as { an_user_id: string; erstellt_am: string }[] | null) ?? []).map((x) => ({ user_id: x.an_user_id, am: x.erstellt_am }))),
+      minuten: belegung((t.data as Termin[] | null) ?? [], jetzt, bis),
+      antworten: antwortenBereinigen(fragen, antworten), regeln: regelnBereinigen(cfg?.regeln, liste.map((c) => c.user_id)),
+    })
+    if (!w) { setMeldung({ ok: false, text: 'Kein Closer verfügbar — bitte unter „Verkaufsteam" Closer festlegen.' }); return }
+    setCloser(w.user_id)
+    setMeldung({ ok: true, text: `Vorschlag: ${personName(team, w.user_id) ?? 'Closer'} (${w.grund})${!cfg || cfg.modus === 'aus' ? ' · Verteilung ist aus, vorgeschlagen wird reihum' : ''}.` })
+  }
+
   async function passtNicht() {
     const f = ergebnisPruefen({ ergebnis: 'passt_nicht', grund, grundText: grundFrei }, fragen, antworten, closerIds)
     if (f.length) { setMeldung({ ok: false, text: f.join(' ') }); return }
@@ -194,10 +222,13 @@ export default function QualiBox({ leadId, team, ich, nachfassAktiv }: { leadId:
           {modus === 'passt' && (
             <div style={{ display: 'grid', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '12px' }}>
               <label style={label}>Closer
-                <select style={feld} value={closer} onChange={(e) => setCloser(e.target.value)}>
-                  <option value="">— bitte wählen —</option>
-                  {closerListe.map((p) => <option key={p.user_id} value={p.user_id}>{p.name}{p.user_id === ich ? ' (Sie)' : ''}</option>)}
-                </select>
+                <span style={{ display: 'flex', gap: '8px' }}>
+                  <select style={feld} value={closer} onChange={(e) => setCloser(e.target.value)}>
+                    <option value="">— bitte wählen —</option>
+                    {closerListe.map((p) => <option key={p.user_id} value={p.user_id}>{p.name}{p.user_id === ich ? ' (Sie)' : ''}</option>)}
+                  </select>
+                  <button type="button" style={knopf('#C9A84C')} disabled={busy} onClick={() => void vorschlag()} title="Nach den Regeln unter Verkaufsteam → Termin-Verteilung">⚡ Vorschlag</button>
+                </span>
               </label>
               <label style={label}>Notiz für den Closer (steht auf dem Spickzettel)
                 <textarea style={{ ...feld, minHeight: '64px' }} maxLength={2000} value={notiz} onChange={(e) => setNotiz(e.target.value)} placeholder="z. B. will das Bad bis Mai fertig, Frau entscheidet mit" />
