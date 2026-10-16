@@ -1,6 +1,6 @@
 // ============================================================================
 // ARGONAUT OS · lib/fachdossier.ts — Paket 214 (05.10.2026) · Stufe 3 B11a
-// Fachdossier-Generator für alle 698 Branchen (nach dem Elektro-Richtwert)
+// Fachdossier-Generator für alle 697 Branchen (nach dem Elektro-Richtwert)
 //
 // RICHTWERT: das Elektro-Dossier vom 30.09.2026 (11 Seiten). Grundsätze, die
 // hier fest eingebaut sind:

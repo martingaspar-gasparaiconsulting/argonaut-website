@@ -1,9 +1,9 @@
 // ============================================================================
 // ARGONAUT OS · lib/vorfuehrung.ts — Motor der öffentlichen Branchen-Vorführung
 //
-// Setzt für JEDE der 698 Branchen eine vollständige Vorführung zusammen — OHNE
+// Setzt für JEDE der 697 Branchen eine vollständige Vorführung zusammen — OHNE
 // Login, OHNE Datenbank, OHNE KI-Aufruf. Alles kommt aus den Katalogen, die auch
-// das echte System und die 698 Dossiers steuern:
+// das echte System und die 697 Dossiers steuern:
 //
 //   · Schmerzpunkte + Ergebnisse  → app/vorschau/_lib/branchen-web (je Branche eigen)
 //   · Modul-Set                   → lib/branchenkatalog + lib/rechte
@@ -102,7 +102,7 @@ function schritteFuer(kategorie: string) {
 /**
  * Die vollständige Vorführung zu einem Schlüssel.
  * Zuerst wird unter den 21 handgeschriebenen Vorführ-Betrieben gesucht,
- * danach unter allen 698 Branchen. null = unbekannter Schlüssel.
+ * danach unter allen 697 Branchen. null = unbekannter Schlüssel.
  */
 export function vorfuehrDaten(slug: string): VorfuehrDaten | null {
   // --- Fall 1: einer der handgeschriebenen Vorführ-Betriebe ----------------
@@ -129,7 +129,7 @@ export function vorfuehrDaten(slug: string): VorfuehrDaten | null {
     };
   }
 
-  // --- Fall 2: eine der 698 Branchen --------------------------------------
+  // --- Fall 2: eine der 697 Branchen --------------------------------------
   const b = websiteBrancheBySlug(slug);
   if (!b) return null;
   const i = INHALT_JE_KATEGORIE[b.kategorie] || NOTNAGEL;
@@ -180,7 +180,7 @@ export function kategorieAusSchluessel(schluessel: string): string | null {
   return null;
 }
 
-/** Alle 698 für die Suche — bewusst schlank, das geht in den Browser. */
+/** Alle 697 für die Suche — bewusst schlank, das geht in den Browser. */
 export function alleBranchenKurz(): BrancheKurz[] {
   return websiteBranchen()
     .map((b) => ({ slug: b.slug, name: b.name, kategorie: b.kategorie }))

@@ -14,7 +14,7 @@ export interface VerkaufPack {
   ctaClaim: string;     // starke Zeile über dem Anfrage-Block
 }
 
-// Starker, branchenneutraler Standard — gilt sofort für alle 698, falls eine
+// Starker, branchenneutraler Standard — gilt sofort für alle 697, falls eine
 // Kategorie (noch) keine eigene Copy hat.
 export const DEFAULT_VERKAUF: VerkaufPack = {
   heroSub: 'Angebote, Aufträge, Rechnungen, Personal und Auswertungen für {branche} — in einem System, ein Login. Kein Zettel-Chaos, keine fünf Programme, die nicht miteinander reden.',

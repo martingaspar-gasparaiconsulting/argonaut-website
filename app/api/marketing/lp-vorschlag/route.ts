@@ -7,7 +7,7 @@ import { VERKAUF, DEFAULT_VERKAUF } from '@/app/vorschau/_lib/branchen-verkauf';
 //
 // Liefert einen branchenspezifischen Text-Vorschlag fuer eine Landingpage,
 // aus der vorhandenen Verkaufs-Copy (branchen-verkauf.ts, dieselbe Quelle wie
-// die 698 Website-Branchenseiten). Der Nutzer waehlt seine Kategorie im Editor,
+// die 697 Website-Branchenseiten). Der Nutzer waehlt seine Kategorie im Editor,
 // dieser Endpunkt fuellt Untertitel + Nutzen-Punkte vor (frei ueberschreibbar).
 //
 //   GET ?kategorie=<eine der 19>&typ=<newsletter|beratung|freebie|aktion>

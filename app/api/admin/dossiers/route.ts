@@ -15,10 +15,10 @@ import { betreiberGuard } from '@/lib/betreiberGuard';
 // WARUM VORAB ERZEUGEN, WENN DIE OEFFENTLICHE ROUTE DAS OHNEHIN TUT
 // Die tut es beim ERSTEN Abruf — und laesst genau den Besucher warten, der
 // gerade seine E-Mail bestaetigt hat. Nach einer Layout-Aenderung trifft das
-// jeden der 698 Slugs einmal. Vorab erzeugt wartet niemand.
+// jeden der 697 Slugs einmal. Vorab erzeugt wartet niemand.
 //
 // WARUM IN HAEPPCHEN
-// Ein PDF braucht ueber Gotenberg ein bis drei Sekunden. 698 Stueck sind
+// Ein PDF braucht ueber Gotenberg ein bis drei Sekunden. 697 Stueck sind
 // zwanzig Minuten — laenger als jede Serverlaufzeit. Deshalb liefert diese
 // Route immer nur ein Haeppchen und die Oberflaeche ruft sie wieder auf.
 // Ein Aufruf, der ins Zeitlimit laeuft, hinterliesse sonst halbe Arbeit
@@ -63,7 +63,7 @@ export async function GET() {
   const veraltet: string[] = [];
 
   try {
-    // Der Bucket haelt bis zu 698 aktuelle plus alte Fassungen — in Seiten holen.
+    // Der Bucket haelt bis zu 697 aktuelle plus alte Fassungen — in Seiten holen.
     let versatz = 0;
     for (let runde = 0; runde < 10; runde++) {
       const { data, error } = await db.storage.from(BUCKET).list('', { limit: 1000, offset: versatz });

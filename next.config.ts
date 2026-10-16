@@ -35,6 +35,9 @@ const nextConfig: NextConfig = {
       { source: "/vorschau/ressourcen/:slug", destination: "/ressourcen/:slug", permanent: true },
       { source: "/demo", destination: "/", permanent: true },
       { source: "/baustelle", destination: "/", permanent: true },
+      // 16.10.2026: „Floating- & Salzgrotten" stand doppelt (Gesundheit + Sport/Beauty) — jetzt EIN Eintrag „Salzgrotten" in Gesundheit & Wellness.
+      { source: "/branchen/floating-salzgrotten-gesundheit", destination: "/branchen/salzgrotten", permanent: true },
+      { source: "/branchen/floating-salzgrotten", destination: "/branchen/salzgrotten", permanent: true },
     ];
   },
 };

@@ -3,7 +3,7 @@
 // ============================================================================
 // ARGONAUT OS · app/admin/branchen/page.tsx  (Control-Room · Branchen-Katalog)
 //
-// OPERATOR-Sicht: alle 698 Branchen nach 19 Kategorien. Je Branche das fertige
+// OPERATOR-Sicht: alle 697 Branchen nach 19 Kategorien. Je Branche das fertige
 // Paket (Kategorie-Modul-Set + branchentypisches Wording + Standard-Automation).
 // Ein Klick → Kunde einladen: E-Mail-Login raus, Kunde setzt Passwort, ist sofort
 // online mit genau diesem Branchen-Set (tenant_module scharf).

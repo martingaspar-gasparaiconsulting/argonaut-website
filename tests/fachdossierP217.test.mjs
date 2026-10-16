@@ -24,7 +24,7 @@ test('Welle 1: zehn Handwerks-Branchen mit vollständigem Text', () => {
   }
 });
 
-test('Die Branchen-Schlüssel gibt es im Katalog der 698 Branchen', () => {
+test('Die Branchen-Schlüssel gibt es im Katalog der 697 Branchen', () => {
   const k = lies('app/vorschau/_lib/branchen-web.ts') + lies('lib/branchenkatalog.ts');
   const quelle = fs.readdirSync(path.join(WURZEL, 'app/vorschau/_lib')).map((f) => lies('app/vorschau/_lib/' + f)).join('\n') + k;
   for (const slug of WELLE1) assert.ok(quelle.includes(`'${slug}'`) || quelle.includes(`"${slug}"`), slug);

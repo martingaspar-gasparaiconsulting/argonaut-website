@@ -4,7 +4,7 @@
 // ARGONAUT OS · app/admin/fachdossiers/page.tsx  (Paket 214, 05.10.2026 · B11a)
 //
 // Der Fachdossier-Generator nach dem Elektro-Richtwert: Branche wählen,
-// Vorschau ansehen, PDF herunterladen. Übersicht, für wie viele der 698
+// Vorschau ansehen, PDF herunterladen. Übersicht, für wie viele der 697
 // Branchen schon geprüfte Branchentexte vorliegen.
 //
 // Vor der Abnahme durch den Anwalt trägt jedes Dossier das Wasserzeichen

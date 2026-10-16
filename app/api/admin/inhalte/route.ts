@@ -115,7 +115,7 @@ async function offeneStapel(db: ReturnType<typeof adminDb>, userId: string): Pro
  * klickt, bestellte sie ein zweites Mal und zahlte doppelt.
  *
  * Der frueher hier stehende Riegel „nur EIN Stapel gleichzeitig" war zu grob:
- * 698 Vorworte und 698 Dialoge passen zusammen mit den Modul-Kapiteln nicht in
+ * 697 Vorworte und 697 Dialoge passen zusammen mit den Modul-Kapiteln nicht in
  * einen Stapel (Grenze 1000). Jetzt zaehlt der konkrete Schluessel, nicht die
  * Anzahl der Stapel — mehrere Stapel duerfen parallel laufen, aber kein
  * Baustein wird zweimal bestellt.
@@ -258,7 +258,7 @@ export async function POST(req: Request) {
 
   const kosten = schaetzeKosten(vorbereitet.anfragen.length, modell);
   // Der Zweck nennt die Typen — bei mehreren parallelen Stapeln waere
-  // „Inhalts-Werkstatt: 698 Kapitel" sonst nicht unterscheidbar.
+  // „Inhalts-Werkstatt: 697 Kapitel" sonst nicht unterscheidbar.
   const typenImStapel = [...new Set(offen.map((o) => o.typ))].join(' + ');
   const zweck = `Inhalts-Werkstatt: ${vorbereitet.anfragen.length}× ${typenImStapel}`;
 

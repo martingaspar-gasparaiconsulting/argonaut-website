@@ -6,7 +6,7 @@
 // Kapitel ein E-Book braucht und wann eines fertig ist.
 //
 // WARUM DAS EINE EIGENE DATEI IST
-// E-Books und die 698 KI-Dialoge kommen aus derselben Quelle. Wuerde jede der
+// E-Books und die 697 KI-Dialoge kommen aus derselben Quelle. Wuerde jede der
 // vier Stellen (Erzeugung, Redaktion, E-Book-Bau, Dialog-Auslieferung) selbst
 // ausrechnen, welche Kapitel dazugehoeren, liefen die vier Rechnungen frueher
 // oder spaeter auseinander: der Stapel erzeugt Kapitel, die kein Buch abruft,
@@ -35,8 +35,8 @@ import { KERN_MODULE } from './pakete';
 export type BausteinTyp =
   | 'modul_kapitel'       // ~113 · einmal geschrieben, gilt fuer jeden Kunden
   | 'kategorie_kapitel'   //   19 · je Website-Kategorie eines
-  | 'branchen_vorwort'    //  698 · kurz, aus Schmerzen + Ergebnissen der Branche
-  | 'ki_dialog';          //  698 · der Gespraechseinstieg je Branche
+  | 'branchen_vorwort'    //  697 · kurz, aus Schmerzen + Ergebnissen der Branche
+  | 'ki_dialog';          //  697 · der Gespraechseinstieg je Branche
 
 export const BAUSTEIN_TYPEN: readonly BausteinTyp[] = [
   'modul_kapitel',

@@ -6,7 +6,7 @@
 // Der Einstieg am Vorführbildschirm. Zwei Wege, weil Menschen verschieden sind:
 //
 //   1. TIPPEN — „Was machen Sie beruflich?" Wer seinen Beruf eintippt, findet
-//      sich unter 698 Branchen wieder. Das ist der Moment, der verkauft: nicht
+//      sich unter 697 Branchen wieder. Das ist der Moment, der verkauft: nicht
 //      „so ähnlich wie meine Branche", sondern „das bin ich".
 //   2. BLÄTTERN — 19 Kategorie-Kacheln für alle, die auf einem fremden
 //      Bildschirm nichts eintippen wollen.

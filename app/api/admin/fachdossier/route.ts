@@ -10,7 +10,7 @@ import { dossierPdf } from '@/lib/dossierPdf';
 // ARGONAUT OS · /api/admin/fachdossier   (Paket 214, 05.10.2026 · B11a)
 //
 // Fachdossier-Generator nach dem Elektro-Richtwert — NUR für den Betreiber.
-//   GET                         -> Übersicht: 698 Branchen, fertig/Entwurf je Kategorie
+//   GET                         -> Übersicht: 697 Branchen, fertig/Entwurf je Kategorie
 //   GET ?slug=elektriker        -> Dossier als HTML (Vorschau im Command Center)
 //   GET ?slug=…&format=pdf      -> Dossier als PDF (Gotenberg)
 // Vor der Abnahme durch den Anwalt trägt jedes Dossier „ENTWURF – nicht zur

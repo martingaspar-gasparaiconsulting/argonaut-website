@@ -137,7 +137,7 @@ export default function AdminInhalte() {
   /**
    * Einen Stapel abschicken — wahlweise nur für einen Typ.
    *
-   * WARUM JE TYP: 698 Vorworte und 698 Dialoge passen zusammen mit den
+   * WARUM JE TYP: 697 Vorworte und 697 Dialoge passen zusammen mit den
    * Modul-Kapiteln nicht in einen Stapel (die Schnittstelle nimmt höchstens
    * 1000 auf einmal). Ein Knopf je Typ macht sichtbar, was gerade bestellt
    * wird — und was es kostet.
