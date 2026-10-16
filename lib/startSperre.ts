@@ -28,7 +28,8 @@ export type StartBereich =
   | 'vorbestellShop' // Paket 343 (BV3b): Vorbestellung und Vormerkliste im Shop-Schaufenster (R52, R53) — wirkt nur mit „shop“
   | 'adrPapier' // Paket 356 (A4c): ADR-Beförderungspapier ausstellen und ohne „ENTWURF“ drucken (R58)
   | 'foerderantrag' // HW-3 (16.10.2026): Förder-Übersicht Heizungstausch (KfW 458) an den Endkunden ausgeben (R67)
-  | 'metallzuschlag'; // HW-1 (16.10.2026): Metallzuschlag (Kupfer) als Position in Angebot/Rechnung übernehmen (R66)
+  | 'metallzuschlag' // HW-1 (16.10.2026): Metallzuschlag (Kupfer) als Position in Angebot/Rechnung übernehmen (R66)
+  | 'cookieMessung'; // C1 (16.10.2026): Einwilligungs-Fenster + Wiedererkennung mit Cookie auf Kunden-Webseiten (R68)
 
 /** Der Schalter. false = abgeschaltet bis zur Freigabe durch den Anwalt. */
 export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.freeze({
@@ -46,6 +47,7 @@ export const START_FREIGABE: Readonly<Record<StartBereich, boolean>> = Object.fr
   adrPapier: false,
   metallzuschlag: false,
   foerderantrag: false,
+  cookieMessung: false,
 });
 
 const GRUND: Record<StartBereich, string> = {
@@ -62,6 +64,7 @@ const GRUND: Record<StartBereich, string> = {
   vorbestellShop: 'Vorbestellungen im Online-Shop werden nach der rechtlichen Prüfung freigeschaltet. Bis dahin nehmen Sie Vorbestellungen an der Theke, am Telefon oder per E-Mail auf; die Aktionen können Sie für den Shop schon vorbereiten.',
   foerderantrag: 'Die Förder-Übersicht für Ihre Kunden wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie den Zuschuss intern schätzen und den Ablauf mit dem Kunden besprechen.',
   metallzuschlag: 'Die Übernahme des Metallzuschlags in Angebote und Rechnungen wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie den Zuschlag mit dem Rechner ausrechnen und intern nutzen.',
+  cookieMessung: 'Die Besucher-Messung mit Einwilligungs-Fenster wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin zählt Ihre Website weiter ohne Cookies – anonym, ohne Fenster und ohne Wiedererkennung.',
   adrPapier: 'Das Ausstellen von ADR-Beförderungspapieren wird nach der rechtlichen Prüfung freigeschaltet. Bis dahin können Sie Papiere als Entwurf vorbereiten und die 1000-Punkte-Rechnung nutzen; der Druck trägt „ENTWURF“.',
 };
 

@@ -14,6 +14,7 @@
 // ============================================================
 
 import { impressumText, datenschutzText, agbOeffentlich, fussHtml, type CiRecht, type WebDienste } from './webRecht';
+import { fensterHtml, fensterCss, fensterSkript } from './cookieEinwilligung';
 import { startFrei, startSperrGrund } from './startSperre';
 
 import { einstellung as einblendungEinstellung } from './einblendung';
@@ -32,6 +33,8 @@ export interface CiWeb extends CiRecht {
   oeffnungszeiten?: string | null;
   /** Paket PR (K04): Informationen zur Barrierefreiheit (Anlage 3 BFSG), schmales Markdown. Leer = kein Abschnitt. */
   barrierefreiheit_text?: string | null;
+  /** Paket C1: Einwilligungs-Fenster + Wiedererkennung mit Cookie (wirkt nur mit Start-Schalter cookieMessung). */
+  cookie_messung?: boolean | null;
 }
 
 // --- Baustein-Typen ---------------------------------------------------------
@@ -1038,7 +1041,7 @@ export function seiteHtml(
   seite: { titel?: string; bloecke: Block[] },
   ci: CiWeb,
   jahr: number,
-  opts: { oeffentlichId?: string; editor?: boolean; fahrzeugeLink?: string; verkaufenLink?: string; shopFrei?: boolean; agbText?: string | null } = {},
+  opts: { oeffentlichId?: string; editor?: boolean; fahrzeugeLink?: string; verkaufenLink?: string; shopFrei?: boolean; agbText?: string | null; cookieMessung?: boolean } = {},
 ): string {
   // Paket 346: /p/[id] und eigene Domains geben den wirksamen Stand mit (lib/freigabeServer.ts).
   const shopFrei = opts.shopFrei ?? startFrei('shop');
@@ -1068,6 +1071,10 @@ export function seiteHtml(
   const hatProdukte = shopFrei && (seite.bloecke || []).some((b) => b.typ === 'produkte');
   const hatChatbot = (seite.bloecke || []).some((b) => b.typ === 'chatbot');
   const hatEinblendung = (seite.bloecke || []).some((b) => b.typ === 'einblendung');
+  // Paket C1: Einwilligungs-Fenster nur auf veröffentlichten Seiten und nur, wenn die Route
+  // den wirksamen Stand mitgibt (Start-Schalter cookieMessung UND web_ci.cookie_messung).
+  const einwilligung = !!opts.oeffentlichId && !opts.editor && opts.cookieMessung === true;
+  const dienste = { ...webDiensteDerSeite(seite.bloecke || [], shopFrei), cookieMessung: einwilligung };
 
   return [
     '<!doctype html>',
@@ -1075,7 +1082,7 @@ export function seiteHtml(
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     '<title>' + firma + '</title>',
     seoMeta(ci, firma),
-    '<style>' + seiteCss(ci) + (opts.editor ? editorCss() : '') + '</style>',
+    '<style>' + seiteCss(ci) + (opts.editor ? editorCss() : '') + (einwilligung ? fensterCss(z(ci.farbe_primaer) || '#1F3A5F') : '') + '</style>',
     '</head><body>',
     '<header class="top"><div class="trow">',
     logo,
@@ -1083,14 +1090,17 @@ export function seiteHtml(
     '<nav class="mainnav"><a href="#leistungen">Leistungen</a>' + fahrzeuge + verkaufen + '<a href="#ueber">Über uns</a><a href="#kontakt">Kontakt</a></nav>',
     '</div></header>',
     koerper,
-    rechtsSektionen(ci, webDiensteDerSeite(seite.bloecke || [], shopFrei), opts.agbText),
+    rechtsSektionen(ci, dienste, opts.agbText),
     hatProdukte ? widerrufSektion(opts.oeffentlichId) : '',
-    fussHtml(ci, jahr, { widerruf: hatProdukte, barrierefreiheit: !!z(ci.barrierefreiheit_text), agb: !!agbOeffentlich(opts.agbText) }),
+    fussHtml(ci, jahr, { widerruf: hatProdukte, barrierefreiheit: !!z(ci.barrierefreiheit_text), agb: !!agbOeffentlich(opts.agbText), einwilligung }),
+    einwilligung ? fensterHtml() : '',
     anfrageSkript(),
     newsletterSkript(),
     terminSkript(),
     // Cookiefreie Website-Analyse: nur auf veröffentlichten Seiten (mit oeffentlichId),
     // nicht in der Editor-/Dashboard-Vorschau. Meldet an /api/oeffentlich/analyse.
+    // Paket C1: Das Fenster-Skript läuft VOR analyse.js (defer) und gibt nur nach „Annehmen" die Kennung weiter.
+    einwilligung ? fensterSkript(opts.oeffentlichId as string) : '',
     opts.oeffentlichId
       ? '<script>window.__ANALYSE_SEITE=' + JSON.stringify(opts.oeffentlichId) + ';</script><script src="/analyse.js" defer></script>'
       : '',

@@ -1379,6 +1379,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Website-Bauer (Erklärung im Fuß jeder Seite)', href: '/dashboard/webseiten' }, { text: 'Webauftritt (übernommene Farben)', href: '/dashboard/webauftritt' }],
     vorher: [{ text: 'Firmen-Auftritt', href: '/dashboard/webauftritt' }, { text: 'Gespeicherte Seiten im Website-Bauer', href: '/dashboard/webseiten' }],
   },
+  '/dashboard/webseiten/besucher-messung': {
+    zweck: 'Einwilligungs-Fenster für die eigene Website: Besucher entscheiden selbst, ob sie wiedererkannt werden dürfen. Nur mit Zustimmung setzt die Seite ein Cookie mit einer Zufalls-Kennung; so wird sichtbar, wer wiederkommt und über welche Anzeige jemand nach Tagen anfragt. Ohne Zustimmung zählt die Seite weiter anonym ohne Cookie. Jede Entscheidung wird als Nachweis ohne IP-Adresse gespeichert.',
+    wer: 'chef',
+    werText: 'Nur der Chef schaltet das Fenster ein oder aus. Bis zur rechtlichen Prüfung durch ARGONAUT ist das Einschalten gesperrt.',
+    schritte: [
+      'Oben steht, ob die Funktion schon freigeschaltet ist. Solange das Schloss angezeigt wird, zählt die Website weiter ohne Cookie',
+      '„2 · Vorschau des Fensters“ ansehen: „Annehmen“ und „Ablehnen“ sind gleich groß und gleich farbig',
+      '„Fenster einschalten“ klicken und die Rückfrage bestätigen. Die Datenschutzerklärung bekommt den passenden Abschnitt automatisch',
+      'Unter „3 · Nachweise“ steht jede Entscheidung mit Zeitpunkt und Text-Fassung. Abschalten jederzeit mit „Fenster ausschalten“',
+    ],
+    landetIn: [{ text: 'Website-Bauer (Fenster und „Cookie-Einstellungen“ im Fuß jeder veröffentlichten Seite)', href: '/dashboard/webseiten' }],
+    vorher: [{ text: 'Firmen-Auftritt (Hauptfarbe für die Knöpfe)', href: '/dashboard/webauftritt' }, { text: 'Veröffentlichte Seite im Website-Bauer', href: '/dashboard/webseiten' }],
+  },
   '/dashboard/rechtstexte': {
     zweck: 'Hier hinterlegt die Geschäftsleitung ihre eigenen Texte für Verträge, Bedingungen und Erklärungen, die Kunden unterschreiben — zum Beispiel die Bedingungen der Einlagerung im Verwahrprotokoll. ARGONAUT liefert dafür bewusst keinen Mustertext, nur ein Gerüst mit Überschriften. Ihren Text setzt ARGONAUT in das Dokument ein und füllt Platzhalter wie {{kunde}} automatisch. Jede Änderung wird eine neue Fassung; frühere Fassungen bleiben unveränderbar belegbar.',
     wer: 'chef',

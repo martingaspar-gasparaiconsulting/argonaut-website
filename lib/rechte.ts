@@ -436,6 +436,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🖥️ Website-Bauer', href: '/dashboard/webseiten', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   // Paket PR (24.09.26): Barrierefreiheits-Check (BFSG) — Unterpfad des Website-Bauers, nur Chef.
   { label: '♿ Barrierefreiheit', href: '/dashboard/webseiten/barrierefreiheit', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
+  // Paket C1 (16.10.26): Einwilligungs-Fenster + Besucher-Messung mit Cookie — Unterpfad des Website-Bauers, nur Chef (Start-Schalter cookieMessung).
+  { label: '🍪 Besucher-Messung', href: '/dashboard/webseiten/besucher-messung', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   // Paket 347 (13.10.26): A1 Vorlagen-Prinzip — eigene Rechtstexte des Betriebs (Verwahrung, Kfz …), nur Chef.
   { label: '📜 Meine Rechtstexte', href: '/dashboard/rechtstexte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },
   { label: '🔐 Rechte', href: '/dashboard/rechte', nurChef: true, ebene: 1, gruppe: 'verwaltung' },

@@ -62,6 +62,11 @@ export const DROSSEL: Record<string, DrosselRegel[]> = {
     { art: 'ip', max: 10, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },
   ],
+  // Paket C1: Nachweis aus dem Einwilligungs-Fenster — je Besucher und je Seite gedeckelt.
+  'oeffentlich/einwilligung': [
+    { art: 'ip', max: 30, fensterSek: STUNDE },
+    { art: 'ziel', max: 5000, fensterSek: TAG },
+  ],
   'oeffentlich/web-anfrage': [
     { art: 'ip', max: 5, fensterSek: STUNDE },
     { art: 'ziel', max: 3, fensterSek: TAG },

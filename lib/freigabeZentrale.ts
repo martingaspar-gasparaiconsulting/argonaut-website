@@ -55,6 +55,7 @@ export const START_INFO: Readonly<Record<StartBereich, SchalterInfo>> = Object.f
   adrPapier: { titel: 'ADR-Beförderungspapier', aus: 'Ausstellen; Druck immer „ENTWURF" (Entsorgung → Gefahrgut)', anwalt: 'R58' },
   foerderantrag: { titel: 'Förder-Übersicht Heizungstausch für Endkunden', aus: 'Druck/Ausgabe der KfW-458-Schätzung an den Kunden (Rechner intern frei)', anwalt: 'R67' },
   metallzuschlag: { titel: 'Metallzuschlag in Angebot und Rechnung', aus: 'Übernahme des Kupferzuschlags als Position (Rechner bleibt nutzbar)', anwalt: 'R66' },
+  cookieMessung: { titel: 'Besucher-Messung mit Einwilligung (Cookie)', aus: 'Einwilligungs-Fenster, Wiedererkennungs-Cookie und Nachweis auf Kunden-Webseiten (ohne Schalter: Zählung ohne Cookie)', anwalt: 'R68' },
 });
 
 /** Je Import-Sperre. Neue Bereiche MÜSSEN hier stehen (Test). */

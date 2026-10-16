@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase-server';
 import { createHash } from 'crypto';
 import { berlinTag } from '@/lib/lpAnalytics';
+import { startFreiServer } from '@/lib/freigabeServer';
+import { gueltigeKennung, messungAktiv, kennungFuerEreignis } from '@/lib/cookieEinwilligung';
 
 // ============================================================================
 // ARGONAUT OS · /api/oeffentlich/analyse  (cookiefreies Website-Tracking)
@@ -185,6 +187,10 @@ export async function POST(req: Request) {
     // ('argonaut-os') läuft ohne Inhaber. Unbekannte/nicht-live Seiten still
     // verwerfen, damit die Tabelle sauber bleibt.
     let owner_user_id: string | null = null;
+    // Paket C1: Besucher-Kennung aus dem Einwilligungs-Cookie — nur mit Start-Schalter
+    // cookieMessung UND eingeschalteter Messung des Betriebs (web_ci.cookie_messung).
+    // Ohne beides wird sie verworfen und wie bisher nur ohne Cookie gezählt.
+    let besucher_id: string | null = null;
     if (seite !== 'argonaut-os') {
       const { data } = await db
         .from('web_seiten')
@@ -194,12 +200,16 @@ export async function POST(req: Request) {
       const row = data as { owner_user_id?: string; status?: string } | null;
       if (row?.status === 'live' && row.owner_user_id) {
         owner_user_id = row.owner_user_id;
+        if (gueltigeKennung(b.besucher_id) && (await startFreiServer('cookieMessung'))) {
+          const { data: ciZeile } = await db.from('web_ci').select('cookie_messung').eq('owner_user_id', owner_user_id).maybeSingle();
+          besucher_id = kennungFuerEreignis(b.besucher_id, messungAktiv(true, ciZeile as { cookie_messung?: boolean | null } | null));
+        }
       } else {
         return NextResponse.json({ ok: true }, { headers: CORS });
       }
     }
 
-    await db.from('web_ereignisse').insert({
+    const zeile: Record<string, unknown> = {
       oeffentlich_id: seite,
       owner_user_id,
       typ,
@@ -217,7 +227,14 @@ export async function POST(req: Request) {
       os: osAusUA(ua),
       land,
       besucher_tag,
-    });
+    };
+    if (besucher_id) zeile.besucher_id = besucher_id;
+    const { error: schreibFehler } = await db.from('web_ereignisse').insert(zeile);
+    // Fehlt die Spalte noch (SQL p406), zählt das Ereignis trotzdem — nur ohne Kennung.
+    if (schreibFehler && besucher_id) {
+      delete zeile.besucher_id;
+      await db.from('web_ereignisse').insert(zeile);
+    }
 
     return NextResponse.json({ ok: true }, { headers: CORS });
   } catch (err) {

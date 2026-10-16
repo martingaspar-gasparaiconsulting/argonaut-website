@@ -23,6 +23,10 @@
     function senden(daten) {
       try {
         daten.seite = SEITE;
+        // Paket C1: Kennung nur, wenn das Einwilligungs-Fenster der Kunden-Webseite nach
+        // „Annehmen" eine gesetzt hat. Dieses Skript selbst liest und setzt nie ein Cookie.
+        var kennung = window && window.__ANALYSE_BESUCHER;
+        if (typeof kennung === 'string' && kennung.length === 36) daten.besucher_id = kennung;
         var koerper = JSON.stringify(daten);
         if (navigator.sendBeacon) {
           navigator.sendBeacon(ENDPUNKT, new Blob([koerper], { type: 'text/plain' }));

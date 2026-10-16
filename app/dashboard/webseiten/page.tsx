@@ -270,6 +270,10 @@ export default function WebseitenPage() {
       <p style={styles.sub}>
         <a href="/dashboard/webseiten/barrierefreiheit" style={styles.link}>♿ Barrierefreiheit prüfen (BFSG)</a> — Farben, Seiten und die Pflicht-Erklärung.
       </p>
+      {/* Paket C1: Einwilligungs-Fenster + Wiedererkennung mit Cookie (Start-Schalter cookieMessung) */}
+      <p style={styles.sub}>
+        <a href="/dashboard/webseiten/besucher-messung" style={styles.link}>🍪 Besucher-Messung mit Einwilligung</a> — wiederkehrende Besucher erkennen, nur wenn sie zustimmen.
+      </p>
 
       {laden ? (
         <p style={styles.dim}>Lädt …</p>

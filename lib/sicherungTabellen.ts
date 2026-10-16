@@ -98,7 +98,7 @@ export const WEITERE_TABELLEN: string[] = [
   'verkaufschancen', 'verleih_artikel', 'verleih_vorgang', 'versammlung', 'versammlung_beschluss',
   'versand_sendung', 'vertraege', 'vertrieb_aktivitaet', 'vertrieb_woche', 'vorlage_pool',
   'vorlagen_aufgaben', 'wareneingang', 'wareneingang_positionen', 'wartungshistorie',
-  'wartungsvertraege', 'web_ci', 'web_ereignisse', 'web_seiten', 'webinar_anmeldung',
+  'wartungsvertraege', 'web_ci', 'web_einwilligung', 'web_ereignisse', 'web_seiten', 'webinar_anmeldung',
   'webinar_termin', 'webinar_versand', 'webinare', 'wellness_behandlungen', 'wellness_kunden',
   'werkstatt_anhaenge', 'werkstatt_auftraege', 'werkstatt_fahrzeug_halter_log',
   'werkstatt_fahrzeuge', 'werkstatt_freigabe_log', 'werkstatt_material_buchungen',

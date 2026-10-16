@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin';
 import { startFreiServer } from '@/lib/freigabeServer';
+import { messungAktiv } from '@/lib/cookieEinwilligung';
 import { seiteHtml, type CiWeb, type Block } from '@/lib/webBloecke';
 import { aktiveBoerseKennung, betriebZuDomain, boerseDb } from '@/lib/kfzBoerseLaden';
 import { aktiveAnkaufKennung } from '@/lib/fahrzeugMappeServer';
@@ -58,7 +59,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ host: s
     // Paket 349: AGB nur aus „Meine Rechtstexte" des Betriebs (web.agb), sonst kein AGB-Abschnitt.
     const { data: agbZeile } = await db.from('rechtstext').select('text').eq('owner_user_id', (seite as { owner_user_id: string }).owner_user_id).eq('schluessel', 'web.agb').maybeSingle();
     const agbText = (agbZeile as { text?: string } | null)?.text ?? null;
-    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: (seite as { oeffentlich_id?: string }).oeffentlich_id, shopFrei: await startFreiServer('shop'), agbText, ...(boerse ? { fahrzeugeLink: '/fahrzeuge' } : {}), ...(ankauf ? { verkaufenLink: '/fahrzeug-verkaufen' } : {}) });
+    const html = seiteHtml({ titel: (seite as { titel?: string }).titel, bloecke }, (ci as CiWeb) || {}, new Date().getFullYear(), { oeffentlichId: (seite as { oeffentlich_id?: string }).oeffentlich_id, shopFrei: await startFreiServer('shop'), agbText, cookieMessung: messungAktiv(await startFreiServer('cookieMessung'), ci as { cookie_messung?: boolean | null } | null), ...(boerse ? { fahrzeugeLink: '/fahrzeuge' } : {}), ...(ankauf ? { verkaufenLink: '/fahrzeug-verkaufen' } : {}) });
 
     return new Response(html, {
       status: 200,

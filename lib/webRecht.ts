@@ -11,6 +11,8 @@
 // Editor-Oberfläche, vom KI-Generator UND vom Seiten-Renderer (W3/W7) nutzbar.
 // ============================================================
 
+import { DATENSCHUTZ_ABSCHNITT, FENSTER } from './cookieEinwilligung';
+
 export interface CiRecht {
   firma?: string | null;
   impressum_inhaber?: string | null;
@@ -79,6 +81,8 @@ export interface WebDienste {
   video?: boolean;
   karte?: boolean;
   whatsapp?: boolean;
+  /** Paket C1: Einwilligungs-Fenster + Wiedererkennung mit Cookie (Start-Schalter cookieMessung UND web_ci.cookie_messung). */
+  cookieMessung?: boolean;
 }
 
 export function datenschutzText(ci: CiRecht, dienste?: WebDienste, opts: { mitHinweis?: boolean } = {}): string {
@@ -105,6 +109,8 @@ export function datenschutzText(ci: CiRecht, dienste?: WebDienste, opts: { mitHi
     'Beim Aufruf verarbeitet der Server technisch notwendige Daten (IP-Adresse, Datum und Uhrzeit, aufgerufene Seite, Browser-Angaben), um die Seite auszuliefern und vor Missbrauch zu schützen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO. Für Übermittlungen in die USA gelten die EU-Standardvertragsklauseln bzw. der EU-US Data Privacy Framework.');
   abschnitt('Cookiefreie Reichweitenmessung',
     'Wir messen, welche Seiten aufgerufen werden, woher Besucher kommen, welche Links angeklickt werden und wie lange eine Seite sichtbar war. Dafür werden keine Cookies gesetzt und nichts auf Ihrem Gerät gespeichert. Ihre IP-Adresse wird nicht gespeichert; zur Zählung dient ein Schlüssel, der aus Datum, IP-Adresse und Browser-Angaben berechnet wird und täglich wechselt. Ein Wiedererkennen über mehrere Tage ist damit nicht möglich. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (Verbesserung unseres Angebots).');
+  // Paket C1: nur wenn die Messung mit Einwilligung auf dieser Seite wirklich läuft (nie im Sammeltext „alle").
+  if (d.cookieMessung) abschnitt(DATENSCHUTZ_ABSCHNITT.titel, ...DATENSCHUTZ_ABSCHNITT.absaetze);
   if (alle || d.kontakt) {
     abschnitt('Kontakt- und Anfrageformular' + falls,
       'Nutzen Sie unser Formular, verarbeiten wir Ihre Angaben (z. B. Name, E-Mail-Adresse, Telefonnummer, Nachricht) zur Bearbeitung Ihrer Anfrage und speichern sie in unserer Kundenverwaltung. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Anfrage vor Vertragsschluss) bzw. lit. f DSGVO. Werbung senden wir Ihnen nur, wenn Sie dem gesondert zugestimmt haben.');
@@ -181,7 +187,7 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean; barrierefreiheit?: boolean; agb?: boolean } = {}): string {
+export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean; barrierefreiheit?: boolean; agb?: boolean; einwilligung?: boolean } = {}): string {
   const firma = esc(z(ci.firma) || 'Ihr Firmenname');
   return [
     '<footer class="ao-fuss">',
@@ -193,6 +199,8 @@ export function fussHtml(ci: CiRecht, jahr: number, opts: { widerruf?: boolean; 
     opts.agb ? '      <a href="#agb">AGB</a>' : '',
     opts.widerruf ? '      <a href="#widerruf" class="ao-fuss-widerruf"><b>Vertrag widerrufen</b></a>' : '',
     opts.barrierefreiheit ? '      <a href="#barrierefreiheit">Barrierefreiheit</a>' : '',
+    // Paket C1: Widerruf jederzeit — öffnet das Einwilligungs-Fenster wieder.
+    opts.einwilligung ? '      <button type="button" class="ao-fuss-einw" data-ao-einw-oeffnen>' + FENSTER.einstellungen + '</button>' : '',
     '    </nav>',
     // Paket 273: offener Hinweis auf ARGONAUT — nur die Marke, keine Suchbegriffe im Linktext.
     '    <a class="ao-fuss-ao" href="https://argonaut-os.com" rel="noopener">Präsentiert mit ARGONAUT OS</a>',
