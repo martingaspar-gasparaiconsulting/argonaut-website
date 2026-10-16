@@ -136,6 +136,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '🎯 Leads', href: '/dashboard/leads', modul: 'leads', ebene: 3, gruppe: 'vertrieb' },
   // Paket 358 (13.10.26): Verkaufsteam (VK1) — Unterpfad von /dashboard/leads, deshalb ohne eigenen Modul-Schluessel.
   { label: '👥 Verkaufsteam', href: '/dashboard/leads/team', ebene: 3, gruppe: 'vertrieb' },
+  // Paket VK2 (16.10.26): Qualifizierungsbögen je Angebot — Unterpfad von /dashboard/leads, nur Chef legt an.
+  { label: '📋 Qualifizierungsbögen', href: '/dashboard/leads/boegen', nurChef: true, ebene: 3, gruppe: 'vertrieb' },
   // Akquise-Cockpit: bewusst OHNE `modul`-Schluessel. Ein zweiter Eintrag mit
   // `modul: 'leads'` wuerde in MODUL_PFAD den Pfad von /dashboard/leads
   // ueberschreiben. `immer: true` heisst: jeder erfasst seine eigene Arbeit —

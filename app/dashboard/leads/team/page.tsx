@@ -15,6 +15,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import Leerzustand from '../../_components/Leerzustand';
 import { C, s } from '../../bestattung/bestattungUi';
 import { nichtsGeschrieben } from '@/lib/speichernPruefen';
+import { gruendeZaehlen, passtQuote } from '@/lib/qualifizierung';
 import {
   FUNKTIONEN, teamAufbauen, uebersicht, funktionWerte, funktionName,
   type Person, type MitarbeiterRoh, type FunktionRoh, type LeadKurz,
@@ -39,6 +40,9 @@ export default function VerkaufsteamPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [entwurf, setEntwurf] = useState<Entwurf>({});
+  // Paket VK2: Qualifizierung und Übergaben der letzten 90 Tage
+  const [qualis, setQualis] = useState<{ ergebnis: string; grund: string | null }[] | null>(null);
+  const [uebergaben, setUebergaben] = useState<{ an_user_id: string }[]>([]);
 
   const lade = useCallback(async () => {
     const { data: u } = await supabase.auth.getUser();
@@ -61,6 +65,13 @@ export default function VerkaufsteamPage() {
     setFrei(!fr.error && fr.data === true);
     setLeads(l.error ? [] : ((l.data as unknown) as LeadKurz[]) ?? []);
     setEntwurf(Object.fromEntries(t.map((p) => [p.user_id, { funktion: p.funktion ?? '', frei: p.frei, aktiv: p.aktiv }])));
+    const seit = new Date(Date.now() - 90 * 86400000).toISOString();
+    const [q, ue] = await Promise.all([
+      supabase.from('lead_qualifizierung').select('ergebnis, grund').gte('aktualisiert_am', seit).limit(5000),
+      supabase.from('vk_uebergabe').select('an_user_id').gte('erstellt_am', seit).limit(5000),
+    ]);
+    setQualis(q.error ? null : ((q.data as { ergebnis: string; grund: string | null }[]) ?? []));
+    setUebergaben(ue.error ? [] : ((ue.data as { an_user_id: string }[]) ?? []));
     setLaden(false);
   }, []);
   useEffect(() => { void lade(); }, [lade]);
@@ -144,6 +155,51 @@ export default function VerkaufsteamPage() {
             })}</tbody>
           </table>
         </div>
+        {/* Paket VK2: Qualifizierung und Übergaben (90 Tage) */}
+        {qualis && (() => {
+          const qq = passtQuote(qualis);
+          const gr = gruendeZaehlen(qualis);
+          const jeCloser = new Map<string, number>();
+          for (const u of uebergaben) jeCloser.set(u.an_user_id, (jeCloser.get(u.an_user_id) ?? 0) + 1);
+          const maxG = Math.max(1, ...gr.map((g) => g.anzahl));
+          return (
+            <div style={{ ...s.box, marginTop: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                <b>🎯 Qualifizierung (90 Tage)</b>
+                {istChef && <Link href="/dashboard/leads/boegen" style={{ color: C.gold, fontSize: 13.5 }}>📋 Qualifizierungsbögen verwalten</Link>}
+              </div>
+              <div style={s.kacheln}>
+                <div style={s.kachel}><div style={s.dim}>Passt</div><b style={{ ...s.zahl, color: C.ok }}>{qq.passt}</b></div>
+                <div style={s.kachel}><div style={s.dim}>Passt nicht</div><b style={{ ...s.zahl, color: C.bad }}>{qq.passtNicht}</b></div>
+                <div style={s.kachel}><div style={s.dim}>Quote passt</div><b style={s.zahl}>{qq.quote === null ? '–' : `${qq.quote} %`}</b><span style={s.klein}>noch offen: {qq.offen}</span></div>
+              </div>
+              {qualis.length === 0 ? (
+                <p style={s.klein}>Noch keine Qualifizierung erfasst. Am Lead unter „🎯 Qualifizierung" den Bogen ausfüllen und „Passt" oder „Passt nicht" wählen.</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginTop: 8 }}>
+                  <div>
+                    <div style={s.h3}>Warum es nicht passt</div>
+                    {gr.length === 0 ? <span style={s.klein}>Noch kein „Passt nicht".</span> : gr.map((g) => (
+                      <div key={g.key} style={{ position: 'relative', margin: '4px 0' }}>
+                        <div style={{ position: 'absolute', inset: 0, width: `${(g.anzahl / maxG) * 100}%`, background: C.bad, opacity: 0.15, borderRadius: 6 }} />
+                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', padding: '5px 8px', fontSize: 14 }}><span>{g.text}</span><b>{g.anzahl}</b></div>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div style={s.h3}>Übergaben je Closer</div>
+                    {jeCloser.size === 0 ? <span style={s.klein}>Noch keine Übergabe.</span> : [...jeCloser.entries()].sort((a, b) => b[1] - a[1]).map(([id, n]) => (
+                      <div key={id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 8px', fontSize: 14, borderBottom: `1px solid ${C.border}` }}>
+                        <span>{team.find((p) => p.user_id === id)?.name ?? 'Ehemalig'}</span><b>{n}</b>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         <p style={s.klein}>
           {FUNKTIONEN.map((f) => `${f.name}: ${f.text}`).join(' · ')}. „frei" passt für freie Mitarbeiter ohne Einblick in Umsätze; die
           Geschäftsleitung kann nicht „frei" sein. Wer „inaktiv" ist, erscheint nicht mehr in der Auswahl am Lead.

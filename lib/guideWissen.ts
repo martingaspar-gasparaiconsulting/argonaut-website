@@ -419,6 +419,19 @@ export const WISSEN: Record<string, SeitenWissen> = {
   },
 
   // --- Vertrieb (Teil A2b) -------------------------------------------------
+  '/dashboard/leads/boegen': {
+    zweck: 'Qualifizierungsbögen je Angebot: welche Fragen der Setter im ersten Gespräch klärt. Vier Standardfragen (Bedarf, Budget, Entscheider, Zeitpunkt) sind vorbelegt, eigene Fragen kommen dazu. Am Lead entscheidet der Setter dann „Passt" (Übergabe an einen Closer mit Glocke und Spickzettel) oder „Passt nicht" mit Grund.',
+    wer: 'chef',
+    werText: 'Bögen legt nur die Geschäftsleitung an. Ausfüllen darf am Lead jeder mit Zugriff auf Leads, freie Setter nur bei ihren eigenen Leads.',
+    schritte: [
+      '„Neuer Bogen“ klicken, Namen und bei Bedarf das Angebot eintragen',
+      '„+ Eigene Frage“: Fragetext, Art (Freitext, Auswahl, Zahl, Ja / Nein) und ob sie vor der Übergabe Pflicht ist. Bei „Auswahl“ je Zeile eine Möglichkeit',
+      '„Bogen speichern“. Am Lead steht er unter „🎯 Qualifizierung“ zur Auswahl',
+      'Nicht mehr gebrauchte Bögen auf „inaktiv“ setzen — gelöscht wird nichts, damit alte Antworten lesbar bleiben',
+    ],
+    landetIn: [{ text: 'Lead (Qualifizierung und Spickzettel)', href: '/dashboard/leads' }, { text: 'Verkaufsteam (Auswertung „Passt nicht“)', href: '/dashboard/leads/team' }],
+    vorher: [{ text: 'Verkaufsteam mit Setter und Closer', href: '/dashboard/leads/team' }],
+  },
   '/dashboard/leads/team': {
     zweck: 'Verkaufsteam: wer im Verkauf Setter, Closer oder Teamleitung ist, wer „frei" ist (nur eigene Leads, keine Deals), und wie viele Leads jede Person betreut.',
     wer: 'beide',

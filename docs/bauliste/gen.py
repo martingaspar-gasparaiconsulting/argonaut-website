@@ -142,7 +142,7 @@ tr.summe td{{background:var(--goldbg)}} .zw{{margin:6px 0 0;font-size:16px}} .fu
 </style>
 <div class="wrap">
 <div class="kopf">
-<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · Runde fertig bis P405 · Handwerk 1a: nur noch C1 (Anwalt), D1 (Hetzner), WEB-HW (gemeinsam) · SQL p405 gesammelt</div>
+<div class="eyebrow">ARGONAUT OS · Stand 16.10.2026 · Live bis P407 · C1 fertig (hinter Schalter bis Anwalt) · Handwerk 1a: nur noch D1 (Hetzner), WEB-HW (gemeinsam) · weiter mit Platz 1b</div>
 <h1>Bauliste: was fehlt, was falsch läuft, wie es gelöst wird</h1>
 <p class="lead">Neu seit 15.10.2026: gebaut wird nach Branchen – Handwerk zuerst und komplett, dann Plätze 2–19, dann eigener Server, Partner und zum Schluss die Dossiertexte. Was der Anwalt freigeben muss, wird gebaut und bleibt bis dahin gesperrt. Jede Zeile ist ein Paket. Links steht, was heute fehlt oder schiefläuft, rechts die Lösung. Pushes und Zeiten sind Schätzungen; gerechnet sind etwa 2 Pushes je 2-Stunden-Block.</p>
 <div class="zahlen">

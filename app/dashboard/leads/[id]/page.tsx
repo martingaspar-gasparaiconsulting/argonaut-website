@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 import LeadDetailClient, { type LeadDetail } from './LeadDetailClient'
 import AblaufKnoepfe from '../../_components/AblaufKnoepfe'
 import ZustaendigBox from './ZustaendigBox'
+import QualiBox from './QualiBox'
 import AnrufVerlauf from '../../_components/AnrufVerlauf'
 import { ladeVerkaufsteam, ladeZustaendige } from '@/lib/verkaufsteamLaden'
 
@@ -38,7 +39,10 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         {stand.bereit ? <ZustaendigBox leadId={lead.id} team={stand.team} setter={z.setter_user_id} closer={z.closer_user_id} frei={stand.frei} ich={stand.ich} /> : null}
         {/* Paket 361: Anrufe mit Ergebnis, Nummer zum Antippen, Zeit bis zum ersten Anruf */}
         <AnrufVerlauf leadId={lead.id} telefon={lead.telefon} angelegt={lead.created_at} />
-        <LeadDetailClient lead={lead} ohneAngebot={stand.frei} />
+        {/* Paket VK2: Qualifizierungsbogen, Übergabe an den Closer, „Passt nicht" mit Grund */}
+        <QualiBox leadId={lead.id} team={stand.bereit ? stand.team : []} ich={stand.ich} nachfassAktiv={lead.nachfass_status === 'aktiv'} />
+        {/* key: nach „Passt nicht" (Stufe → verloren) neu aufbauen, damit die Stufen-Anzeige stimmt */}
+        <LeadDetailClient key={String(lead.stufe ?? '')} lead={lead} ohneAngebot={stand.frei} />
       </main>
     </div>
   )
