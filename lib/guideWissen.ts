@@ -3212,6 +3212,7 @@ export const WISSEN: Record<string, SeitenWissen> = {
     werText: 'Planen, ändern und löschen macht der Chef. Mitarbeiter mit dem Modul Projekte sehen den Plan und tragen den Fortschritt in Prozent ein.',
     schritte: [
       'Projekt wählen und den „Baubeginn“ prüfen (kommt aus dem Startdatum des Projekts)',
+      'Schneller Start: „Typischen Ablauf als Vorlage einfügen“ (Einfamilienhaus, Badsanierung, Dachsanierung, Heizungstausch) — die Dauern sind Startwerte und werden danach angepasst',
       'Vorgang einplanen: Name (z. B. Rohbau), Gewerk, Firma, „Dauer (Arbeitstage)“; bei Trocknungs- oder Wartezeiten „Wartezeit davor“ eintragen (z. B. 5 Tage nach dem Estrich)',
       'Unter „Fängt an, wenn fertig ist“ die Vorgänger anhaken — ein Kreis (A wartet auf B, B auf A) wird abgewiesen',
       'Optional „Frühester Start“, wenn ein Gewerk nicht vorher kann (z. B. Gerüst erst ab einem Termin)',

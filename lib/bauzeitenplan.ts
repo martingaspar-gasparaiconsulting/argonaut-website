@@ -172,3 +172,72 @@ export function stand(z: Pick<PlanZeile, 'start' | 'ende' | 'esIdx' | 'efIdx'>, 
 }
 
 export const STAND_TEXT: Record<Stand, string> = { fertig: 'fertig', ueberfaellig: 'überfällig', hinter_plan: 'hinter Plan', laeuft: 'läuft', geplant: 'geplant' };
+
+// ============================================================================
+// HW-2 Teil 2 — Vorlagen für typische Abläufe (Startwerte, im Plan anpassen)
+// ============================================================================
+
+export type VorlageSchritt = { key: string; titel: string; gewerk: string; dauer: number; puffer?: number; nach?: string[] };
+export type PlanVorlage = { id: string; name: string; schritte: VorlageSchritt[] };
+
+export const PLAN_VORLAGEN: PlanVorlage[] = [
+  { id: 'efh', name: 'Einfamilienhaus Neubau', schritte: [
+    { key: 'ein', titel: 'Baustelleneinrichtung', gewerk: 'Bauunternehmen', dauer: 2 },
+    { key: 'erd', titel: 'Erdarbeiten und Gründung', gewerk: 'Tiefbau', dauer: 8, nach: ['ein'] },
+    { key: 'roh', titel: 'Rohbau', gewerk: 'Maurer', dauer: 30, nach: ['erd'] },
+    { key: 'dst', titel: 'Dachstuhl', gewerk: 'Zimmerer', dauer: 5, nach: ['roh'] },
+    { key: 'dach', titel: 'Dacheindeckung und Spenglerarbeiten', gewerk: 'Dachdecker', dauer: 8, nach: ['dst'] },
+    { key: 'fen', titel: 'Fenster und Außentüren', gewerk: 'Fensterbau', dauer: 4, nach: ['dach'] },
+    { key: 'elr', titel: 'Elektro Rohinstallation', gewerk: 'Elektro', dauer: 8, nach: ['fen'] },
+    { key: 'shk', titel: 'Sanitär und Heizung Rohinstallation', gewerk: 'SHK', dauer: 10, nach: ['fen'] },
+    { key: 'put', titel: 'Innenputz', gewerk: 'Stuckateur', dauer: 8, nach: ['elr', 'shk'] },
+    { key: 'est', titel: 'Estrich', gewerk: 'Estrichleger', dauer: 3, puffer: 3, nach: ['put'] },
+    { key: 'fli', titel: 'Fliesen', gewerk: 'Fliesenleger', dauer: 8, puffer: 20, nach: ['est'] },
+    { key: 'mal', titel: 'Maler', gewerk: 'Maler', dauer: 8, nach: ['fli'] },
+    { key: 'fs', titel: 'Feininstallation Elektro und Sanitär', gewerk: 'Elektro / SHK', dauer: 5, nach: ['mal'] },
+    { key: 'bod', titel: 'Bodenbeläge', gewerk: 'Bodenleger', dauer: 4, nach: ['fs'] },
+    { key: 'abn', titel: 'Endreinigung und Abnahme', gewerk: 'Bauunternehmen', dauer: 2, nach: ['bod'] },
+  ] },
+  { id: 'bad', name: 'Badsanierung', schritte: [
+    { key: 'abb', titel: 'Rückbau altes Bad', gewerk: 'SHK', dauer: 2 },
+    { key: 'shk', titel: 'Sanitär Rohinstallation', gewerk: 'SHK', dauer: 3, nach: ['abb'] },
+    { key: 'ele', titel: 'Elektro Rohinstallation', gewerk: 'Elektro', dauer: 1, nach: ['abb'] },
+    { key: 'put', titel: 'Putz und Abdichtung', gewerk: 'Fliesenleger', dauer: 2, puffer: 1, nach: ['shk', 'ele'] },
+    { key: 'fli', titel: 'Fliesen', gewerk: 'Fliesenleger', dauer: 4, puffer: 1, nach: ['put'] },
+    { key: 'mon', titel: 'Endmontage Sanitär und Elektro', gewerk: 'SHK / Elektro', dauer: 2, nach: ['fli'] },
+    { key: 'abn', titel: 'Reinigung und Übergabe', gewerk: 'SHK', dauer: 1, nach: ['mon'] },
+  ] },
+  { id: 'dach', name: 'Dachsanierung', schritte: [
+    { key: 'ger', titel: 'Gerüst stellen', gewerk: 'Gerüstbau', dauer: 1 },
+    { key: 'abd', titel: 'Abdecken alte Eindeckung', gewerk: 'Dachdecker', dauer: 3, nach: ['ger'] },
+    { key: 'hol', titel: 'Holzarbeiten und Lattung', gewerk: 'Zimmerer', dauer: 3, nach: ['abd'] },
+    { key: 'dae', titel: 'Dämmung und Unterdeckbahn', gewerk: 'Dachdecker', dauer: 3, nach: ['hol'] },
+    { key: 'ein', titel: 'Neueindeckung', gewerk: 'Dachdecker', dauer: 5, nach: ['dae'] },
+    { key: 'spe', titel: 'Spenglerarbeiten', gewerk: 'Spengler', dauer: 2, nach: ['ein'] },
+    { key: 'abg', titel: 'Gerüst abbauen und Abnahme', gewerk: 'Gerüstbau', dauer: 1, nach: ['spe'] },
+  ] },
+  { id: 'heiz', name: 'Heizungstausch (Wärmepumpe)', schritte: [
+    { key: 'auf', titel: 'Aufnahme und Heizlast', gewerk: 'SHK', dauer: 1 },
+    { key: 'fun', titel: 'Fundament Außengerät', gewerk: 'Bauunternehmen', dauer: 1, puffer: 5, nach: ['auf'] },
+    { key: 'dem', titel: 'Demontage alte Heizung', gewerk: 'SHK', dauer: 1, nach: ['auf'] },
+    { key: 'mon', titel: 'Montage Wärmepumpe und Speicher', gewerk: 'SHK', dauer: 2, nach: ['fun', 'dem'] },
+    { key: 'ele', titel: 'Elektroanschluss', gewerk: 'Elektro', dauer: 1, nach: ['mon'] },
+    { key: 'inb', titel: 'Inbetriebnahme und hydraulischer Abgleich', gewerk: 'SHK', dauer: 1, nach: ['ele'] },
+    { key: 'ein', titel: 'Einweisung Kunde und Unterlagen', gewerk: 'SHK', dauer: 1, nach: ['inb'] },
+  ] },
+];
+
+/** Reihenfolge zum Anlegen: jeder Schritt erst, wenn alle Vorgänger schon angelegt sind. Kreis → null. */
+export function vorlageReihenfolge(v: PlanVorlage): VorlageSchritt[] | null {
+  const fertig = new Set<string>(); const out: VorlageSchritt[] = [];
+  const keys = new Set(v.schritte.map((x) => x.key));
+  if (v.schritte.some((x) => (x.nach ?? []).some((n) => !keys.has(n)))) return null;
+  let rest = [...v.schritte];
+  while (rest.length) {
+    const bereit = rest.filter((x) => (x.nach ?? []).every((n) => fertig.has(n)));
+    if (!bereit.length) return null;
+    for (const b of bereit) { out.push(b); fertig.add(b.key); }
+    rest = rest.filter((x) => !fertig.has(x.key));
+  }
+  return out;
+}

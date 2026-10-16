@@ -80,3 +80,18 @@ test('Stand: fertig, überfällig, hinter Plan, läuft, geplant', () => {
   assert.equal(stand(p, 10, '2026-10-28', keine), 'hinter_plan'); // Soll 80 %
   assert.equal(stand(p, 70, '2026-10-28', keine), 'laeuft');
 });
+
+import { PLAN_VORLAGEN, vorlageReihenfolge } from '../out/bauzeitenplan.js';
+
+test('Vorlagen: jede ist rechenbar, ohne Kreis, Vorgänger kommen zuerst', () => {
+  for (const v of PLAN_VORLAGEN) {
+    const r = vorlageReihenfolge(v);
+    assert.ok(r && r.length === v.schritte.length, v.name);
+    const pos = new Map(r.map((x, i) => [x.key, i]));
+    for (const x of r) for (const n of x.nach ?? []) assert.ok(pos.get(n) < pos.get(x.key), `${v.name}: ${n} vor ${x.key}`);
+    const plan = planBerechnen(r.map((x) => ({ id: x.key, titel: x.titel, dauer_tage: x.dauer, puffer_tage: x.puffer ?? 0, vorgaenger: x.nach ?? [] })), '2027-03-01', keine);
+    assert.equal(plan.fehler, null, v.name);
+    for (const x of r) assert.ok(pruefeVorgang({ titel: x.titel, gewerk: x.gewerk, dauer_tage: String(x.dauer), puffer_tage: String(x.puffer ?? 0) }).fehler === null, x.titel);
+  }
+  assert.equal(vorlageReihenfolge({ id: 'k', name: 'K', schritte: [{ key: 'a', titel: 'A', gewerk: '', dauer: 1, nach: ['b'] }, { key: 'b', titel: 'B', gewerk: '', dauer: 1, nach: ['a'] }] }), null);
+});

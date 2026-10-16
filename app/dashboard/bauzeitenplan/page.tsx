@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'r
 import { createBrowserClient } from '@supabase/ssr';
 import { feiertagsSet } from '@/lib/feiertage';
 import { heuteIso, datumDe } from '@/lib/nachweisMotor';
-import { planBerechnen, pruefeVorgang, bildetKreis, stand, STAND_TEXT, istIso, type Vorgang, type Eingabe } from '@/lib/bauzeitenplan';
+import { planBerechnen, pruefeVorgang, bildetKreis, stand, STAND_TEXT, istIso, PLAN_VORLAGEN, vorlageReihenfolge, type Vorgang, type Eingabe } from '@/lib/bauzeitenplan';
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -56,6 +56,7 @@ export default function BauzeitenplanSeite() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [vorlageId, setVorlageId] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -110,6 +111,32 @@ export default function BauzeitenplanSeite() {
       if (res.error || !res.data?.length) { setFehler('Speichern fehlgeschlagen.'); return; }
       setOk(bearbeite ? 'Vorgang geändert — der Plan ist neu gerechnet.' : `„${p.zeile.titel}" eingeplant.`);
       setForm(LEER); setBearbeite(null);
+      await laden();
+    } finally { setBusy(false); }
+  }
+
+  async function vorlageEinfuegen() {
+    if (!istChef || !projektId) return;
+    const v = PLAN_VORLAGEN.find((x) => x.id === vorlageId);
+    const reihe = v ? vorlageReihenfolge(v) : null;
+    if (!v || !reihe) return;
+    const schon = (zeilen ?? []).length;
+    if (!window.confirm(`Vorlage „${v.name}" mit ${reihe.length} Vorgängen ${schon ? 'zusätzlich zu den vorhandenen ' : ''}einplanen? Die Dauern sind Startwerte — bitte danach an Ihre Baustelle anpassen.`)) return;
+    setBusy(true); setFehler(null); setOk(null);
+    const ids = new Map<string, string>();
+    let n = 0;
+    try {
+      for (const x of reihe) {
+        const { data, error } = await supabase.from('bau_zeitplan').insert({
+          projekt_id: projektId, titel: x.titel, gewerk: x.gewerk, dauer_tage: x.dauer, puffer_tage: x.puffer ?? 0,
+          vorgaenger: (x.nach ?? []).map((k) => ids.get(k)).filter(Boolean), sortierung: schon + n + 1,
+          notiz: 'Aus Vorlage — Dauer ist ein Startwert',
+        }).select('id').single();
+        if (error || !data) { setFehler(`Vorlage nur teilweise eingeplant (${n} von ${reihe.length}) — bitte prüfen.`); break; }
+        ids.set(x.key, (data as { id: string }).id); n++;
+      }
+      if (n === reihe.length) setOk(`Vorlage „${v.name}" eingeplant (${n} Vorgänge). Dauern und Firmen jetzt an die Baustelle anpassen.`);
+      setVorlageId('');
       await laden();
     } finally { setBusy(false); }
   }
@@ -170,6 +197,14 @@ export default function BauzeitenplanSeite() {
 
       {zeilen !== null && projektId && istChef && (
         <div style={s.card} className="kein-druck">
+          {!bearbeite && (
+            <div style={s.row}>
+              <label style={{ ...s.lab, flex: 1, minWidth: 220 }}>Typischen Ablauf als Vorlage einfügen<select style={s.inp} value={vorlageId} onChange={(e) => setVorlageId(e.target.value)}>
+                <option value="">— Vorlage wählen —</option>{PLAN_VORLAGEN.map((v) => <option key={v.id} value={v.id}>{v.name} ({v.schritte.length} Vorgänge)</option>)}
+              </select></label>
+              <button style={{ ...s.klein, opacity: busy || !vorlageId ? 0.6 : 1 }} disabled={busy || !vorlageId} onClick={vorlageEinfuegen}>📋 Einfügen</button>
+            </div>
+          )}
           <div style={{ fontWeight: 800 }}>{bearbeite ? 'Vorgang ändern' : 'Vorgang einplanen'}</div>
           <div style={s.row}>
             <label style={{ ...s.lab, flex: 2, minWidth: 180 }}>Vorgang<input style={s.inp} value={form.titel} placeholder="z. B. Rohbau, Dachstuhl, Estrich" onChange={(e) => setForm({ ...form, titel: e.target.value })} /></label>
