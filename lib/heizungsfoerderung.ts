@@ -121,3 +121,50 @@ export const ABLAUF: { schritt: string; wer: 'Betrieb' | 'Kunde' | 'beide'; text
   { schritt: 'Einbau', wer: 'Betrieb', text: 'Nach der Zusage einbauen (bzw. nach Antragstellung auf eigenes Risiko).' },
   { schritt: 'Nachweis', wer: 'beide', text: 'Bestätigung nach Durchführung (BnD) durch den Betrieb, Rechnung; der Kunde reicht die Nachweise fristgerecht bei der KfW ein.' },
 ];
+
+// ============================================================================
+// HW-3 Teil 2 — Förder-Vorgang je Kunde (Status in fester Reihenfolge, Fristen)
+// ============================================================================
+
+export const STATUS = [
+  'geplant', 'vertrag', 'bza', 'antrag', 'zusage', 'eingebaut', 'nachweis', 'ausgezahlt',
+] as const;
+export type Status = (typeof STATUS)[number] | 'abgelehnt';
+export const STATUS_TEXT: Record<Status, string> = {
+  geplant: 'Geplant', vertrag: 'Vertrag mit Bedingung', bza: 'BzA erstellt', antrag: 'Antrag gestellt',
+  zusage: 'Zusage erhalten', eingebaut: 'Eingebaut', nachweis: 'Nachweis eingereicht', ausgezahlt: 'Ausgezahlt', abgelehnt: 'Abgelehnt',
+};
+export const NAECHSTER_SCHRITT: Record<Status, string> = {
+  geplant: 'Vertrag mit aufschiebender oder auflösender Bedingung der Förderzusage abschließen',
+  vertrag: 'Bestätigung zum Antrag (BzA) bei der KfW erstellen und dem Kunden die BzA-ID geben',
+  bza: 'Kunde stellt den Antrag in „Meine KfW“ — erst danach mit den Arbeiten beginnen',
+  antrag: 'Auf die Zusage warten (Einbau vorher nur auf eigenes Risiko des Kunden)',
+  zusage: 'Einbauen',
+  eingebaut: 'Bestätigung nach Durchführung (BnD) erstellen, Rechnung an den Kunden; Kunde reicht Nachweise ein',
+  nachweis: 'Auf die Auszahlung warten',
+  ausgezahlt: '—',
+  abgelehnt: '—',
+};
+
+/** Darf der Status so wechseln? Nur ein Schritt vor (oder auf „abgelehnt"); zurück nie. */
+export function statusWechselOk(alt: Status, neu: Status): string | null {
+  if (alt === neu) return null;
+  if (alt === 'ausgezahlt' || alt === 'abgelehnt') return 'Der Vorgang ist abgeschlossen.';
+  if (neu === 'abgelehnt') return null;
+  const a = STATUS.indexOf(alt as (typeof STATUS)[number]), n = STATUS.indexOf(neu as (typeof STATUS)[number]);
+  if (n < 0) return 'Unbekannter Status.';
+  if (n < a) return 'Zurück geht nicht — bitte eine Notiz schreiben.';
+  if (n > a + 1) return `Bitte der Reihe nach: als Nächstes kommt „${STATUS_TEXT[STATUS[a + 1]]}“. Gerade die Reihenfolge Vertrag → BzA → Antrag → Einbau entscheidet über die Förderung.`;
+  return null;
+}
+
+export type Vorgang = { status: Status; nachweis_bis?: string | null; antrag_am?: string | null };
+
+/** Ampel: Nachweis-Frist (rot ≤ 14 Tage oder überschritten, gelb ≤ 60 Tage). */
+export function fristAmpel(v: Vorgang, heute: string): 'rot' | 'gelb' | 'gruen' | null {
+  if (!v.nachweis_bis || ['nachweis', 'ausgezahlt', 'abgelehnt'].includes(v.status)) return null;
+  const tage = (Date.parse(v.nachweis_bis + 'T00:00:00Z') - Date.parse(heute + 'T00:00:00Z')) / 86400000;
+  if (tage <= 14) return 'rot';
+  if (tage <= 60) return 'gelb';
+  return 'gruen';
+}

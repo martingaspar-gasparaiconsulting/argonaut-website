@@ -359,7 +359,7 @@ EF_HW=[
 ('HW-16', 'Projekt als Klammer', 'Handwerk-Durchgang 15.10.: Auftrag, Einsatz und Aufmaß kennen kein Projekt, das Bautagebuch nur das Projekt; Dispo legt Einsätze ohne Auftrag an; zwei Mängellisten nebeneinander.', 'Projekt an Auftrag, Einsatz und Aufmaß (SQL additiv), Auftragswahl in der Dispo, Bautagebuch zeigt die Vorgänge des Projekts.', 'C', '1', 'live'),
 ('HW-1', 'Kupferzuschlag in Angebot/Rechnung', 'Aus der Branchen-Querschau 13.10.2026: Fachlogik ohne Motor-Abdeckung.', 'Kupferzuschlag in Angebot/Rechnung. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'G', '2', 'live'),
 ('HW-2', 'Bauzeitenplan mit Abhängigkeiten der Gewerke', 'Aus der Branchen-Querschau 13.10.2026: Fachlogik ohne Motor-Abdeckung.', 'Bauzeitenplan mit Abhängigkeiten der Gewerke.', 'C', '3', 'live'),
-('HW-3', 'Förderantrag Heizungstausch für Endkunden', 'Aus der Branchen-Querschau 13.10.2026: Fachlogik ohne Motor-Abdeckung.', 'Förderantrag Heizungstausch für Endkunden. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'offen'),
+('HW-3', 'Förderantrag Heizungstausch für Endkunden', 'Aus der Branchen-Querschau 13.10.2026: Fachlogik ohne Motor-Abdeckung.', 'Förderantrag Heizungstausch für Endkunden. Bauen und bis zur Anwalt-Freigabe gesperrt lassen (Freigabe-Zentrale).', 'C', '2', 'live'),
 ('HW-4', 'Schlechtwetterstunden/Saison-Kurzarbeit als Anbau an LK5', 'Aus der Branchen-Querschau 13.10.2026: Fachlogik ohne Motor-Abdeckung.', 'Schlechtwetterstunden/Saison-Kurzarbeit als Anbau an LK5.', 'C', '1', 'live'),
 ]
 EF_IM=[

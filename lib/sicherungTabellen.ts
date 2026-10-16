@@ -48,7 +48,7 @@ export const WEITERE_TABELLEN: string[] = [
   'etikett_produkt', 'event_anmeldung', 'event_veranstaltung', 'expose', 'expose_interessent',
   'fahrtkosten_staffel', 'fahrzeug_eintrag', 'fahrzeuge', 'fertigung_auftraege',
   'fertigung_stueckliste_positionen', 'fertigung_stuecklisten', 'finanz_szenarien', 'firmen',
-  'foerder_angebote', 'foerder_beleg', 'foerder_vorhaben', 'formular_eintrag', 'formular_nachtrag', 'formular_vorlage',
+  'foerder_angebote', 'foerder_vorgang', 'foerder_beleg', 'foerder_vorhaben', 'formular_eintrag', 'formular_nachtrag', 'formular_vorlage',
   'forst_auftrag', 'forst_auftrag_position', 'forst_baeume', 'forst_einsatzmittel',
   'forst_gutachten', 'forst_nachweis', 'forst_objekte', 'freebie', 'freebie_lead', 'freebie_mail',
   'freebie_versand', 'freistellungen', 'gastro_reservierungen', 'gastro_trinkgeld', 'gefahrstoff',

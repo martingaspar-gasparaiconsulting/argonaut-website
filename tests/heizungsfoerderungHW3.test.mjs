@@ -74,3 +74,29 @@ test('Sperre: Kunden-Unterlage aus bis Anwalt (R67), in Zentrale und Gedächtnis
   assert.match(fs.readFileSync(new URL('../lib/freigabeZentrale.ts', import.meta.url), 'utf8'), /foerderantrag: \{ titel: [^}]*anwalt: 'R67' \}/);
   assert.match(fs.readFileSync(new URL('../docs/ARGONAUT-SPERR-GEDAECHTNIS.md', import.meta.url), 'utf8'), /SCHALTER startSperre\.foerderantrag = aus/);
 });
+
+import { statusWechselOk, fristAmpel, NAECHSTER_SCHRITT, STATUS } from '../out/heizungsfoerderung.js';
+
+test('Vorgang: Status nur der Reihe nach, zurück nie, abgelehnt jederzeit', () => {
+  assert.equal(statusWechselOk('geplant', 'vertrag'), null);
+  assert.match(statusWechselOk('geplant', 'antrag'), /der Reihe nach.*Vertrag mit Bedingung/);
+  assert.match(statusWechselOk('antrag', 'bza'), /Zurück geht nicht/);
+  assert.equal(statusWechselOk('bza', 'abgelehnt'), null);
+  assert.match(statusWechselOk('ausgezahlt', 'abgelehnt'), /abgeschlossen/);
+  for (const s of STATUS) assert.ok(NAECHSTER_SCHRITT[s]);
+});
+
+test('Vorgang: Frist-Ampel für den Nachweis', () => {
+  assert.equal(fristAmpel({ status: 'eingebaut', nachweis_bis: '2026-10-20' }, '2026-10-16'), 'rot');
+  assert.equal(fristAmpel({ status: 'eingebaut', nachweis_bis: '2026-12-01' }, '2026-10-16'), 'gelb');
+  assert.equal(fristAmpel({ status: 'zusage', nachweis_bis: '2027-12-01' }, '2026-10-16'), 'gruen');
+  assert.equal(fristAmpel({ status: 'nachweis', nachweis_bis: '2026-10-01' }, '2026-10-16'), null);
+});
+
+test('SQL p405: additiv, Status-Reihenfolge auch in der Datenbank, kein Einkommen gespeichert', () => {
+  const sql = fs.readFileSync(new URL('../supabase-sql/p405-foerder-vorgang.sql', import.meta.url), 'utf8');
+  assert.match(sql, /create table if not exists public\.foerder_vorgang/);
+  assert.match(sql, /p405_status_reihe/);
+  assert.doesNotMatch(sql, /^\s*einkommen\w*\s+(numeric|integer|int|text|bigint)/im, 'keine Einkommens-Spalte');
+  assert.doesNotMatch(sql, /\bdrop\s+table\b|\btruncate\b/i);
+});
