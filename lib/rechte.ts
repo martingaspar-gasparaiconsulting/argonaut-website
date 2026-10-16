@@ -301,6 +301,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: '📐 Aufmaß', href: '/dashboard/aufmass', modul: 'aufmass', ebene: 3, gruppe: 'betrieb' },
   { label: '🏗 Bau & LV', href: '/dashboard/bau-lv', modul: 'bau-lv', ebene: 3, gruppe: 'betrieb' },
   { label: '📒 Bautagebuch', href: '/dashboard/bautagebuch', modul: 'bautagebuch', ebene: 3, gruppe: 'betrieb' },
+  // HW-3 (16.10.26): Foerderung Heizungstausch (KfW 458) — Schaetzung fuer Endkunden, ohne Modul (SHK und Energie)
+  { label: '🔥 Förderung Heizungstausch', href: '/dashboard/heizungsfoerderung', ebene: 3, gruppe: 'betrieb' },
   // HW-1 (16.10.26): Metallzuschlag-Rechner (Elektro) — haengt am Modul Kalkulator
   { label: '🔌 Metallzuschlag', href: '/dashboard/metallzuschlag', modul: 'kalkulator', ebene: 3, gruppe: 'betrieb' },
   // HW-2 (16.10.26): Bauzeitenplan je Projekt — haengt am Modul Projekte

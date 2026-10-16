@@ -3206,6 +3206,20 @@ export const WISSEN: Record<string, SeitenWissen> = {
     landetIn: [{ text: 'Pläne & Mängel-Pins', href: '/dashboard/bautagebuch/plaene' }],
     vorher: [{ text: 'Baustelle als Projekt angelegt', href: '/dashboard/projekte' }],
   },
+  '/dashboard/heizungsfoerderung': {
+    zweck: 'Zuschuss für den Heizungstausch nach KfW 458 für Ihre Kunden schätzen (Grundförderung 30 %, Klimageschwindigkeitsbonus, Einkommensbonus, Deckel 70/80 %, Kostengrenze je Wohneinheit) und den richtigen Ablauf zeigen. Stand der Sätze 21.07.2026.',
+    wer: 'beide',
+    werText: 'Alle mit Zugang. Nichts wird gespeichert — auch das Einkommen nicht. Die Förder-Übersicht zum Ausdrucken für den Kunden wird nach der rechtlichen Prüfung freigeschaltet.',
+    schritte: [
+      'Geplantes Antragsdatum, Kosten laut Angebot (brutto) und Zahl der Wohneinheiten eintragen',
+      'Angeben, ob der Eigentümer selbst darin wohnt und welche alte Heizung ersetzt wird (bei Gas/Biomasse das Alter)',
+      'Optional das zu versteuernde Haushaltseinkommen und „Kind unter 18“ — dann rechnet der Einkommensbonus mit',
+      'Fördersatz und voraussichtlichen Zuschuss ablesen; Hinweise erklären Deckel, Kostengrenze und fehlende Boni',
+      'Mit dem Kunden den Ablauf besprechen: zuerst Vertrag mit Bedingung, dann Bestätigung zum Antrag (BzA), dann Antrag in „Meine KfW“ — vor Beginn der Arbeiten',
+    ],
+    probe: { anlegen: 'Ölheizung, selbst bewohnt, 35.000 € Kosten, ohne Einkommen: 46 % → 12.880 € Zuschuss.', loeschen: 'Nichts zu löschen — die Seite speichert nichts.' },
+    landetIn: [{ text: 'Angebote', href: '/dashboard/angebote' }],
+  },
   '/dashboard/metallzuschlag': {
     zweck: 'Metallzuschlag (Kupfer oder Aluminium) für Kabel und Leitungen nach der Tagesnotiz ausrechnen: (Notiz + 1 % Bezugskosten − Basis) × Metallzahl ÷ 100 = € je km, für mehrere Kabel auf einmal mit Summe.',
     wer: 'beide',
